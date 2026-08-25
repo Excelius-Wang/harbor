@@ -1,8 +1,12 @@
 import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { GitHubCodeOverview } from "./github-data";
-import { repositoryCodeQueryOptions, resetGitHubQueryCache } from "./github-queries";
+import type { GitHubCodeOverview, GitHubFilePreview } from "./github-data";
+import {
+  repositoryCodeQueryOptions,
+  repositoryFileQueryOptions,
+  resetGitHubQueryCache,
+} from "./github-queries";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
@@ -69,6 +73,38 @@ describe("GitHub repository queries", () => {
     await client.fetchQuery(options);
 
     expect(invoke).toHaveBeenCalledTimes(2);
+  });
+
+  it("loads and caches a repository file by revision and path", async () => {
+    const client = createTestQueryClient();
+    const preview: GitHubFilePreview = {
+      kind: "text",
+      name: "main.rs",
+      path: "src/main.rs",
+      size: 13,
+      url: "https://github.com/octocat/hello-world/blob/main/src/main.rs",
+      content: "fn main() {}\n",
+    };
+    vi.mocked(invoke).mockResolvedValueOnce(preview);
+    const options = repositoryFileQueryOptions({
+      owner: "octocat",
+      repository: "hello-world",
+      reference: "main",
+      path: "src/main.rs",
+    });
+
+    const first = await client.fetchQuery(options);
+    const cached = await client.fetchQuery(options);
+
+    expect(first).toEqual(preview);
+    expect(cached).toEqual(preview);
+    expect(invoke).toHaveBeenCalledTimes(1);
+    expect(invoke).toHaveBeenCalledWith("github_get_repository_file", {
+      owner: "octocat",
+      repository: "hello-world",
+      reference: "main",
+      path: "src/main.rs",
+    });
   });
 
   it("resets active GitHub data on an account change without clearing unrelated data", async () => {

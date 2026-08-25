@@ -10,6 +10,9 @@ use crate::{
     github_oauth::{GitHubLoginAttempt, GitHubOAuthCredentials, GitHubOAuthSession},
 };
 
+const MAX_FILE_PREVIEW_BYTES: i64 = 1_000_000;
+const MAX_FILE_PREVIEW_LINES: usize = 10_000;
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GitHubIdentity {
@@ -145,6 +148,32 @@ pub struct GitHubContentListing {
     pub entries: Vec<GitHubContentEntry>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum GitHubFilePreview {
+    Text {
+        name: String,
+        path: String,
+        size: i64,
+        url: Option<String>,
+        content: String,
+    },
+    Unsupported {
+        name: String,
+        path: String,
+        size: i64,
+        url: Option<String>,
+        reason: GitHubFilePreviewUnsupportedReason,
+    },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum GitHubFilePreviewUnsupportedReason {
+    Binary,
+    TooLarge,
+}
+
 impl GitHubConnection {
     fn disconnected() -> Self {
         Self {
@@ -186,6 +215,14 @@ pub trait GitHubClient: Send + Sync {
         reference: &str,
         path: &str,
     ) -> Result<GitHubContentListing, AppError>;
+    async fn repository_file(
+        &self,
+        token: &str,
+        owner: &str,
+        repository: &str,
+        reference: &str,
+        path: &str,
+    ) -> Result<GitHubFilePreview, AppError>;
 }
 
 pub trait CredentialStore: Send + Sync {
@@ -345,6 +382,19 @@ impl GitHubService {
         let token = self.load_access_token().await?;
         self.client
             .repository_contents(&token, owner, repository, reference, path)
+            .await
+    }
+
+    pub async fn file(
+        &self,
+        owner: &str,
+        repository: &str,
+        reference: &str,
+        path: &str,
+    ) -> Result<GitHubFilePreview, AppError> {
+        let token = self.load_access_token().await?;
+        self.client
+            .repository_file(&token, owner, repository, reference, path)
             .await
     }
 
@@ -508,6 +558,27 @@ impl GitHubClient for OctocrabGitHubClient {
 
         Ok(content_listing_from_octocrab(contents.items))
     }
+
+    async fn repository_file(
+        &self,
+        token: &str,
+        owner: &str,
+        repository: &str,
+        reference: &str,
+        path: &str,
+    ) -> Result<GitHubFilePreview, AppError> {
+        let client = authenticated_client(token)?;
+        let contents = client
+            .repos(owner, repository)
+            .get_content()
+            .path(path)
+            .r#ref(reference)
+            .send()
+            .await
+            .map_err(github_error)?;
+
+        file_preview_from_octocrab(contents.items)
+    }
 }
 
 fn github_error(error: octocrab::Error) -> AppError {
@@ -594,15 +665,7 @@ fn readme_from_octocrab(
         .content
         .as_deref()
         .ok_or_else(|| AppError::GitHub("GitHub did not return README content".to_string()))?;
-    let compact = encoded
-        .bytes()
-        .filter(|byte| !byte.is_ascii_whitespace())
-        .collect::<Vec<_>>();
-    let decoded = base64::prelude::BASE64_STANDARD
-        .decode(compact)
-        .map_err(|error| {
-            AppError::GitHub(format!("README content is not valid base64: {error}"))
-        })?;
+    let decoded = decode_base64_content(encoded, "README")?;
 
     Ok(GitHubReadme {
         name: content.name,
@@ -634,6 +697,72 @@ fn content_listing_from_octocrab(
     });
 
     GitHubContentListing { entries }
+}
+
+fn file_preview_from_octocrab(
+    mut contents: Vec<octocrab::models::repos::Content>,
+) -> Result<GitHubFilePreview, AppError> {
+    if contents.len() != 1 {
+        return Err(AppError::GitHub(
+            "GitHub did not return a single repository file".to_string(),
+        ));
+    }
+    let content = contents.pop().expect("one repository content item");
+    if content.r#type != "file" {
+        return Err(AppError::Validation(
+            "repository path is not a file".to_string(),
+        ));
+    }
+
+    let unsupported = |reason| GitHubFilePreview::Unsupported {
+        name: content.name.clone(),
+        path: content.path.clone(),
+        size: content.size,
+        url: content.html_url.clone(),
+        reason,
+    };
+    if content.size > MAX_FILE_PREVIEW_BYTES {
+        return Ok(unsupported(GitHubFilePreviewUnsupportedReason::TooLarge));
+    }
+
+    let encoded = content
+        .content
+        .as_deref()
+        .ok_or_else(|| AppError::GitHub("GitHub did not return file content".to_string()))?;
+    if content.encoding.as_deref() != Some("base64") {
+        return Err(AppError::GitHub(
+            "GitHub returned an unsupported file encoding".to_string(),
+        ));
+    }
+    let decoded = decode_base64_content(encoded, "file")?;
+    if decoded.contains(&0) {
+        return Ok(unsupported(GitHubFilePreviewUnsupportedReason::Binary));
+    }
+    let text = match String::from_utf8(decoded) {
+        Ok(text) => text,
+        Err(_) => return Ok(unsupported(GitHubFilePreviewUnsupportedReason::Binary)),
+    };
+    if text.lines().take(MAX_FILE_PREVIEW_LINES + 1).count() > MAX_FILE_PREVIEW_LINES {
+        return Ok(unsupported(GitHubFilePreviewUnsupportedReason::TooLarge));
+    }
+
+    Ok(GitHubFilePreview::Text {
+        name: content.name,
+        path: content.path,
+        size: content.size,
+        url: content.html_url,
+        content: text,
+    })
+}
+
+fn decode_base64_content(encoded: &str, label: &str) -> Result<Vec<u8>, AppError> {
+    let compact = encoded
+        .bytes()
+        .filter(|byte| !byte.is_ascii_whitespace())
+        .collect::<Vec<_>>();
+    base64::prelude::BASE64_STANDARD
+        .decode(compact)
+        .map_err(|error| AppError::GitHub(format!("{label} content is not valid base64: {error}")))
 }
 
 fn repository_from_octocrab(repository: octocrab::models::Repository) -> Option<GitHubRepository> {
@@ -897,6 +1026,30 @@ mod tests {
                 }],
             })
         }
+
+        async fn repository_file(
+            &self,
+            token: &str,
+            owner: &str,
+            repository: &str,
+            reference: &str,
+            path: &str,
+        ) -> Result<GitHubFilePreview, AppError> {
+            assert_eq!(token, "github-user-access-token");
+            assert_eq!(
+                (owner, repository, reference, path),
+                ("octocat", "hello-world", "main", "src/lib.rs")
+            );
+            Ok(GitHubFilePreview::Text {
+                name: "lib.rs".to_string(),
+                path: "src/lib.rs".to_string(),
+                size: 30,
+                url: Some(
+                    "https://github.com/octocat/hello-world/blob/main/src/lib.rs".to_string(),
+                ),
+                content: "pub fn harbor() {\n    todo!()\n}\n".to_string(),
+            })
+        }
     }
 
     #[derive(Default)]
@@ -1109,6 +1262,37 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn file_preview_uses_the_saved_connection() {
+        let credentials = Arc::new(MemoryCredentialStore::default());
+        credentials
+            .save_github_credentials(&oauth_credentials())
+            .expect("seed credentials");
+        let service = GitHubService::new(
+            Arc::new(FakeGitHubClient),
+            credentials,
+            Some(oauth_session("github-user-access-token")),
+        );
+
+        let preview = service
+            .file("octocat", "hello-world", "main", "src/lib.rs")
+            .await
+            .expect("file preview");
+
+        assert_eq!(
+            preview,
+            GitHubFilePreview::Text {
+                name: "lib.rs".to_string(),
+                path: "src/lib.rs".to_string(),
+                size: 30,
+                url: Some(
+                    "https://github.com/octocat/hello-world/blob/main/src/lib.rs".to_string()
+                ),
+                content: "pub fn harbor() {\n    todo!()\n}\n".to_string(),
+            }
+        );
+    }
+
+    #[tokio::test]
     async fn unconfigured_service_never_loads_credentials() {
         let credentials = Arc::new(MemoryCredentialStore::default());
         let service = GitHubService::new(Arc::new(FakeGitHubClient), credentials.clone(), None);
@@ -1266,6 +1450,107 @@ mod tests {
 
         assert_eq!(listing.entries[0].name, "src");
         assert_eq!(listing.entries[1].name, "README.md");
+    }
+
+    #[test]
+    fn file_preview_decodes_utf8_text() {
+        let mut file = content_json("main.rs", "src/main.rs", "file");
+        file["encoding"] = serde_json::json!("base64");
+        file["content"] = serde_json::json!("Zm4gbWFpbigpIHt9Cg==");
+        file["size"] = serde_json::json!(13);
+        let file = serde_json::from_value(file).expect("file fixture");
+
+        let preview = file_preview_from_octocrab(vec![file]).expect("file preview");
+
+        assert_eq!(
+            preview,
+            GitHubFilePreview::Text {
+                name: "main.rs".to_string(),
+                path: "src/main.rs".to_string(),
+                size: 13,
+                url: Some(
+                    "https://github.com/octocat/hello-world/blob/main/src/main.rs".to_string()
+                ),
+                content: "fn main() {}\n".to_string(),
+            }
+        );
+    }
+
+    #[test]
+    fn file_preview_marks_binary_content_as_unsupported() {
+        let mut file = content_json("logo.png", "assets/logo.png", "file");
+        file["encoding"] = serde_json::json!("base64");
+        file["content"] = serde_json::json!("AAEC");
+        file["size"] = serde_json::json!(3);
+        let file = serde_json::from_value(file).expect("file fixture");
+
+        let preview = file_preview_from_octocrab(vec![file]).expect("file preview");
+
+        assert_eq!(
+            preview,
+            GitHubFilePreview::Unsupported {
+                name: "logo.png".to_string(),
+                path: "assets/logo.png".to_string(),
+                size: 3,
+                url: Some(
+                    "https://github.com/octocat/hello-world/blob/main/assets/logo.png".to_string()
+                ),
+                reason: GitHubFilePreviewUnsupportedReason::Binary,
+            }
+        );
+    }
+
+    #[test]
+    fn file_preview_skips_content_above_the_safe_limit() {
+        let mut file = content_json("fixture.txt", "fixtures/fixture.txt", "file");
+        file["size"] = serde_json::json!(MAX_FILE_PREVIEW_BYTES + 1);
+        let file = serde_json::from_value(file).expect("file fixture");
+
+        let preview = file_preview_from_octocrab(vec![file]).expect("file preview");
+
+        assert!(matches!(
+            preview,
+            GitHubFilePreview::Unsupported {
+                reason: GitHubFilePreviewUnsupportedReason::TooLarge,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn file_preview_skips_text_above_the_safe_line_limit() {
+        let text = "x\n".repeat(MAX_FILE_PREVIEW_LINES + 1);
+        let mut file = content_json("generated.txt", "fixtures/generated.txt", "file");
+        file["encoding"] = serde_json::json!("base64");
+        file["content"] = serde_json::json!(base64::prelude::BASE64_STANDARD.encode(&text));
+        file["size"] = serde_json::json!(text.len());
+        let file = serde_json::from_value(file).expect("file fixture");
+
+        let preview = file_preview_from_octocrab(vec![file]).expect("file preview");
+
+        assert!(matches!(
+            preview,
+            GitHubFilePreview::Unsupported {
+                reason: GitHubFilePreviewUnsupportedReason::TooLarge,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn file_preview_serializes_the_frontend_discriminator() {
+        let preview = GitHubFilePreview::Unsupported {
+            name: "generated.txt".to_string(),
+            path: "fixtures/generated.txt".to_string(),
+            size: MAX_FILE_PREVIEW_BYTES + 1,
+            url: None,
+            reason: GitHubFilePreviewUnsupportedReason::TooLarge,
+        };
+
+        let value = serde_json::to_value(preview).expect("serialized preview");
+
+        assert_eq!(value["kind"], "unsupported");
+        assert_eq!(value["reason"], "tooLarge");
     }
 
     #[test]

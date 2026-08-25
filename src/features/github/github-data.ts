@@ -83,3 +83,20 @@ export type GitHubContentEntry = {
 export type GitHubContentListing = {
   entries: GitHubContentEntry[];
 };
+
+type GitHubFilePreviewBase = {
+  name: string;
+  path: string;
+  size: number;
+  url?: string;
+};
+
+export type GitHubFilePreview =
+  | (GitHubFilePreviewBase & {
+      kind: "text";
+      content: string;
+    })
+  | (GitHubFilePreviewBase & {
+      kind: "unsupported";
+      reason: "binary" | "tooLarge";
+    });

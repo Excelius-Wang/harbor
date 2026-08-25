@@ -44,10 +44,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { parseIpcError } from "@/lib/ipc-error";
 import { openExternalUrl } from "@/lib/window";
 import type { GitHubContentEntry, GitHubRepository } from "./github-data";
-import { repositoryCodeQueryOptions, repositoryContentsQueryOptions } from "./github-queries";
+import { GitHubFilePreviewPanel, GitHubFilePreviewSkeleton } from "./github-file-preview";
+import {
+  repositoryCodeQueryOptions,
+  repositoryContentsQueryOptions,
+  repositoryFileQueryOptions,
+} from "./github-queries";
 
 function formatBytes(bytes: number, locale: string) {
   if (bytes < 1_000) return `${bytes} B`;
@@ -139,33 +145,62 @@ export function GitHubCodeView({ repository }: { repository: GitHubRepository })
   const { t, i18n } = useTranslation();
   const [reference, setReference] = useState(repository.defaultBranch);
   const [path, setPath] = useState("");
+  const [selectedFile, setSelectedFile] = useState<GitHubContentEntry | null>(null);
   const target = { owner: repository.owner, repository: repository.name, reference };
   const overviewResult = useQuery(repositoryCodeQueryOptions(target));
   const contentsResult = useQuery(repositoryContentsQueryOptions({ ...target, path }));
+  const fileResult = useQuery({
+    ...repositoryFileQueryOptions({ ...target, path: selectedFile?.path ?? "" }),
+    enabled: selectedFile !== null,
+  });
   const overview = overviewResult.data ?? null;
   const listing = contentsResult.data ?? null;
+  const filePreview = fileResult.data ?? null;
   const overviewLoading = overviewResult.isPending;
   const contentsLoading = contentsResult.isPending;
+  const fileLoading = selectedFile !== null && fileResult.isPending;
   const overviewError =
     !overview && overviewResult.error ? parseIpcError(overviewResult.error) : null;
   const contentsError =
     !listing && contentsResult.error ? parseIpcError(contentsResult.error) : null;
+  const fileError =
+    selectedFile && !filePreview && fileResult.error ? parseIpcError(fileResult.error) : null;
+  const activeError = overviewError ?? (selectedFile ? fileError : contentsError);
 
   const breadcrumbSegments = useMemo(() => path.split("/").filter(Boolean), [path]);
   const latestCommit = overview?.commits[0];
 
   const selectBranch = (nextReference: string) => {
     setPath("");
+    setSelectedFile(null);
     setReference(nextReference);
+  };
+
+  const navigateToPath = (nextPath: string) => {
+    setSelectedFile(null);
+    setPath(nextPath);
   };
 
   const openEntry = (entry: GitHubContentEntry) => {
     if (entry.kind === "dir") {
-      setPath(entry.path);
+      navigateToPath(entry.path);
+      return;
+    }
+    if (entry.kind === "file") {
+      setSelectedFile(entry);
       return;
     }
     if (entry.url) void openExternalUrl(entry.url);
   };
+
+  const selectedFileUrl = selectedFile
+    ? (filePreview?.url ??
+      selectedFile.url ??
+      `${repository.url}/blob/${encodeURIComponent(reference)}/${selectedFile.path
+        .split("/")
+        .map(encodeURIComponent)
+        .join("/")}`)
+    : repository.url;
 
   if (overviewLoading && !overview && contentsLoading && !listing) return <CodeSkeleton />;
 
@@ -194,9 +229,13 @@ export function GitHubCodeView({ repository }: { repository: GitHubRepository })
             <Breadcrumb>
               <BreadcrumbList className="flex-nowrap gap-1 text-[11px] sm:gap-1">
                 <BreadcrumbItem>
-                  {breadcrumbSegments.length ? (
+                  {breadcrumbSegments.length || selectedFile ? (
                     <BreadcrumbLink asChild>
-                      <button type="button" onClick={() => setPath("")} className="font-medium">
+                      <button
+                        type="button"
+                        onClick={() => navigateToPath("")}
+                        className="font-medium"
+                      >
                         {repository.name}
                       </button>
                     </BreadcrumbLink>
@@ -206,7 +245,7 @@ export function GitHubCodeView({ repository }: { repository: GitHubRepository })
                 </BreadcrumbItem>
                 {breadcrumbSegments.map((segment, index) => {
                   const segmentPath = breadcrumbSegments.slice(0, index + 1).join("/");
-                  const current = index === breadcrumbSegments.length - 1;
+                  const current = index === breadcrumbSegments.length - 1 && !selectedFile;
                   return (
                     <span key={segmentPath} className="contents">
                       <BreadcrumbSeparator />
@@ -217,7 +256,7 @@ export function GitHubCodeView({ repository }: { repository: GitHubRepository })
                           <BreadcrumbLink asChild>
                             <button
                               type="button"
-                              onClick={() => setPath(segmentPath)}
+                              onClick={() => navigateToPath(segmentPath)}
                               className="max-w-32 truncate"
                             >
                               {segment}
@@ -228,43 +267,66 @@ export function GitHubCodeView({ repository }: { repository: GitHubRepository })
                     </span>
                   );
                 })}
+                {selectedFile ? (
+                  <>
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem className="min-w-0">
+                      <BreadcrumbPage className="max-w-44 truncate">
+                        {selectedFile.name}
+                      </BreadcrumbPage>
+                    </BreadcrumbItem>
+                  </>
+                ) : null}
               </BreadcrumbList>
             </Breadcrumb>
           </div>
 
-          <Button
-            variant="outline"
-            size="icon-sm"
-            aria-label={t("workspace.repositories.refreshCode")}
-            onClick={() => {
-              void overviewResult.refetch();
-              void contentsResult.refetch();
-            }}
-            disabled={overviewResult.isFetching || contentsResult.isFetching}
-          >
-            <RefreshCw
-              className={
-                overviewResult.isFetching || contentsResult.isFetching ? "animate-spin" : ""
-              }
-            />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon-sm"
+                aria-label={t("workspace.repositories.refreshCode")}
+                onClick={() => {
+                  void overviewResult.refetch();
+                  if (selectedFile) void fileResult.refetch();
+                  else void contentsResult.refetch();
+                }}
+                disabled={
+                  overviewResult.isFetching ||
+                  (selectedFile ? fileResult.isFetching : contentsResult.isFetching)
+                }
+              >
+                <RefreshCw
+                  className={
+                    overviewResult.isFetching ||
+                    (selectedFile ? fileResult.isFetching : contentsResult.isFetching)
+                      ? "animate-spin"
+                      : ""
+                  }
+                />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t("workspace.repositories.refreshCode")}</TooltipContent>
+          </Tooltip>
         </div>
 
-        {overviewError || contentsError ? (
+        {activeError ? (
           <Empty className="min-h-56 border border-white/[0.07] bg-white/[0.018]">
             <EmptyHeader>
               <EmptyMedia variant="icon">
                 <Box />
               </EmptyMedia>
               <EmptyTitle>{t("workspace.repositories.codeLoadFailed")}</EmptyTitle>
-              <EmptyDescription>{(overviewError ?? contentsError)?.message}</EmptyDescription>
+              <EmptyDescription>{activeError.message}</EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
               <Button
                 variant="outline"
                 onClick={() => {
                   void overviewResult.refetch();
-                  void contentsResult.refetch();
+                  if (selectedFile) void fileResult.refetch();
+                  else void contentsResult.refetch();
                 }}
               >
                 <RefreshCw data-icon="inline-start" />
@@ -272,6 +334,18 @@ export function GitHubCodeView({ repository }: { repository: GitHubRepository })
               </Button>
             </EmptyContent>
           </Empty>
+        ) : selectedFile ? (
+          fileLoading && !filePreview ? (
+            <GitHubFilePreviewSkeleton />
+          ) : filePreview ? (
+            <GitHubFilePreviewPanel
+              preview={filePreview}
+              sizeLabel={formatBytes(filePreview.size, i18n.language)}
+              externalUrl={selectedFileUrl}
+              onBack={() => setSelectedFile(null)}
+              onOpenExternal={(url) => void openExternalUrl(url)}
+            />
+          ) : null
         ) : (
           <>
             <section className="overflow-hidden rounded-lg border border-white/[0.075] bg-white/[0.018] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">

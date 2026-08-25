@@ -2,20 +2,26 @@
 
 Harbor's repository workspace keeps the familiar GitHub flow in one desktop view:
 
-- **Code** reads branches, repository contents, the root README, and the latest eight commits.
+- **Code** reads branches, repository contents, text-file previews, the root README, and the latest eight commits.
 - **Issues** reads open GitHub Issues and keeps Harbor's unassigned filter and detail sheet.
 - **Pull requests** and **Actions** are visible navigation targets with honest GitHub fallbacks until their end-to-end workflows are implemented.
 
 ## Data flow
 
-The React views call two read-only Tauri commands:
+The React views call three read-only Tauri commands:
 
 - `github_get_repository_code_overview`
 - `github_list_repository_contents`
+- `github_get_repository_file`
 
-Both commands validate the repository reference and path, load the token from the operating system credential store, and delegate to the `GitHubClient` interface. The Octocrab implementation uses GitHub's repository Contents, README, Branches, and Commits APIs.
+All three commands validate the repository reference and path, load the token from the operating system credential store, and delegate to the `GitHubClient` interface. The Octocrab implementation uses GitHub's repository Contents, README, Branches, and Commits APIs.
 
 README Markdown is rendered with `react-markdown` and `remark-gfm`. Raw HTML is not enabled. Links open outside Harbor, and images are presented as explicit external links so private image URLs and webview navigation do not leak credentials or replace the workspace.
+
+Repository files open in Harbor's read-only source viewer. The GitHub client decodes Base64 with
+strict UTF-8 validation and treats binary content as unsupported instead of displaying mojibake.
+To keep the webview responsive, Harbor previews files up to 1 MB and 10,000 lines. Binary and
+larger files keep an explicit **Open on GitHub** fallback; ordinary file clicks do not leave Harbor.
 
 GitHub reads use TanStack Query with query keys scoped by repository, branch, and path. Fresh data
 is reused for 60 seconds and inactive data is kept for five minutes. The cache is memory-only and

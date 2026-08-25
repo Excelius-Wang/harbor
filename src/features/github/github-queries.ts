@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type {
   GitHubCodeOverview,
   GitHubContentListing,
+  GitHubFilePreview,
   GitHubIssuePage,
   GitHubRepositoryPage,
 } from "./github-data";
@@ -28,6 +29,8 @@ const githubQueryKeys = {
     ["github", "repository", owner, repository, "code", reference] as const,
   contents: ({ owner, repository, reference, path }: GitHubContentsTarget) =>
     ["github", "repository", owner, repository, "contents", reference, path] as const,
+  file: ({ owner, repository, reference, path }: GitHubContentsTarget) =>
+    ["github", "repository", owner, repository, "file", reference, path] as const,
   issues: ({ owner, repository }: GitHubRepositoryTarget) =>
     ["github", "repository", owner, repository, "issues"] as const,
 };
@@ -65,6 +68,20 @@ export function repositoryContentsQueryOptions(target: GitHubContentsTarget) {
     queryKey: githubQueryKeys.contents(target),
     queryFn: () =>
       invoke<GitHubContentListing>("github_list_repository_contents", {
+        owner: target.owner,
+        repository: target.repository,
+        reference: target.reference,
+        path: target.path,
+      }),
+    staleTime: GITHUB_QUERY_STALE_TIME,
+  });
+}
+
+export function repositoryFileQueryOptions(target: GitHubContentsTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.file(target),
+    queryFn: () =>
+      invoke<GitHubFilePreview>("github_get_repository_file", {
         owner: target.owner,
         repository: target.repository,
         reference: target.reference,

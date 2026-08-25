@@ -5,7 +5,7 @@ use crate::{
     error::AppError,
     github::{
         GitHubAuthEvent, GitHubCodeOverview, GitHubConnection, GitHubContentListing,
-        GitHubIssuePage, GitHubLoginAvailability, GitHubRepositoryPage,
+        GitHubFilePreview, GitHubIssuePage, GitHubLoginAvailability, GitHubRepositoryPage,
     },
     github_oauth::{GitHubLoginAttempt, GitHubLoopbackListener, GITHUB_AUTH_EVENT},
     repository_context::{RepositoryContextAnswer, RepositoryRef},
@@ -117,6 +117,23 @@ pub async fn github_list_repository_contents(
         .await
 }
 
+#[tauri::command]
+pub async fn github_get_repository_file(
+    owner: String,
+    repository: String,
+    reference: String,
+    path: String,
+    state: State<'_, AppState>,
+) -> Result<GitHubFilePreview, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    let reference = validate_reference(reference)?;
+    let path = validate_repository_file_path(path)?;
+    state
+        .github
+        .file(repository.owner(), repository.name(), &reference, &path)
+        .await
+}
+
 fn validate_reference(reference: String) -> Result<String, AppError> {
     let reference = reference.trim().to_string();
     if reference.is_empty() || reference.len() > 512 || reference.chars().any(char::is_control) {
@@ -137,6 +154,16 @@ fn validate_repository_path(path: String) -> Result<String, AppError> {
     {
         return Err(AppError::Validation(
             "repository path is invalid".to_string(),
+        ));
+    }
+    Ok(path)
+}
+
+fn validate_repository_file_path(path: String) -> Result<String, AppError> {
+    let path = validate_repository_path(path)?;
+    if path.is_empty() {
+        return Err(AppError::Validation(
+            "repository file path is required".to_string(),
         ));
     }
     Ok(path)
@@ -178,5 +205,14 @@ mod tests {
             "feature/code-workspace"
         );
         assert!(validate_reference("main\nother".to_string()).is_err());
+    }
+
+    #[test]
+    fn repository_file_path_rejects_the_repository_root() {
+        assert!(validate_repository_file_path("/".to_string()).is_err());
+        assert_eq!(
+            validate_repository_file_path("/src/main.rs/".to_string()).expect("file path"),
+            "src/main.rs"
+        );
     }
 }
