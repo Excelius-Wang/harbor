@@ -2,21 +2,24 @@
 
 ## Goal
 
-Replace manual GitHub token entry with browser-based GitHub OAuth: Harbor opens the system browser,
-accepts a verified deep-link callback, stores OAuth credentials in the operating-system credential
-store, and shows the connected account without exposing credentials to React.
+Make GitHub sign-in usable without startup Keychain prompts: an unconfigured build must explain its
+state without touching credentials, and configured builds must defer Keychain access until GitHub
+data or an explicit credential action actually needs it.
 
 ## Current state
 
-The browser OAuth replacement is implemented. The dialog opens GitHub in the system browser,
-Tauri accepts the `harbor://oauth/github/callback` deep link, Rust validates state and PKCE before
-exchanging the code, and Keyring stores OAuth credentials. The connected state shows only GitHub
-account metadata. Manual token entry and its command have been removed. A distributable GitHub App
-client ID and secret remain external build configuration and must not be committed.
+The startup and dialog status probes are removed. React caches only account name and avatar in
+localStorage, while Rust returns disconnected before reaching the credential-store interface when
+OAuth is unconfigured. The login dialog checks a non-secret availability command and shows a clear
+disabled state instead of the raw backend error. The current machine still has neither
+`HARBOR_GITHUB_CLIENT_ID` nor `HARBOR_GITHUB_CLIENT_SECRET`, so real browser sign-in requires a
+one-time external GitHub App registration and a rebuilt Harbor binary.
 
 ## Next action
 
-None — complete.
+Blocked — Harbor has no registered GitHub App credentials; when the user authorizes external app
+creation, register the app, configure the callback, set the two build variables, and run the real
+installed-app login flow.
 
 ## Verification
 
@@ -29,11 +32,12 @@ git diff --check
 pnpm tauri:dev
 ```
 
-Result: `pnpm check`, Rust formatting, 24 local Rust tests, `cargo check`, and `git diff --check`
-pass; one external DeepWiki test remains ignored by design. Playwright verified the disconnected,
-waiting-for-browser, and connected-account dialog states. The OAuth tests cover PKCE and state,
-callback expiry and one-time completion, token refresh, identity validation before persistence,
-restored sessions, and disconnect cleanup.
+Result: `pnpm check`, Rust formatting, 25 local Rust tests, `cargo check`, and `git diff --check`
+pass; one external DeepWiki test remains ignored by design. The regression test reproduces two
+credential-store reads before the fix and zero after it when OAuth is unconfigured. Playwright
+confirms startup plus opening the login dialog makes zero `github_connection_status` calls and one
+non-secret availability call. Real GitHub authorization remains unverified until the external app
+credentials exist.
 
 ## Decisions
 

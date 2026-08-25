@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { invoke, isTauri } from "@tauri-apps/api/core";
+import { useCallback, useState } from "react";
+import { isTauri } from "@tauri-apps/api/core";
 import {
   ArrowLeft,
   ArrowRight,
@@ -27,10 +27,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  disconnectedGitHubConnection,
-  GitHubConnectionDialog,
+  cacheGitHubConnection,
+  readCachedGitHubConnection,
   type GitHubConnection,
-} from "@/features/github/github-connection-dialog";
+} from "@/features/github/github-connection";
+import { GitHubConnectionDialog } from "@/features/github/github-connection-dialog";
 import { createWindow, openSettingsWindow } from "@/lib/window";
 
 type MainTitleBarProps = {
@@ -41,19 +42,13 @@ export function MainTitleBar({ onOpenCommand }: MainTitleBarProps) {
   const { theme, setTheme } = useTheme();
   const { t, i18n } = useTranslation();
   const [githubDialogOpen, setGithubDialogOpen] = useState(false);
-  const [githubConnection, setGithubConnection] = useState<GitHubConnection>(
-    disconnectedGitHubConnection
+  const [githubConnection, setGithubConnection] = useState<GitHubConnection>(() =>
+    readCachedGitHubConnection()
   );
 
   const handleConnectionChange = useCallback((connection: GitHubConnection) => {
+    cacheGitHubConnection(connection);
     setGithubConnection(connection);
-  }, []);
-
-  useEffect(() => {
-    if (!isTauri()) return;
-    void invoke<GitHubConnection>("github_connection_status")
-      .then(setGithubConnection)
-      .catch(() => setGithubConnection(disconnectedGitHubConnection));
   }, []);
 
   const handleToggleTheme = () => {

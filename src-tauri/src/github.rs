@@ -25,6 +25,12 @@ pub struct GitHubConnection {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitHubLoginAvailability {
+    pub configured: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(tag = "status", rename_all = "camelCase")]
 pub enum GitHubAuthEvent {
     Connected { connection: GitHubConnection },
@@ -223,6 +229,12 @@ impl GitHubService {
             .begin_login()
     }
 
+    pub fn login_availability(&self) -> GitHubLoginAvailability {
+        GitHubLoginAvailability {
+            configured: self.oauth.is_some(),
+        }
+    }
+
     pub async fn complete_login(&self, callback_url: &str) -> Result<GitHubConnection, AppError> {
         let oauth = self.oauth.as_ref().ok_or_else(|| {
             AppError::GitHubAuthentication(
@@ -263,6 +275,9 @@ impl GitHubService {
             .clone()
         {
             return Ok(GitHubConnection::connected(identity));
+        }
+        if self.oauth.is_none() {
+            return Ok(GitHubConnection::disconnected());
         }
 
         let token = match self.load_access_token().await {
@@ -334,6 +349,9 @@ impl GitHubService {
     }
 
     async fn load_access_token(&self) -> Result<String, AppError> {
+        if self.oauth.is_none() {
+            return Err(AppError::GitHubNotConnected);
+        }
         let cached = self
             .session_credentials
             .read()
@@ -747,7 +765,10 @@ impl CredentialStore for SystemCredentialStore {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Mutex;
+    use std::sync::{
+        atomic::{AtomicUsize, Ordering},
+        Mutex,
+    };
 
     use oauth2::PkceCodeVerifier;
 
@@ -881,10 +902,12 @@ mod tests {
     #[derive(Default)]
     struct MemoryCredentialStore {
         credentials: Mutex<Option<GitHubOAuthCredentials>>,
+        load_count: AtomicUsize,
     }
 
     impl CredentialStore for MemoryCredentialStore {
         fn load_github_credentials(&self) -> Result<Option<GitHubOAuthCredentials>, AppError> {
+            self.load_count.fetch_add(1, Ordering::Relaxed);
             Ok(self.credentials.lock().expect("credentials lock").clone())
         }
 
@@ -1014,7 +1037,11 @@ mod tests {
         credentials
             .save_github_credentials(&oauth_credentials())
             .expect("seed credentials");
-        let service = GitHubService::new(Arc::new(FakeGitHubClient), credentials, None);
+        let service = GitHubService::new(
+            Arc::new(FakeGitHubClient),
+            credentials,
+            Some(oauth_session("github-user-access-token")),
+        );
 
         let connection = service.status().await.expect("status");
 
@@ -1052,7 +1079,11 @@ mod tests {
         credentials
             .save_github_credentials(&oauth_credentials())
             .expect("seed credentials");
-        let service = GitHubService::new(Arc::new(FakeGitHubClient), credentials, None);
+        let service = GitHubService::new(
+            Arc::new(FakeGitHubClient),
+            credentials,
+            Some(oauth_session("github-user-access-token")),
+        );
 
         let repositories = service.repositories().await.expect("repositories");
         let issues = service
@@ -1078,16 +1109,33 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn data_queries_require_a_saved_connection() {
+    async fn unconfigured_service_never_loads_credentials() {
+        let credentials = Arc::new(MemoryCredentialStore::default());
+        let service = GitHubService::new(Arc::new(FakeGitHubClient), credentials.clone(), None);
+
+        let status = service.status().await.expect("status");
+        let result = service.repositories().await;
+
+        assert!(!service.login_availability().configured);
+        assert_eq!(status, GitHubConnection::disconnected());
+        assert!(matches!(result, Err(AppError::GitHubNotConnected)));
+        assert_eq!(credentials.load_count.load(Ordering::Relaxed), 0);
+    }
+
+    #[tokio::test]
+    async fn configured_data_query_loads_credentials_lazily() {
+        let credentials = Arc::new(MemoryCredentialStore::default());
         let service = GitHubService::new(
             Arc::new(FakeGitHubClient),
-            Arc::new(MemoryCredentialStore::default()),
-            None,
+            credentials.clone(),
+            Some(oauth_session("github-user-access-token")),
         );
 
+        assert_eq!(credentials.load_count.load(Ordering::Relaxed), 0);
         let result = service.repositories().await;
 
         assert!(matches!(result, Err(AppError::GitHubNotConnected)));
+        assert_eq!(credentials.load_count.load(Ordering::Relaxed), 1);
     }
 
     fn author_json(login: &str) -> serde_json::Value {

@@ -18,20 +18,15 @@ import {
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { parseIpcError } from "@/lib/ipc-error";
+import type { GitHubConnection, GitHubIdentity } from "./github-connection";
 import { resetGitHubQueryCache } from "./github-queries";
-
-export type GitHubIdentity = {
-  login: string;
-  avatarUrl?: string;
-};
-
-export type GitHubConnection = {
-  connected: boolean;
-  identity?: GitHubIdentity;
-};
 
 type GitHubLoginAttempt = {
   authorizationUrl: string;
+};
+
+type GitHubLoginAvailability = {
+  configured: boolean;
 };
 
 type GitHubAuthEvent =
@@ -44,8 +39,6 @@ type GitHubConnectionDialogProps = {
   connection: GitHubConnection;
   onConnectionChange: (connection: GitHubConnection) => void;
 };
-
-const disconnected: GitHubConnection = { connected: false };
 
 function AccountAvatar({ identity }: { identity: GitHubIdentity }) {
   const [imageFailed, setImageFailed] = useState(false);
@@ -95,17 +88,18 @@ export function GitHubConnectionDialog({
   const [checking, setChecking] = useState(false);
   const [waiting, setWaiting] = useState(false);
   const [error, setError] = useState("");
+  const [loginConfigured, setLoginConfigured] = useState<boolean | null>(() =>
+    isTauri() ? null : true
+  );
 
   useEffect(() => {
     if (!open || !isTauri()) return;
 
-    setChecking(true);
     setError("");
-    void invoke<GitHubConnection>("github_connection_status")
-      .then(onConnectionChange)
-      .catch((reason) => setError(parseIpcError(reason).message))
-      .finally(() => setChecking(false));
-  }, [open, onConnectionChange]);
+    void invoke<GitHubLoginAvailability>("github_login_availability")
+      .then(({ configured }) => setLoginConfigured(configured))
+      .catch(() => setLoginConfigured(false));
+  }, [open]);
 
   useEffect(() => {
     if (!isTauri()) return;
@@ -210,16 +204,24 @@ export function GitHubConnectionDialog({
           </div>
         ) : (
           <div className="flex flex-col gap-4">
-            <Alert>
+            <Alert variant={loginConfigured === false ? "destructive" : "default"}>
               {waiting ? <ExternalLink /> : <ShieldCheck />}
               <AlertTitle>
-                {t(waiting ? "workspace.github.waitingTitle" : "workspace.github.permissionsTitle")}
+                {t(
+                  loginConfigured === false
+                    ? "workspace.github.notConfiguredTitle"
+                    : waiting
+                      ? "workspace.github.waitingTitle"
+                      : "workspace.github.permissionsTitle"
+                )}
               </AlertTitle>
               <AlertDescription>
                 {t(
-                  waiting
-                    ? "workspace.github.waitingDescription"
-                    : "workspace.github.permissionsDescription"
+                  loginConfigured === false
+                    ? "workspace.github.notConfiguredDescription"
+                    : waiting
+                      ? "workspace.github.waitingDescription"
+                      : "workspace.github.permissionsDescription"
                 )}
               </AlertDescription>
             </Alert>
@@ -236,7 +238,7 @@ export function GitHubConnectionDialog({
               size="lg"
               className="w-full"
               onClick={() => void handleLogin()}
-              disabled={checking}
+              disabled={checking || loginConfigured !== true}
             >
               {checking ? (
                 <Spinner data-icon="inline-start" />
@@ -246,11 +248,13 @@ export function GitHubConnectionDialog({
                 <Github data-icon="inline-start" />
               )}
               {t(
-                checking
-                  ? "workspace.github.opening"
-                  : waiting
-                    ? "workspace.github.openAgain"
-                    : "workspace.github.login"
+                loginConfigured === false
+                  ? "workspace.github.notConfiguredAction"
+                  : checking
+                    ? "workspace.github.opening"
+                    : waiting
+                      ? "workspace.github.openAgain"
+                      : "workspace.github.login"
               )}
             </Button>
             <p className="text-muted-foreground text-center text-xs leading-relaxed">
@@ -262,5 +266,3 @@ export function GitHubConnectionDialog({
     </Dialog>
   );
 }
-
-export { disconnected as disconnectedGitHubConnection };

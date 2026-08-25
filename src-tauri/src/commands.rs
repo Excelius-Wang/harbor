@@ -5,7 +5,7 @@ use crate::{
     error::AppError,
     github::{
         GitHubCodeOverview, GitHubConnection, GitHubContentListing, GitHubIssuePage,
-        GitHubRepositoryPage,
+        GitHubLoginAvailability, GitHubRepositoryPage,
     },
     github_oauth::GitHubLoginAttempt,
     repository_context::{RepositoryContextAnswer, RepositoryRef},
@@ -14,6 +14,11 @@ use crate::{
 #[tauri::command]
 pub fn github_begin_login(state: State<'_, AppState>) -> Result<GitHubLoginAttempt, AppError> {
     state.github.begin_login()
+}
+
+#[tauri::command]
+pub fn github_login_availability(state: State<'_, AppState>) -> GitHubLoginAvailability {
+    state.github.login_availability()
 }
 
 #[tauri::command]

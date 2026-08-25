@@ -22,6 +22,11 @@ is reused for 60 seconds and inactive data is kept for five minutes. The cache i
 is cleared when the GitHub account connects or disconnects. Refresh controls bypass the freshness
 window and read from GitHub again.
 
+The frontend caches only the connected account name and avatar for display. It does not probe
+Keyring on startup or when opening the connection dialog. Rust loads OAuth credentials lazily when
+a GitHub data request or an explicit credential action needs them. Builds without GitHub App
+configuration return disconnected without opening Keyring.
+
 ## Manual verification
 
 1. Build Harbor with its GitHub App configuration, install the bundled desktop app, and sign in

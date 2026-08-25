@@ -78,6 +78,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             update_tray_menu,
             commands::github_begin_login,
+            commands::github_login_availability,
             commands::github_connection_status,
             commands::github_disconnect,
             commands::github_list_repositories,
