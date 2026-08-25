@@ -82,7 +82,6 @@ pub struct GitHubIssuePage {
 #[serde(rename_all = "camelCase")]
 pub struct GitHubBranch {
     pub name: String,
-    pub sha: String,
     pub protected: bool,
 }
 
@@ -92,8 +91,7 @@ pub struct GitHubCommitSummary {
     pub sha: String,
     pub short_sha: String,
     pub title: String,
-    pub author: String,
-    pub authored_at: Option<String>,
+    pub author: Option<String>,
     pub url: String,
 }
 
@@ -111,7 +109,6 @@ pub struct GitHubReadme {
 pub struct GitHubCodeOverview {
     pub reference: String,
     pub branches: Vec<GitHubBranch>,
-    pub branches_have_more: bool,
     pub commits: Vec<GitHubCommitSummary>,
     pub commits_have_more: bool,
     pub readme: Option<GitHubReadme>,
@@ -122,11 +119,9 @@ pub struct GitHubCodeOverview {
 pub struct GitHubContentEntry {
     pub name: String,
     pub path: String,
-    pub sha: String,
     pub kind: String,
     pub size: i64,
     pub url: Option<String>,
-    pub download_url: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -401,7 +396,6 @@ impl GitHubClient for OctocrabGitHubClient {
                 .into_iter()
                 .map(branch_from_octocrab)
                 .collect(),
-            branches_have_more: branches.next.is_some(),
             commits: commits
                 .items
                 .into_iter()
@@ -486,7 +480,6 @@ fn issue_page_from_octocrab(
 fn branch_from_octocrab(branch: octocrab::models::repos::Branch) -> GitHubBranch {
     GitHubBranch {
         name: branch.name,
-        sha: branch.commit.sha,
         protected: branch.protected,
     }
 }
@@ -497,21 +490,7 @@ fn commit_from_octocrab(commit: octocrab::models::repos::RepoCommit) -> GitHubCo
         .author
         .as_ref()
         .map(|author| author.name.clone())
-        .or_else(|| commit.author.as_ref().map(|author| author.login.clone()))
-        .unwrap_or_else(|| "Unknown".to_string());
-    let authored_at = commit
-        .commit
-        .author
-        .as_ref()
-        .and_then(|author| author.date)
-        .or_else(|| {
-            commit
-                .commit
-                .committer
-                .as_ref()
-                .and_then(|committer| committer.date)
-        })
-        .map(|date| date.to_rfc3339());
+        .or_else(|| commit.author.as_ref().map(|author| author.login.clone()));
     let title = commit
         .commit
         .message
@@ -526,7 +505,6 @@ fn commit_from_octocrab(commit: octocrab::models::repos::RepoCommit) -> GitHubCo
         short_sha,
         title,
         author,
-        authored_at,
         url: commit.html_url,
     }
 }
@@ -566,11 +544,9 @@ fn content_listing_from_octocrab(
         .map(|content| GitHubContentEntry {
             name: content.name,
             path: content.path,
-            sha: content.sha,
             kind: content.r#type,
             size: content.size,
             url: content.html_url,
-            download_url: content.download_url,
         })
         .collect::<Vec<_>>();
     entries.sort_by(|left, right| {
@@ -795,16 +771,13 @@ mod tests {
                 reference: reference.to_string(),
                 branches: vec![GitHubBranch {
                     name: "main".to_string(),
-                    sha: "abc1234".to_string(),
                     protected: true,
                 }],
-                branches_have_more: false,
                 commits: vec![GitHubCommitSummary {
                     sha: "abc1234".to_string(),
                     short_sha: "abc1234".to_string(),
                     title: "Ship the workspace".to_string(),
-                    author: "Octo Cat".to_string(),
-                    authored_at: Some("2026-08-25T08:00:00+00:00".to_string()),
+                    author: Some("Octo Cat".to_string()),
                     url: "https://github.com/octocat/hello-world/commit/abc1234".to_string(),
                 }],
                 commits_have_more: false,
@@ -831,11 +804,9 @@ mod tests {
                 entries: vec![GitHubContentEntry {
                     name: "src".to_string(),
                     path: "src".to_string(),
-                    sha: "def5678".to_string(),
                     kind: "dir".to_string(),
                     size: 0,
                     url: Some("https://github.com/octocat/hello-world/tree/main/src".to_string()),
-                    download_url: None,
                 }],
             })
         }

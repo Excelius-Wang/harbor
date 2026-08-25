@@ -71,6 +71,7 @@
       "emptyDirectory": "这个目录是空的。",
       "recentCommits": "最近提交",
       "latestCommitsOnly": "显示最近 8 条",
+      "unknownAuthor": "未知作者",
       "viewSource": "查看原文",
       "readmeImage": "README 图片",
       "pullRequestsNext": "下一步接入拉取请求工作台",

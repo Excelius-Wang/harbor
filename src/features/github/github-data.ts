@@ -47,7 +47,6 @@ export type GitHubIssuePage = {
 
 export type GitHubBranch = {
   name: string;
-  sha: string;
   protected: boolean;
 };
 
@@ -55,8 +54,7 @@ export type GitHubCommitSummary = {
   sha: string;
   shortSha: string;
   title: string;
-  author: string;
-  authoredAt?: string;
+  author?: string;
   url: string;
 };
 
@@ -70,7 +68,6 @@ export type GitHubReadme = {
 export type GitHubCodeOverview = {
   reference: string;
   branches: GitHubBranch[];
-  branchesHaveMore: boolean;
   commits: GitHubCommitSummary[];
   commitsHaveMore: boolean;
   readme?: GitHubReadme;
@@ -79,11 +76,9 @@ export type GitHubCodeOverview = {
 export type GitHubContentEntry = {
   name: string;
   path: string;
-  sha: string;
   kind: "dir" | "file" | "symlink" | "submodule" | string;
   size: number;
   url?: string;
-  downloadUrl?: string;
 };
 
 export type GitHubContentListing = {

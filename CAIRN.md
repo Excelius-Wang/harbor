@@ -16,8 +16,7 @@ libraries (`react-markdown` and `remark-gfm`).
 
 ## Next action
 
-Implement the Pull Requests vertical slice next: list open PRs, open a PR summary, and show checks
-before attempting an in-app diff viewer.
+None — complete.
 
 ## Verification
 

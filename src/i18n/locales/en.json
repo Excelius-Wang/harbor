@@ -71,6 +71,7 @@
       "emptyDirectory": "This directory is empty.",
       "recentCommits": "Recent commits",
       "latestCommitsOnly": "latest 8 commits",
+      "unknownAuthor": "Unknown author",
       "viewSource": "View source",
       "readmeImage": "README image",
       "pullRequestsNext": "Pull request workspace is next",

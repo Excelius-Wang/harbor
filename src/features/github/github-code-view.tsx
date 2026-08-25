@@ -334,7 +334,7 @@ export function GitHubCodeView({ repository }: { repository: GitHubRepository })
                     {latestCommit.title}
                   </span>
                   <span className="text-muted-foreground hidden text-[10px] sm:inline">
-                    {latestCommit.author}
+                    {latestCommit.author ?? t("workspace.repositories.unknownAuthor")}
                   </span>
                   <code className="text-primary/80 text-[10px]">{latestCommit.shortSha}</code>
                   <ExternalLink className="text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
@@ -382,7 +382,7 @@ export function GitHubCodeView({ repository }: { repository: GitHubRepository })
                     >
                       <span className="min-w-0 flex-1 truncate text-[11px]">{commit.title}</span>
                       <span className="text-muted-foreground hidden text-[10px] sm:inline">
-                        {commit.author}
+                        {commit.author ?? t("workspace.repositories.unknownAuthor")}
                       </span>
                       <code className="text-primary/75 text-[10px]">{commit.shortSha}</code>
                     </button>
