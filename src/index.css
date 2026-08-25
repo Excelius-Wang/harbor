@@ -193,6 +193,149 @@ kbd {
   line-height: 1rem;
 }
 
+.harbor-markdown {
+  color: color-mix(in oklch, var(--foreground) 90%, transparent);
+  font-size: 0.8125rem;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+}
+
+.harbor-markdown > :first-child {
+  margin-top: 0;
+}
+
+.harbor-markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.harbor-markdown h1,
+.harbor-markdown h2,
+.harbor-markdown h3,
+.harbor-markdown h4 {
+  margin: 1.5em 0 0.65em;
+  color: var(--foreground);
+  font-weight: 650;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+
+.harbor-markdown h1 {
+  border-bottom: 1px solid color-mix(in oklch, var(--foreground) 9%, transparent);
+  padding-bottom: 0.4em;
+  font-size: 1.55rem;
+}
+
+.harbor-markdown h2 {
+  border-bottom: 1px solid color-mix(in oklch, var(--foreground) 7%, transparent);
+  padding-bottom: 0.35em;
+  font-size: 1.2rem;
+}
+
+.harbor-markdown h3 {
+  font-size: 1rem;
+}
+
+.harbor-markdown p,
+.harbor-markdown ul,
+.harbor-markdown ol,
+.harbor-markdown blockquote,
+.harbor-markdown pre,
+.harbor-markdown table {
+  margin: 0.8em 0;
+}
+
+.harbor-markdown ul,
+.harbor-markdown ol {
+  padding-left: 1.4rem;
+}
+
+.harbor-markdown ul {
+  list-style: disc;
+}
+
+.harbor-markdown ol {
+  list-style: decimal;
+}
+
+.harbor-markdown button,
+.harbor-markdown a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklch, var(--primary) 35%, transparent);
+  text-underline-offset: 0.18em;
+}
+
+.harbor-markdown code {
+  border: 1px solid color-mix(in oklch, var(--foreground) 7%, transparent);
+  border-radius: 0.3rem;
+  background: color-mix(in oklch, var(--foreground) 5%, transparent);
+  padding: 0.12em 0.35em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.84em;
+}
+
+.harbor-markdown pre {
+  overflow-x: auto;
+  border: 1px solid color-mix(in oklch, var(--foreground) 7%, transparent);
+  border-radius: 0.5rem;
+  background: color-mix(in oklch, var(--background) 78%, black);
+  padding: 0.9rem 1rem;
+}
+
+.harbor-markdown pre code {
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.harbor-markdown blockquote {
+  border-left: 0.18rem solid color-mix(in oklch, var(--primary) 55%, transparent);
+  padding-left: 0.9rem;
+  color: var(--muted-foreground);
+}
+
+.harbor-markdown table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+
+.harbor-markdown th,
+.harbor-markdown td {
+  border: 1px solid color-mix(in oklch, var(--foreground) 10%, transparent);
+  padding: 0.4rem 0.65rem;
+  text-align: left;
+}
+
+.harbor-markdown th {
+  background: color-mix(in oklch, var(--foreground) 4%, transparent);
+}
+
+.harbor-markdown hr {
+  margin: 1.4rem 0;
+  border-color: color-mix(in oklch, var(--foreground) 9%, transparent);
+}
+
+.harbor-markdown-image {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 100%;
+  border: 1px solid color-mix(in oklch, var(--foreground) 8%, transparent);
+  border-radius: 0.4rem;
+  background: color-mix(in oklch, var(--foreground) 3%, transparent);
+  padding: 0.35rem 0.55rem;
+  color: var(--muted-foreground) !important;
+  font-size: 0.7rem;
+  text-decoration: none !important;
+}
+
+.harbor-markdown-image svg {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
 /* Global scrollbar styles with theme support */
 ::-webkit-scrollbar {
   width: 0.5rem;

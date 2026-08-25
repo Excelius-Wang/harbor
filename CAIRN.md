@@ -2,19 +2,22 @@
 
 ## Goal
 
-Connect Harbor's first real GitHub data workflow: after authentication, the user can browse
-their repositories, select one, and inspect its real open Issues inside the desktop app.
+Build Harbor's first GitHub-style repository workspace: a selected repository has Code, Issues,
+Pull Requests, and Actions navigation, with real Code data for branches, files, README, and
+recent commits.
 
 ## Current state
 
-The previous foundation is complete at `07c7ae1`. The current HEAD contains the verified
-real repository and open-Issue read path, focused Octocrab mapping tests, structured IPC errors,
-and the repository workspace with Issue details. Both standards and spec re-reviews report no
-remaining findings.
+The first GitHub-style repository workspace is implemented. Code reads real branches, repository
+contents, the root README, and recent commits through Octocrab; Issues retains its real open and
+unassigned views. Pull Requests and Actions are visible with honest GitHub fallbacks. The browser
+view was split into repository, Code, and Issue modules, and README rendering uses maintained MIT
+libraries (`react-markdown` and `remark-gfm`).
 
 ## Next action
 
-None — complete
+Implement the Pull Requests vertical slice next: list open PRs, open a PR summary, and show checks
+before attempting an in-app diff viewer.
 
 ## Verification
 
@@ -27,15 +30,14 @@ git diff --check
 pnpm tauri:dev
 ```
 
-Success: The connected account can load real repositories and real open Issues in Harbor;
-disconnected and empty states are clear; `pnpm check` passes; 14 Rust tests pass with one live
-DeepWiki test ignored by default; UI interaction checks and native startup pass.
+Result: `pnpm check`, Rust formatting, all local Rust tests (19 passed, 1 external-service test
+ignored), `cargo check`, and `git diff --check` pass. A Playwright IPC simulation verified Code,
+folder navigation and breadcrumbs, README GFM rendering, Issues, and the Issue detail sheet. The
+native development process also compiled and hot-reloaded the new Tauri commands.
 
 ## Decisions
 
-- Keep the first slice read-only. Assignment, comments, background monitoring, and automatic
-  actions remain out of scope until the data path is stable.
-- Reuse Octocrab and GitHub's official APIs behind `GitHubClient`; do not expose credentials to
-  the frontend.
-- Browser preview keeps sample or desktop-only states because authenticated API calls belong in
-  the Tauri backend.
+- Keep Code read-only. Pull Requests and Actions get honest placeholders in this slice.
+- Reuse Octocrab for GitHub API access and a maintained Markdown renderer for README content.
+- Keep repository navigation within the existing Harbor visual system instead of copying GitHub
+  styling pixel for pixel.

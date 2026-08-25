@@ -1,6 +1,7 @@
 use std::sync::{Arc, RwLock};
 
 use async_trait::async_trait;
+use base64::Engine;
 use keyring::{Entry, Error as KeyringError};
 use serde::Serialize;
 
@@ -33,6 +34,7 @@ pub struct GitHubRepository {
     pub stars: u32,
     pub forks: u32,
     pub open_issues: u32,
+    pub default_branch: String,
     pub is_private: bool,
     pub is_fork: bool,
     pub is_archived: bool,
@@ -76,6 +78,65 @@ pub struct GitHubIssuePage {
     pub has_more: bool,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitHubBranch {
+    pub name: String,
+    pub sha: String,
+    pub protected: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitHubCommitSummary {
+    pub sha: String,
+    pub short_sha: String,
+    pub title: String,
+    pub author: String,
+    pub authored_at: Option<String>,
+    pub url: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitHubReadme {
+    pub name: String,
+    pub path: String,
+    pub content: String,
+    pub url: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitHubCodeOverview {
+    pub reference: String,
+    pub branches: Vec<GitHubBranch>,
+    pub branches_have_more: bool,
+    pub commits: Vec<GitHubCommitSummary>,
+    pub commits_have_more: bool,
+    pub readme: Option<GitHubReadme>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitHubContentEntry {
+    pub name: String,
+    pub path: String,
+    pub sha: String,
+    pub kind: String,
+    pub size: i64,
+    pub url: Option<String>,
+    pub download_url: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitHubContentListing {
+    pub reference: String,
+    pub path: String,
+    pub entries: Vec<GitHubContentEntry>,
+}
+
 impl GitHubConnection {
     fn disconnected() -> Self {
         Self {
@@ -102,6 +163,21 @@ pub trait GitHubClient: Send + Sync {
         owner: &str,
         repository: &str,
     ) -> Result<GitHubIssuePage, AppError>;
+    async fn repository_code_overview(
+        &self,
+        token: &str,
+        owner: &str,
+        repository: &str,
+        reference: &str,
+    ) -> Result<GitHubCodeOverview, AppError>;
+    async fn repository_contents(
+        &self,
+        token: &str,
+        owner: &str,
+        repository: &str,
+        reference: &str,
+        path: &str,
+    ) -> Result<GitHubContentListing, AppError>;
 }
 
 pub trait CredentialStore: Send + Sync {
@@ -202,6 +278,31 @@ impl GitHubService {
         self.client.list_issues(&token, owner, repository).await
     }
 
+    pub async fn code_overview(
+        &self,
+        owner: &str,
+        repository: &str,
+        reference: &str,
+    ) -> Result<GitHubCodeOverview, AppError> {
+        let token = self.load_token().await?;
+        self.client
+            .repository_code_overview(&token, owner, repository, reference)
+            .await
+    }
+
+    pub async fn contents(
+        &self,
+        owner: &str,
+        repository: &str,
+        reference: &str,
+        path: &str,
+    ) -> Result<GitHubContentListing, AppError> {
+        let token = self.load_token().await?;
+        self.client
+            .repository_contents(&token, owner, repository, reference, path)
+            .await
+    }
+
     async fn load_token(&self) -> Result<String, AppError> {
         let credentials = Arc::clone(&self.credentials);
         tokio::task::spawn_blocking(move || credentials.load_github_token())
@@ -266,6 +367,86 @@ impl GitHubClient for OctocrabGitHubClient {
             .map_err(|error| AppError::GitHub(error.to_string()))?;
         Ok(issue_page_from_octocrab(page.items, page.next.is_some()))
     }
+
+    async fn repository_code_overview(
+        &self,
+        token: &str,
+        owner: &str,
+        repository: &str,
+        reference: &str,
+    ) -> Result<GitHubCodeOverview, AppError> {
+        let client = authenticated_client(token)?;
+        let repository_handler = client.repos(owner, repository);
+        let (branches, commits, readme) = tokio::join!(
+            repository_handler.list_branches().per_page(100).send(),
+            repository_handler
+                .list_commits()
+                .branch(reference)
+                .per_page(8)
+                .send(),
+            repository_handler.get_readme().r#ref(reference).send(),
+        );
+        let branches = branches.map_err(github_error)?;
+        let commits = commits.map_err(github_error)?;
+        let readme = match readme {
+            Ok(readme) => Some(readme_from_octocrab(readme)?),
+            Err(error) if is_not_found(&error) => None,
+            Err(error) => return Err(github_error(error)),
+        };
+
+        Ok(GitHubCodeOverview {
+            reference: reference.to_string(),
+            branches: branches
+                .items
+                .into_iter()
+                .map(branch_from_octocrab)
+                .collect(),
+            branches_have_more: branches.next.is_some(),
+            commits: commits
+                .items
+                .into_iter()
+                .map(commit_from_octocrab)
+                .collect(),
+            commits_have_more: commits.next.is_some(),
+            readme,
+        })
+    }
+
+    async fn repository_contents(
+        &self,
+        token: &str,
+        owner: &str,
+        repository: &str,
+        reference: &str,
+        path: &str,
+    ) -> Result<GitHubContentListing, AppError> {
+        let client = authenticated_client(token)?;
+        let contents = client
+            .repos(owner, repository)
+            .get_content()
+            .path(path)
+            .r#ref(reference)
+            .send()
+            .await
+            .map_err(github_error)?;
+
+        Ok(content_listing_from_octocrab(
+            reference,
+            path,
+            contents.items,
+        ))
+    }
+}
+
+fn github_error(error: octocrab::Error) -> AppError {
+    AppError::GitHub(error.to_string())
+}
+
+fn is_not_found(error: &octocrab::Error) -> bool {
+    matches!(
+        error,
+        octocrab::Error::GitHub { source, .. } if source.status_code.as_u16() == 404
+    )
 }
 
 fn authenticated_client(token: &str) -> Result<octocrab::Octocrab, AppError> {
@@ -299,6 +480,111 @@ fn issue_page_from_octocrab(
             .map(issue_from_octocrab)
             .collect(),
         has_more,
+    }
+}
+
+fn branch_from_octocrab(branch: octocrab::models::repos::Branch) -> GitHubBranch {
+    GitHubBranch {
+        name: branch.name,
+        sha: branch.commit.sha,
+        protected: branch.protected,
+    }
+}
+
+fn commit_from_octocrab(commit: octocrab::models::repos::RepoCommit) -> GitHubCommitSummary {
+    let author = commit
+        .commit
+        .author
+        .as_ref()
+        .map(|author| author.name.clone())
+        .or_else(|| commit.author.as_ref().map(|author| author.login.clone()))
+        .unwrap_or_else(|| "Unknown".to_string());
+    let authored_at = commit
+        .commit
+        .author
+        .as_ref()
+        .and_then(|author| author.date)
+        .or_else(|| {
+            commit
+                .commit
+                .committer
+                .as_ref()
+                .and_then(|committer| committer.date)
+        })
+        .map(|date| date.to_rfc3339());
+    let title = commit
+        .commit
+        .message
+        .lines()
+        .next()
+        .unwrap_or_default()
+        .to_string();
+    let short_sha = commit.sha.chars().take(7).collect();
+
+    GitHubCommitSummary {
+        sha: commit.sha,
+        short_sha,
+        title,
+        author,
+        authored_at,
+        url: commit.html_url,
+    }
+}
+
+fn readme_from_octocrab(
+    content: octocrab::models::repos::Content,
+) -> Result<GitHubReadme, AppError> {
+    let encoded = content
+        .content
+        .as_deref()
+        .ok_or_else(|| AppError::GitHub("GitHub did not return README content".to_string()))?;
+    let compact = encoded
+        .bytes()
+        .filter(|byte| !byte.is_ascii_whitespace())
+        .collect::<Vec<_>>();
+    let decoded = base64::prelude::BASE64_STANDARD
+        .decode(compact)
+        .map_err(|error| {
+            AppError::GitHub(format!("README content is not valid base64: {error}"))
+        })?;
+
+    Ok(GitHubReadme {
+        name: content.name,
+        path: content.path,
+        content: String::from_utf8_lossy(&decoded).into_owned(),
+        url: content.html_url.unwrap_or(content.url),
+    })
+}
+
+fn content_listing_from_octocrab(
+    reference: &str,
+    path: &str,
+    contents: Vec<octocrab::models::repos::Content>,
+) -> GitHubContentListing {
+    let mut entries = contents
+        .into_iter()
+        .map(|content| GitHubContentEntry {
+            name: content.name,
+            path: content.path,
+            sha: content.sha,
+            kind: content.r#type,
+            size: content.size,
+            url: content.html_url,
+            download_url: content.download_url,
+        })
+        .collect::<Vec<_>>();
+    entries.sort_by(|left, right| {
+        let left_is_directory = left.kind == "dir";
+        let right_is_directory = right.kind == "dir";
+        right_is_directory
+            .cmp(&left_is_directory)
+            .then_with(|| left.name.to_lowercase().cmp(&right.name.to_lowercase()))
+    });
+
+    GitHubContentListing {
+        reference: reference.to_string(),
+        path: path.to_string(),
+        entries,
     }
 }
 
@@ -337,6 +623,9 @@ fn repository_from_octocrab(repository: octocrab::models::Repository) -> Option<
         stars: repository.stargazers_count.unwrap_or_default(),
         forks: repository.forks_count.unwrap_or_default(),
         open_issues: repository.open_issues_count.unwrap_or_default(),
+        default_branch: repository
+            .default_branch
+            .unwrap_or_else(|| "main".to_string()),
         is_private: repository.private.unwrap_or_default(),
         is_fork: repository.fork.unwrap_or_default(),
         is_archived: repository.archived.unwrap_or_default(),
@@ -450,6 +739,7 @@ mod tests {
                     stars: 42,
                     forks: 3,
                     open_issues: 1,
+                    default_branch: "main".to_string(),
                     is_private: false,
                     is_fork: false,
                     is_archived: false,
@@ -486,6 +776,67 @@ mod tests {
                     updated_at: "2026-08-25T08:00:00+00:00".to_string(),
                 }],
                 has_more: false,
+            })
+        }
+
+        async fn repository_code_overview(
+            &self,
+            token: &str,
+            owner: &str,
+            repository: &str,
+            reference: &str,
+        ) -> Result<GitHubCodeOverview, AppError> {
+            assert_eq!(token, "github_pat_valid-token");
+            assert_eq!(
+                (owner, repository, reference),
+                ("octocat", "hello-world", "main")
+            );
+            Ok(GitHubCodeOverview {
+                reference: reference.to_string(),
+                branches: vec![GitHubBranch {
+                    name: "main".to_string(),
+                    sha: "abc1234".to_string(),
+                    protected: true,
+                }],
+                branches_have_more: false,
+                commits: vec![GitHubCommitSummary {
+                    sha: "abc1234".to_string(),
+                    short_sha: "abc1234".to_string(),
+                    title: "Ship the workspace".to_string(),
+                    author: "Octo Cat".to_string(),
+                    authored_at: Some("2026-08-25T08:00:00+00:00".to_string()),
+                    url: "https://github.com/octocat/hello-world/commit/abc1234".to_string(),
+                }],
+                commits_have_more: false,
+                readme: None,
+            })
+        }
+
+        async fn repository_contents(
+            &self,
+            token: &str,
+            owner: &str,
+            repository: &str,
+            reference: &str,
+            path: &str,
+        ) -> Result<GitHubContentListing, AppError> {
+            assert_eq!(token, "github_pat_valid-token");
+            assert_eq!(
+                (owner, repository, reference, path),
+                ("octocat", "hello-world", "main", "")
+            );
+            Ok(GitHubContentListing {
+                reference: reference.to_string(),
+                path: path.to_string(),
+                entries: vec![GitHubContentEntry {
+                    name: "src".to_string(),
+                    path: "src".to_string(),
+                    sha: "def5678".to_string(),
+                    kind: "dir".to_string(),
+                    size: 0,
+                    url: Some("https://github.com/octocat/hello-world/tree/main/src".to_string()),
+                    download_url: None,
+                }],
             })
         }
     }
@@ -586,7 +937,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn repositories_and_issues_use_the_saved_connection() {
+    async fn data_queries_use_the_saved_connection() {
         let credentials = Arc::new(MemoryCredentialStore::default());
         credentials
             .save_github_token("github_pat_valid-token")
@@ -598,12 +949,22 @@ mod tests {
             .issues("octocat", "hello-world")
             .await
             .expect("issues");
+        let overview = service
+            .code_overview("octocat", "hello-world", "main")
+            .await
+            .expect("code overview");
+        let contents = service
+            .contents("octocat", "hello-world", "main", "")
+            .await
+            .expect("contents");
 
         assert_eq!(
             repositories.repositories[0].full_name,
             "octocat/hello-world"
         );
         assert_eq!(issues.issues[0].number, 7);
+        assert_eq!(overview.commits[0].short_sha, "abc1234");
+        assert_eq!(contents.entries[0].path, "src");
     }
 
     #[tokio::test]
@@ -697,6 +1058,7 @@ mod tests {
             "stargazers_count": 99,
             "open_issues_count": 4,
             "archived": false,
+            "default_branch": "trunk",
             "updated_at": "2026-08-25T08:00:00Z"
         }))
         .expect("repository fixture");
@@ -708,7 +1070,55 @@ mod tests {
         assert_eq!(page.repositories[0].language.as_deref(), Some("Rust"));
         assert_eq!(page.repositories[0].stars, 99);
         assert_eq!(page.repositories[0].open_issues, 4);
+        assert_eq!(page.repositories[0].default_branch, "trunk");
         assert!(page.repositories[0].is_fork);
+    }
+
+    fn content_json(name: &str, path: &str, kind: &str) -> serde_json::Value {
+        serde_json::json!({
+            "name": name,
+            "path": path,
+            "sha": "abc123",
+            "encoding": null,
+            "content": null,
+            "size": 10,
+            "url": format!("https://api.github.com/repos/octocat/hello-world/contents/{path}"),
+            "html_url": format!("https://github.com/octocat/hello-world/blob/main/{path}"),
+            "git_url": null,
+            "download_url": null,
+            "type": kind,
+            "_links": {
+                "git": null,
+                "html": null,
+                "self": format!("https://api.github.com/repos/octocat/hello-world/contents/{path}")
+            },
+            "license": null
+        })
+    }
+
+    #[test]
+    fn content_listing_places_directories_before_files() {
+        let file = serde_json::from_value(content_json("README.md", "README.md", "file"))
+            .expect("file fixture");
+        let directory =
+            serde_json::from_value(content_json("src", "src", "dir")).expect("directory fixture");
+
+        let listing = content_listing_from_octocrab("main", "", vec![file, directory]);
+
+        assert_eq!(listing.entries[0].name, "src");
+        assert_eq!(listing.entries[1].name, "README.md");
+    }
+
+    #[test]
+    fn readme_content_is_decoded_without_panicking() {
+        let mut readme = content_json("README.md", "README.md", "file");
+        readme["encoding"] = serde_json::json!("base64");
+        readme["content"] = serde_json::json!("IyBIZWxsbyBmcm9tIEhhcmJvcgo=");
+        let readme = serde_json::from_value(readme).expect("readme fixture");
+
+        let mapped = readme_from_octocrab(readme).expect("decoded README");
+
+        assert_eq!(mapped.content, "# Hello from Harbor\n");
     }
 
     #[test]

@@ -1,0 +1,460 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import {
+  BookOpenText,
+  Box,
+  ChevronRight,
+  ExternalLink,
+  File,
+  FileCode2,
+  Folder,
+  GitBranch,
+  GitCommitHorizontal,
+  ImageIcon,
+  LockKeyhole,
+  RefreshCw,
+} from "lucide-react";
+import { useTranslation } from "react-i18next";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { parseIpcError, type IpcError } from "@/lib/ipc-error";
+import { openExternalUrl } from "@/lib/window";
+import type {
+  GitHubCodeOverview,
+  GitHubContentEntry,
+  GitHubContentListing,
+  GitHubRepository,
+} from "./github-data";
+
+function formatBytes(bytes: number, locale: string) {
+  if (bytes < 1_000) return `${bytes} B`;
+  if (bytes < 1_000_000)
+    return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(bytes / 1_000)} KB`;
+  return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(bytes / 1_000_000)} MB`;
+}
+
+function repositoryLink(
+  href: string,
+  repository: GitHubRepository,
+  reference: string,
+  readmePath: string
+) {
+  if (/^(https?:|mailto:)/i.test(href) || href.startsWith("#")) return href;
+  const basePath = readmePath.includes("/") ? readmePath.slice(0, readmePath.lastIndexOf("/")) : "";
+  const path = [basePath, href]
+    .filter(Boolean)
+    .join("/")
+    .split("/")
+    .reduce<string[]>((segments, segment) => {
+      if (segment === "..") segments.pop();
+      else if (segment !== "." && segment !== "") segments.push(segment);
+      return segments;
+    }, [])
+    .map(encodeURIComponent)
+    .join("/");
+  return `${repository.url}/blob/${encodeURIComponent(reference)}/${path}`;
+}
+
+function CodeSkeleton() {
+  return (
+    <div className="space-y-4 p-4">
+      <div className="flex gap-2">
+        <Skeleton className="h-8 w-36" />
+        <Skeleton className="h-8 flex-1" />
+      </div>
+      <div className="overflow-hidden rounded-lg border border-white/[0.07]">
+        {Array.from({ length: 7 }, (_, index) => (
+          <div
+            key={index}
+            className="flex h-10 items-center gap-3 border-b border-white/[0.055] px-3 last:border-b-0"
+          >
+            <Skeleton className="size-4" />
+            <Skeleton className="h-3 w-2/5" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FileRow({
+  entry,
+  locale,
+  onOpen,
+}: {
+  entry: GitHubContentEntry;
+  locale: string;
+  onOpen: () => void;
+}) {
+  const isDirectory = entry.kind === "dir";
+  const Icon = isDirectory
+    ? Folder
+    : entry.name.match(/\.(ts|tsx|rs|js|jsx|json|css|html|md)$/i)
+      ? FileCode2
+      : File;
+
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      onClick={onOpen}
+      className="group hover:bg-primary/[0.045] h-10 w-full justify-start gap-2.5 rounded-none border-b border-white/[0.055] px-3 text-left last:border-b-0"
+    >
+      <Icon className={isDirectory ? "text-primary" : "text-muted-foreground"} />
+      <span className="min-w-0 flex-1 truncate text-xs font-medium">{entry.name}</span>
+      {!isDirectory ? (
+        <span className="text-muted-foreground text-[10px] font-normal tabular-nums">
+          {formatBytes(entry.size, locale)}
+        </span>
+      ) : null}
+      <ChevronRight className="text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+    </Button>
+  );
+}
+
+export function GitHubCodeView({ repository }: { repository: GitHubRepository }) {
+  const { t, i18n } = useTranslation();
+  const [reference, setReference] = useState(repository.defaultBranch);
+  const [path, setPath] = useState("");
+  const [overview, setOverview] = useState<GitHubCodeOverview | null>(null);
+  const [listing, setListing] = useState<GitHubContentListing | null>(null);
+  const [overviewLoading, setOverviewLoading] = useState(true);
+  const [contentsLoading, setContentsLoading] = useState(true);
+  const [overviewError, setOverviewError] = useState<IpcError | null>(null);
+  const [contentsError, setContentsError] = useState<IpcError | null>(null);
+  const overviewRequest = useRef(0);
+  const contentsRequest = useRef(0);
+
+  const loadOverview = useCallback(async () => {
+    const currentRequest = ++overviewRequest.current;
+    setOverviewLoading(true);
+    setOverviewError(null);
+    try {
+      const nextOverview = await invoke<GitHubCodeOverview>("github_get_repository_code_overview", {
+        owner: repository.owner,
+        repository: repository.name,
+        reference,
+      });
+      if (overviewRequest.current === currentRequest) setOverview(nextOverview);
+    } catch (reason) {
+      if (overviewRequest.current === currentRequest) setOverviewError(parseIpcError(reason));
+    } finally {
+      if (overviewRequest.current === currentRequest) setOverviewLoading(false);
+    }
+  }, [reference, repository.name, repository.owner]);
+
+  const loadContents = useCallback(async () => {
+    const currentRequest = ++contentsRequest.current;
+    setContentsLoading(true);
+    setContentsError(null);
+    try {
+      const nextListing = await invoke<GitHubContentListing>("github_list_repository_contents", {
+        owner: repository.owner,
+        repository: repository.name,
+        reference,
+        path,
+      });
+      if (contentsRequest.current === currentRequest) setListing(nextListing);
+    } catch (reason) {
+      if (contentsRequest.current === currentRequest) setContentsError(parseIpcError(reason));
+    } finally {
+      if (contentsRequest.current === currentRequest) setContentsLoading(false);
+    }
+  }, [path, reference, repository.name, repository.owner]);
+
+  useEffect(() => {
+    void loadOverview();
+    return () => {
+      overviewRequest.current += 1;
+    };
+  }, [loadOverview]);
+
+  useEffect(() => {
+    void loadContents();
+    return () => {
+      contentsRequest.current += 1;
+    };
+  }, [loadContents]);
+
+  const breadcrumbSegments = useMemo(() => path.split("/").filter(Boolean), [path]);
+  const latestCommit = overview?.commits[0];
+
+  const selectBranch = (nextReference: string) => {
+    setPath("");
+    setReference(nextReference);
+  };
+
+  const openEntry = (entry: GitHubContentEntry) => {
+    if (entry.kind === "dir") {
+      setPath(entry.path);
+      return;
+    }
+    if (entry.url) void openExternalUrl(entry.url);
+  };
+
+  if (overviewLoading && !overview && contentsLoading && !listing) return <CodeSkeleton />;
+
+  return (
+    <ScrollArea className="min-h-0 flex-1">
+      <div className="mx-auto w-full max-w-[1040px] space-y-4 p-4 pb-10">
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={reference} onValueChange={selectBranch}>
+            <SelectTrigger size="sm" className="min-w-40 bg-white/[0.025] text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="harbor-popover">
+              <SelectGroup>
+                {(overview?.branches ?? []).map((branch) => (
+                  <SelectItem key={branch.name} value={branch.name}>
+                    <GitBranch />
+                    {branch.name}
+                    {branch.protected ? <LockKeyhole className="ml-auto size-3" /> : null}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+
+          <div className="flex h-8 min-w-0 flex-1 items-center rounded-md border border-white/[0.07] bg-white/[0.018] px-2.5">
+            <Breadcrumb>
+              <BreadcrumbList className="flex-nowrap gap-1 text-[11px] sm:gap-1">
+                <BreadcrumbItem>
+                  {breadcrumbSegments.length ? (
+                    <BreadcrumbLink asChild>
+                      <button type="button" onClick={() => setPath("")} className="font-medium">
+                        {repository.name}
+                      </button>
+                    </BreadcrumbLink>
+                  ) : (
+                    <BreadcrumbPage className="font-medium">{repository.name}</BreadcrumbPage>
+                  )}
+                </BreadcrumbItem>
+                {breadcrumbSegments.map((segment, index) => {
+                  const segmentPath = breadcrumbSegments.slice(0, index + 1).join("/");
+                  const current = index === breadcrumbSegments.length - 1;
+                  return (
+                    <span key={segmentPath} className="contents">
+                      <BreadcrumbSeparator />
+                      <BreadcrumbItem className="min-w-0">
+                        {current ? (
+                          <BreadcrumbPage className="max-w-44 truncate">{segment}</BreadcrumbPage>
+                        ) : (
+                          <BreadcrumbLink asChild>
+                            <button
+                              type="button"
+                              onClick={() => setPath(segmentPath)}
+                              className="max-w-32 truncate"
+                            >
+                              {segment}
+                            </button>
+                          </BreadcrumbLink>
+                        )}
+                      </BreadcrumbItem>
+                    </span>
+                  );
+                })}
+              </BreadcrumbList>
+            </Breadcrumb>
+          </div>
+
+          <Button
+            variant="outline"
+            size="icon-sm"
+            aria-label={t("workspace.repositories.refreshCode")}
+            onClick={() => {
+              void loadOverview();
+              void loadContents();
+            }}
+            disabled={overviewLoading || contentsLoading}
+          >
+            <RefreshCw className={overviewLoading || contentsLoading ? "animate-spin" : ""} />
+          </Button>
+        </div>
+
+        {overviewError || contentsError ? (
+          <Empty className="min-h-56 border border-white/[0.07] bg-white/[0.018]">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Box />
+              </EmptyMedia>
+              <EmptyTitle>{t("workspace.repositories.codeLoadFailed")}</EmptyTitle>
+              <EmptyDescription>{(overviewError ?? contentsError)?.message}</EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  void loadOverview();
+                  void loadContents();
+                }}
+              >
+                <RefreshCw data-icon="inline-start" />
+                {t("workspace.repositories.retry")}
+              </Button>
+            </EmptyContent>
+          </Empty>
+        ) : (
+          <>
+            <section className="overflow-hidden rounded-lg border border-white/[0.075] bg-white/[0.018] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
+              {latestCommit && path === "" ? (
+                <button
+                  type="button"
+                  onClick={() => void openExternalUrl(latestCommit.url)}
+                  className="group bg-primary/[0.035] flex h-11 w-full items-center gap-2.5 border-b border-white/[0.07] px-3 text-left"
+                >
+                  <GitCommitHorizontal className="text-primary" />
+                  <span className="min-w-0 flex-1 truncate text-xs font-medium">
+                    {latestCommit.title}
+                  </span>
+                  <span className="text-muted-foreground hidden text-[10px] sm:inline">
+                    {latestCommit.author}
+                  </span>
+                  <code className="text-primary/80 text-[10px]">{latestCommit.shortSha}</code>
+                  <ExternalLink className="text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                </button>
+              ) : null}
+
+              {contentsLoading && !listing ? (
+                <CodeSkeleton />
+              ) : listing?.entries.length ? (
+                listing.entries.map((entry) => (
+                  <FileRow
+                    key={`${entry.kind}:${entry.path}`}
+                    entry={entry}
+                    locale={i18n.language}
+                    onOpen={() => openEntry(entry)}
+                  />
+                ))
+              ) : (
+                <div className="text-muted-foreground grid h-32 place-items-center text-xs">
+                  {t("workspace.repositories.emptyDirectory")}
+                </div>
+              )}
+            </section>
+
+            {path === "" && overview?.commits.length ? (
+              <section className="overflow-hidden rounded-lg border border-white/[0.075] bg-white/[0.014]">
+                <div className="flex h-10 items-center justify-between border-b border-white/[0.065] px-3">
+                  <div className="flex items-center gap-2 text-xs font-semibold">
+                    <GitCommitHorizontal className="text-primary" />
+                    {t("workspace.repositories.recentCommits")}
+                  </div>
+                  {overview.commitsHaveMore ? (
+                    <span className="text-muted-foreground text-[10px]">
+                      {t("workspace.repositories.latestCommitsOnly")}
+                    </span>
+                  ) : null}
+                </div>
+                <div className="divide-y divide-white/[0.055]">
+                  {overview.commits.map((commit) => (
+                    <button
+                      key={commit.sha}
+                      type="button"
+                      onClick={() => void openExternalUrl(commit.url)}
+                      className="group flex min-h-10 w-full items-center gap-3 px-3 py-2 text-left hover:bg-white/[0.025]"
+                    >
+                      <span className="min-w-0 flex-1 truncate text-[11px]">{commit.title}</span>
+                      <span className="text-muted-foreground hidden text-[10px] sm:inline">
+                        {commit.author}
+                      </span>
+                      <code className="text-primary/75 text-[10px]">{commit.shortSha}</code>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            {path === "" && overview?.readme ? (
+              <section className="overflow-hidden rounded-lg border border-white/[0.075] bg-white/[0.018]">
+                <div className="flex h-11 items-center justify-between border-b border-white/[0.065] px-4">
+                  <div className="flex items-center gap-2 text-xs font-semibold">
+                    <BookOpenText className="text-primary" />
+                    {overview.readme.name}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    onClick={() => void openExternalUrl(overview.readme?.url ?? repository.url)}
+                  >
+                    <ExternalLink data-icon="inline-end" />
+                    {t("workspace.repositories.viewSource")}
+                  </Button>
+                </div>
+                <article className="harbor-markdown px-5 py-6 sm:px-7">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      a: ({ href = "", children }) => {
+                        const destination = repositoryLink(
+                          href,
+                          repository,
+                          reference,
+                          overview.readme?.path ?? "README.md"
+                        );
+                        if (destination.startsWith("#"))
+                          return <a href={destination}>{children}</a>;
+                        return (
+                          <button type="button" onClick={() => void openExternalUrl(destination)}>
+                            {children}
+                          </button>
+                        );
+                      },
+                      img: ({ alt = "", src = "" }) => (
+                        <button
+                          type="button"
+                          className="harbor-markdown-image"
+                          onClick={() =>
+                            void openExternalUrl(
+                              repositoryLink(
+                                src,
+                                repository,
+                                reference,
+                                overview.readme?.path ?? "README.md"
+                              )
+                            )
+                          }
+                        >
+                          <ImageIcon />
+                          {alt || t("workspace.repositories.readmeImage")}
+                        </button>
+                      ),
+                    }}
+                  >
+                    {overview.readme.content}
+                  </ReactMarkdown>
+                </article>
+              </section>
+            ) : null}
+          </>
+        )}
+      </div>
+    </ScrollArea>
+  );
+}

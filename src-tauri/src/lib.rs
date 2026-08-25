@@ -38,6 +38,8 @@ pub fn run() {
             commands::github_disconnect,
             commands::github_list_repositories,
             commands::github_list_repository_issues,
+            commands::github_get_repository_code_overview,
+            commands::github_list_repository_contents,
             commands::repository_context_ask,
         ]);
 
