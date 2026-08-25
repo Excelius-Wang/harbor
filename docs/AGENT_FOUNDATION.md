@@ -11,13 +11,13 @@ repository through DeepWiki.
 - Keep GitHub API access behind a small client interface and use Octocrab for the implementation.
 - Start GitHub authorization in the system browser with the authorization-code flow, PKCE, and a
   per-attempt state value.
-- Accept only the verified `harbor://oauth/github/callback` deep link and expire pending login
-  attempts after ten minutes.
+- Accept only the verified `http://127.0.0.1:49152/oauth/github/callback` loopback callback and
+  expire pending login attempts after ten minutes.
 - Exchange the authorization code in Rust, validate the returned identity, and save access and
   refresh credentials in the operating system credential store through Keyring. Never return
   credentials through IPC or write them to Harbor configuration files.
 - Expose begin-login, connection-status, and disconnect commands to the Tauri frontend. Complete
-  login from the Tauri deep-link handler and publish only connected-account metadata.
+  login from the short-lived loopback listener and publish only connected-account metadata.
 - Keep repository understanding behind a replaceable context-provider interface.
 - Implement the first provider with the official DeepWiki MCP endpoint and official Rust MCP SDK.
 - Send DeepWiki only the selected public repository name and the user's question.

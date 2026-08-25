@@ -1,19 +1,51 @@
-use tauri::State;
+use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::{
     app_state::AppState,
     error::AppError,
     github::{
-        GitHubCodeOverview, GitHubConnection, GitHubContentListing, GitHubIssuePage,
-        GitHubLoginAvailability, GitHubRepositoryPage,
+        GitHubAuthEvent, GitHubCodeOverview, GitHubConnection, GitHubContentListing,
+        GitHubIssuePage, GitHubLoginAvailability, GitHubRepositoryPage,
     },
-    github_oauth::GitHubLoginAttempt,
+    github_oauth::{GitHubLoginAttempt, GitHubLoopbackListener, GITHUB_AUTH_EVENT},
     repository_context::{RepositoryContextAnswer, RepositoryRef},
 };
 
 #[tauri::command]
-pub fn github_begin_login(state: State<'_, AppState>) -> Result<GitHubLoginAttempt, AppError> {
-    state.github.begin_login()
+pub async fn github_begin_login(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<GitHubLoginAttempt, AppError> {
+    let listener = GitHubLoopbackListener::bind_default().await?;
+    let attempt = state.github.begin_login()?;
+    let expected_state = attempt.callback_state().to_string();
+    let github = state.github.clone();
+    tauri::async_runtime::spawn(async move {
+        let event = match listener.wait_for_callback(&expected_state).await {
+            Ok(callback) => {
+                let result = github.complete_login(callback.callback_url()).await;
+                let connected = result.is_ok();
+                let event = match result {
+                    Ok(connection) => GitHubAuthEvent::Connected { connection },
+                    Err(error) => GitHubAuthEvent::Failed {
+                        message: error.to_string(),
+                    },
+                };
+                let _ = callback.respond(connected).await;
+                event
+            }
+            Err(error) => GitHubAuthEvent::Failed {
+                message: error.to_string(),
+            },
+        };
+        let _ = app.emit(GITHUB_AUTH_EVENT, event);
+        if let Some(window) = app.get_webview_window("main") {
+            let _ = window.unminimize();
+            let _ = window.show();
+            let _ = window.set_focus();
+        }
+    });
+    Ok(attempt)
 }
 
 #[tauri::command]

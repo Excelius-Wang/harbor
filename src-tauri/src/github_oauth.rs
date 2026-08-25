@@ -1,4 +1,5 @@
 use std::{
+    net::SocketAddr,
     sync::{Arc, Mutex},
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
@@ -10,14 +11,21 @@ use oauth2::{
     RefreshToken, TokenResponse, TokenUrl,
 };
 use serde::{Deserialize, Serialize};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    net::{TcpListener, TcpStream},
+};
 
 use crate::error::AppError;
 
-pub const GITHUB_OAUTH_CALLBACK_URL: &str = "harbor://oauth/github/callback";
+pub const GITHUB_OAUTH_CALLBACK_URL: &str = "http://127.0.0.1:49152/oauth/github/callback";
 pub const GITHUB_AUTH_EVENT: &str = "github-auth";
 const GITHUB_AUTHORIZE_URL: &str = "https://github.com/login/oauth/authorize";
 const GITHUB_TOKEN_URL: &str = "https://github.com/login/oauth/access_token";
 const GITHUB_LOGIN_TIMEOUT: Duration = Duration::from_secs(10 * 60);
+const MAX_CALLBACK_REQUEST_BYTES: usize = 8 * 1024;
+const CALLBACK_SUCCESS_HTML: &str = r#"<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Connected to Harbor</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#07131d;color:#e8f2f8;font:16px system-ui,sans-serif}.card{max-width:32rem;padding:2rem;border:1px solid #264152;border-radius:16px;background:#0c1d29}h1{margin:0 0 .5rem;font-size:1.35rem}p{margin:0;color:#a9bdca;line-height:1.6}</style></head><body><main class="card"><h1>Connected to Harbor</h1><p>You can close this window and return to Harbor.</p></main></body></html>"#;
+const CALLBACK_FAILURE_HTML: &str = r#"<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Harbor sign-in incomplete</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#07131d;color:#e8f2f8;font:16px system-ui,sans-serif}.card{max-width:32rem;padding:2rem;border:1px solid #5c3535;border-radius:16px;background:#211416}h1{margin:0 0 .5rem;font-size:1.35rem}p{margin:0;color:#d4b3b3;line-height:1.6}</style></head><body><main class="card"><h1>Harbor sign-in was not completed</h1><p>Return to Harbor and try again.</p></main></body></html>"#;
 
 type ConfiguredGitHubOAuthClient =
     BasicClient<EndpointSet, EndpointNotSet, EndpointNotSet, EndpointNotSet, EndpointSet>;
@@ -42,11 +50,220 @@ impl GitHubOAuthConfig {
     }
 }
 
-pub fn is_github_oauth_callback(value: &str) -> bool {
-    oauth2::url::Url::parse(value).is_ok_and(|url| {
-        url.scheme() == "harbor"
-            && url.host_str() == Some("oauth")
-            && url.path() == "/github/callback"
+fn configured_callback_url() -> Result<oauth2::url::Url, AppError> {
+    oauth2::url::Url::parse(GITHUB_OAUTH_CALLBACK_URL).map_err(|_| {
+        AppError::GitHubAuthentication(
+            "Harbor has an invalid local GitHub callback URL".to_string(),
+        )
+    })
+}
+
+fn configured_callback_address() -> Result<SocketAddr, AppError> {
+    let callback = configured_callback_url()?;
+    let host = callback.host_str().ok_or_else(|| {
+        AppError::GitHubAuthentication(
+            "Harbor has an invalid local GitHub callback address".to_string(),
+        )
+    })?;
+    let port = callback.port().ok_or_else(|| {
+        AppError::GitHubAuthentication(
+            "Harbor has an invalid local GitHub callback port".to_string(),
+        )
+    })?;
+    let address = format!("{host}:{port}")
+        .parse::<SocketAddr>()
+        .map_err(|_| {
+            AppError::GitHubAuthentication(
+                "Harbor has an invalid local GitHub callback address".to_string(),
+            )
+        })?;
+    if !address.ip().is_loopback() {
+        return Err(AppError::GitHubAuthentication(
+            "Harbor's GitHub callback must use a loopback address".to_string(),
+        ));
+    }
+    Ok(address)
+}
+
+pub struct GitHubLoopbackListener {
+    listener: TcpListener,
+}
+
+pub struct GitHubLoopbackCallback {
+    callback_url: String,
+    stream: TcpStream,
+}
+
+impl GitHubLoopbackListener {
+    pub async fn bind_default() -> Result<Self, AppError> {
+        Self::bind(configured_callback_address()?).await
+    }
+
+    pub async fn bind(address: SocketAddr) -> Result<Self, AppError> {
+        let listener = TcpListener::bind(address).await.map_err(|error| {
+            AppError::GitHubAuthentication(format!(
+                "Harbor could not start the local GitHub callback: {error}"
+            ))
+        })?;
+        Ok(Self { listener })
+    }
+
+    #[cfg(test)]
+    pub fn local_addr(&self) -> Result<SocketAddr, AppError> {
+        self.listener.local_addr().map_err(|error| {
+            AppError::GitHubAuthentication(format!(
+                "Harbor could not read the local GitHub callback address: {error}"
+            ))
+        })
+    }
+
+    pub async fn wait_for_callback(
+        self,
+        expected_state: &str,
+    ) -> Result<GitHubLoopbackCallback, AppError> {
+        tokio::time::timeout(GITHUB_LOGIN_TIMEOUT, async move {
+            loop {
+                let (mut stream, peer) = self.listener.accept().await.map_err(|error| {
+                    AppError::GitHubAuthentication(format!(
+                        "Harbor could not receive the GitHub callback: {error}"
+                    ))
+                })?;
+                if !peer.ip().is_loopback() {
+                    let _ = write_http_response(
+                        &mut stream,
+                        "403 Forbidden",
+                        "text/plain; charset=utf-8",
+                        "Forbidden",
+                    )
+                    .await;
+                    continue;
+                }
+
+                let local_addr = stream.local_addr().map_err(|error| {
+                    AppError::GitHubAuthentication(format!(
+                        "Harbor could not read the GitHub callback address: {error}"
+                    ))
+                })?;
+                match read_callback_url(&mut stream, local_addr, expected_state).await {
+                    Ok(Some(callback_url)) => {
+                        return Ok(GitHubLoopbackCallback {
+                            callback_url,
+                            stream,
+                        });
+                    }
+                    Ok(None) | Err(_) => {
+                        let _ = write_http_response(
+                            &mut stream,
+                            "404 Not Found",
+                            "text/plain; charset=utf-8",
+                            "Not found",
+                        )
+                        .await;
+                    }
+                }
+            }
+        })
+        .await
+        .map_err(|_| {
+            AppError::GitHubAuthentication("GitHub login timed out; try again".to_string())
+        })?
+    }
+}
+
+impl GitHubLoopbackCallback {
+    pub fn callback_url(&self) -> &str {
+        &self.callback_url
+    }
+
+    pub async fn respond(mut self, connected: bool) -> Result<(), AppError> {
+        let (status, body) = if connected {
+            ("200 OK", CALLBACK_SUCCESS_HTML)
+        } else {
+            ("400 Bad Request", CALLBACK_FAILURE_HTML)
+        };
+        write_http_response(&mut self.stream, status, "text/html; charset=utf-8", body).await
+    }
+}
+
+async fn read_callback_url(
+    stream: &mut TcpStream,
+    local_addr: SocketAddr,
+    expected_state: &str,
+) -> Result<Option<String>, AppError> {
+    let mut buffer = Vec::with_capacity(1024);
+    loop {
+        if buffer.len() >= MAX_CALLBACK_REQUEST_BYTES {
+            return Ok(None);
+        }
+        let mut chunk = [0_u8; 1024];
+        let read = stream.read(&mut chunk).await.map_err(|error| {
+            AppError::GitHubAuthentication(format!(
+                "Harbor could not read the GitHub callback: {error}"
+            ))
+        })?;
+        if read == 0 {
+            return Ok(None);
+        }
+        buffer.extend_from_slice(&chunk[..read]);
+        if buffer.len() > MAX_CALLBACK_REQUEST_BYTES {
+            return Ok(None);
+        }
+        if buffer.windows(4).any(|window| window == b"\r\n\r\n") {
+            break;
+        }
+    }
+
+    let mut headers = [httparse::EMPTY_HEADER; 32];
+    let mut request = httparse::Request::new(&mut headers);
+    if !request
+        .parse(&buffer)
+        .is_ok_and(|status| status.is_complete())
+        || request.method != Some("GET")
+    {
+        return Ok(None);
+    }
+    let Some(target) = request.path.filter(|target| target.starts_with('/')) else {
+        return Ok(None);
+    };
+    let callback = oauth2::url::Url::parse(&format!("http://{local_addr}{target}"))
+        .map_err(|_| AppError::GitHubAuthentication("Invalid GitHub callback URL".to_string()))?;
+    if callback.path() != configured_callback_url()?.path() {
+        return Ok(None);
+    }
+    let query = callback
+        .query_pairs()
+        .into_owned()
+        .collect::<std::collections::HashMap<_, _>>();
+    if query.get("state").map(String::as_str) != Some(expected_state)
+        || !(query.contains_key("code") || query.contains_key("error"))
+    {
+        return Ok(None);
+    }
+    Ok(Some(callback.to_string()))
+}
+
+async fn write_http_response(
+    stream: &mut TcpStream,
+    status: &str,
+    content_type: &str,
+    body: &str,
+) -> Result<(), AppError> {
+    let response = format!(
+        "HTTP/1.1 {status}\r\nContent-Type: {content_type}\r\nContent-Security-Policy: default-src 'none'; style-src 'unsafe-inline'\r\nCache-Control: no-store\r\nConnection: close\r\nContent-Length: {}\r\n\r\n{body}",
+        body.len()
+    );
+    stream
+        .write_all(response.as_bytes())
+        .await
+        .map_err(|error| {
+            AppError::GitHubAuthentication(format!(
+                "Harbor could not respond to the GitHub callback: {error}"
+            ))
+        })?;
+    stream.shutdown().await.map_err(|error| {
+        AppError::GitHubAuthentication(format!(
+            "Harbor could not close the GitHub callback: {error}"
+        ))
     })
 }
 
@@ -54,6 +271,14 @@ pub fn is_github_oauth_callback(value: &str) -> bool {
 #[serde(rename_all = "camelCase")]
 pub struct GitHubLoginAttempt {
     pub authorization_url: String,
+    #[serde(skip)]
+    callback_state: String,
+}
+
+impl GitHubLoginAttempt {
+    pub(crate) fn callback_state(&self) -> &str {
+        &self.callback_state
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -175,6 +400,7 @@ impl GitHubOAuthSession {
             .authorize_url(CsrfToken::new_random)
             .set_pkce_challenge(pkce_challenge)
             .url();
+        let callback_state = csrf_token.secret().clone();
 
         *self.pending.lock().map_err(|_| {
             AppError::GitHubAuthentication("OAuth login state is unavailable".to_string())
@@ -186,6 +412,7 @@ impl GitHubOAuthSession {
 
         Ok(GitHubLoginAttempt {
             authorization_url: authorization_url.to_string(),
+            callback_state,
         })
     }
 
@@ -196,9 +423,11 @@ impl GitHubOAuthSession {
         let callback = oauth2::url::Url::parse(callback_url).map_err(|_| {
             AppError::GitHubAuthentication("GitHub returned an invalid login callback".to_string())
         })?;
-        if callback.scheme() != "harbor"
-            || callback.host_str() != Some("oauth")
-            || callback.path() != "/github/callback"
+        let expected_callback = configured_callback_url()?;
+        if callback.scheme() != expected_callback.scheme()
+            || callback.host_str() != expected_callback.host_str()
+            || callback.port() != expected_callback.port()
+            || callback.path() != expected_callback.path()
         {
             return Err(AppError::GitHubAuthentication(
                 "GitHub returned an unexpected login callback".to_string(),
@@ -321,6 +550,7 @@ mod tests {
     use std::collections::HashMap;
 
     use oauth2::url::Url;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
     use super::*;
 
@@ -395,9 +625,9 @@ mod tests {
         session.begin_login().expect("login attempt");
 
         let result = session
-            .complete_login(
-                "harbor://oauth/github/callback?code=temporary-code&state=attacker-state",
-            )
+            .complete_login(&format!(
+                "{GITHUB_OAUTH_CALLBACK_URL}?code=temporary-code&state=attacker-state"
+            ))
             .await;
 
         assert!(matches!(result, Err(AppError::GitHubAuthentication(_))));
@@ -417,7 +647,7 @@ mod tests {
             .find_map(|(key, value)| (key == "state").then(|| value.into_owned()))
             .expect("state");
 
-        let callback = format!("harbor://oauth/github/callback?code=temporary-code&state={state}");
+        let callback = format!("{GITHUB_OAUTH_CALLBACK_URL}?code=temporary-code&state={state}");
         let credentials = session
             .complete_login(&callback)
             .await
@@ -477,10 +707,83 @@ mod tests {
 
         let result = session
             .complete_login(&format!(
-                "harbor://oauth/github/callback?code=temporary-code&state={state}"
+                "{GITHUB_OAUTH_CALLBACK_URL}?code=temporary-code&state={state}"
             ))
             .await;
 
         assert!(matches!(result, Err(AppError::GitHubAuthentication(_))));
+    }
+
+    #[tokio::test]
+    async fn loopback_listener_accepts_only_the_expected_state_and_returns_a_completion_page() {
+        let listener = GitHubLoopbackListener::bind("127.0.0.1:0".parse().expect("address"))
+            .await
+            .expect("loopback listener");
+        let address = listener.local_addr().expect("listener address");
+        let callback =
+            tokio::spawn(async move { listener.wait_for_callback("expected-state").await });
+
+        let mut unrelated = tokio::net::TcpStream::connect(address)
+            .await
+            .expect("unrelated request connection");
+        unrelated
+            .write_all(b"GET /favicon.ico HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n")
+            .await
+            .expect("unrelated request");
+        let mut unrelated_response = Vec::new();
+        unrelated
+            .read_to_end(&mut unrelated_response)
+            .await
+            .expect("unrelated response");
+        assert!(String::from_utf8_lossy(&unrelated_response).starts_with("HTTP/1.1 404"));
+
+        let mut wrong_state = tokio::net::TcpStream::connect(address)
+            .await
+            .expect("wrong-state connection");
+        wrong_state
+            .write_all(
+                b"GET /oauth/github/callback?code=temporary-code&state=wrong-state HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n",
+            )
+            .await
+            .expect("wrong-state request");
+        let mut wrong_state_response = Vec::new();
+        wrong_state
+            .read_to_end(&mut wrong_state_response)
+            .await
+            .expect("wrong-state response");
+        assert!(String::from_utf8_lossy(&wrong_state_response).starts_with("HTTP/1.1 404"));
+        assert!(!callback.is_finished());
+
+        let mut browser = tokio::net::TcpStream::connect(address)
+            .await
+            .expect("callback connection");
+        browser
+            .write_all(
+                b"GET /oauth/github/callback?code=temporary-code&state=expected-state HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n",
+            )
+            .await
+            .expect("callback request");
+
+        let received = tokio::time::timeout(Duration::from_secs(1), callback)
+            .await
+            .expect("callback timeout")
+            .expect("callback task")
+            .expect("received callback");
+        assert_eq!(
+            received.callback_url(),
+            format!(
+                "http://{address}/oauth/github/callback?code=temporary-code&state=expected-state"
+            )
+        );
+        received.respond(true).await.expect("completion response");
+
+        let mut browser_response = Vec::new();
+        browser
+            .read_to_end(&mut browser_response)
+            .await
+            .expect("browser response");
+        let browser_response = String::from_utf8_lossy(&browser_response);
+        assert!(browser_response.starts_with("HTTP/1.1 200"));
+        assert!(browser_response.contains("Connected to Harbor"));
     }
 }

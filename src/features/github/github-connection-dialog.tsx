@@ -88,6 +88,7 @@ export function GitHubConnectionDialog({
   const [checking, setChecking] = useState(false);
   const [waiting, setWaiting] = useState(false);
   const [error, setError] = useState("");
+  const [authorizationUrl, setAuthorizationUrl] = useState("");
   const [loginConfigured, setLoginConfigured] = useState<boolean | null>(() =>
     isTauri() ? null : true
   );
@@ -108,6 +109,7 @@ export function GitHubConnectionDialog({
       if (event.payload.status === "failed") {
         setWaiting(false);
         setChecking(false);
+        setAuthorizationUrl("");
         setError(event.payload.message);
         return;
       }
@@ -118,6 +120,7 @@ export function GitHubConnectionDialog({
         .then(() => {
           onConnectionChange(nextConnection);
           setWaiting(false);
+          setAuthorizationUrl("");
           setError("");
         })
         .finally(() => setChecking(false));
@@ -128,6 +131,14 @@ export function GitHubConnectionDialog({
     };
   }, [onConnectionChange, queryClient]);
 
+  const openGitHubAuthorization = async (url: string) => {
+    try {
+      await openUrl(url);
+    } catch (reason) {
+      setError(parseIpcError(reason).message);
+    }
+  };
+
   const handleLogin = async () => {
     if (!isTauri()) {
       setError(t("workspace.github.desktopOnly"));
@@ -137,11 +148,17 @@ export function GitHubConnectionDialog({
     setChecking(true);
     setError("");
     try {
+      if (waiting && authorizationUrl) {
+        await openGitHubAuthorization(authorizationUrl);
+        return;
+      }
       const attempt = await invoke<GitHubLoginAttempt>("github_begin_login");
-      await openUrl(attempt.authorizationUrl);
+      setAuthorizationUrl(attempt.authorizationUrl);
       setWaiting(true);
+      await openGitHubAuthorization(attempt.authorizationUrl);
     } catch (reason) {
       setWaiting(false);
+      setAuthorizationUrl("");
       setError(parseIpcError(reason).message);
     } finally {
       setChecking(false);
@@ -156,6 +173,7 @@ export function GitHubConnectionDialog({
       await resetGitHubQueryCache(queryClient);
       onConnectionChange(nextConnection);
       setWaiting(false);
+      setAuthorizationUrl("");
     } catch (reason) {
       setError(parseIpcError(reason).message);
     } finally {
