@@ -1,0 +1,125 @@
+{
+  "app": {
+    "title": "Harbor",
+    "welcome": "欢迎使用 Harbor",
+    "description": "专注、高效的 GitHub 桌面工作台"
+  },
+  "greet": {
+    "title": "来自 Rust 的问候",
+    "description": "测试前端与 Tauri 后端的通信",
+    "placeholder": "输入你的名字...",
+    "button": "问候"
+  },
+  "about": {
+    "title": "关于",
+    "button": "关于",
+    "appName": "Harbor",
+    "version": "版本",
+    "description": "基于 Tauri、React 和 TypeScript 构建的 GitHub 桌面工作台。",
+    "features": "特性",
+    "feature1": "Tauri v2 - 轻量级桌面应用框架",
+    "feature2": "React 19 - 最新的 React 版本",
+    "feature3": "TypeScript - 类型安全",
+    "feature4": "Tailwind CSS v4 - 现代 CSS 框架",
+    "feature5": "shadcn/ui - 精美的 UI 组件",
+    "close": "关闭"
+  },
+  "theme": {
+    "toggle": "切换主题"
+  },
+  "language": {
+    "toggle": "切换语言",
+    "en": "English",
+    "zh": "中文"
+  },
+  "tray": {
+    "show": "显示窗口",
+    "quit": "退出"
+  },
+  "updater": {
+    "checkForUpdates": "检查更新",
+    "checking": "检查中...",
+    "checkFailed": "检查更新失败。",
+    "upToDate": "您正在使用最新版本！",
+    "updateAvailable": "发现新版本",
+    "downloading": "正在下载更新",
+    "installingVersion": "正在安装版本 {{version}}...",
+    "versionAvailable": "版本 {{version}} 可用。",
+    "releaseNotes": "更新说明：",
+    "later": "稍后",
+    "installNow": "立即安装"
+  },
+  "settings": {
+    "title": "设置",
+    "button": "设置",
+    "close": "关闭",
+    "appearance": {
+      "title": "外观",
+      "description": "自定义应用的外观和语言",
+      "theme": "主题",
+      "light": "浅色",
+      "dark": "深色",
+      "system": "跟随系统",
+      "language": "语言"
+    },
+    "shortcut": {
+      "title": "快捷键",
+      "description": "设置全局快捷键",
+      "placeholder": "按下组合键设置",
+      "showMain": "显示主窗口",
+      "showMainDesc": "使用快捷键快速显示主窗口",
+      "setSuccess": "已将快捷键设为 {{shortcut}}！",
+      "cleared": "已取消快捷键！"
+    }
+  },
+  "releaseVersion": {
+    "options": {
+      "patch": "补丁版本",
+      "minor": "次版本",
+      "major": "主版本",
+      "promoteBeta": "将 beta 提升为正式版",
+      "nextBeta": "下一个 beta",
+      "nextPatchBeta": "下一个补丁 beta",
+      "custom": "自定义版本"
+    },
+    "prompts": {
+      "yesNoDefaultYes": " (Y/n): ",
+      "yesNoDefaultNo": " (y/N): ",
+      "enterChoice": "\n请输入选择 (1-{{max}}): ",
+      "enterCustomVersion": "请输入自定义版本号: ",
+      "confirmRelease": "是否继续更新版本并创建 tag？",
+      "pushNow": "是否立即推送提交和 tag 到远程仓库？"
+    },
+    "messages": {
+      "currentVersion": "当前版本：{{version}}",
+      "selectNextVersion": "请选择下一个版本：",
+      "invalidChoice": "选择无效，默认使用第一个候选版本。",
+      "summaryTitle": "发布摘要：",
+      "summaryBranch": "- 分支：{{branch}}",
+      "summaryCurrentVersion": "- 当前版本：{{version}}",
+      "summaryNextVersion": "- 新版本：{{version}}",
+      "summaryTag": "- Tag：{{tag}}",
+      "cancelled": "已取消。",
+      "createdCommitAndTag": "已成功创建提交和 tag。",
+      "pushCompleted": "推送完成。",
+      "pushSkipped": "已跳过推送，你之后可以执行：",
+      "pushBranchLater": "git push origin {{branch}}",
+      "pushTagLater": "git push origin {{tag}}"
+    },
+    "errors": {
+      "unsupportedVersion": "不支持的版本格式：{{version}}",
+      "cargoVersionNotFound": "未能在 Cargo.toml 中找到版本字段",
+      "cargoPackageNameNotFound": "未能在 Cargo.toml 中找到包名字段",
+      "cargoLockVersionNotFound": "未能在 Cargo.lock 中找到版本字段",
+      "releaseStagingIncomplete": "发布暂存文件不完整，当前已暂存：{{stagedFiles}}",
+      "workingTreeNotClean": "当前工作区不干净，请先提交或暂存现有改动。",
+      "tagExists": "Tag {{tag}} 已存在。",
+      "remoteTagExists": "远程 origin 上已存在 Tag {{tag}}。",
+      "branchNotMain": "只能在 main 分支创建发布，当前分支：{{branch}}",
+      "versionMismatch": "检测到版本不一致：package.json={{packageVersion}}，tauri.conf.json={{tauriVersion}}，Cargo.toml={{cargoVersion}}，Cargo.lock={{cargoLockVersion}}",
+      "packageVersionInvalid": "package.json 中的版本号缺失或无效",
+      "tauriVersionInvalid": "src-tauri/tauri.conf.json 中的版本号缺失或无效",
+      "invalidLang": "无效的 --lang 参数，请使用 zh 或 en。"
+    }
+  }
+}

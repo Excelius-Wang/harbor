@@ -1,0 +1,125 @@
+{
+  "app": {
+    "title": "Harbor",
+    "welcome": "Welcome to Harbor",
+    "description": "A focused GitHub desktop workspace"
+  },
+  "greet": {
+    "title": "Greet from Rust",
+    "description": "Test the communication between frontend and Tauri backend",
+    "placeholder": "Enter your name...",
+    "button": "Greet"
+  },
+  "about": {
+    "title": "About",
+    "button": "About",
+    "appName": "Harbor",
+    "version": "Version",
+    "description": "A focused GitHub desktop workspace built with Tauri, React, and TypeScript.",
+    "features": "Features",
+    "feature1": "Tauri v2 - Lightweight desktop app framework",
+    "feature2": "React 19 - Latest React version",
+    "feature3": "TypeScript - Type safety",
+    "feature4": "Tailwind CSS v4 - Modern CSS framework",
+    "feature5": "shadcn/ui - Beautiful UI components",
+    "close": "Close"
+  },
+  "theme": {
+    "toggle": "Toggle theme"
+  },
+  "language": {
+    "toggle": "Switch language",
+    "en": "English",
+    "zh": "中文"
+  },
+  "tray": {
+    "show": "Show Window",
+    "quit": "Quit"
+  },
+  "updater": {
+    "checkForUpdates": "Check for Updates",
+    "checking": "Checking...",
+    "checkFailed": "Failed to check for updates.",
+    "upToDate": "You're using the latest version!",
+    "updateAvailable": "Update Available",
+    "downloading": "Downloading Update",
+    "installingVersion": "Installing version {{version}}...",
+    "versionAvailable": "Version {{version}} is available.",
+    "releaseNotes": "Release Notes:",
+    "later": "Later",
+    "installNow": "Install Now"
+  },
+  "settings": {
+    "title": "Settings",
+    "button": "Settings",
+    "close": "Close",
+    "appearance": {
+      "title": "Appearance",
+      "description": "Customize the appearance and language of the app",
+      "theme": "Theme",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System",
+      "language": "Language"
+    },
+    "shortcut": {
+      "title": "Shortcuts",
+      "description": "Configure global shortcuts",
+      "placeholder": "Press key combination",
+      "showMain": "Show Main Window",
+      "showMainDesc": "Use shortcut to quickly show the main window",
+      "setSuccess": "Shortcut set to {{shortcut}}!",
+      "cleared": "Shortcut cleared!"
+    }
+  },
+  "releaseVersion": {
+    "options": {
+      "patch": "Patch",
+      "minor": "Minor",
+      "major": "Major",
+      "promoteBeta": "Promote beta to release",
+      "nextBeta": "Next beta",
+      "nextPatchBeta": "Next patch beta",
+      "custom": "Custom version"
+    },
+    "prompts": {
+      "yesNoDefaultYes": " (Y/n): ",
+      "yesNoDefaultNo": " (y/N): ",
+      "enterChoice": "\nEnter choice (1-{{max}}): ",
+      "enterCustomVersion": "Enter custom version: ",
+      "confirmRelease": "Continue with version update and tag creation?",
+      "pushNow": "Push commit and tag to remote now?"
+    },
+    "messages": {
+      "currentVersion": "Current version: {{version}}",
+      "selectNextVersion": "Select the next version:",
+      "invalidChoice": "Invalid choice, defaulting to patch release.",
+      "summaryTitle": "Release summary:",
+      "summaryBranch": "- Branch: {{branch}}",
+      "summaryCurrentVersion": "- Current version: {{version}}",
+      "summaryNextVersion": "- Next version: {{version}}",
+      "summaryTag": "- Tag: {{tag}}",
+      "cancelled": "Cancelled.",
+      "createdCommitAndTag": "Created commit and tag successfully.",
+      "pushCompleted": "Push completed.",
+      "pushSkipped": "Skipped push. You can push later with:",
+      "pushBranchLater": "git push origin {{branch}}",
+      "pushTagLater": "git push origin {{tag}}"
+    },
+    "errors": {
+      "unsupportedVersion": "Unsupported version format: {{version}}",
+      "cargoVersionNotFound": "Failed to locate version in Cargo.toml",
+      "cargoPackageNameNotFound": "Failed to locate package name in Cargo.toml",
+      "cargoLockVersionNotFound": "Failed to locate version in Cargo.lock",
+      "releaseStagingIncomplete": "Release staging is incomplete. Staged files: {{stagedFiles}}",
+      "workingTreeNotClean": "Working tree is not clean. Please commit or stash your changes first.",
+      "tagExists": "Tag {{tag}} already exists.",
+      "remoteTagExists": "Remote tag {{tag}} already exists on origin.",
+      "branchNotMain": "Releases must be created from the main branch. Current branch: {{branch}}",
+      "versionMismatch": "Version mismatch detected. package.json={{packageVersion}}, tauri.conf.json={{tauriVersion}}, Cargo.toml={{cargoVersion}}, Cargo.lock={{cargoLockVersion}}",
+      "packageVersionInvalid": "package.json version is missing or invalid",
+      "tauriVersionInvalid": "src-tauri/tauri.conf.json version is missing or invalid",
+      "invalidLang": "Invalid --lang value. Use zh or en."
+    }
+  }
+}
