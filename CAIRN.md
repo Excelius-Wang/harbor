@@ -16,7 +16,7 @@ libraries (`react-markdown` and `remark-gfm`).
 
 ## Next action
 
-None — complete.
+None — complete
 
 ## Verification
 

@@ -54,7 +54,7 @@ export type GitHubCommitSummary = {
   sha: string;
   shortSha: string;
   title: string;
-  author?: string;
+  author: string | null;
   url: string;
 };
 
@@ -66,7 +66,6 @@ export type GitHubReadme = {
 };
 
 export type GitHubCodeOverview = {
-  reference: string;
   branches: GitHubBranch[];
   commits: GitHubCommitSummary[];
   commitsHaveMore: boolean;
@@ -82,7 +81,5 @@ export type GitHubContentEntry = {
 };
 
 export type GitHubContentListing = {
-  reference: string;
-  path: string;
   entries: GitHubContentEntry[];
 };

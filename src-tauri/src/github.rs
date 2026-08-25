@@ -107,7 +107,6 @@ pub struct GitHubReadme {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GitHubCodeOverview {
-    pub reference: String,
     pub branches: Vec<GitHubBranch>,
     pub commits: Vec<GitHubCommitSummary>,
     pub commits_have_more: bool,
@@ -127,8 +126,6 @@ pub struct GitHubContentEntry {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GitHubContentListing {
-    pub reference: String,
-    pub path: String,
     pub entries: Vec<GitHubContentEntry>,
 }
 
@@ -390,7 +387,6 @@ impl GitHubClient for OctocrabGitHubClient {
         };
 
         Ok(GitHubCodeOverview {
-            reference: reference.to_string(),
             branches: branches
                 .items
                 .into_iter()
@@ -424,11 +420,7 @@ impl GitHubClient for OctocrabGitHubClient {
             .await
             .map_err(github_error)?;
 
-        Ok(content_listing_from_octocrab(
-            reference,
-            path,
-            contents.items,
-        ))
+        Ok(content_listing_from_octocrab(contents.items))
     }
 }
 
@@ -535,8 +527,6 @@ fn readme_from_octocrab(
 }
 
 fn content_listing_from_octocrab(
-    reference: &str,
-    path: &str,
     contents: Vec<octocrab::models::repos::Content>,
 ) -> GitHubContentListing {
     let mut entries = contents
@@ -557,11 +547,7 @@ fn content_listing_from_octocrab(
             .then_with(|| left.name.to_lowercase().cmp(&right.name.to_lowercase()))
     });
 
-    GitHubContentListing {
-        reference: reference.to_string(),
-        path: path.to_string(),
-        entries,
-    }
+    GitHubContentListing { entries }
 }
 
 fn repository_from_octocrab(repository: octocrab::models::Repository) -> Option<GitHubRepository> {
@@ -768,7 +754,6 @@ mod tests {
                 ("octocat", "hello-world", "main")
             );
             Ok(GitHubCodeOverview {
-                reference: reference.to_string(),
                 branches: vec![GitHubBranch {
                     name: "main".to_string(),
                     protected: true,
@@ -799,8 +784,6 @@ mod tests {
                 ("octocat", "hello-world", "main", "")
             );
             Ok(GitHubContentListing {
-                reference: reference.to_string(),
-                path: path.to_string(),
                 entries: vec![GitHubContentEntry {
                     name: "src".to_string(),
                     path: "src".to_string(),
@@ -1074,7 +1057,7 @@ mod tests {
         let directory =
             serde_json::from_value(content_json("src", "src", "dir")).expect("directory fixture");
 
-        let listing = content_listing_from_octocrab("main", "", vec![file, directory]);
+        let listing = content_listing_from_octocrab(vec![file, directory]);
 
         assert_eq!(listing.entries[0].name, "src");
         assert_eq!(listing.entries[1].name, "README.md");
