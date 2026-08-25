@@ -2,15 +2,15 @@
 
 ## Goal
 
-Deliver Harbor's first usable workspace slice: the Discover UI, secure GitHub connection,
-and a replaceable public-repository context provider backed by DeepWiki.
+Connect Harbor's first real GitHub data workflow: after authentication, the user can browse
+their repositories, select one, and inspect its real open Issues inside the desktop app.
 
 ## Current state
 
-The implementation and documentation are complete in the current HEAD. GitHub API,
-system credential storage, and MCP transport use maintained MIT/Apache dependencies behind
-Harbor-owned interfaces. Browser interaction checks, frontend checks, Rust tests, a live
-DeepWiki smoke test, and native Tauri startup have passed.
+The previous foundation is complete at `07c7ae1`. The current HEAD contains the verified
+real repository and open-Issue read path, focused Octocrab mapping tests, structured IPC errors,
+and the repository workspace with Issue details. Both standards and spec re-reviews report no
+remaining findings.
 
 ## Next action
 
@@ -27,17 +27,15 @@ git diff --check
 pnpm tauri:dev
 ```
 
-Success: Frontend build and lint pass; 9 Rust tests pass with the network test ignored by
-default; the explicit DeepWiki smoke test answers for a public repository; the native Harbor
-window starts without a CSP, IPC, or transparent-window warning.
+Success: The connected account can load real repositories and real open Issues in Harbor;
+disconnected and empty states are clear; `pnpm check` passes; 14 Rust tests pass with one live
+DeepWiki test ignored by default; UI interaction checks and native startup pass.
 
 ## Decisions
 
-- DeepWiki receives only `owner/repository` and the user's question, and only for repositories
-  whose public GitHub page can be verified.
-- GitHub credentials stay in the operating system credential store and are never returned to
-  the frontend after connection.
-- GitHub client, credential store, and repository context provider remain replaceable seams for
-  the next Issue Radar slice.
-- The macOS window enables Tauri's private API support for the requested transparent shell. If
-  Mac App Store distribution becomes a goal, revisit this packaging decision.
+- Keep the first slice read-only. Assignment, comments, background monitoring, and automatic
+  actions remain out of scope until the data path is stable.
+- Reuse Octocrab and GitHub's official APIs behind `GitHubClient`; do not expose credentials to
+  the frontend.
+- Browser preview keeps sample or desktop-only states because authenticated API calls belong in
+  the Tauri backend.

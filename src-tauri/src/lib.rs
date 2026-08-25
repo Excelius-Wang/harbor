@@ -36,6 +36,8 @@ pub fn run() {
             commands::github_connect,
             commands::github_connection_status,
             commands::github_disconnect,
+            commands::github_list_repositories,
+            commands::github_list_repository_issues,
             commands::repository_context_ask,
         ]);
 

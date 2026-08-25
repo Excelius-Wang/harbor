@@ -24,9 +24,15 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import type { Repository } from "./mock-data";
-
+import { parseIpcError } from "@/lib/ipc-error";
 export type RailView = "overview" | "checks" | "comments" | "harbor";
+
+export type RepositoryTarget = {
+  id: string | number;
+  owner: string;
+  name: string;
+  isPrivate?: boolean;
+};
 
 type RepositoryContextAnswer = {
   repository: string;
@@ -46,7 +52,7 @@ export function HarborRail({
   activeView,
   onViewChange,
 }: {
-  selectedRepository: Repository;
+  selectedRepository: RepositoryTarget | null;
   activeView: RailView;
   onViewChange: (view: RailView) => void;
 }) {
@@ -60,7 +66,8 @@ export function HarborRail({
   useEffect(() => {
     setAnswer(null);
     setAgentError("");
-  }, [selectedRepository.id]);
+    setQuestion("");
+  }, [selectedRepository?.id]);
 
   const selectView = (view: RailView) => {
     onViewChange(view);
@@ -70,6 +77,14 @@ export function HarborRail({
   const handleAskHarbor = async () => {
     const nextQuestion = question.trim();
     if (!nextQuestion) return;
+    if (!selectedRepository) {
+      setAgentError(t("workspace.agent.selectRepository"));
+      return;
+    }
+    if (selectedRepository.isPrivate) {
+      setAgentError(t("workspace.agent.publicOnly"));
+      return;
+    }
     if (!isTauri()) {
       setAgentError(t("workspace.agent.desktopOnly"));
       return;
@@ -87,7 +102,7 @@ export function HarborRail({
       setAnswer(nextAnswer);
       setQuestion("");
     } catch (reason) {
-      setAgentError(String(reason));
+      setAgentError(parseIpcError(reason).message);
     } finally {
       setAsking(false);
     }
@@ -146,17 +161,33 @@ export function HarborRail({
               {t(`workspace.rail.${activeView}`)}
             </SheetTitle>
             <SheetDescription className="text-xs">
-              {selectedRepository.owner}/{selectedRepository.name}
+              {selectedRepository
+                ? `${selectedRepository.owner}/${selectedRepository.name}`
+                : t("workspace.agent.noRepository")}
             </SheetDescription>
           </SheetHeader>
           <div className="flex min-h-0 flex-1 flex-col gap-4 p-5">
             {activeView === "harbor" ? (
               <>
-                <Alert>
-                  <Bot />
-                  <AlertTitle>{t("workspace.agent.ready")}</AlertTitle>
-                  <AlertDescription>{t("workspace.agent.description")}</AlertDescription>
-                </Alert>
+                {selectedRepository?.isPrivate ? (
+                  <Alert>
+                    <CircleAlert />
+                    <AlertTitle>{t("workspace.agent.publicOnlyTitle")}</AlertTitle>
+                    <AlertDescription>{t("workspace.agent.publicOnly")}</AlertDescription>
+                  </Alert>
+                ) : selectedRepository ? (
+                  <Alert>
+                    <Bot />
+                    <AlertTitle>{t("workspace.agent.ready")}</AlertTitle>
+                    <AlertDescription>{t("workspace.agent.description")}</AlertDescription>
+                  </Alert>
+                ) : (
+                  <Alert>
+                    <CircleAlert />
+                    <AlertTitle>{t("workspace.agent.selectRepositoryTitle")}</AlertTitle>
+                    <AlertDescription>{t("workspace.agent.selectRepository")}</AlertDescription>
+                  </Alert>
+                )}
 
                 {agentError ? (
                   <Alert variant="destructive">
@@ -166,7 +197,9 @@ export function HarborRail({
                   </Alert>
                 ) : null}
 
-                {asking ? (
+                {!selectedRepository || selectedRepository.isPrivate ? (
+                  <div className="flex-1" />
+                ) : asking ? (
                   <div className="text-muted-foreground flex flex-1 items-center justify-center gap-2 text-xs">
                     <Spinner />
                     {t("workspace.agent.thinking")}
@@ -186,35 +219,37 @@ export function HarborRail({
                   <div className="flex-1" />
                 )}
 
-                <form
-                  className="mt-auto"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    void handleAskHarbor();
-                  }}
-                >
-                  <Field orientation="horizontal" className="gap-2">
-                    <FieldLabel htmlFor="harbor-prompt" className="sr-only">
-                      {t("workspace.agent.placeholder")}
-                    </FieldLabel>
-                    <Input
-                      id="harbor-prompt"
-                      value={question}
-                      onChange={(event) => setQuestion(event.currentTarget.value)}
-                      placeholder={t("workspace.agent.placeholder")}
-                      disabled={asking}
-                      className="bg-black/10 text-xs"
-                    />
-                    <Button
-                      type="submit"
-                      size="icon"
-                      disabled={asking || !question.trim()}
-                      aria-label={t("workspace.agent.send")}
-                    >
-                      {asking ? <Spinner /> : <ArrowUpRight />}
-                    </Button>
-                  </Field>
-                </form>
+                {selectedRepository && !selectedRepository.isPrivate ? (
+                  <form
+                    className="mt-auto"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      void handleAskHarbor();
+                    }}
+                  >
+                    <Field orientation="horizontal" className="gap-2">
+                      <FieldLabel htmlFor="harbor-prompt" className="sr-only">
+                        {t("workspace.agent.placeholder")}
+                      </FieldLabel>
+                      <Input
+                        id="harbor-prompt"
+                        value={question}
+                        onChange={(event) => setQuestion(event.currentTarget.value)}
+                        placeholder={t("workspace.agent.placeholder")}
+                        disabled={asking}
+                        className="bg-black/10 text-xs"
+                      />
+                      <Button
+                        type="submit"
+                        size="icon"
+                        disabled={asking || !question.trim()}
+                        aria-label={t("workspace.agent.send")}
+                      >
+                        {asking ? <Spinner /> : <ArrowUpRight />}
+                      </Button>
+                    </Field>
+                  </form>
+                ) : null}
               </>
             ) : (
               <div className="grid flex-1 place-items-center text-center">

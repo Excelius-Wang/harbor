@@ -32,6 +32,14 @@ impl RepositoryRef {
     pub fn full_name(&self) -> String {
         format!("{}/{}", self.owner, self.name)
     }
+
+    pub fn owner(&self) -> &str {
+        &self.owner
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]

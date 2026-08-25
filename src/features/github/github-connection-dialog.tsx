@@ -16,6 +16,7 @@ import {
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import { parseIpcError } from "@/lib/ipc-error";
 
 export type GitHubIdentity = {
   login: string;
@@ -54,7 +55,7 @@ export function GitHubConnectionDialog({
     setError("");
     void invoke<GitHubConnection>("github_connection_status")
       .then(onConnectionChange)
-      .catch((reason) => setError(String(reason)))
+      .catch((reason) => setError(parseIpcError(reason).message))
       .finally(() => setChecking(false));
   }, [open, onConnectionChange]);
 
@@ -72,7 +73,7 @@ export function GitHubConnectionDialog({
       onConnectionChange(nextConnection);
       setToken("");
     } catch (reason) {
-      setError(String(reason));
+      setError(parseIpcError(reason).message);
     } finally {
       setChecking(false);
     }
@@ -85,7 +86,7 @@ export function GitHubConnectionDialog({
       const nextConnection = await invoke<GitHubConnection>("github_disconnect");
       onConnectionChange(nextConnection);
     } catch (reason) {
-      setError(String(reason));
+      setError(parseIpcError(reason).message);
     } finally {
       setChecking(false);
     }
@@ -93,7 +94,7 @@ export function GitHubConnectionDialog({
 
   const handleCreateToken = async () => {
     const url =
-      "https://github.com/settings/personal-access-tokens/new?name=Harbor&description=GitHub+desktop+workspace&expires_in=30&contents=read&issues=write&pull_requests=read";
+      "https://github.com/settings/personal-access-tokens/new?name=Harbor&description=GitHub+desktop+workspace&expires_in=30&contents=read&issues=read&pull_requests=read";
     if (isTauri()) {
       await openUrl(url);
       return;

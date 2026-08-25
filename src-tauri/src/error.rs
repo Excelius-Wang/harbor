@@ -9,6 +9,8 @@ pub enum AppError {
     Credentials(String),
     #[error("GitHub error: {0}")]
     GitHub(String),
+    #[error("GitHub is not connected")]
+    GitHubNotConnected,
     #[error("Repository context error: {0}")]
     RepositoryContext(String),
 }
@@ -18,6 +20,42 @@ impl Serialize for AppError {
     where
         S: serde::Serializer,
     {
-        serializer.serialize_str(&self.to_string())
+        #[derive(Serialize)]
+        #[serde(rename_all = "camelCase")]
+        struct ErrorPayload<'a> {
+            code: &'a str,
+            message: String,
+        }
+
+        let code = match self {
+            Self::Validation(_) => "validation",
+            Self::Credentials(_) => "credentials",
+            Self::GitHub(_) => "github",
+            Self::GitHubNotConnected => "githubNotConnected",
+            Self::RepositoryContext(_) => "repositoryContext",
+        };
+        ErrorPayload {
+            code,
+            message: self.to_string(),
+        }
+        .serialize(serializer)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn github_not_connected_has_a_stable_ipc_code() {
+        let payload = serde_json::to_value(AppError::GitHubNotConnected).expect("serialize error");
+
+        assert_eq!(
+            payload,
+            serde_json::json!({
+                "code": "githubNotConnected",
+                "message": "GitHub is not connected"
+            })
+        );
     }
 }

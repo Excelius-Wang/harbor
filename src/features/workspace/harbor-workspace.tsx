@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { isTauri } from "@tauri-apps/api/core";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   ChevronDown,
   ChevronRight,
@@ -55,8 +54,10 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { openSettingsWindow } from "@/lib/window";
-import { HarborRail, type RailView } from "./harbor-rail";
+import { openExternalUrl, openSettingsWindow } from "@/lib/window";
+import type { GitHubRepository } from "@/features/github/github-data";
+import { GitHubRepositoryBrowser } from "@/features/github/github-repository-browser";
+import { HarborRail, type RailView, type RepositoryTarget } from "./harbor-rail";
 import {
   pinnedRepositories,
   repositories,
@@ -72,7 +73,7 @@ const navItems: Array<{
   icon: typeof GitPullRequest;
   count?: number;
 }> = [
-  { id: "pullRequests", icon: GitPullRequest, count: 7 },
+  { id: "pullRequests", icon: GitPullRequest },
   { id: "repositories", icon: Library },
   { id: "discover", icon: Compass },
 ];
@@ -82,15 +83,6 @@ const activityIcons: Record<ActivityKind, typeof GitMerge> = {
   opened: CircleDot,
   commented: MessageSquareText,
 };
-
-async function openExternal(url: string) {
-  if (isTauri()) {
-    await openUrl(url);
-    return;
-  }
-
-  window.open(url, "_blank", "noopener,noreferrer");
-}
 
 function RepositoryMark({
   repository,
@@ -321,7 +313,7 @@ function RepositoryList({
       event.preventDefault();
       const repository = visibleRepositories[selectedIndex] ?? visibleRepositories[0];
       if (event.metaKey || event.ctrlKey) {
-        void openExternal(repository.url);
+        void openExternalUrl(repository.url);
       } else {
         onPreview(repository);
       }
@@ -351,7 +343,7 @@ function RepositoryList({
             role="option"
             aria-selected={isSelected}
             onClick={() => onSelect(repository)}
-            onDoubleClick={() => void openExternal(repository.url)}
+            onDoubleClick={() => void openExternalUrl(repository.url)}
             className={cn(
               "group focus-visible:ring-primary/60 relative grid w-full grid-cols-[24px_44px_minmax(0,1fr)_52px] gap-3 border-b border-white/[0.065] px-4 py-3.5 text-left transition-colors focus-visible:z-10 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset",
               isSelected ? "bg-primary/[0.095]" : "hover:bg-white/[0.025]"
@@ -414,7 +406,7 @@ function RepositoryDetailContent({ repository }: { repository: Repository }) {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => void openExternal(repository.url)}
+            onClick={() => void openExternalUrl(repository.url)}
             className="h-8 shrink-0 rounded-md border-white/10 bg-transparent px-2.5 text-xs shadow-none"
           >
             {t("workspace.openOnGitHub")}
@@ -669,7 +661,7 @@ function DiscoverWorkspace({
   );
 }
 
-function SectionPlaceholder({ section }: { section: Exclude<WorkspaceSection, "discover"> }) {
+function SectionPlaceholder({ section }: { section: "pullRequests" }) {
   const { t } = useTranslation();
   const Icon = section === "pullRequests" ? GitPullRequest : Library;
 
@@ -695,6 +687,9 @@ export function HarborWorkspace() {
   const { t } = useTranslation();
   const [activeSection, setActiveSection] = useState<WorkspaceSection>("discover");
   const [selectedRepository, setSelectedRepository] = useState(repositories[0]);
+  const [selectedGitHubRepository, setSelectedGitHubRepository] = useState<GitHubRepository | null>(
+    null
+  );
   const [commandOpen, setCommandOpen] = useState(false);
   const [railView, setRailView] = useState<RailView>("overview");
 
@@ -715,6 +710,12 @@ export function HarborWorkspace() {
     action();
   };
 
+  const railRepository: RepositoryTarget | null =
+    activeSection === "repositories" ? selectedGitHubRepository : selectedRepository;
+
+  const commandRepositoryUrl =
+    activeSection === "repositories" ? selectedGitHubRepository?.url : selectedRepository.url;
+
   return (
     <WindowFrame
       titleBar={<MainTitleBar onOpenCommand={() => setCommandOpen(true)} />}
@@ -727,11 +728,13 @@ export function HarborWorkspace() {
           selectedRepository={selectedRepository}
           onSelectRepository={setSelectedRepository}
         />
+      ) : activeSection === "repositories" ? (
+        <GitHubRepositoryBrowser onSelectRepository={setSelectedGitHubRepository} />
       ) : (
         <SectionPlaceholder section={activeSection} />
       )}
       <HarborRail
-        selectedRepository={selectedRepository}
+        selectedRepository={railRepository}
         activeView={railView}
         onViewChange={setRailView}
       />
@@ -764,7 +767,12 @@ export function HarborWorkspace() {
           <CommandSeparator />
           <CommandGroup heading={t("workspace.command.repository")}>
             <CommandItem
-              onSelect={() => runCommand(() => void openExternal(selectedRepository.url))}
+              disabled={!commandRepositoryUrl}
+              onSelect={() => {
+                if (commandRepositoryUrl) {
+                  runCommand(() => void openExternalUrl(commandRepositoryUrl));
+                }
+              }}
             >
               <ExternalLink />
               {t("workspace.command.openSelected")}
