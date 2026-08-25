@@ -162,7 +162,7 @@ function PrimaryNavigation({
   };
 
   return (
-    <aside className="harbor-glass harbor-primary-nav flex min-h-0 w-[216px] shrink-0 flex-col border-r max-[760px]:w-[54px]">
+    <aside className="harbor-glass harbor-primary-nav workspace-wide:w-[216px] flex min-h-0 w-[54px] shrink-0 flex-col border-r">
       <nav className="space-y-1 px-2 py-3" aria-label={t("workspace.primaryNavigation")}>
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -180,22 +180,23 @@ function PrimaryNavigation({
                       : "text-muted-foreground hover:text-foreground hover:bg-white/[0.045]"
                   )}
                   aria-current={isActive ? "page" : undefined}
+                  aria-label={t(`workspace.nav.${item.id}`)}
                 >
                   {isActive && (
                     <span className="bg-primary absolute inset-y-1.5 -left-2 w-0.5 rounded-r" />
                   )}
                   <Icon className="size-4 shrink-0" strokeWidth={1.75} />
-                  <span className="min-w-0 flex-1 truncate max-[760px]:hidden">
+                  <span className="workspace-wide:block hidden min-w-0 flex-1 truncate">
                     {t(`workspace.nav.${item.id}`)}
                   </span>
                   {item.count ? (
-                    <span className="text-[11px] tabular-nums opacity-65 max-[760px]:hidden">
+                    <span className="workspace-wide:block hidden text-[11px] tabular-nums opacity-65">
                       {item.count}
                     </span>
                   ) : null}
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="right" sideOffset={8} className="min-[761px]:hidden">
+              <TooltipContent side="right" sideOffset={8} className="workspace-wide:hidden">
                 {t(`workspace.nav.${item.id}`)}
               </TooltipContent>
             </Tooltip>
@@ -203,9 +204,9 @@ function PrimaryNavigation({
         })}
       </nav>
 
-      <Separator className="mx-3 w-auto bg-white/8 max-[760px]:mx-2" />
+      <Separator className="workspace-wide:mx-3 mx-2 w-auto bg-white/8" />
 
-      <div className="min-h-0 flex-1 overflow-hidden px-2 py-3 max-[760px]:hidden">
+      <div className="workspace-wide:block hidden min-h-0 flex-1 overflow-hidden px-2 py-3">
         <div className="text-muted-foreground mb-2 flex items-center gap-1.5 px-2 text-[10px] font-medium tracking-[0.12em] uppercase">
           <Pin className="size-3" />
           {t("workspace.pinned")}
@@ -228,21 +229,37 @@ function PrimaryNavigation({
       </div>
 
       <div className="space-y-0.5 p-2">
-        <button
-          type="button"
-          className="text-muted-foreground hover:text-foreground flex h-9 w-full items-center gap-2.5 rounded-md px-2 text-[13px] hover:bg-white/[0.04]"
-        >
-          <UserRound className="size-4" />
-          <span className="max-[760px]:hidden">{t("workspace.account")}</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => void handleOpenSettings()}
-          className="text-muted-foreground hover:text-foreground flex h-9 w-full items-center gap-2.5 rounded-md px-2 text-[13px] hover:bg-white/[0.04]"
-        >
-          <Settings className="size-4" />
-          <span className="max-[760px]:hidden">{t("settings.title")}</span>
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              aria-label={t("workspace.account")}
+              className="text-muted-foreground hover:text-foreground flex h-9 w-full items-center gap-2.5 rounded-md px-2 text-[13px] hover:bg-white/[0.04]"
+            >
+              <UserRound className="size-4" />
+              <span className="workspace-wide:inline hidden">{t("workspace.account")}</span>
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right" sideOffset={8} className="workspace-wide:hidden">
+            {t("workspace.account")}
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              aria-label={t("settings.title")}
+              onClick={() => void handleOpenSettings()}
+              className="text-muted-foreground hover:text-foreground flex h-9 w-full items-center gap-2.5 rounded-md px-2 text-[13px] hover:bg-white/[0.04]"
+            >
+              <Settings className="size-4" />
+              <span className="workspace-wide:inline hidden">{t("settings.title")}</span>
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right" sideOffset={8} className="workspace-wide:hidden">
+            {t("settings.title")}
+          </TooltipContent>
+        </Tooltip>
       </div>
     </aside>
   );

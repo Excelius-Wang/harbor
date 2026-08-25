@@ -205,7 +205,7 @@ export function GitHubCodeView({ repository }: { repository: GitHubRepository })
   if (overviewLoading && !overview && contentsLoading && !listing) return <CodeSkeleton />;
 
   return (
-    <ScrollArea className="min-h-0 flex-1">
+    <ScrollArea className="min-h-0 min-w-0 flex-1" constrainContentWidth>
       <div className="mx-auto w-full max-w-[1040px] space-y-4 p-4 pb-10">
         <div className="flex flex-wrap items-center gap-2">
           <Select value={reference} onValueChange={selectBranch}>

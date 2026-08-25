@@ -143,7 +143,7 @@ export function MainTitleBar({ onOpenCommand }: MainTitleBarProps) {
         }
         rightActions={
           <>
-            <div className="text-muted-foreground mr-1 flex items-center gap-1.5 px-2 text-[11px] max-[900px]:hidden">
+            <div className="text-muted-foreground mr-1 hidden items-center gap-1.5 px-2 text-[11px] min-[960px]:flex">
               <CheckCircle2 className="text-primary size-3.5" />
               {githubConnection.connected
                 ? t("workspace.github.connected")

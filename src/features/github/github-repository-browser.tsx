@@ -255,8 +255,8 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
         </Alert>
       ) : null}
 
-      <div className="flex min-h-0 flex-1">
-        <aside className="flex w-[320px] shrink-0 flex-col border-r border-white/[0.075] max-[820px]:w-[260px] max-[680px]:w-full max-[680px]:border-r-0">
+      <div className="flex min-h-0 min-w-0 flex-1">
+        <aside className="workspace-wide:w-[280px] flex w-[240px] shrink-0 flex-col border-r border-white/[0.075] max-[680px]:w-full max-[680px]:border-r-0 xl:w-[320px]">
           <div className="border-b border-white/[0.065] p-3">
             <div className="relative">
               <Search className="text-muted-foreground absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
@@ -304,7 +304,7 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
           </ScrollArea>
         </aside>
 
-        <div className="flex min-w-0 flex-1 flex-col max-[680px]:hidden">
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden max-[680px]:hidden">
           {selectedRepository ? (
             <>
               <div className="flex min-h-[76px] items-center justify-between gap-4 border-b border-white/[0.065] px-4 py-3">
@@ -365,7 +365,7 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
               <Tabs
                 value={tab}
                 onValueChange={(value) => setTab(value as RepositoryTab)}
-                className="min-h-0 flex-1 gap-0"
+                className="min-h-0 min-w-0 flex-1 gap-0"
               >
                 <div className="border-b border-white/[0.065] px-4">
                   <TabsList variant="line" className="h-10 gap-4 p-0">
@@ -383,10 +383,10 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
                     </TabsTrigger>
                   </TabsList>
                 </div>
-                <TabsContent value="code" className="min-h-0">
+                <TabsContent value="code" className="min-h-0 min-w-0">
                   <GitHubCodeView key={selectedRepository.id} repository={selectedRepository} />
                 </TabsContent>
-                <TabsContent value="issues" className="min-h-0">
+                <TabsContent value="issues" className="min-h-0 min-w-0">
                   <GitHubIssueView repository={selectedRepository} />
                 </TabsContent>
                 <TabsContent value="pullRequests" className="min-h-0 overflow-auto">
