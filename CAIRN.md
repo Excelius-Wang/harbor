@@ -4,4 +4,4 @@
 
 ## Current item
 
-`.cairn/items/github-login.md`
+`.cairn/items/github-web-parity.md`

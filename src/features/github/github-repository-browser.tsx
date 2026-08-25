@@ -383,10 +383,13 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
                     </TabsTrigger>
                   </TabsList>
                 </div>
-                <TabsContent value="code" className="min-h-0 min-w-0">
+                <TabsContent value="code" className="flex min-h-0 min-w-0 flex-col overflow-hidden">
                   <GitHubCodeView key={selectedRepository.id} repository={selectedRepository} />
                 </TabsContent>
-                <TabsContent value="issues" className="min-h-0 min-w-0">
+                <TabsContent
+                  value="issues"
+                  className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+                >
                   <GitHubIssueView repository={selectedRepository} />
                 </TabsContent>
                 <TabsContent value="pullRequests" className="min-h-0 overflow-auto">
