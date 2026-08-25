@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { CheckCircle2, ExternalLink, KeyRound, Unplug } from "lucide-react";
@@ -17,6 +18,7 @@ import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/c
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { parseIpcError } from "@/lib/ipc-error";
+import { githubQueryKeys } from "./github-queries";
 
 export type GitHubIdentity = {
   login: string;
@@ -44,9 +46,15 @@ export function GitHubConnectionDialog({
   onConnectionChange,
 }: GitHubConnectionDialogProps) {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const [token, setToken] = useState("");
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState("");
+
+  const clearGitHubCache = async () => {
+    await queryClient.cancelQueries({ queryKey: githubQueryKeys.all });
+    queryClient.removeQueries({ queryKey: githubQueryKeys.all });
+  };
 
   useEffect(() => {
     if (!open || !isTauri()) return;
@@ -70,6 +78,7 @@ export function GitHubConnectionDialog({
     setError("");
     try {
       const nextConnection = await invoke<GitHubConnection>("github_connect", { token });
+      await clearGitHubCache();
       onConnectionChange(nextConnection);
       setToken("");
     } catch (reason) {
@@ -84,6 +93,7 @@ export function GitHubConnectionDialog({
     setError("");
     try {
       const nextConnection = await invoke<GitHubConnection>("github_disconnect");
+      await clearGitHubCache();
       onConnectionChange(nextConnection);
     } catch (reason) {
       setError(parseIpcError(reason).message);

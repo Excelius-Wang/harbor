@@ -15,10 +15,12 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css,json}\"",
     "lint": "eslint src/**/*.{ts,tsx} vite.config.ts",
     "lint:fix": "eslint src/**/*.{ts,tsx} vite.config.ts --fix",
-    "check": "pnpm format:check && pnpm lint && pnpm build"
+    "test": "vitest run",
+    "check": "pnpm format:check && pnpm lint && pnpm test && pnpm build"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.1",
+    "@tanstack/react-query": "^5.102.3",
     "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-global-shortcut": "^2.3.1",
     "@tauri-apps/plugin-opener": "^2",
@@ -55,6 +57,7 @@
     "prettier-plugin-tailwindcss": "^0.7.2",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.46.1",
-    "vite": "^7.0.4"
+    "vite": "^7.0.4",
+    "vitest": "^4.1.11"
   }
 }

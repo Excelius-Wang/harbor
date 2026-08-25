@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   ChevronRight,
   CircleDot,
@@ -29,9 +29,10 @@ import {
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { parseIpcError, type IpcError } from "@/lib/ipc-error";
+import { parseIpcError } from "@/lib/ipc-error";
 import { openExternalUrl } from "@/lib/window";
-import type { GitHubIssue, GitHubIssuePage, GitHubRepository } from "./github-data";
+import type { GitHubIssue, GitHubRepository } from "./github-data";
+import { repositoryIssuesQueryOptions } from "./github-queries";
 
 type IssueFilter = "all" | "unassigned";
 
@@ -123,38 +124,18 @@ function IssueRow({
 
 export function GitHubIssueView({ repository }: { repository: GitHubRepository }) {
   const { t, i18n } = useTranslation();
-  const [page, setPage] = useState<GitHubIssuePage | null>(null);
   const [filter, setFilter] = useState<IssueFilter>("all");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<IpcError | null>(null);
   const [selectedIssue, setSelectedIssue] = useState<GitHubIssue | null>(null);
-  const request = useRef(0);
-
-  const loadIssues = useCallback(async () => {
-    const currentRequest = ++request.current;
-    setLoading(true);
-    setError(null);
-    setSelectedIssue(null);
-    try {
-      const nextPage = await invoke<GitHubIssuePage>("github_list_repository_issues", {
-        owner: repository.owner,
-        repository: repository.name,
-      });
-      if (request.current === currentRequest) setPage(nextPage);
-    } catch (reason) {
-      if (request.current === currentRequest) setError(parseIpcError(reason));
-    } finally {
-      if (request.current === currentRequest) setLoading(false);
-    }
-  }, [repository.name, repository.owner]);
+  const issuesResult = useQuery(
+    repositoryIssuesQueryOptions({ owner: repository.owner, repository: repository.name })
+  );
+  const page = issuesResult.data ?? null;
+  const loading = issuesResult.isPending;
+  const error = !page && issuesResult.error ? parseIpcError(issuesResult.error) : null;
 
   useEffect(() => {
-    setPage(null);
-    void loadIssues();
-    return () => {
-      request.current += 1;
-    };
-  }, [loadIssues]);
+    setSelectedIssue(null);
+  }, [repository.name, repository.owner]);
 
   const issues = useMemo(() => {
     const allIssues = page?.issues ?? [];
@@ -196,7 +177,7 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
                 <EmptyDescription>{error.message}</EmptyDescription>
               </EmptyHeader>
               <EmptyContent>
-                <Button variant="outline" onClick={() => void loadIssues()}>
+                <Button variant="outline" onClick={() => void issuesResult.refetch()}>
                   <RefreshCw data-icon="inline-start" />
                   {t("workspace.repositories.retry")}
                 </Button>

@@ -17,6 +17,11 @@ Both commands validate the repository reference and path, load the token from th
 
 README Markdown is rendered with `react-markdown` and `remark-gfm`. Raw HTML is not enabled. Links open outside Harbor, and images are presented as explicit external links so private image URLs and webview navigation do not leak credentials or replace the workspace.
 
+GitHub reads use TanStack Query with query keys scoped by repository, branch, and path. Fresh data
+is reused for 60 seconds and inactive data is kept for five minutes. The cache is memory-only and
+is cleared when the GitHub account connects or disconnects. Refresh controls bypass the freshness
+window and read from GitHub again.
+
 ## Manual verification
 
 1. Run `pnpm tauri:dev` and connect a fine-grained token with repository Contents and Issues read access.
@@ -29,6 +34,7 @@ Automated checks:
 
 ```bash
 pnpm check
+cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
 cargo test --manifest-path src-tauri/Cargo.toml
 cargo check --manifest-path src-tauri/Cargo.toml
 ```

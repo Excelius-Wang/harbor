@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { invoke, isTauri } from "@tauri-apps/api/core";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { isTauri } from "@tauri-apps/api/core";
 import {
   Archive,
   CircleDot,
@@ -35,8 +36,9 @@ import { parseIpcError, type IpcError } from "@/lib/ipc-error";
 import { cn } from "@/lib/utils";
 import { openExternalUrl } from "@/lib/window";
 import { GitHubCodeView } from "./github-code-view";
-import type { GitHubRepository, GitHubRepositoryPage } from "./github-data";
+import type { GitHubRepository } from "./github-data";
 import { GitHubIssueView } from "./github-issue-view";
+import { repositoriesQueryOptions } from "./github-queries";
 
 type RepositoryTab = "code" | "issues" | "pullRequests" | "actions";
 
@@ -138,47 +140,21 @@ function WorkflowPlaceholder({
 
 export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepositoryBrowserProps) {
   const { t } = useTranslation();
-  const [repositoryPage, setRepositoryPage] = useState<GitHubRepositoryPage | null>(null);
   const [selectedRepositoryId, setSelectedRepositoryId] = useState<number | null>(null);
   const [repositoryQuery, setRepositoryQuery] = useState("");
-  const [repositoryLoading, setRepositoryLoading] = useState(true);
-  const [repositoryError, setRepositoryError] = useState<IpcError | null>(null);
   const [tab, setTab] = useState<RepositoryTab>("code");
-
-  const loadRepositories = useCallback(async () => {
-    if (!isTauri()) {
-      setRepositoryError({
-        code: "desktopOnly",
-        message: t("workspace.repositories.desktopOnly"),
-      });
-      onSelectRepository(null);
-      setRepositoryLoading(false);
-      return;
-    }
-
-    setRepositoryLoading(true);
-    setRepositoryError(null);
-    try {
-      const nextPage = await invoke<GitHubRepositoryPage>("github_list_repositories");
-      setRepositoryPage(nextPage);
-      setSelectedRepositoryId((current) => {
-        if (current && nextPage.repositories.some((repository) => repository.id === current)) {
-          return current;
-        }
-        return nextPage.repositories[0]?.id ?? null;
-      });
-    } catch (reason) {
-      const error = parseIpcError(reason);
-      setRepositoryError(error);
-      if (error.code === "githubNotConnected") {
-        setRepositoryPage(null);
-        setSelectedRepositoryId(null);
-        onSelectRepository(null);
-      }
-    } finally {
-      setRepositoryLoading(false);
-    }
-  }, [onSelectRepository, t]);
+  const desktopRuntime = isTauri();
+  const repositoriesResult = useQuery({
+    ...repositoriesQueryOptions(),
+    enabled: desktopRuntime,
+  });
+  const repositoryPage = repositoriesResult.data ?? null;
+  const repositoryLoading = repositoriesResult.isPending;
+  const repositoryError: IpcError | null = !desktopRuntime
+    ? { code: "desktopOnly", message: t("workspace.repositories.desktopOnly") }
+    : repositoriesResult.error
+      ? parseIpcError(repositoriesResult.error)
+      : null;
 
   const selectedRepository = useMemo(
     () =>
@@ -188,8 +164,14 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
   );
 
   useEffect(() => {
-    void loadRepositories();
-  }, [loadRepositories]);
+    if (!repositoryPage) return;
+    setSelectedRepositoryId((current) => {
+      if (current && repositoryPage.repositories.some((repository) => repository.id === current)) {
+        return current;
+      }
+      return repositoryPage.repositories[0]?.id ?? null;
+    });
+  }, [repositoryPage]);
 
   useEffect(() => {
     onSelectRepository(selectedRepository);
@@ -229,7 +211,7 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
             </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
-            <Button variant="outline" onClick={() => void loadRepositories()}>
+            <Button variant="outline" onClick={() => void repositoriesResult.refetch()}>
               <RefreshCw data-icon="inline-start" />
               {t("workspace.repositories.retry")}
             </Button>
@@ -253,10 +235,10 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
         <Button
           variant="outline"
           size="sm"
-          onClick={() => void loadRepositories()}
-          disabled={repositoryLoading}
+          onClick={() => void repositoriesResult.refetch()}
+          disabled={repositoriesResult.isFetching}
         >
-          {repositoryLoading ? (
+          {repositoriesResult.isFetching ? (
             <Spinner data-icon="inline-start" />
           ) : (
             <RefreshCw data-icon="inline-start" />

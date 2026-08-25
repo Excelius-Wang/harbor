@@ -2,17 +2,15 @@
 
 ## Goal
 
-Build Harbor's first GitHub-style repository workspace: a selected repository has Code, Issues,
-Pull Requests, and Actions navigation, with real Code data for branches, files, README, and
-recent commits.
+Make repeated repository navigation feel immediate by adding session-only caching and request
+deduplication to Harbor's GitHub reads, while keeping manual refresh and real GitHub data.
 
 ## Current state
 
-The first GitHub-style repository workspace is implemented. Code reads real branches, repository
-contents, the root README, and recent commits through Octocrab; Issues retains its real open and
-unassigned views. Pull Requests and Actions are visible with honest GitHub fallbacks. The browser
-view was split into repository, Code, and Issue modules, and README rendering uses maintained MIT
-libraries (`react-markdown` and `remark-gfm`).
+The GitHub repository workspace now uses TanStack Query for repositories, Code overview,
+contents, and Issues. Query keys include repository, branch, and path where relevant. Fresh data is
+reused for 60 seconds, inactive entries are collected after five minutes, and connecting or
+disconnecting GitHub clears the in-memory cache. Manual refresh still reads GitHub immediately.
 
 ## Next action
 
@@ -29,14 +27,16 @@ git diff --check
 pnpm tauri:dev
 ```
 
-Result: `pnpm check`, Rust formatting, all local Rust tests (19 passed, 1 external-service test
-ignored), `cargo check`, and `git diff --check` pass. A Playwright IPC simulation verified Code,
-folder navigation and breadcrumbs, README GFM rendering, Issues, and the Issue detail sheet. The
-native development process also compiled and hot-reloaded the new Tauri commands.
+Result: `pnpm check`, Rust formatting, 19 local Rust tests, `cargo check`, and `git diff --check`
+pass; one external DeepWiki test remains ignored by design. Unit tests prove same-key
+deduplication, fresh-cache reuse, and explicit invalidation. A Playwright call-count probe confirms
+StrictMode now issues one initial request per GitHub query, revisiting a repository issues none,
+and manual refresh refetches Code overview and contents.
 
 ## Decisions
 
-- Keep Code read-only. Pull Requests and Actions get honest placeholders in this slice.
-- Reuse Octocrab for GitHub API access and a maintained Markdown renderer for README content.
-- Keep repository navigation within the existing Harbor visual system instead of copying GitHub
-  styling pixel for pixel.
+- Use TanStack Query rather than a handwritten cache.
+- Keep cache in memory only, with a 60-second stale window and five-minute garbage collection.
+- Keep React StrictMode; rely on query-key deduplication instead of effect guards.
+- Defer ETag, disk persistence, prefetching, and Octocrab session reuse until measurements justify
+  them.

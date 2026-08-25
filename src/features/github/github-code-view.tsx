@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   BookOpenText,
   Box,
@@ -44,14 +44,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { parseIpcError, type IpcError } from "@/lib/ipc-error";
+import { parseIpcError } from "@/lib/ipc-error";
 import { openExternalUrl } from "@/lib/window";
-import type {
-  GitHubCodeOverview,
-  GitHubContentEntry,
-  GitHubContentListing,
-  GitHubRepository,
-} from "./github-data";
+import type { GitHubContentEntry, GitHubRepository } from "./github-data";
+import { repositoryCodeQueryOptions, repositoryContentsQueryOptions } from "./github-queries";
 
 function formatBytes(bytes: number, locale: string) {
   if (bytes < 1_000) return `${bytes} B`;
@@ -143,65 +139,17 @@ export function GitHubCodeView({ repository }: { repository: GitHubRepository })
   const { t, i18n } = useTranslation();
   const [reference, setReference] = useState(repository.defaultBranch);
   const [path, setPath] = useState("");
-  const [overview, setOverview] = useState<GitHubCodeOverview | null>(null);
-  const [listing, setListing] = useState<GitHubContentListing | null>(null);
-  const [overviewLoading, setOverviewLoading] = useState(true);
-  const [contentsLoading, setContentsLoading] = useState(true);
-  const [overviewError, setOverviewError] = useState<IpcError | null>(null);
-  const [contentsError, setContentsError] = useState<IpcError | null>(null);
-  const overviewRequest = useRef(0);
-  const contentsRequest = useRef(0);
-
-  const loadOverview = useCallback(async () => {
-    const currentRequest = ++overviewRequest.current;
-    setOverviewLoading(true);
-    setOverviewError(null);
-    try {
-      const nextOverview = await invoke<GitHubCodeOverview>("github_get_repository_code_overview", {
-        owner: repository.owner,
-        repository: repository.name,
-        reference,
-      });
-      if (overviewRequest.current === currentRequest) setOverview(nextOverview);
-    } catch (reason) {
-      if (overviewRequest.current === currentRequest) setOverviewError(parseIpcError(reason));
-    } finally {
-      if (overviewRequest.current === currentRequest) setOverviewLoading(false);
-    }
-  }, [reference, repository.name, repository.owner]);
-
-  const loadContents = useCallback(async () => {
-    const currentRequest = ++contentsRequest.current;
-    setContentsLoading(true);
-    setContentsError(null);
-    try {
-      const nextListing = await invoke<GitHubContentListing>("github_list_repository_contents", {
-        owner: repository.owner,
-        repository: repository.name,
-        reference,
-        path,
-      });
-      if (contentsRequest.current === currentRequest) setListing(nextListing);
-    } catch (reason) {
-      if (contentsRequest.current === currentRequest) setContentsError(parseIpcError(reason));
-    } finally {
-      if (contentsRequest.current === currentRequest) setContentsLoading(false);
-    }
-  }, [path, reference, repository.name, repository.owner]);
-
-  useEffect(() => {
-    void loadOverview();
-    return () => {
-      overviewRequest.current += 1;
-    };
-  }, [loadOverview]);
-
-  useEffect(() => {
-    void loadContents();
-    return () => {
-      contentsRequest.current += 1;
-    };
-  }, [loadContents]);
+  const target = { owner: repository.owner, repository: repository.name, reference };
+  const overviewResult = useQuery(repositoryCodeQueryOptions(target));
+  const contentsResult = useQuery(repositoryContentsQueryOptions({ ...target, path }));
+  const overview = overviewResult.data ?? null;
+  const listing = contentsResult.data ?? null;
+  const overviewLoading = overviewResult.isPending;
+  const contentsLoading = contentsResult.isPending;
+  const overviewError =
+    !overview && overviewResult.error ? parseIpcError(overviewResult.error) : null;
+  const contentsError =
+    !listing && contentsResult.error ? parseIpcError(contentsResult.error) : null;
 
   const breadcrumbSegments = useMemo(() => path.split("/").filter(Boolean), [path]);
   const latestCommit = overview?.commits[0];
@@ -289,12 +237,16 @@ export function GitHubCodeView({ repository }: { repository: GitHubRepository })
             size="icon-sm"
             aria-label={t("workspace.repositories.refreshCode")}
             onClick={() => {
-              void loadOverview();
-              void loadContents();
+              void overviewResult.refetch();
+              void contentsResult.refetch();
             }}
-            disabled={overviewLoading || contentsLoading}
+            disabled={overviewResult.isFetching || contentsResult.isFetching}
           >
-            <RefreshCw className={overviewLoading || contentsLoading ? "animate-spin" : ""} />
+            <RefreshCw
+              className={
+                overviewResult.isFetching || contentsResult.isFetching ? "animate-spin" : ""
+              }
+            />
           </Button>
         </div>
 
@@ -311,8 +263,8 @@ export function GitHubCodeView({ repository }: { repository: GitHubRepository })
               <Button
                 variant="outline"
                 onClick={() => {
-                  void loadOverview();
-                  void loadContents();
+                  void overviewResult.refetch();
+                  void contentsResult.refetch();
                 }}
               >
                 <RefreshCw data-icon="inline-start" />
