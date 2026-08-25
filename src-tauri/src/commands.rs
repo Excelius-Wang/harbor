@@ -7,15 +7,13 @@ use crate::{
         GitHubCodeOverview, GitHubConnection, GitHubContentListing, GitHubIssuePage,
         GitHubRepositoryPage,
     },
+    github_oauth::GitHubLoginAttempt,
     repository_context::{RepositoryContextAnswer, RepositoryRef},
 };
 
 #[tauri::command]
-pub async fn github_connect(
-    token: String,
-    state: State<'_, AppState>,
-) -> Result<GitHubConnection, AppError> {
-    state.github.connect(token).await
+pub fn github_begin_login(state: State<'_, AppState>) -> Result<GitHubLoginAttempt, AppError> {
+    state.github.begin_login()
 }
 
 #[tauri::command]

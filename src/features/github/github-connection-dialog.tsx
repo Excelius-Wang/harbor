@@ -1,10 +1,12 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { invoke, isTauri } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { CheckCircle2, ExternalLink, KeyRound, Unplug } from "lucide-react";
+import { ExternalLink, Github, ShieldCheck, Unplug, Waves } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,8 +16,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { parseIpcError } from "@/lib/ipc-error";
 import { resetGitHubQueryCache } from "./github-queries";
@@ -30,6 +30,14 @@ export type GitHubConnection = {
   identity?: GitHubIdentity;
 };
 
+type GitHubLoginAttempt = {
+  authorizationUrl: string;
+};
+
+type GitHubAuthEvent =
+  | { status: "connected"; connection: GitHubConnection }
+  | { status: "failed"; message: string };
+
 type GitHubConnectionDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -39,6 +47,43 @@ type GitHubConnectionDialogProps = {
 
 const disconnected: GitHubConnection = { connected: false };
 
+function AccountAvatar({ identity }: { identity: GitHubIdentity }) {
+  const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => setImageFailed(false), [identity.avatarUrl]);
+
+  return (
+    <span className="bg-primary/10 text-primary grid size-11 shrink-0 place-items-center overflow-hidden rounded-full border">
+      {identity.avatarUrl && !imageFailed ? (
+        <img
+          src={identity.avatarUrl}
+          alt={`@${identity.login}`}
+          className="size-full object-cover"
+          onError={() => setImageFailed(true)}
+        />
+      ) : (
+        <span className="text-sm font-semibold">{identity.login.charAt(0).toUpperCase()}</span>
+      )}
+    </span>
+  );
+}
+
+function ConnectionRoute() {
+  return (
+    <div className="flex items-center justify-center gap-2 py-1" aria-hidden="true">
+      <span className="bg-muted grid size-10 place-items-center rounded-full border">
+        <Github className="size-5" />
+      </span>
+      <span className="bg-border relative h-px w-16 overflow-hidden">
+        <span className="bg-primary absolute inset-y-0 left-0 w-2/3" />
+      </span>
+      <span className="bg-primary/10 text-primary grid size-10 place-items-center rounded-full border">
+        <Waves className="size-5" />
+      </span>
+    </div>
+  );
+}
+
 export function GitHubConnectionDialog({
   open,
   onOpenChange,
@@ -47,8 +92,8 @@ export function GitHubConnectionDialog({
 }: GitHubConnectionDialogProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const [token, setToken] = useState("");
   const [checking, setChecking] = useState(false);
+  const [waiting, setWaiting] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -62,8 +107,34 @@ export function GitHubConnectionDialog({
       .finally(() => setChecking(false));
   }, [open, onConnectionChange]);
 
-  const handleConnect = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  useEffect(() => {
+    if (!isTauri()) return;
+
+    const unlisten = listen<GitHubAuthEvent>("github-auth", (event) => {
+      if (event.payload.status === "failed") {
+        setWaiting(false);
+        setChecking(false);
+        setError(event.payload.message);
+        return;
+      }
+
+      const nextConnection = event.payload.connection;
+      setChecking(true);
+      void resetGitHubQueryCache(queryClient)
+        .then(() => {
+          onConnectionChange(nextConnection);
+          setWaiting(false);
+          setError("");
+        })
+        .finally(() => setChecking(false));
+    });
+
+    return () => {
+      void unlisten.then((removeListener) => removeListener());
+    };
+  }, [onConnectionChange, queryClient]);
+
+  const handleLogin = async () => {
     if (!isTauri()) {
       setError(t("workspace.github.desktopOnly"));
       return;
@@ -72,11 +143,11 @@ export function GitHubConnectionDialog({
     setChecking(true);
     setError("");
     try {
-      const nextConnection = await invoke<GitHubConnection>("github_connect", { token });
-      await resetGitHubQueryCache(queryClient);
-      onConnectionChange(nextConnection);
-      setToken("");
+      const attempt = await invoke<GitHubLoginAttempt>("github_begin_login");
+      await openUrl(attempt.authorizationUrl);
+      setWaiting(true);
     } catch (reason) {
+      setWaiting(false);
       setError(parseIpcError(reason).message);
     } finally {
       setChecking(false);
@@ -90,6 +161,7 @@ export function GitHubConnectionDialog({
       const nextConnection = await invoke<GitHubConnection>("github_disconnect");
       await resetGitHubQueryCache(queryClient);
       onConnectionChange(nextConnection);
+      setWaiting(false);
     } catch (reason) {
       setError(parseIpcError(reason).message);
     } finally {
@@ -97,31 +169,27 @@ export function GitHubConnectionDialog({
     }
   };
 
-  const handleCreateToken = async () => {
-    const url =
-      "https://github.com/settings/personal-access-tokens/new?name=Harbor&description=GitHub+desktop+workspace&expires_in=30&contents=read&issues=read&pull_requests=read";
-    if (isTauri()) {
-      await openUrl(url);
-      return;
-    }
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="harbor-popover sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="harbor-popover sm:max-w-[420px]">
+        <DialogHeader className="items-center text-center sm:text-center">
+          <ConnectionRoute />
           <DialogTitle>{t("workspace.github.title")}</DialogTitle>
           <DialogDescription>{t("workspace.github.description")}</DialogDescription>
         </DialogHeader>
 
         {connection.connected && connection.identity ? (
           <div className="flex flex-col gap-4">
-            <Alert>
-              <CheckCircle2 />
-              <AlertTitle>{t("workspace.github.connected")}</AlertTitle>
-              <AlertDescription>@{connection.identity.login}</AlertDescription>
-            </Alert>
+            <div className="bg-muted/35 flex items-center gap-3 rounded-lg border p-3">
+              <AccountAvatar identity={connection.identity} />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">@{connection.identity.login}</p>
+                <p className="text-muted-foreground mt-0.5 text-xs">
+                  {t("workspace.github.secureStorage")}
+                </p>
+              </div>
+              <Badge variant="secondary">{t("workspace.github.connected")}</Badge>
+            </div>
             {error ? (
               <Alert variant="destructive">
                 <Unplug />
@@ -141,39 +209,54 @@ export function GitHubConnectionDialog({
             </DialogFooter>
           </div>
         ) : (
-          <form onSubmit={(event) => void handleConnect(event)}>
-            <FieldGroup className="gap-4">
-              <Field data-invalid={Boolean(error)}>
-                <FieldLabel htmlFor="github-token">{t("workspace.github.token")}</FieldLabel>
-                <Input
-                  id="github-token"
-                  type="password"
-                  autoComplete="new-password"
-                  value={token}
-                  onChange={(event) => setToken(event.currentTarget.value)}
-                  placeholder="github_pat_…"
-                  aria-invalid={Boolean(error)}
-                  disabled={checking}
-                />
-                <FieldDescription>{t("workspace.github.tokenDescription")}</FieldDescription>
-                <FieldError>{error}</FieldError>
-              </Field>
-              <div className="flex items-center justify-between gap-3">
-                <Button type="button" variant="ghost" onClick={() => void handleCreateToken()}>
-                  <ExternalLink data-icon="inline-start" />
-                  {t("workspace.github.createToken")}
-                </Button>
-                <Button type="submit" disabled={checking || !token.trim()}>
-                  {checking ? (
-                    <Spinner data-icon="inline-start" />
-                  ) : (
-                    <KeyRound data-icon="inline-start" />
-                  )}
-                  {checking ? t("workspace.github.checking") : t("workspace.github.connect")}
-                </Button>
-              </div>
-            </FieldGroup>
-          </form>
+          <div className="flex flex-col gap-4">
+            <Alert>
+              {waiting ? <ExternalLink /> : <ShieldCheck />}
+              <AlertTitle>
+                {t(waiting ? "workspace.github.waitingTitle" : "workspace.github.permissionsTitle")}
+              </AlertTitle>
+              <AlertDescription>
+                {t(
+                  waiting
+                    ? "workspace.github.waitingDescription"
+                    : "workspace.github.permissionsDescription"
+                )}
+              </AlertDescription>
+            </Alert>
+
+            {error ? (
+              <Alert variant="destructive">
+                <Unplug />
+                <AlertTitle>{t("workspace.github.connectionFailed")}</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : null}
+
+            <Button
+              size="lg"
+              className="w-full"
+              onClick={() => void handleLogin()}
+              disabled={checking}
+            >
+              {checking ? (
+                <Spinner data-icon="inline-start" />
+              ) : waiting ? (
+                <ExternalLink data-icon="inline-start" />
+              ) : (
+                <Github data-icon="inline-start" />
+              )}
+              {t(
+                checking
+                  ? "workspace.github.opening"
+                  : waiting
+                    ? "workspace.github.openAgain"
+                    : "workspace.github.login"
+              )}
+            </Button>
+            <p className="text-muted-foreground text-center text-xs leading-relaxed">
+              {t("workspace.github.browserSecurity")}
+            </p>
+          </div>
         )}
       </DialogContent>
     </Dialog>

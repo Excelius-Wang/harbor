@@ -11,6 +11,11 @@
     "frontendDist": "../dist"
   },
   "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["harbor"]
+      }
+    },
     "updater": {
       "pubkey": "__TAURI_UPDATER_PUBKEY__",
       "endpoints": [
@@ -43,14 +48,14 @@
         "default-src": "'self' customprotocol: asset:",
         "connect-src": "'self' ipc: http://ipc.localhost",
         "font-src": "'self' data:",
-        "img-src": "'self' asset: http://asset.localhost blob: data:",
+        "img-src": "'self' asset: http://asset.localhost blob: data: https://avatars.githubusercontent.com",
         "style-src": "'self' 'unsafe-inline'"
       },
       "devCsp": {
         "default-src": "'self' customprotocol: asset:",
         "connect-src": "'self' ipc: http://ipc.localhost ws://localhost:1420 ws://127.0.0.1:1420",
         "font-src": "'self' data:",
-        "img-src": "'self' asset: http://asset.localhost blob: data:",
+        "img-src": "'self' asset: http://asset.localhost blob: data: https://avatars.githubusercontent.com",
         "style-src": "'self' 'unsafe-inline'"
       }
     }

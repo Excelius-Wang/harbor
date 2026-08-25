@@ -7,7 +7,8 @@ exposing credentials to the frontend or introducing write actions.
 
 ## Behavior
 
-- Read the fine-grained personal access token from the operating system credential store.
+- Read the GitHub OAuth credentials from the operating system credential store and refresh an
+  expiring access token when GitHub supplied a refresh token.
 - Use Octocrab's authenticated-user repository endpoint and request the first 100 repositories,
   ordered by the most recently pushed.
 - Show repository ownership, visibility, language, stars, forks, archive state, and open-item
@@ -34,6 +35,6 @@ cargo check --manifest-path src-tauri/Cargo.toml
 pnpm tauri:dev
 ```
 
-In the desktop app, connect a fine-grained token, open Repositories, select a repository, and
-confirm that its open Issues match GitHub. Search, unassigned filtering, refresh, empty states,
-and external links should remain usable.
+In the bundled desktop app, sign in through GitHub in the system browser, open Repositories, select
+a repository, and confirm that its open Issues match GitHub. Search, unassigned filtering,
+refresh, empty states, and external links should remain usable.

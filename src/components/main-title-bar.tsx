@@ -180,7 +180,7 @@ export function MainTitleBar({ onOpenCommand }: MainTitleBarProps) {
                   <Github />
                   {githubConnection.connected
                     ? t("workspace.github.manage")
-                    : t("workspace.github.connect")}
+                    : t("workspace.github.login")}
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => void handleOpenSettings()}>
                   <Settings /> {t("settings.title")}

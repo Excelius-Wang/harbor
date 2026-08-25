@@ -5,7 +5,10 @@ use base64::Engine;
 use keyring::{Entry, Error as KeyringError};
 use serde::Serialize;
 
-use crate::error::AppError;
+use crate::{
+    error::AppError,
+    github_oauth::{GitHubLoginAttempt, GitHubOAuthCredentials, GitHubOAuthSession},
+};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -19,6 +22,13 @@ pub struct GitHubIdentity {
 pub struct GitHubConnection {
     pub connected: bool,
     pub identity: Option<GitHubIdentity>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(tag = "status", rename_all = "camelCase")]
+pub enum GitHubAuthEvent {
+    Connected { connection: GitHubConnection },
+    Failed { message: String },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -173,45 +183,69 @@ pub trait GitHubClient: Send + Sync {
 }
 
 pub trait CredentialStore: Send + Sync {
-    fn load_github_token(&self) -> Result<Option<String>, AppError>;
-    fn save_github_token(&self, token: &str) -> Result<(), AppError>;
-    fn delete_github_token(&self) -> Result<(), AppError>;
+    fn load_github_credentials(&self) -> Result<Option<GitHubOAuthCredentials>, AppError>;
+    fn save_github_credentials(&self, credentials: &GitHubOAuthCredentials)
+        -> Result<(), AppError>;
+    fn delete_github_credentials(&self) -> Result<(), AppError>;
 }
 
 pub struct GitHubService {
     client: Arc<dyn GitHubClient>,
-    credentials: Arc<dyn CredentialStore>,
+    credential_store: Arc<dyn CredentialStore>,
+    oauth: Option<Arc<GitHubOAuthSession>>,
+    session_credentials: RwLock<Option<GitHubOAuthCredentials>>,
     identity: RwLock<Option<GitHubIdentity>>,
 }
 
 impl GitHubService {
-    pub fn new(client: Arc<dyn GitHubClient>, credentials: Arc<dyn CredentialStore>) -> Self {
+    pub fn new(
+        client: Arc<dyn GitHubClient>,
+        credential_store: Arc<dyn CredentialStore>,
+        oauth: Option<Arc<GitHubOAuthSession>>,
+    ) -> Self {
         Self {
             client,
-            credentials,
+            credential_store,
+            oauth,
+            session_credentials: RwLock::new(None),
             identity: RwLock::new(None),
         }
     }
 
-    pub async fn connect(&self, token: String) -> Result<GitHubConnection, AppError> {
-        let token = token.trim();
-        if token.is_empty() {
-            return Err(AppError::Validation(
-                "GitHub access token cannot be empty".to_string(),
-            ));
-        }
-        if !token.starts_with("github_pat_") {
-            return Err(AppError::Validation(
-                "Harbor accepts fine-grained GitHub tokens only".to_string(),
-            ));
-        }
+    pub fn begin_login(&self) -> Result<GitHubLoginAttempt, AppError> {
+        self.oauth
+            .as_ref()
+            .ok_or_else(|| {
+                AppError::GitHubAuthentication(
+                    "GitHub login is not configured for this Harbor build".to_string(),
+                )
+            })?
+            .begin_login()
+    }
 
-        let identity = self.client.validate_token(token).await?;
-        let credentials = Arc::clone(&self.credentials);
-        let token_to_store = token.to_string();
-        tokio::task::spawn_blocking(move || credentials.save_github_token(&token_to_store))
-            .await
-            .map_err(|error| AppError::Credentials(error.to_string()))??;
+    pub async fn complete_login(&self, callback_url: &str) -> Result<GitHubConnection, AppError> {
+        let oauth = self.oauth.as_ref().ok_or_else(|| {
+            AppError::GitHubAuthentication(
+                "GitHub login is not configured for this Harbor build".to_string(),
+            )
+        })?;
+        let credentials = oauth.complete_login(callback_url).await?;
+        let identity = self
+            .client
+            .validate_token(&credentials.access_token)
+            .await?;
+        let credential_store = Arc::clone(&self.credential_store);
+        let credentials_to_store = credentials.clone();
+        tokio::task::spawn_blocking(move || {
+            credential_store.save_github_credentials(&credentials_to_store)
+        })
+        .await
+        .map_err(|error| AppError::Credentials(error.to_string()))??;
+        *self
+            .session_credentials
+            .write()
+            .map_err(|_| AppError::GitHub("connection state is unavailable".to_string()))? =
+            Some(credentials);
         *self
             .identity
             .write()
@@ -231,12 +265,12 @@ impl GitHubService {
             return Ok(GitHubConnection::connected(identity));
         }
 
-        let credentials = Arc::clone(&self.credentials);
-        let Some(token) = tokio::task::spawn_blocking(move || credentials.load_github_token())
-            .await
-            .map_err(|error| AppError::Credentials(error.to_string()))??
-        else {
-            return Ok(GitHubConnection::disconnected());
+        let token = match self.load_access_token().await {
+            Ok(token) => token,
+            Err(AppError::GitHubNotConnected) => {
+                return Ok(GitHubConnection::disconnected());
+            }
+            Err(error) => return Err(error),
         };
         let identity = self.client.validate_token(&token).await?;
         *self
@@ -249,10 +283,14 @@ impl GitHubService {
     }
 
     pub async fn disconnect(&self) -> Result<GitHubConnection, AppError> {
-        let credentials = Arc::clone(&self.credentials);
-        tokio::task::spawn_blocking(move || credentials.delete_github_token())
+        let credential_store = Arc::clone(&self.credential_store);
+        tokio::task::spawn_blocking(move || credential_store.delete_github_credentials())
             .await
             .map_err(|error| AppError::Credentials(error.to_string()))??;
+        *self
+            .session_credentials
+            .write()
+            .map_err(|_| AppError::GitHub("connection state is unavailable".to_string()))? = None;
         *self
             .identity
             .write()
@@ -261,12 +299,12 @@ impl GitHubService {
     }
 
     pub async fn repositories(&self) -> Result<GitHubRepositoryPage, AppError> {
-        let token = self.load_token().await?;
+        let token = self.load_access_token().await?;
         self.client.list_repositories(&token).await
     }
 
     pub async fn issues(&self, owner: &str, repository: &str) -> Result<GitHubIssuePage, AppError> {
-        let token = self.load_token().await?;
+        let token = self.load_access_token().await?;
         self.client.list_issues(&token, owner, repository).await
     }
 
@@ -276,7 +314,7 @@ impl GitHubService {
         repository: &str,
         reference: &str,
     ) -> Result<GitHubCodeOverview, AppError> {
-        let token = self.load_token().await?;
+        let token = self.load_access_token().await?;
         self.client
             .repository_code_overview(&token, owner, repository, reference)
             .await
@@ -289,18 +327,48 @@ impl GitHubService {
         reference: &str,
         path: &str,
     ) -> Result<GitHubContentListing, AppError> {
-        let token = self.load_token().await?;
+        let token = self.load_access_token().await?;
         self.client
             .repository_contents(&token, owner, repository, reference, path)
             .await
     }
 
-    async fn load_token(&self) -> Result<String, AppError> {
-        let credentials = Arc::clone(&self.credentials);
-        tokio::task::spawn_blocking(move || credentials.load_github_token())
+    async fn load_access_token(&self) -> Result<String, AppError> {
+        let cached = self
+            .session_credentials
+            .read()
+            .map_err(|_| AppError::GitHub("connection state is unavailable".to_string()))?
+            .clone();
+        let credentials = match cached {
+            Some(credentials) => credentials,
+            None => {
+                let credential_store = Arc::clone(&self.credential_store);
+                tokio::task::spawn_blocking(move || credential_store.load_github_credentials())
+                    .await
+                    .map_err(|error| AppError::Credentials(error.to_string()))??
+                    .ok_or(AppError::GitHubNotConnected)?
+            }
+        };
+        let refreshed = match &self.oauth {
+            Some(oauth) => oauth.refresh_if_needed(credentials.clone()).await?,
+            None => credentials.clone(),
+        };
+        if refreshed != credentials {
+            let credential_store = Arc::clone(&self.credential_store);
+            let credentials_to_store = refreshed.clone();
+            tokio::task::spawn_blocking(move || {
+                credential_store.save_github_credentials(&credentials_to_store)
+            })
             .await
-            .map_err(|error| AppError::Credentials(error.to_string()))??
-            .ok_or(AppError::GitHubNotConnected)
+            .map_err(|error| AppError::Credentials(error.to_string()))??;
+        }
+        let access_token = refreshed.access_token.clone();
+        *self
+            .session_credentials
+            .write()
+            .map_err(|_| AppError::GitHub("connection state is unavailable".to_string()))? =
+            Some(refreshed);
+        Ok(access_token)
     }
 }
 
@@ -644,21 +712,32 @@ impl SystemCredentialStore {
 }
 
 impl CredentialStore for SystemCredentialStore {
-    fn load_github_token(&self) -> Result<Option<String>, AppError> {
+    fn load_github_credentials(&self) -> Result<Option<GitHubOAuthCredentials>, AppError> {
         match self.entry()?.get_password() {
-            Ok(token) => Ok(Some(token)),
+            Ok(value) => match serde_json::from_str(&value) {
+                Ok(credentials) => Ok(Some(credentials)),
+                Err(_) if value.starts_with("github_pat_") || value.starts_with("ghp_") => Ok(None),
+                Err(_) => Err(AppError::Credentials(
+                    "stored GitHub credentials are invalid".to_string(),
+                )),
+            },
             Err(KeyringError::NoEntry) => Ok(None),
             Err(error) => Err(AppError::Credentials(error.to_string())),
         }
     }
 
-    fn save_github_token(&self, token: &str) -> Result<(), AppError> {
+    fn save_github_credentials(
+        &self,
+        credentials: &GitHubOAuthCredentials,
+    ) -> Result<(), AppError> {
+        let value = serde_json::to_string(credentials)
+            .map_err(|error| AppError::Credentials(error.to_string()))?;
         self.entry()?
-            .set_password(token)
+            .set_password(&value)
             .map_err(|error| AppError::Credentials(error.to_string()))
     }
 
-    fn delete_github_token(&self) -> Result<(), AppError> {
+    fn delete_github_credentials(&self) -> Result<(), AppError> {
         match self.entry()?.delete_credential() {
             Ok(()) | Err(KeyringError::NoEntry) => Ok(()),
             Err(error) => Err(AppError::Credentials(error.to_string())),
@@ -670,6 +749,10 @@ impl CredentialStore for SystemCredentialStore {
 mod tests {
     use std::sync::Mutex;
 
+    use oauth2::PkceCodeVerifier;
+
+    use crate::github_oauth::{GitHubOAuthConfig, GitHubTokenExchange, GITHUB_OAUTH_CALLBACK_URL};
+
     use super::*;
 
     struct FakeGitHubClient;
@@ -677,7 +760,7 @@ mod tests {
     #[async_trait]
     impl GitHubClient for FakeGitHubClient {
         async fn validate_token(&self, token: &str) -> Result<GitHubIdentity, AppError> {
-            if token == "github_pat_valid-token" {
+            if token == "github-user-access-token" {
                 Ok(GitHubIdentity {
                     login: "octocat".to_string(),
                     avatar_url: Some("https://github.com/octocat.png".to_string()),
@@ -688,7 +771,7 @@ mod tests {
         }
 
         async fn list_repositories(&self, token: &str) -> Result<GitHubRepositoryPage, AppError> {
-            assert_eq!(token, "github_pat_valid-token");
+            assert_eq!(token, "github-user-access-token");
             Ok(GitHubRepositoryPage {
                 repositories: vec![GitHubRepository {
                     id: 1,
@@ -717,7 +800,7 @@ mod tests {
             owner: &str,
             repository: &str,
         ) -> Result<GitHubIssuePage, AppError> {
-            assert_eq!(token, "github_pat_valid-token");
+            assert_eq!(token, "github-user-access-token");
             assert_eq!(owner, "octocat");
             assert_eq!(repository, "hello-world");
             Ok(GitHubIssuePage {
@@ -748,7 +831,7 @@ mod tests {
             repository: &str,
             reference: &str,
         ) -> Result<GitHubCodeOverview, AppError> {
-            assert_eq!(token, "github_pat_valid-token");
+            assert_eq!(token, "github-user-access-token");
             assert_eq!(
                 (owner, repository, reference),
                 ("octocat", "hello-world", "main")
@@ -778,7 +861,7 @@ mod tests {
             reference: &str,
             path: &str,
         ) -> Result<GitHubContentListing, AppError> {
-            assert_eq!(token, "github_pat_valid-token");
+            assert_eq!(token, "github-user-access-token");
             assert_eq!(
                 (owner, repository, reference, path),
                 ("octocat", "hello-world", "main", "")
@@ -797,62 +880,141 @@ mod tests {
 
     #[derive(Default)]
     struct MemoryCredentialStore {
-        token: Mutex<Option<String>>,
+        credentials: Mutex<Option<GitHubOAuthCredentials>>,
     }
 
     impl CredentialStore for MemoryCredentialStore {
-        fn load_github_token(&self) -> Result<Option<String>, AppError> {
-            Ok(self.token.lock().expect("token lock").clone())
+        fn load_github_credentials(&self) -> Result<Option<GitHubOAuthCredentials>, AppError> {
+            Ok(self.credentials.lock().expect("credentials lock").clone())
         }
 
-        fn save_github_token(&self, token: &str) -> Result<(), AppError> {
-            *self.token.lock().expect("token lock") = Some(token.to_string());
+        fn save_github_credentials(
+            &self,
+            credentials: &GitHubOAuthCredentials,
+        ) -> Result<(), AppError> {
+            *self.credentials.lock().expect("credentials lock") = Some(credentials.clone());
             Ok(())
         }
 
-        fn delete_github_token(&self) -> Result<(), AppError> {
-            *self.token.lock().expect("token lock") = None;
+        fn delete_github_credentials(&self) -> Result<(), AppError> {
+            *self.credentials.lock().expect("credentials lock") = None;
             Ok(())
         }
     }
 
+    struct TestTokenExchange {
+        access_token: &'static str,
+    }
+
+    #[async_trait]
+    impl GitHubTokenExchange for TestTokenExchange {
+        async fn exchange_code(
+            &self,
+            _code: String,
+            _pkce_verifier: PkceCodeVerifier,
+        ) -> Result<GitHubOAuthCredentials, AppError> {
+            Ok(GitHubOAuthCredentials {
+                access_token: self.access_token.to_string(),
+                refresh_token: Some("github-refresh-token".to_string()),
+                expires_at: None,
+            })
+        }
+
+        async fn refresh_token(
+            &self,
+            _refresh_token: String,
+        ) -> Result<GitHubOAuthCredentials, AppError> {
+            Ok(GitHubOAuthCredentials {
+                access_token: self.access_token.to_string(),
+                refresh_token: Some("rotated-refresh-token".to_string()),
+                expires_at: None,
+            })
+        }
+    }
+
+    fn oauth_credentials() -> GitHubOAuthCredentials {
+        GitHubOAuthCredentials {
+            access_token: "github-user-access-token".to_string(),
+            refresh_token: Some("github-refresh-token".to_string()),
+            expires_at: None,
+        }
+    }
+
+    fn oauth_session(access_token: &'static str) -> Arc<GitHubOAuthSession> {
+        Arc::new(
+            GitHubOAuthSession::with_token_exchange(
+                GitHubOAuthConfig {
+                    client_id: "harbor-client-id".to_string(),
+                    client_secret: "harbor-client-secret".to_string(),
+                },
+                Arc::new(TestTokenExchange { access_token }),
+            )
+            .expect("OAuth session"),
+        )
+    }
+
+    fn callback_for(attempt: GitHubLoginAttempt) -> String {
+        let authorization_url =
+            oauth2::url::Url::parse(&attempt.authorization_url).expect("authorization URL");
+        let state = authorization_url
+            .query_pairs()
+            .find_map(|(key, value)| (key == "state").then(|| value.into_owned()))
+            .expect("state");
+        format!("{GITHUB_OAUTH_CALLBACK_URL}?code=temporary-code&state={state}")
+    }
+
     #[tokio::test]
-    async fn connect_validates_before_saving_and_returns_identity() {
+    async fn browser_callback_validates_before_saving_and_returns_identity() {
         let credentials = Arc::new(MemoryCredentialStore::default());
-        let service = GitHubService::new(Arc::new(FakeGitHubClient), credentials.clone());
+        let service = GitHubService::new(
+            Arc::new(FakeGitHubClient),
+            credentials.clone(),
+            Some(oauth_session("github-user-access-token")),
+        );
+        let callback = callback_for(service.begin_login().expect("login attempt"));
 
         let connection = service
-            .connect(" github_pat_valid-token ".to_string())
+            .complete_login(&callback)
             .await
-            .expect("valid token should connect");
+            .expect("valid OAuth callback should connect");
 
         assert_eq!(connection.identity.expect("identity").login, "octocat");
         assert_eq!(
-            credentials.load_github_token().expect("stored token"),
-            Some("github_pat_valid-token".to_string())
+            credentials
+                .load_github_credentials()
+                .expect("stored credentials"),
+            Some(oauth_credentials())
         );
     }
 
     #[tokio::test]
-    async fn rejected_token_is_not_saved() {
+    async fn rejected_oauth_token_is_not_saved() {
         let credentials = Arc::new(MemoryCredentialStore::default());
-        let service = GitHubService::new(Arc::new(FakeGitHubClient), credentials.clone());
+        let service = GitHubService::new(
+            Arc::new(FakeGitHubClient),
+            credentials.clone(),
+            Some(oauth_session("rejected-user-access-token")),
+        );
+        let callback = callback_for(service.begin_login().expect("login attempt"));
 
-        let result = service
-            .connect("github_pat_invalid-token".to_string())
-            .await;
+        let result = service.complete_login(&callback).await;
 
         assert!(result.is_err());
-        assert_eq!(credentials.load_github_token().expect("stored token"), None);
+        assert_eq!(
+            credentials
+                .load_github_credentials()
+                .expect("stored credentials"),
+            None
+        );
     }
 
     #[tokio::test]
     async fn status_restores_a_saved_connection() {
         let credentials = Arc::new(MemoryCredentialStore::default());
         credentials
-            .save_github_token("github_pat_valid-token")
-            .expect("seed token");
-        let service = GitHubService::new(Arc::new(FakeGitHubClient), credentials);
+            .save_github_credentials(&oauth_credentials())
+            .expect("seed credentials");
+        let service = GitHubService::new(Arc::new(FakeGitHubClient), credentials, None);
 
         let connection = service.status().await.expect("status");
 
@@ -864,9 +1026,9 @@ mod tests {
     async fn disconnect_removes_credentials_and_cached_identity() {
         let credentials = Arc::new(MemoryCredentialStore::default());
         credentials
-            .save_github_token("github_pat_valid-token")
-            .expect("seed token");
-        let service = GitHubService::new(Arc::new(FakeGitHubClient), credentials.clone());
+            .save_github_credentials(&oauth_credentials())
+            .expect("seed credentials");
+        let service = GitHubService::new(Arc::new(FakeGitHubClient), credentials.clone(), None);
         *service.identity.write().expect("identity lock") = Some(GitHubIdentity {
             login: "octocat".to_string(),
             avatar_url: None,
@@ -875,28 +1037,22 @@ mod tests {
         let connection = service.disconnect().await.expect("disconnect");
 
         assert_eq!(connection, GitHubConnection::disconnected());
-        assert_eq!(credentials.load_github_token().expect("stored token"), None);
+        assert_eq!(
+            credentials
+                .load_github_credentials()
+                .expect("stored credentials"),
+            None
+        );
         assert!(service.identity.read().expect("identity lock").is_none());
-    }
-
-    #[tokio::test]
-    async fn classic_personal_access_token_is_rejected() {
-        let credentials = Arc::new(MemoryCredentialStore::default());
-        let service = GitHubService::new(Arc::new(FakeGitHubClient), credentials.clone());
-
-        let result = service.connect("ghp_classic-token".to_string()).await;
-
-        assert!(matches!(result, Err(AppError::Validation(_))));
-        assert_eq!(credentials.load_github_token().expect("stored token"), None);
     }
 
     #[tokio::test]
     async fn data_queries_use_the_saved_connection() {
         let credentials = Arc::new(MemoryCredentialStore::default());
         credentials
-            .save_github_token("github_pat_valid-token")
-            .expect("seed token");
-        let service = GitHubService::new(Arc::new(FakeGitHubClient), credentials);
+            .save_github_credentials(&oauth_credentials())
+            .expect("seed credentials");
+        let service = GitHubService::new(Arc::new(FakeGitHubClient), credentials, None);
 
         let repositories = service.repositories().await.expect("repositories");
         let issues = service
@@ -926,6 +1082,7 @@ mod tests {
         let service = GitHubService::new(
             Arc::new(FakeGitHubClient),
             Arc::new(MemoryCredentialStore::default()),
+            None,
         );
 
         let result = service.repositories().await;

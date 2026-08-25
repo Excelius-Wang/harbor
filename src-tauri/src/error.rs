@@ -9,6 +9,8 @@ pub enum AppError {
     Credentials(String),
     #[error("GitHub error: {0}")]
     GitHub(String),
+    #[error("GitHub authentication error: {0}")]
+    GitHubAuthentication(String),
     #[error("GitHub is not connected")]
     GitHubNotConnected,
     #[error("Repository context error: {0}")]
@@ -31,6 +33,7 @@ impl Serialize for AppError {
             Self::Validation(_) => "validation",
             Self::Credentials(_) => "credentials",
             Self::GitHub(_) => "github",
+            Self::GitHubAuthentication(_) => "githubAuthentication",
             Self::GitHubNotConnected => "githubNotConnected",
             Self::RepositoryContext(_) => "repositoryContext",
         };
@@ -55,6 +58,22 @@ mod tests {
             serde_json::json!({
                 "code": "githubNotConnected",
                 "message": "GitHub is not connected"
+            })
+        );
+    }
+
+    #[test]
+    fn github_authentication_has_a_stable_ipc_code() {
+        let payload = serde_json::to_value(AppError::GitHubAuthentication(
+            "GitHub login was cancelled".to_string(),
+        ))
+        .expect("serialize error");
+
+        assert_eq!(
+            payload,
+            serde_json::json!({
+                "code": "githubAuthentication",
+                "message": "GitHub authentication error: GitHub login was cancelled"
             })
         );
     }
