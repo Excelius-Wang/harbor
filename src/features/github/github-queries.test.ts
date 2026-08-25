@@ -1,8 +1,8 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { GitHubCodeOverview } from "./github-data";
-import { repositoryCodeQueryOptions } from "./github-queries";
+import { repositoryCodeQueryOptions, resetGitHubQueryCache } from "./github-queries";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
@@ -69,5 +69,42 @@ describe("GitHub repository queries", () => {
     await client.fetchQuery(options);
 
     expect(invoke).toHaveBeenCalledTimes(2);
+  });
+
+  it("resets active GitHub data on an account change without clearing unrelated data", async () => {
+    const client = createTestQueryClient();
+    const options = repositoryCodeQueryOptions({
+      owner: "octocat",
+      repository: "hello-world",
+      reference: "main",
+    });
+    const observer = new QueryObserver(client, options);
+    const unsubscribe = observer.subscribe(() => undefined);
+    await observer.refetch();
+    client.setQueryData(["settings", "theme"], "dark");
+    client.setQueryData(["github", "repository", "old", "private", "issues"], {
+      issues: [{ id: 1 }],
+    });
+
+    let resolveRefetch: ((value: GitHubCodeOverview) => void) | undefined;
+    const nextOverview = { ...overview, commitsHaveMore: true };
+    vi.mocked(invoke).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveRefetch = resolve as (value: GitHubCodeOverview) => void;
+        })
+    );
+
+    const reset = resetGitHubQueryCache(client);
+    await vi.waitFor(() => expect(observer.getCurrentResult().data).toBeUndefined());
+    resolveRefetch?.(nextOverview);
+    await reset;
+
+    expect(observer.getCurrentResult().data).toEqual(nextOverview);
+    expect(
+      client.getQueryData(["github", "repository", "old", "private", "issues"])
+    ).toBeUndefined();
+    expect(client.getQueryData(["settings", "theme"])).toBe("dark");
+    unsubscribe();
   });
 });

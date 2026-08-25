@@ -1,4 +1,4 @@
-import { queryOptions } from "@tanstack/react-query";
+import { queryOptions, type QueryClient } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
 import type {
   GitHubCodeOverview,
@@ -7,25 +7,23 @@ import type {
   GitHubRepositoryPage,
 } from "./github-data";
 
-export const GITHUB_QUERY_STALE_TIME = 60_000;
+const GITHUB_QUERY_STALE_TIME = 60_000;
 
-export type GitHubCodeTarget = {
+type GitHubCodeTarget = {
   owner: string;
   repository: string;
   reference: string;
 };
 
-export type GitHubContentsTarget = GitHubCodeTarget & {
+type GitHubContentsTarget = GitHubCodeTarget & {
   path: string;
 };
 
-export type GitHubRepositoryTarget = Pick<GitHubCodeTarget, "owner" | "repository">;
+type GitHubRepositoryTarget = Pick<GitHubCodeTarget, "owner" | "repository">;
 
-export const githubQueryKeys = {
+const githubQueryKeys = {
   all: ["github"] as const,
   repositories: ["github", "repositories"] as const,
-  repository: ({ owner, repository }: GitHubRepositoryTarget) =>
-    ["github", "repository", owner, repository] as const,
   code: ({ owner, repository, reference }: GitHubCodeTarget) =>
     ["github", "repository", owner, repository, "code", reference] as const,
   contents: ({ owner, repository, reference, path }: GitHubContentsTarget) =>
@@ -33,6 +31,13 @@ export const githubQueryKeys = {
   issues: ({ owner, repository }: GitHubRepositoryTarget) =>
     ["github", "repository", owner, repository, "issues"] as const,
 };
+
+export async function resetGitHubQueryCache(queryClient: QueryClient) {
+  await queryClient.cancelQueries({ queryKey: githubQueryKeys.all });
+  const activeRefetch = queryClient.resetQueries({ queryKey: githubQueryKeys.all });
+  queryClient.removeQueries({ queryKey: githubQueryKeys.all, type: "inactive" });
+  await activeRefetch;
+}
 
 export function repositoriesQueryOptions() {
   return queryOptions({

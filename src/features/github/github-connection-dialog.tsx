@@ -18,7 +18,7 @@ import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/c
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { parseIpcError } from "@/lib/ipc-error";
-import { githubQueryKeys } from "./github-queries";
+import { resetGitHubQueryCache } from "./github-queries";
 
 export type GitHubIdentity = {
   login: string;
@@ -51,11 +51,6 @@ export function GitHubConnectionDialog({
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState("");
 
-  const clearGitHubCache = async () => {
-    await queryClient.cancelQueries({ queryKey: githubQueryKeys.all });
-    queryClient.removeQueries({ queryKey: githubQueryKeys.all });
-  };
-
   useEffect(() => {
     if (!open || !isTauri()) return;
 
@@ -78,7 +73,7 @@ export function GitHubConnectionDialog({
     setError("");
     try {
       const nextConnection = await invoke<GitHubConnection>("github_connect", { token });
-      await clearGitHubCache();
+      await resetGitHubQueryCache(queryClient);
       onConnectionChange(nextConnection);
       setToken("");
     } catch (reason) {
@@ -93,7 +88,7 @@ export function GitHubConnectionDialog({
     setError("");
     try {
       const nextConnection = await invoke<GitHubConnection>("github_disconnect");
-      await clearGitHubCache();
+      await resetGitHubQueryCache(queryClient);
       onConnectionChange(nextConnection);
     } catch (reason) {
       setError(parseIpcError(reason).message);

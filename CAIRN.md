@@ -29,9 +29,10 @@ pnpm tauri:dev
 
 Result: `pnpm check`, Rust formatting, 19 local Rust tests, `cargo check`, and `git diff --check`
 pass; one external DeepWiki test remains ignored by design. Unit tests prove same-key
-deduplication, fresh-cache reuse, and explicit invalidation. A Playwright call-count probe confirms
-StrictMode now issues one initial request per GitHub query, revisiting a repository issues none,
-and manual refresh refetches Code overview and contents.
+deduplication, fresh-cache reuse, explicit invalidation, and account-change isolation for active
+and inactive queries. A Playwright call-count probe confirms StrictMode now issues one initial
+request per GitHub query, revisiting a repository issues none, and manual refresh refetches Code
+overview and contents.
 
 ## Decisions
 
