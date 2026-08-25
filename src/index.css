@@ -27,48 +27,48 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --background: oklch(0.975 0.01 238);
+  --foreground: oklch(0.23 0.025 242);
+  --card: oklch(0.995 0.006 238);
+  --card-foreground: oklch(0.23 0.025 242);
+  --popover: oklch(0.99 0.009 238);
+  --popover-foreground: oklch(0.23 0.025 242);
+  --primary: oklch(0.58 0.145 236);
+  --primary-foreground: oklch(0.99 0.005 235);
+  --secondary: oklch(0.935 0.02 238);
+  --secondary-foreground: oklch(0.27 0.03 242);
+  --muted: oklch(0.94 0.015 238);
+  --muted-foreground: oklch(0.52 0.03 242);
+  --accent: oklch(0.925 0.028 235);
+  --accent-foreground: oklch(0.27 0.035 242);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --radius: 0.625rem;
+  --border: oklch(0.88 0.022 238);
+  --input: oklch(0.88 0.022 238);
+  --ring: oklch(0.58 0.145 236);
+  --radius: 0.55rem;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --background: oklch(0.155 0.026 247);
+  --foreground: oklch(0.93 0.018 235);
+  --card: oklch(0.185 0.028 246);
+  --card-foreground: oklch(0.93 0.018 235);
+  --popover: oklch(0.19 0.032 245);
+  --popover-foreground: oklch(0.93 0.018 235);
+  --primary: oklch(0.72 0.14 232);
+  --primary-foreground: oklch(0.15 0.035 248);
+  --secondary: oklch(0.23 0.03 245);
+  --secondary-foreground: oklch(0.91 0.018 235);
+  --muted: oklch(0.225 0.025 245);
+  --muted-foreground: oklch(0.69 0.028 238);
+  --accent: oklch(0.25 0.038 241);
+  --accent-foreground: oklch(0.94 0.018 235);
   --destructive: oklch(0.396 0.141 25.723);
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
+  --border: oklch(0.3 0.035 242);
+  --input: oklch(0.28 0.032 242);
+  --ring: oklch(0.72 0.14 232);
 }
 
 @layer base {
@@ -87,16 +87,35 @@
 
   body {
     @apply text-foreground bg-transparent;
+    font-family:
+      Inter,
+      ui-sans-serif,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    text-rendering: optimizeLegibility;
+  }
+
+  button,
+  input {
+    font: inherit;
+  }
+
+  button:focus-visible,
+  input:focus-visible {
+    outline-color: var(--ring);
   }
 }
 
 @layer utilities {
   .title-bar-btn {
-    @apply hover:bg-accent hover:text-accent-foreground flex h-7 w-7 cursor-pointer items-center justify-center rounded-md text-slate-400 transition-colors outline-none;
+    @apply text-muted-foreground hover:text-foreground focus-visible:ring-primary/60 flex h-7 w-7 cursor-pointer items-center justify-center rounded-md transition-colors outline-none hover:bg-white/[0.055] focus-visible:ring-2;
   }
 
   .title-bar-control {
-    @apply hover:bg-accent hover:text-accent-foreground flex h-8 w-9 cursor-pointer items-center justify-center text-slate-400 outline-none;
+    @apply text-muted-foreground hover:text-foreground focus-visible:ring-primary/60 flex h-full w-9 cursor-pointer items-center justify-center outline-none hover:bg-white/[0.055] focus-visible:ring-2 focus-visible:ring-inset;
   }
 
   .scrollbar-none {
@@ -108,6 +127,70 @@
       scrollbar-width: none;
     }
   }
+
+  .harbor-glass {
+    border-color: color-mix(in oklch, var(--foreground) 10%, transparent);
+    background: color-mix(in oklch, var(--background) 76%, transparent);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, white 5%, transparent);
+    backdrop-filter: saturate(125%) blur(22px);
+    -webkit-backdrop-filter: saturate(125%) blur(22px);
+  }
+
+  .harbor-popover,
+  .harbor-command,
+  .harbor-sheet {
+    background: color-mix(in oklch, var(--popover) 92%, transparent);
+    box-shadow:
+      0 24px 70px color-mix(in srgb, black 38%, transparent),
+      inset 0 1px 0 color-mix(in srgb, white 6%, transparent);
+    backdrop-filter: saturate(125%) blur(24px);
+    -webkit-backdrop-filter: saturate(125%) blur(24px);
+  }
+}
+
+.harbor-window {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(
+      900px 560px at 9% -16%,
+      color-mix(in oklch, var(--primary) 13%, transparent),
+      transparent 62%
+    ),
+    linear-gradient(
+      145deg,
+      color-mix(in oklch, var(--background) 94%, #071827),
+      var(--background) 54%,
+      color-mix(in oklch, var(--background) 94%, #06131f)
+    );
+  box-shadow:
+    0 34px 90px rgb(0 0 0 / 34%),
+    inset 0 1px 0 rgb(255 255 255 / 5%);
+}
+
+.light .harbor-window {
+  background:
+    radial-gradient(
+      900px 560px at 9% -16%,
+      color-mix(in oklch, var(--primary) 9%, transparent),
+      transparent 62%
+    ),
+    linear-gradient(145deg, oklch(0.985 0.013 236), var(--background));
+}
+
+kbd {
+  display: inline-flex;
+  min-width: 1.2rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in oklch, var(--foreground) 10%, transparent);
+  border-radius: 0.25rem;
+  background: color-mix(in oklch, var(--foreground) 4%, transparent);
+  padding: 0.05rem 0.25rem;
+  color: var(--muted-foreground);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.62rem;
+  line-height: 1rem;
 }
 
 /* Global scrollbar styles with theme support */
@@ -132,4 +215,26 @@
 
 button {
   user-select: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .harbor-glass,
+  .harbor-popover,
+  .harbor-command,
+  .harbor-sheet {
+    background: var(--background);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
 }

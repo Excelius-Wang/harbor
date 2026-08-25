@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   checkForUpdates,
   downloadAndInstall,
@@ -13,7 +13,7 @@ export function useUpdater() {
   const [downloading, setDownloading] = useState(false);
   const [progress, setProgress] = useState<UpdateProgress | null>(null);
 
-  const checkUpdate = async (): Promise<UpdateCheckResult> => {
+  const checkUpdate = useCallback(async (): Promise<UpdateCheckResult> => {
     setChecking(true);
     try {
       const result = await checkForUpdates();
@@ -22,9 +22,9 @@ export function useUpdater() {
     } finally {
       setChecking(false);
     }
-  };
+  }, []);
 
-  const installUpdate = async () => {
+  const installUpdate = useCallback(async () => {
     setDownloading(true);
     try {
       await downloadAndInstall((progressEvent) => {
@@ -34,7 +34,7 @@ export function useUpdater() {
       console.error("Failed to install update:", error);
       setDownloading(false);
     }
-  };
+  }, []);
 
   return {
     update,

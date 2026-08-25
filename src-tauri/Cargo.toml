@@ -14,14 +14,21 @@ name = "harbor_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2", features = [] }
+tauri-build = { version = "2.6.3", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["tray-icon"] }
+tauri = { version = "2.11.5", features = ["macos-private-api", "tray-icon"] }
 tauri-plugin-opener = "2"
 tauri-plugin-global-shortcut = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+async-trait = "0.1"
+keyring = "4.1.6"
+octocrab = "0.54.1"
+rmcp = { version = "3.1.4", default-features = false, features = ["client", "reqwest", "transport-streamable-http-client-reqwest"] }
+reqwest = { version = "0.13", default-features = false, features = ["rustls"] }
+thiserror = "2"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-single-instance = "2"

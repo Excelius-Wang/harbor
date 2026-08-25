@@ -1,4 +1,5 @@
 import { useEffect, useState, ReactNode } from "react";
+import { isTauri } from "@tauri-apps/api/core";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { Minus, Maximize2, Minimize2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -9,8 +10,11 @@ interface TitleBarProps {
   showMaximize?: boolean;
   showClose?: boolean;
   leftActions?: ReactNode;
+  centerContent?: ReactNode;
   rightActions?: ReactNode;
   onDoubleClick?: () => void;
+  size?: "default" | "workspace";
+  className?: string;
 }
 
 export function TitleBar({
@@ -19,13 +23,16 @@ export function TitleBar({
   showMaximize = true,
   showClose = true,
   leftActions,
+  centerContent,
   rightActions,
   onDoubleClick,
+  size = "default",
+  className,
 }: TitleBarProps) {
   const [isMaximized, setIsMaximized] = useState(false);
 
   useEffect(() => {
-    if (!showMaximize) return;
+    if (!showMaximize || !isTauri()) return;
 
     const appWindow = getCurrentWebviewWindow();
 
@@ -44,22 +51,25 @@ export function TitleBar({
   }, [showMaximize]);
 
   const handleMinimize = async () => {
+    if (!isTauri()) return;
     const appWindow = getCurrentWebviewWindow();
     await appWindow.minimize();
   };
 
   const handleToggleMaximize = async () => {
+    if (!isTauri()) return;
     const appWindow = getCurrentWebviewWindow();
     await appWindow.toggleMaximize();
   };
 
   const handleClose = async () => {
+    if (!isTauri()) return;
     const appWindow = getCurrentWebviewWindow();
     await appWindow.close();
   };
 
   useEffect(() => {
-    if (!showClose) {
+    if (!showClose || !isTauri()) {
       return;
     }
 
@@ -93,22 +103,30 @@ export function TitleBar({
   return (
     <div
       className={cn(
-        "bg-background/95 supports-backdrop-filter:bg-background/60 border-border/40 flex h-8 items-center justify-between border-b backdrop-blur select-none",
-        showMaximize && isMaximized ? "" : "rounded-t-lg"
+        "harbor-glass relative flex items-center justify-between border-b select-none",
+        size === "workspace" ? "h-12" : "h-8",
+        showMaximize && isMaximized ? "" : "rounded-t-lg",
+        className
       )}
     >
       {/* Left: Title + Drag region */}
       <div
         data-tauri-drag-region
         onDoubleClick={handleDragRegionDoubleClick}
-        className="flex grow items-center gap-2 pl-2"
+        className="flex h-full grow items-center gap-2 pl-2"
       >
         {title && <span className="text-sm font-medium text-slate-400">{title}</span>}
         {leftActions}
       </div>
 
+      {centerContent ? (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div className="pointer-events-auto">{centerContent}</div>
+        </div>
+      ) : null}
+
       {/* Right: Control buttons */}
-      <div className="flex items-center">
+      <div className="relative z-10 flex h-full items-center">
         {rightActions}
 
         {rightActions && (showMinimize || showMaximize || showClose) && (

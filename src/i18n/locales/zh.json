@@ -10,6 +10,118 @@
     "placeholder": "输入你的名字...",
     "button": "问候"
   },
+  "workspace": {
+    "primaryNavigation": "主导航",
+    "pinned": "已固定",
+    "account": "账户",
+    "accountMenu": "打开账户菜单",
+    "accountLocal": "本地预览账户",
+    "synced": "已同步",
+    "sampleData": "示例数据",
+    "openOnGitHub": "在 GitHub 打开",
+    "language": "语言构成",
+    "recentActivity": "最近动态",
+    "searchRepositories": "筛选仓库…",
+    "harborRail": "Harbor 工具栏",
+    "nextSlice": "下一阶段功能",
+    "nav": {
+      "pullRequests": "拉取请求",
+      "repositories": "仓库",
+      "discover": "发现"
+    },
+    "history": {
+      "back": "后退",
+      "forward": "前进"
+    },
+    "discover": {
+      "eyebrow": "开源趋势",
+      "tabs": {
+        "trending": "热门",
+        "forYou": "为你推荐",
+        "collections": "精选集合"
+      }
+    },
+    "filters": {
+      "period": "时间范围",
+      "today": "今天",
+      "week": "本周",
+      "month": "本月",
+      "language": "编程语言",
+      "allLanguages": "全部语言",
+      "spoken": "内容语言",
+      "spokenAny": "内容：不限"
+    },
+    "empty": {
+      "title": "没有找到仓库",
+      "description": "换一个组织、语言或关键词试试。"
+    },
+    "activity": {
+      "merged": "已合并",
+      "opened": "已创建",
+      "commented": "评论了",
+      "none": "示例中暂无最近动态。"
+    },
+    "shortcuts": {
+      "preview": "预览",
+      "actions": "操作"
+    },
+    "rail": {
+      "overview": "概览",
+      "checks": "检查",
+      "comments": "评论",
+      "harbor": "问 Harbor"
+    },
+    "panel": {
+      "checks": {
+        "title": "检查项已就绪",
+        "description": "连接真实 GitHub 仓库后，CI 和评审检查会集中显示在这里。"
+      },
+      "comments": {
+        "title": "目前没有讨论",
+        "description": "评审线程和 Issue 评论会汇总在这里，不需要离开工作区。"
+      }
+    },
+    "agent": {
+      "ready": "已准备读取仓库上下文",
+      "description": "DeepWiki 为公开仓库提供上下文。Harbor 只会发送当前仓库名称和你的问题。",
+      "placeholder": "问问这个仓库…",
+      "send": "发送消息",
+      "thinking": "正在读取仓库上下文…",
+      "failed": "Harbor 暂时无法回答",
+      "desktopOnly": "仓库上下文功能需要在 Harbor 桌面端使用。"
+    },
+    "github": {
+      "title": "连接 GitHub",
+      "description": "连接 Fine-grained Personal Access Token。Harbor 会先向 GitHub 验证，再交给系统安全凭证库保存。",
+      "token": "Fine-grained Access Token",
+      "tokenDescription": "Token 不会返回界面，也不会写入 Harbor 的配置文件。",
+      "createToken": "创建 Token",
+      "connect": "连接 GitHub",
+      "checking": "正在验证…",
+      "connected": "GitHub 已连接",
+      "connectionFailed": "连接失败",
+      "disconnect": "断开连接",
+      "manage": "管理 GitHub 连接",
+      "notConnected": "尚未连接 GitHub",
+      "secureStorage": "Token 由操作系统安全保存",
+      "local": "本地工作区",
+      "desktopOnly": "GitHub 连接功能需要在 Harbor 桌面端使用。"
+    },
+    "placeholder": {
+      "pullRequests": "评审队列、状态检查和专注的 Diff 阅读，会作为下一条完整 GitHub 工作流实现。",
+      "repositories": "已连接的仓库、本地克隆和最近工作区会统一放在这里。"
+    },
+    "command": {
+      "title": "Harbor 命令面板",
+      "description": "跳转到工作区或执行操作",
+      "trigger": "搜索或运行命令",
+      "placeholder": "输入命令或仓库名…",
+      "empty": "没有匹配的命令。",
+      "navigation": "导航",
+      "repository": "仓库",
+      "openSelected": "在 GitHub 打开当前仓库"
+    }
+  },
   "about": {
     "title": "关于",
     "button": "关于",

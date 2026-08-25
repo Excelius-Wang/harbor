@@ -1,5 +1,6 @@
 import { ThemeProvider } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
+import { isTauri } from "@tauri-apps/api/core";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useEffect, useState, type ReactNode } from "react";
 
@@ -14,6 +15,8 @@ export function WindowFrame({ titleBar, children, className, contentClassName }:
   const [isMaximized, setIsMaximized] = useState(false);
 
   useEffect(() => {
+    if (!isTauri()) return;
+
     const appWindow = getCurrentWebviewWindow();
 
     appWindow.isMaximized().then(setIsMaximized);
@@ -29,7 +32,7 @@ export function WindowFrame({ titleBar, children, className, contentClassName }:
   }, []);
 
   return (
-    <ThemeProvider defaultTheme="system" storageKey="tauri-ui-theme">
+    <ThemeProvider defaultTheme="dark" storageKey="tauri-ui-theme">
       <div
         className={cn(
           "bg-background flex h-screen w-screen flex-col overflow-hidden",

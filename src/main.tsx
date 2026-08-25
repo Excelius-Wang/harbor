@@ -1,6 +1,8 @@
 import React, { lazy, Suspense, useEffect } from "react";
 import ReactDOM from "react-dom/client";
+import { isTauri } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import "./index.css";
 import "./i18n";
 
@@ -20,10 +22,14 @@ const PageComponent = pageMap[pathname as keyof typeof pageMap] ?? HomePage;
 function AppWrapper() {
   useEffect(() => {
     // Show window after React is ready
-    getCurrentWindow().show();
+    if (isTauri()) void getCurrentWindow().show();
   }, []);
 
-  return <PageComponent />;
+  return (
+    <TooltipProvider delayDuration={350}>
+      <PageComponent />
+    </TooltipProvider>
+  );
 }
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(

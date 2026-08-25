@@ -266,3 +266,19 @@ export async function createWindow(
     createWindowLoading[label] = false;
   }
 }
+
+export async function openSettingsWindow(title: string) {
+  await createWindow("settings", {
+    title,
+    url: "/settings",
+    width: 600,
+    height: 500,
+    resizable: true,
+    maximizable: true,
+    minimizable: false,
+    decorations: false,
+    transparent: true,
+    shadow: false,
+    parent: "main",
+  });
+}

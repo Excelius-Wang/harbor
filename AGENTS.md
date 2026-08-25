@@ -30,3 +30,27 @@ cargo check --manifest-path src-tauri/Cargo.toml
 - Keep source comments and identifiers in English.
 - Do not commit generated build output or credentials.
 
+<!-- cairn:begin -->
+
+## Cairn
+
+When root `CAIRN.md` exists, follow the `cairn` skill when available; otherwise follow this
+block. Read the root before task work. When it declares workspace mode, read only the item
+named under `Current item`; do not load other items or `.cairn/archive/` unless the request
+explicitly requires them.
+
+Verify the selected checkpoint against its working area and authoritative records before
+acting. In Git-backed work, inspect the relevant working tree. A checkpoint stored beside a
+different repository or external system does not prove that external state is current.
+
+Before ending a turn with authorized edits, update the selected checkpoint only when
+recovery-critical information changed. Keep `Goal`, `Current state`, exactly one `Next action`,
+and `Verification` current. Keep one independently resumable outcome per checkpoint; separate
+unrelated work instead of carrying it forward as history.
+
+Follow user and workspace authorization for commits and external writes. After verification
+passes, set `Next action` to `None — complete`. Keep a completed inline checkpoint until new
+work begins; in workspace mode, move the completed item to `.cairn/archive/` and update the
+root pointer.
+
+<!-- cairn:end -->

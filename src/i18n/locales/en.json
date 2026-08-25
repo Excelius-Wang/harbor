@@ -10,6 +10,118 @@
     "placeholder": "Enter your name...",
     "button": "Greet"
   },
+  "workspace": {
+    "primaryNavigation": "Primary navigation",
+    "pinned": "Pinned",
+    "account": "Account",
+    "accountMenu": "Open account menu",
+    "accountLocal": "Local preview account",
+    "synced": "Synced",
+    "sampleData": "Sample data",
+    "openOnGitHub": "Open on GitHub",
+    "language": "Language",
+    "recentActivity": "Recent activity",
+    "searchRepositories": "Filter repositories…",
+    "harborRail": "Harbor tools",
+    "nextSlice": "Next product slice",
+    "nav": {
+      "pullRequests": "Pull Requests",
+      "repositories": "Repositories",
+      "discover": "Discover"
+    },
+    "history": {
+      "back": "Go back",
+      "forward": "Go forward"
+    },
+    "discover": {
+      "eyebrow": "Open-source pulse",
+      "tabs": {
+        "trending": "Trending",
+        "forYou": "For you",
+        "collections": "Collections"
+      }
+    },
+    "filters": {
+      "period": "Time range",
+      "today": "Today",
+      "week": "This week",
+      "month": "This month",
+      "language": "Programming language",
+      "allLanguages": "All languages",
+      "spoken": "Spoken language",
+      "spokenAny": "Spoken: Any"
+    },
+    "empty": {
+      "title": "No repositories found",
+      "description": "Try a different owner, language, or keyword."
+    },
+    "activity": {
+      "merged": "Merged",
+      "opened": "Opened",
+      "commented": "Commented on",
+      "none": "No recent activity in this preview."
+    },
+    "shortcuts": {
+      "preview": "Preview",
+      "actions": "Actions"
+    },
+    "rail": {
+      "overview": "Overview",
+      "checks": "Checks",
+      "comments": "Comments",
+      "harbor": "Ask Harbor"
+    },
+    "panel": {
+      "checks": {
+        "title": "Checks are ready",
+        "description": "CI and review checks will appear here when a live GitHub repository is connected."
+      },
+      "comments": {
+        "title": "No open conversation",
+        "description": "Review threads and issue comments will be gathered here without leaving the workspace."
+      }
+    },
+    "agent": {
+      "ready": "Ready for repository context",
+      "description": "DeepWiki provides context for public repositories. Harbor sends only the selected owner, repository, and your question.",
+      "placeholder": "Ask about this repository…",
+      "send": "Send message",
+      "thinking": "Reading the repository context…",
+      "failed": "Harbor could not answer",
+      "desktopOnly": "Repository context is available in the Harbor desktop runtime."
+    },
+    "github": {
+      "title": "Connect GitHub",
+      "description": "Connect a fine-grained personal access token. Harbor validates it with GitHub before saving it to your operating system's secure credential store.",
+      "token": "Fine-grained access token",
+      "tokenDescription": "The token is never returned to the interface or written to Harbor's files.",
+      "createToken": "Create token",
+      "connect": "Connect GitHub",
+      "checking": "Checking…",
+      "connected": "GitHub connected",
+      "connectionFailed": "Connection failed",
+      "disconnect": "Disconnect",
+      "manage": "Manage GitHub connection",
+      "notConnected": "GitHub not connected",
+      "secureStorage": "Token stored by the operating system",
+      "local": "Local workspace",
+      "desktopOnly": "GitHub connection is available in the Harbor desktop runtime."
+    },
+    "placeholder": {
+      "pullRequests": "Review queues, status checks, and focused diffs will be built as the next end-to-end GitHub workflow.",
+      "repositories": "Connected repositories, local clones, and recent workspaces will live here."
+    },
+    "command": {
+      "title": "Harbor command palette",
+      "description": "Navigate the workspace or run an action",
+      "trigger": "Search or run a command",
+      "placeholder": "Type a command or repository…",
+      "empty": "No matching command.",
+      "navigation": "Navigate",
+      "repository": "Repository",
+      "openSelected": "Open selected repository on GitHub"
+    }
+  },
   "about": {
     "title": "About",
     "button": "About",
