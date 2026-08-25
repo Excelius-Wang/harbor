@@ -23,6 +23,15 @@ strict UTF-8 validation and treats binary content as unsupported instead of disp
 To keep the webview responsive, Harbor previews files up to 1 MB and 10,000 lines. Binary and
 larger files keep an explicit **Open on GitHub** fallback; ordinary file clicks do not leave Harbor.
 
+Supported source files are highlighted in a Web Worker with a fine-grained Shiki bundle and GitHub
+light or dark themes. Harbor loads only the selected language grammar, keeps one highlighter
+instance, and renders tokens as escaped React text nodes rather than injecting generated HTML. A
+total worker timeout keeps pathological source from blocking the interface and falls back to plain
+text.
+
+Unknown file types and source above 500 KB or 5,000 lines remain readable plain text so syntax
+tokenization cannot stall the file view.
+
 GitHub reads use TanStack Query with query keys scoped by repository, branch, and path. Fresh data
 is reused for 60 seconds and inactive data is kept for five minutes. The cache is memory-only and
 is cleared when the GitHub account connects or disconnects. Refresh controls bypass the freshness

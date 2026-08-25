@@ -1,5 +1,6 @@
-import { useMemo } from "react";
+import { type CSSProperties, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ExternalLink, FileCode2, FileWarning } from "lucide-react";
+import { useTheme } from "@/components/theme-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,18 +15,45 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAppTranslation } from "@/hooks/use-app-translation";
 import type { GitHubFilePreview } from "./github-data";
+import {
+  detectSyntaxLanguage,
+  highlightSourceCode,
+  type HighlightedToken,
+} from "./github-syntax-highlighting";
 
-function sourceLines(content: string) {
+const SHIKI_FONT_STYLE_ITALIC = 1;
+const SHIKI_FONT_STYLE_BOLD = 2;
+const SHIKI_FONT_STYLE_UNDERLINE = 4;
+const SHIKI_FONT_STYLE_STRIKETHROUGH = 8;
+
+function plainSourceLines(content: string): HighlightedToken[][] {
   if (!content) return [];
   const lines = content.replace(/\r\n/g, "\n").split("\n");
   if (lines[lines.length - 1] === "") lines.pop();
-  return lines;
+  return lines.map((line) => [{ content: line }]);
 }
 
 function fileExtension(name: string) {
   const segments = name.split(".");
   const extension = name.includes(".") ? segments[segments.length - 1] : null;
   return extension && extension !== name ? extension.toUpperCase() : null;
+}
+
+function tokenStyle(token: HighlightedToken): CSSProperties {
+  const fontStyle = token.fontStyle && token.fontStyle > 0 ? token.fontStyle : 0;
+  const textDecoration = [
+    fontStyle & SHIKI_FONT_STYLE_UNDERLINE ? "underline" : null,
+    fontStyle & SHIKI_FONT_STYLE_STRIKETHROUGH ? "line-through" : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return {
+    color: token.color,
+    fontStyle: fontStyle & SHIKI_FONT_STYLE_ITALIC ? "italic" : undefined,
+    fontWeight: fontStyle & SHIKI_FONT_STYLE_BOLD ? 600 : undefined,
+    textDecorationLine: textDecoration || undefined,
+  };
 }
 
 export function GitHubFilePreviewSkeleton() {
@@ -62,11 +90,44 @@ export function GitHubFilePreviewPanel({
   onOpenExternal: (url: string) => void;
 }) {
   const { t } = useAppTranslation();
-  const lines = useMemo(
-    () => (preview.kind === "text" ? sourceLines(preview.content) : []),
+  const { theme } = useTheme();
+  const syntaxColorMode =
+    theme === "light" ||
+    (theme === "system" && window.matchMedia("(prefers-color-scheme: light)").matches)
+      ? "light"
+      : "dark";
+  const plainLines = useMemo(
+    () => (preview.kind === "text" ? plainSourceLines(preview.content) : []),
     [preview]
   );
+  const [highlightedLines, setHighlightedLines] = useState<HighlightedToken[][] | null>(null);
   const extension = fileExtension(preview.name);
+  const syntaxLanguage = detectSyntaxLanguage(preview.name);
+
+  useEffect(() => {
+    setHighlightedLines(null);
+    if (preview.kind !== "text" || !preview.content) return;
+
+    let active = true;
+    void highlightSourceCode({
+      source: preview.content,
+      fileName: preview.name,
+      colorMode: syntaxColorMode,
+      size: preview.size,
+    })
+      .then((highlighted) => {
+        if (active) setHighlightedLines(highlighted?.lines ?? null);
+      })
+      .catch(() => {
+        if (active) setHighlightedLines(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [preview, syntaxColorMode]);
+
+  const lines = highlightedLines ?? plainLines;
 
   return (
     <section className="overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.018] shadow-[inset_0_1px_0_rgba(125,211,252,0.08)]">
@@ -88,12 +149,12 @@ export function GitHubFilePreviewPanel({
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <FileCode2 className="text-primary size-4 shrink-0" />
           <span className="truncate text-xs font-semibold">{preview.name}</span>
-          {extension ? (
+          {extension || syntaxLanguage !== "text" ? (
             <Badge
               variant="outline"
               className="border-primary/20 bg-primary/[0.045] text-primary h-5 rounded px-1.5 font-mono text-[9px]"
             >
-              {extension}
+              {syntaxLanguage === "text" ? extension : syntaxLanguage.toUpperCase()}
             </Badge>
           ) : null}
         </div>
@@ -137,9 +198,9 @@ export function GitHubFilePreviewPanel({
         <div
           role="table"
           aria-label={t("workspace.repositories.fileSource", { name: preview.name })}
-          className="overflow-x-auto py-2 font-mono text-[11px] leading-5"
+          className="overflow-x-auto py-2 font-mono text-xs leading-5"
         >
-          {lines.map((line, index) => (
+          {lines.map((tokens, index) => (
             <div
               key={index}
               role="row"
@@ -152,7 +213,13 @@ export function GitHubFilePreviewPanel({
                 {index + 1}
               </span>
               <code role="cell" className="px-4 whitespace-pre [tab-size:2]">
-                {line || " "}
+                {tokens.length
+                  ? tokens.map((token, tokenIndex) => (
+                      <span key={tokenIndex} style={tokenStyle(token)}>
+                        {token.content}
+                      </span>
+                    ))
+                  : " "}
               </code>
             </div>
           ))}

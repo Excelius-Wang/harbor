@@ -19,6 +19,10 @@
     "check": "pnpm format:check && pnpm lint && pnpm test && pnpm build"
   },
   "dependencies": {
+    "@shikijs/core": "4.4.3",
+    "@shikijs/engine-javascript": "4.4.3",
+    "@shikijs/langs": "4.4.3",
+    "@shikijs/themes": "4.4.3",
     "@tailwindcss/vite": "^4.2.1",
     "@tanstack/react-query": "^5.102.3",
     "@tauri-apps/api": "^2.11.1",
