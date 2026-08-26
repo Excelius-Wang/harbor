@@ -32,7 +32,7 @@ should feel fast, calm, information-dense, and unmistakably desktop-first.
    agent opens as an overlay sheet rather than permanently shrinking the workspace.
 
 Below 1040 px, the detail pane is hidden and opened from the repository row. Below 760 px, the
-primary navigation collapses to icons. The Tauri window should use 1280 x 800 as its initial size
+primary navigation collapses to icons. The Tauri window should use 1600 x 1000 as its initial size
 and enforce a usable minimum size.
 
 ## Interaction model

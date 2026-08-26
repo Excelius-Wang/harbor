@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   BookOpenText,
@@ -10,13 +10,10 @@ import {
   Folder,
   GitBranch,
   GitCommitHorizontal,
-  ImageIcon,
   LockKeyhole,
   RefreshCw,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -55,33 +52,13 @@ import {
   repositoryFileQueryOptions,
 } from "./github-queries";
 
+const GitHubReadme = lazy(() => import("./github-readme"));
+
 function formatBytes(bytes: number, locale: string) {
   if (bytes < 1_000) return `${bytes} B`;
   if (bytes < 1_000_000)
     return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(bytes / 1_000)} KB`;
   return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(bytes / 1_000_000)} MB`;
-}
-
-function repositoryLink(
-  href: string,
-  repository: GitHubRepository,
-  reference: string,
-  readmePath: string
-) {
-  if (/^(https?:|mailto:)/i.test(href) || href.startsWith("#")) return href;
-  const basePath = readmePath.includes("/") ? readmePath.slice(0, readmePath.lastIndexOf("/")) : "";
-  const path = [basePath, href]
-    .filter(Boolean)
-    .join("/")
-    .split("/")
-    .reduce<string[]>((segments, segment) => {
-      if (segment === "..") segments.pop();
-      else if (segment !== "." && segment !== "") segments.push(segment);
-      return segments;
-    }, [])
-    .map(encodeURIComponent)
-    .join("/");
-  return `${repository.url}/blob/${encodeURIComponent(reference)}/${path}`;
 }
 
 function CodeSkeleton() {
@@ -434,47 +411,24 @@ export function GitHubCodeView({ repository }: { repository: GitHubRepository })
                   </Button>
                 </div>
                 <article className="harbor-markdown px-5 py-6 sm:px-7">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                      a: ({ href = "", children }) => {
-                        const destination = repositoryLink(
-                          href,
-                          repository,
-                          reference,
-                          overview.readme?.path ?? "README.md"
-                        );
-                        if (destination.startsWith("#"))
-                          return <a href={destination}>{children}</a>;
-                        return (
-                          <button type="button" onClick={() => void openExternalUrl(destination)}>
-                            {children}
-                          </button>
-                        );
-                      },
-                      img: ({ alt = "", src = "" }) => (
-                        <button
-                          type="button"
-                          className="harbor-markdown-image"
-                          onClick={() =>
-                            void openExternalUrl(
-                              repositoryLink(
-                                src,
-                                repository,
-                                reference,
-                                overview.readme?.path ?? "README.md"
-                              )
-                            )
-                          }
-                        >
-                          <ImageIcon />
-                          {alt || t("workspace.repositories.readmeImage")}
-                        </button>
-                      ),
-                    }}
+                  <Suspense
+                    fallback={
+                      <div className="flex flex-col gap-3 py-2">
+                        <Skeleton className="mx-auto h-8 w-48" />
+                        <Skeleton className="mx-auto h-3 w-64 max-w-full" />
+                        <Skeleton className="mt-4 h-4 w-1/3" />
+                        <Skeleton className="h-3 w-full" />
+                      </div>
+                    }
                   >
-                    {overview.readme.content}
-                  </ReactMarkdown>
+                    <GitHubReadme
+                      content={overview.readme.content}
+                      path={overview.readme.path}
+                      reference={reference}
+                      repository={repository}
+                      onOpenExternal={(url) => void openExternalUrl(url)}
+                    />
+                  </Suspense>
                 </article>
               </section>
             ) : null}

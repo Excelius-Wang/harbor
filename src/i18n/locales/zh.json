@@ -83,7 +83,6 @@
       "latestCommitsOnly": "显示最近 8 条",
       "unknownAuthor": "未知作者",
       "viewSource": "查看原文",
-      "readmeImage": "README 图片",
       "pullRequestsNext": "下一步接入拉取请求工作台",
       "pullRequestsDescription": "之后会把评审队列、Diff 和检查项收进当前仓库工作台；现在仍可以直接跳到 GitHub 处理。",
       "actionsNext": "下一步接入 Actions 工作台",

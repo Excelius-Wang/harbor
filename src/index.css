@@ -196,8 +196,8 @@ kbd {
 
 .harbor-markdown {
   color: color-mix(in oklch, var(--foreground) 90%, transparent);
-  font-size: 0.8125rem;
-  line-height: 1.75;
+  font-size: 0.875rem;
+  line-height: 1.72;
   overflow-wrap: anywhere;
 }
 
@@ -258,7 +258,6 @@ kbd {
   list-style: decimal;
 }
 
-.harbor-markdown button,
 .harbor-markdown a {
   color: var(--primary);
   text-decoration: underline;
@@ -318,23 +317,28 @@ kbd {
   border-color: color-mix(in oklch, var(--foreground) 9%, transparent);
 }
 
-.harbor-markdown-image {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  max-width: 100%;
-  border: 1px solid color-mix(in oklch, var(--foreground) 8%, transparent);
-  border-radius: 0.4rem;
-  background: color-mix(in oklch, var(--foreground) 3%, transparent);
-  padding: 0.35rem 0.55rem;
-  color: var(--muted-foreground) !important;
-  font-size: 0.7rem;
-  text-decoration: none !important;
+.harbor-markdown [align="center"] {
+  text-align: center;
 }
 
-.harbor-markdown-image svg {
-  width: 0.85rem;
-  height: 0.85rem;
+.harbor-markdown [align="right"] {
+  text-align: right;
+}
+
+.harbor-markdown img {
+  display: inline-block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.35rem;
+  vertical-align: middle;
+}
+
+.harbor-markdown a img {
+  transition: opacity 160ms ease;
+}
+
+.harbor-markdown a:hover img {
+  opacity: 0.82;
 }
 
 /* Global scrollbar styles with theme support */

@@ -86,10 +86,10 @@ function RepositoryRow({
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-1">
         <span className="flex min-w-0 items-center gap-1.5">
-          <span className="truncate text-xs font-medium">{repository.fullName}</span>
+          <span className="truncate text-[13px] font-medium">{repository.fullName}</span>
           {repository.isPrivate ? <LockKeyhole className="text-muted-foreground" /> : null}
         </span>
-        <span className="text-muted-foreground line-clamp-1 text-[10px] font-normal">
+        <span className="text-muted-foreground line-clamp-2 text-[11px] leading-4 font-normal">
           {repository.description ?? repository.url}
         </span>
       </span>
@@ -256,7 +256,7 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
       ) : null}
 
       <div className="flex min-h-0 min-w-0 flex-1">
-        <aside className="workspace-wide:w-[280px] flex w-[240px] shrink-0 flex-col border-r border-white/[0.075] max-[680px]:w-full max-[680px]:border-r-0 xl:w-[320px]">
+        <aside className="workspace-wide:w-[280px] flex w-[240px] shrink-0 flex-col border-r border-white/[0.075] max-[680px]:w-full max-[680px]:border-r-0 xl:w-[320px] 2xl:w-[360px]">
           <div className="border-b border-white/[0.065] p-3">
             <div className="relative">
               <Search className="text-muted-foreground absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
@@ -274,7 +274,7 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
               {repositoryPage?.hasMore ? ` · ${t("workspace.repositories.firstPage")}` : ""}
             </p>
           </div>
-          <ScrollArea className="min-h-0 flex-1">
+          <ScrollArea type="always" className="min-h-0 flex-1">
             {repositoryLoading && !repositoryPage ? (
               <RepositorySkeletons />
             ) : filteredRepositories.length ? (

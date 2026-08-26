@@ -16,7 +16,10 @@ The React views call three read-only Tauri commands:
 
 All three commands validate the repository reference and path, load the token from the operating system credential store, and delegate to the `GitHubClient` interface. The Octocrab implementation uses GitHub's repository Contents, README, Branches, and Commits APIs.
 
-README Markdown is rendered with `react-markdown` and `remark-gfm`. Raw HTML is not enabled. Links open outside Harbor, and images are presented as explicit external links so private image URLs and webview navigation do not leak credentials or replace the workspace.
+README Markdown is rendered with `react-markdown`, `remark-gfm`, `rehype-raw`, and
+`rehype-sanitize`. Common GitHub presentation HTML is parsed into React elements and cleaned with the
+sanitizer's GitHub-style default schema before rendering. Links open outside Harbor, relative images
+resolve through the repository's raw route, and images use lazy loading without a referrer.
 
 Repository files open in Harbor's read-only source viewer. The GitHub client decodes Base64 with
 strict UTF-8 validation and treats binary content as unsupported instead of displaying mojibake.

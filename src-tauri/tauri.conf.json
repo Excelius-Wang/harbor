@@ -13,9 +13,7 @@
   "plugins": {
     "updater": {
       "pubkey": "__TAURI_UPDATER_PUBKEY__",
-      "endpoints": [
-        "__TAURI_UPDATER_ENDPOINT__"
-      ],
+      "endpoints": ["__TAURI_UPDATER_ENDPOINT__"],
       "windows": {
         "installMode": "passive"
       }
@@ -27,8 +25,8 @@
       {
         "label": "main",
         "title": "Harbor",
-        "width": 1280,
-        "height": 800,
+        "width": 1600,
+        "height": 1000,
         "minWidth": 900,
         "minHeight": 620,
         "decorations": false,
@@ -43,14 +41,14 @@
         "default-src": "'self' customprotocol: asset:",
         "connect-src": "'self' ipc: http://ipc.localhost",
         "font-src": "'self' data:",
-        "img-src": "'self' asset: http://asset.localhost blob: data: https://avatars.githubusercontent.com",
+        "img-src": "'self' asset: http://asset.localhost blob: data: https:",
         "style-src": "'self' 'unsafe-inline'"
       },
       "devCsp": {
         "default-src": "'self' customprotocol: asset:",
         "connect-src": "'self' ipc: http://ipc.localhost ws://localhost:1420 ws://127.0.0.1:1420",
         "font-src": "'self' data:",
-        "img-src": "'self' asset: http://asset.localhost blob: data: https://avatars.githubusercontent.com",
+        "img-src": "'self' asset: http://asset.localhost blob: data: https:",
         "style-src": "'self' 'unsafe-inline'"
       }
     }
@@ -62,10 +60,7 @@
     "windows": {
       "nsis": {
         "installerIcon": "icons/icon.ico",
-        "languages": [
-          "SimpChinese",
-          "English"
-        ]
+        "languages": ["SimpChinese", "English"]
       }
     },
     "icon": [

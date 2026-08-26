@@ -83,7 +83,6 @@
       "latestCommitsOnly": "latest 8 commits",
       "unknownAuthor": "Unknown author",
       "viewSource": "View source",
-      "readmeImage": "README image",
       "pullRequestsNext": "Pull request workspace is next",
       "pullRequestsDescription": "Harbor will bring review queues, diffs, and checks into this repository workspace. GitHub remains available in the meantime.",
       "actionsNext": "Actions workspace is next",

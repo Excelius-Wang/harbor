@@ -8,12 +8,12 @@ before expanding Harbor-only discovery and agent features.
 ## Current state
 
 Authentication, repository listing, code overview, directory traversal, text-file preview with syntax
-highlighting, and a basic open-issue list use real GitHub data. Repository pagination stops at the
-first 100 results; code browsing is read-only and lacks history, blame, raw/download, tags, and code
-search; issue filtering and detail are shallow and mutations are absent. Both global and repository
-Pull Requests are placeholders, repository Actions is a placeholder, Discover is sample data, and
-the Rail checks/comments views are placeholders. The workspace shell is responsive and the long
-repository content scroll regression is fixed.
+highlighting, GitHub-style safe README rendering, and a basic open-issue list use real GitHub data.
+Repository pagination stops at the first 100 results; code browsing is read-only and lacks history,
+blame, raw/download, tags, and code search; issue filtering and detail are shallow and mutations are
+absent. Both global and repository Pull Requests are placeholders, repository Actions is a
+placeholder, Discover is sample data, and the Rail checks/comments views are placeholders. The
+workspace shell is responsive, starts at 1600x1000, and remains usable down to 900x620.
 
 ## Next action
 
