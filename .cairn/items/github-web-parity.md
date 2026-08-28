@@ -375,13 +375,15 @@ whole-Package deletion retain explicit GitHub links. New OAuth logins request `r
 `write:packages`, and `delete:packages`; returned scopes are normalized and stored with a
 backward-compatible empty-scope migration. Known lower-scope connections fail before transport,
 while legacy credentials probe GitHub and treat a hidden private-package 404 as a reconnect state.
-Repository Insights is complete on open pull request #1; it remains unmerged pending user review.
+Repository Insights is complete on open pull request #1, and Personal Packages is complete on open
+pull request #2; both remain unmerged pending user review.
 The workspace shell is responsive, starts at 1600x1000, and remains usable down to 900x620.
 
 ## Next action
 
-Review the Personal Packages pull request, complete one live Harbor OAuth read probe when no other
-Harbor instance owns the desktop window, then audit the next missing personal-developer workflow.
+Review and merge Personal Packages pull request #2, complete one live Harbor OAuth read probe when no
+other Harbor instance owns the desktop window, then audit the next missing personal-developer
+workflow.
 
 ## Verification
 
