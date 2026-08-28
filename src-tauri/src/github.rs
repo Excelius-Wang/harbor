@@ -19,6 +19,7 @@ pub(crate) mod gist;
 pub(crate) mod issue;
 pub(crate) mod item_metadata;
 pub(crate) mod notification;
+pub(crate) mod packages;
 pub(crate) mod pending_review;
 pub(crate) mod profile;
 pub(crate) mod projects;
@@ -64,6 +65,13 @@ pub use issue::{
     GitHubIssueSort, GitHubIssueState, GitHubIssueTimelineItem,
 };
 pub use notification::{GitHubNotificationAction, GitHubNotificationPage};
+#[cfg(test)]
+use packages::GitHubPackageVersionAction;
+pub use packages::{
+    GitHubPackage, GitHubPackagePage, GitHubPackageType, GitHubPackageVersionMutationInput,
+    GitHubPackageVersionMutationResult, GitHubPackageVersionPage, GitHubPackageVersionState,
+    GitHubPackageVisibility,
+};
 pub use profile::{
     GitHubContributionSummary, GitHubProfileActivityPage, GitHubProfileConnectionKind,
     GitHubUserPage, GitHubUserProfile, GitHubUserProfileUpdate,
@@ -568,6 +576,7 @@ pub(crate) trait GitHubClient:
     + gist::GitHubGistClient
     + issue::GitHubIssueClient
     + notification::GitHubNotificationClient
+    + packages::GitHubPackagesClient
     + pending_review::GitHubPendingReviewClient
     + profile::GitHubProfileClient
     + projects::GitHubProjectsClient
@@ -880,6 +889,10 @@ impl GitHubService {
     }
 
     async fn load_access_token(&self) -> Result<String, AppError> {
+        Ok(self.load_credentials().await?.access_token)
+    }
+
+    async fn load_credentials(&self) -> Result<GitHubOAuthCredentials, AppError> {
         if self.oauth.is_none() {
             return Err(AppError::GitHubNotConnected);
         }
@@ -911,13 +924,12 @@ impl GitHubService {
             .await
             .map_err(|error| AppError::Credentials(error.to_string()))??;
         }
-        let access_token = refreshed.access_token.clone();
         *self
             .session_credentials
             .write()
             .map_err(|_| AppError::GitHub("connection state is unavailable".to_string()))? =
-            Some(refreshed);
-        Ok(access_token)
+            Some(refreshed.clone());
+        Ok(refreshed)
     }
 }
 
@@ -2448,6 +2460,7 @@ mod tests {
                 access_token: self.access_token.to_string(),
                 refresh_token: Some("github-refresh-token".to_string()),
                 expires_at: None,
+                scopes: Vec::new(),
             })
         }
 
@@ -2459,6 +2472,7 @@ mod tests {
                 access_token: self.access_token.to_string(),
                 refresh_token: Some("rotated-refresh-token".to_string()),
                 expires_at: None,
+                scopes: Vec::new(),
             })
         }
     }
@@ -2468,6 +2482,7 @@ mod tests {
             access_token: "github-user-access-token".to_string(),
             refresh_token: Some("github-refresh-token".to_string()),
             expires_at: None,
+            scopes: Vec::new(),
         }
     }
 
@@ -3213,6 +3228,57 @@ mod tests {
         assert!(resolved_thread.viewer_can_unresolve);
         assert!(!unresolved_thread.is_resolved);
         assert!(unresolved_thread.viewer_can_resolve);
+    }
+
+    #[tokio::test]
+    async fn personal_packages_use_the_saved_connection() {
+        let credentials = Arc::new(MemoryCredentialStore::default());
+        credentials
+            .save_github_credentials(&oauth_credentials())
+            .expect("seed credentials");
+        let service = GitHubService::new(
+            Arc::new(FakeGitHubClient),
+            credentials,
+            Some(oauth_session("github-user-access-token")),
+        );
+
+        let page = service
+            .personal_packages(
+                GitHubPackageType::Container,
+                Some(GitHubPackageVisibility::Private),
+                1,
+            )
+            .await
+            .expect("personal packages");
+        let package = service
+            .personal_package(GitHubPackageType::Container, "harbor/desktop")
+            .await
+            .expect("personal package");
+        let versions = service
+            .personal_package_versions(
+                GitHubPackageType::Container,
+                "harbor/desktop",
+                GitHubPackageVersionState::Active,
+                1,
+            )
+            .await
+            .expect("package versions");
+        let mutation = service
+            .mutate_personal_package_version(&GitHubPackageVersionMutationInput {
+                package_type: GitHubPackageType::Container,
+                package_name: "harbor/desktop".to_string(),
+                expected_package_id: 42,
+                version_id: 84,
+                expected_version_name: "sha256:abc123".to_string(),
+                action: GitHubPackageVersionAction::Delete,
+            })
+            .await
+            .expect("package version mutation");
+
+        assert_eq!(page.packages[0].id, 42);
+        assert_eq!(package.name, "harbor/desktop");
+        assert_eq!(versions.versions[0].id, 84);
+        assert_eq!(mutation.action, GitHubPackageVersionAction::Delete);
     }
 
     #[tokio::test]

@@ -361,19 +361,50 @@ SHA confirmation. The focused `GitHubCodeMutationClient` owns normalization, per
 repository guards, conflict mapping, Git transport, response verification, and tests. The Code UI
 reuses the existing overview, Markdown editor, Shiki preview, shadcn dialogs, toasts, and query roots;
 workflow-file scope requirements and protected/default-branch failures remain explicit.
+Personal Packages now has a native account workspace behind the focused four-method
+`GitHubPackagesClient` Interface. Harbor lists one selected ecosystem with server-side visibility
+and page filters, loads authoritative Package details, and paginates active or recently deleted
+versions. Version deletion requires the exact Package name and rechecks both Package and version
+identity before writing; restoration resolves the selected version from GitHub's deleted-version
+inventory before calling the official restore route. Raw 204 write responses are checked without
+trying to parse an empty JSON body. Successful writes invalidate inventory, detail, and both
+version-state query families instead of inventing local Package state. Package visibility and
+registry metadata keep explicit unknown fallbacks, while container tags remain sorted and
+deduplicated. Publishing, install commands, visibility, access, repository linking, and
+whole-Package deletion retain explicit GitHub links. New OAuth logins request `read:packages`,
+`write:packages`, and `delete:packages`; returned scopes are normalized and stored with a
+backward-compatible empty-scope migration. Known lower-scope connections fail before transport,
+while legacy credentials probe GitHub and treat a hidden private-package 404 as a reconnect state.
+Repository Insights is complete on open pull request #1; it remains unmerged pending user review.
 The workspace shell is responsive, starts at 1600x1000, and remains usable down to 900x620.
 
 ## Next action
 
-Complete the remaining deterministic desktop checks for repository file rename, file deletion, and
-the 900x620 layout, then audit the next missing personal-developer GitHub Web workflow. Keep
-organization administration, Enterprise controls, and advanced organization security out of scope.
+Review the Personal Packages pull request, complete one live Harbor OAuth read probe when no other
+Harbor instance owns the desktop window, then audit the next missing personal-developer workflow.
 
 ## Verification
 
 Each GitHub parity slice must use real API data, cover loading/empty/error/permission states, preserve
 repository context and navigation, and complete its primary path without forcing a browser fallback.
 Run `pnpm check`, the Rust check suite when Rust changes, and a focused desktop interaction check.
+
+Personal Packages verification covers exact Tauri query and mutation arguments, every official read
+and version-write route, single-segment Package-name encoding, private-resource 404 handling, and
+realistic 204 delete and restore responses. It also covers bounded Package identities and pages,
+normalized OAuth-scope persistence and legacy credential migration, linked-repository mapping,
+forward-compatible visibility and metadata (including malformed future container payloads),
+personal-only request enum rejection, deduplicated container tags, cross-registry rejection,
+saved-credential delegation, stable conflict errors, and focused cache invalidation. `pnpm check`
+passes with 128 frontend tests; 241 Rust tests pass with one external DeepWiki test ignored by design;
+`cargo fmt --check`, `cargo check`, the production build, and `git diff --check` pass. Deterministic
+desktop fixtures verified ecosystem and visibility filters, empty, permission, rate-limit,
+active/deleted, exact-name deletion confirmation, public-version deletion guidance,
+deletion-to-recently-deleted reconciliation, restoration, explicit GitHub fallbacks, compact back
+navigation, and the 1600x1000 and 900x620 layouts. Document width equals viewport width, and the
+browser console reports zero errors and warnings. A live read probe through `tauri:dev` remains
+pending because an existing Harbor process prevented the debug window from becoming available; no
+credential was read or exported while attempting it.
 
 Repository Code mutation verification covers exact Tauri contracts, atomic rename payloads, stale
 file and branch guards, Git-compatible branch validation, empty-repository initialization, stable

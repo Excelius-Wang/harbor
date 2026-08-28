@@ -24,9 +24,11 @@ use crate::{
         GitHubIssueDetailPage, GitHubIssueFilters, GitHubIssueInboxFilters, GitHubIssueInboxPage,
         GitHubIssueInboxScope, GitHubIssueLabelPage, GitHubIssueMilestonePage, GitHubIssuePage,
         GitHubIssueSort, GitHubIssueState, GitHubIssueTimelineItem, GitHubLoginAvailability,
-        GitHubNotificationAction, GitHubNotificationPage, GitHubPendingPullRequestReview,
-        GitHubProfileActivityPage, GitHubProfileConnectionKind, GitHubProjectDetail,
-        GitHubProjectFilters, GitHubProjectItem, GitHubProjectItemAction,
+        GitHubNotificationAction, GitHubNotificationPage, GitHubPackage, GitHubPackagePage,
+        GitHubPackageType, GitHubPackageVersionMutationInput, GitHubPackageVersionMutationResult,
+        GitHubPackageVersionPage, GitHubPackageVersionState, GitHubPackageVisibility,
+        GitHubPendingPullRequestReview, GitHubProfileActivityPage, GitHubProfileConnectionKind,
+        GitHubProjectDetail, GitHubProjectFilters, GitHubProjectItem, GitHubProjectItemAction,
         GitHubProjectItemAddition, GitHubProjectItemFilters, GitHubProjectItemUpdate,
         GitHubProjectPage, GitHubProjectSort, GitHubProjectStateFilter, GitHubProjectSummary,
         GitHubProjectUpdate, GitHubPullRequest, GitHubPullRequestAutoMergeStatus,
@@ -221,6 +223,77 @@ pub async fn github_update_user_follow(
             followed,
         )
         .await
+}
+
+#[tauri::command]
+pub async fn github_list_personal_packages(
+    package_type: GitHubPackageType,
+    visibility: Option<GitHubPackageVisibility>,
+    page: u32,
+    state: State<'_, AppState>,
+) -> Result<GitHubPackagePage, AppError> {
+    state
+        .github
+        .personal_packages(
+            package_type,
+            visibility,
+            crate::github::packages::validate_package_page(page)?,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_get_personal_package(
+    package_type: GitHubPackageType,
+    package_name: String,
+    state: State<'_, AppState>,
+) -> Result<GitHubPackage, AppError> {
+    state
+        .github
+        .personal_package(
+            package_type,
+            &crate::github::packages::normalize_package_name(&package_name)?,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_list_personal_package_versions(
+    package_type: GitHubPackageType,
+    package_name: String,
+    version_state: GitHubPackageVersionState,
+    page: u32,
+    state: State<'_, AppState>,
+) -> Result<GitHubPackageVersionPage, AppError> {
+    state
+        .github
+        .personal_package_versions(
+            package_type,
+            &crate::github::packages::normalize_package_name(&package_name)?,
+            version_state,
+            crate::github::packages::validate_package_page(page)?,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_mutate_personal_package_version(
+    input: GitHubPackageVersionMutationInput,
+    state: State<'_, AppState>,
+) -> Result<GitHubPackageVersionMutationResult, AppError> {
+    if input.expected_package_id == 0 || input.version_id == 0 {
+        return Err(AppError::Validation(
+            "package and version identifiers must be positive".to_string(),
+        ));
+    }
+    let input = GitHubPackageVersionMutationInput {
+        package_name: crate::github::packages::normalize_package_name(&input.package_name)?,
+        expected_version_name: crate::github::packages::normalize_package_version_name(
+            &input.expected_version_name,
+        )?,
+        ..input
+    };
+    state.github.mutate_personal_package_version(&input).await
 }
 
 #[tauri::command]

@@ -34,6 +34,9 @@ import {
   userContributionsQueryOptions,
   userProfileQueryOptions,
   notificationsQueryOptions,
+  personalPackageQueryOptions,
+  personalPackagesQueryOptions,
+  personalPackageVersionsQueryOptions,
   pendingPullRequestReviewQueryOptions,
   pullRequestAutoMergeStatusQueryOptions,
   pullRequestBranchUpdateStatusQueryOptions,
@@ -208,6 +211,60 @@ describe("GitHub repository queries", () => {
     expect(invoke).toHaveBeenNthCalledWith(5, "github_list_gist_comments", {
       gistId: "abc123",
       page: 1,
+    });
+  });
+
+  it("keeps personal package inventory, detail, and version pages in focused caches", async () => {
+    const client = createTestQueryClient();
+    vi.mocked(invoke)
+      .mockResolvedValueOnce({ packages: [], page: 2, hasPrevious: true, hasMore: false })
+      .mockResolvedValueOnce({ id: 41, name: "@harbor/desktop", packageType: "npm" })
+      .mockResolvedValueOnce({ versions: [], state: "deleted", page: 3, hasMore: false });
+    const list = personalPackagesQueryOptions({
+      packageType: "npm",
+      visibility: "private",
+      page: 2,
+    });
+    const detail = personalPackageQueryOptions({
+      packageType: "npm",
+      packageName: "@harbor/desktop",
+    });
+    const versions = personalPackageVersionsQueryOptions({
+      packageType: "npm",
+      packageName: "@harbor/desktop",
+      state: "deleted",
+      page: 3,
+    });
+
+    await client.fetchQuery(list);
+    await client.fetchQuery(detail);
+    await client.fetchQuery(versions);
+
+    expect(list.queryKey).toEqual(["github", "personal-packages", "npm", "private", 2]);
+    expect(detail.queryKey).toEqual(["github", "personal-package", "npm", "@harbor/desktop"]);
+    expect(versions.queryKey).toEqual([
+      "github",
+      "personal-package",
+      "npm",
+      "@harbor/desktop",
+      "versions",
+      "deleted",
+      3,
+    ]);
+    expect(invoke).toHaveBeenNthCalledWith(1, "github_list_personal_packages", {
+      packageType: "npm",
+      visibility: "private",
+      page: 2,
+    });
+    expect(invoke).toHaveBeenNthCalledWith(2, "github_get_personal_package", {
+      packageType: "npm",
+      packageName: "@harbor/desktop",
+    });
+    expect(invoke).toHaveBeenNthCalledWith(3, "github_list_personal_package_versions", {
+      packageType: "npm",
+      packageName: "@harbor/desktop",
+      versionState: "deleted",
+      page: 3,
     });
   });
 

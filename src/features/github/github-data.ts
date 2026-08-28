@@ -419,6 +419,74 @@ export type GitHubGistCommentMutation =
   | { action: "update"; commentId: number; body: string }
   | { action: "delete"; commentId: number };
 
+export type GitHubPackageType = "npm" | "maven" | "rubygems" | "nuget" | "container" | "docker";
+
+export type GitHubPackageVisibility = "public" | "private";
+
+export type GitHubPackageVisibilityValue =
+  | { kind: GitHubPackageVisibility | "internal" }
+  | { kind: "unknown"; value: string };
+
+export type GitHubPackageVersionState = "active" | "deleted";
+
+export type GitHubPackageVersionAction = "delete" | "restore";
+
+export type GitHubPackageRepository = {
+  name: string;
+  fullName: string;
+  url: string;
+};
+
+export type GitHubPackage = {
+  id: number;
+  name: string;
+  packageType: GitHubPackageType;
+  visibility: GitHubPackageVisibilityValue;
+  versionCount: number;
+  owner: string;
+  url: string;
+  createdAt: string;
+  updatedAt: string;
+  repository?: GitHubPackageRepository;
+};
+
+export type GitHubPackagePage = {
+  packages: GitHubPackage[];
+  page: number;
+  hasPrevious: boolean;
+  hasMore: boolean;
+};
+
+export type GitHubPackageVersion = {
+  id: number;
+  name: string;
+  state: GitHubPackageVersionState;
+  metadata: { kind: "container"; tags: string[] } | { kind: "unknown"; raw: unknown };
+  description?: string;
+  license?: string;
+  deletedAt?: string;
+  url: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type GitHubPackageVersionPage = {
+  versions: GitHubPackageVersion[];
+  state: GitHubPackageVersionState;
+  page: number;
+  hasPrevious: boolean;
+  hasMore: boolean;
+};
+
+export type GitHubPackageVersionMutationResult = {
+  packageId: number;
+  packageType: GitHubPackageType;
+  packageName: string;
+  versionId: number;
+  versionName: string;
+  action: GitHubPackageVersionAction;
+};
+
 export type GitHubRepositoryIdentity = Pick<GitHubRepository, "owner" | "name">;
 export type GitHubRepositoryContentContext = Pick<
   GitHubRepository,
