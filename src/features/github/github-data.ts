@@ -304,6 +304,104 @@ export type GitHubRepositorySettingsUpdate = Omit<GitHubRepositorySettings, "rep
   confirmArchiveChange: boolean;
 };
 
+export type GitHubInsightsTrafficPeriod = "day" | "week";
+
+export type GitHubInsightsStatisticStatus = "ready" | "building" | "unavailable";
+
+export type GitHubCommunityFile = {
+  key: string;
+  name: string;
+  url?: string;
+  present: boolean;
+};
+
+export type GitHubCommunityProfile = {
+  healthPercentage: number;
+  description?: string;
+  documentation?: string;
+  updatedAt?: string;
+  files: GitHubCommunityFile[];
+};
+
+export type GitHubCommitActivityWeek = {
+  week: number;
+  total: number;
+  days: number[];
+};
+
+export type GitHubCodeFrequencyWeek = {
+  week: number;
+  additions: number;
+  deletions: number;
+};
+
+export type GitHubRepositoryInsightsOverview = {
+  community: GitHubCommunityProfile;
+  commitActivity: {
+    status: GitHubInsightsStatisticStatus;
+    weeks: GitHubCommitActivityWeek[];
+  };
+  codeFrequency: {
+    status: GitHubInsightsStatisticStatus;
+    weeks: GitHubCodeFrequencyWeek[];
+  };
+};
+
+export type GitHubContributorWeek = {
+  week: number;
+  additions: number;
+  deletions: number;
+  commits: number;
+};
+
+export type GitHubInsightsContributor = {
+  login?: string;
+  avatarUrl?: string;
+  total: number;
+  additions: number;
+  deletions: number;
+  weeks: GitHubContributorWeek[];
+};
+
+export type GitHubRepositoryInsightsContributors = {
+  status: GitHubInsightsStatisticStatus;
+  contributors: GitHubInsightsContributor[];
+};
+
+export type GitHubTrafficPoint = {
+  timestamp: string;
+  count: number;
+  uniques: number;
+};
+
+export type GitHubTrafficSeries = {
+  count: number;
+  uniques: number;
+  points: GitHubTrafficPoint[];
+};
+
+export type GitHubTrafficReferrer = {
+  referrer: string;
+  count: number;
+  uniques: number;
+};
+
+export type GitHubTrafficPath = {
+  path: string;
+  title: string;
+  url?: string;
+  count: number;
+  uniques: number;
+};
+
+export type GitHubRepositoryInsightsTraffic = {
+  period: GitHubInsightsTrafficPeriod;
+  views: GitHubTrafficSeries;
+  clones: GitHubTrafficSeries;
+  referrers: GitHubTrafficReferrer[];
+  paths: GitHubTrafficPath[];
+};
+
 export type GitHubGistSource = "mine" | "starred" | "public";
 
 export type GitHubGistFile = {

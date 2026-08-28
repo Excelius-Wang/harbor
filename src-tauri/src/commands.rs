@@ -20,30 +20,31 @@ use crate::{
         GitHubForkResult, GitHubGist, GitHubGistComment, GitHubGistCommentMutation,
         GitHubGistCommentPage, GitHubGistCreateInput, GitHubGistFileInput, GitHubGistFileMutation,
         GitHubGistPage, GitHubGistRevisionDetail, GitHubGistRevisionPage, GitHubGistSource,
-        GitHubGistUpdateInput, GitHubIssue, GitHubIssueAssigneePage, GitHubIssueAssignment,
-        GitHubIssueDetailPage, GitHubIssueFilters, GitHubIssueInboxFilters, GitHubIssueInboxPage,
-        GitHubIssueInboxScope, GitHubIssueLabelPage, GitHubIssueMilestonePage, GitHubIssuePage,
-        GitHubIssueSort, GitHubIssueState, GitHubIssueTimelineItem, GitHubLoginAvailability,
-        GitHubNotificationAction, GitHubNotificationPage, GitHubPendingPullRequestReview,
-        GitHubProfileActivityPage, GitHubProfileConnectionKind, GitHubProjectDetail,
-        GitHubProjectFilters, GitHubProjectItem, GitHubProjectItemAction,
-        GitHubProjectItemAddition, GitHubProjectItemFilters, GitHubProjectItemUpdate,
-        GitHubProjectPage, GitHubProjectSort, GitHubProjectStateFilter, GitHubProjectSummary,
-        GitHubProjectUpdate, GitHubPullRequest, GitHubPullRequestAutoMergeStatus,
-        GitHubPullRequestBranchUpdate, GitHubPullRequestBranchUpdateStatus,
-        GitHubPullRequestCommitPage, GitHubPullRequestComparison, GitHubPullRequestDetailPage,
-        GitHubPullRequestFilePage, GitHubPullRequestFilters, GitHubPullRequestInboxFilters,
-        GitHubPullRequestInboxScope, GitHubPullRequestMergeMethod,
-        GitHubPullRequestMergeQueueStatus, GitHubPullRequestPage, GitHubPullRequestReview,
-        GitHubPullRequestReviewAction, GitHubPullRequestReviewComment,
+        GitHubGistUpdateInput, GitHubInsightsTrafficPeriod, GitHubIssue, GitHubIssueAssigneePage,
+        GitHubIssueAssignment, GitHubIssueDetailPage, GitHubIssueFilters, GitHubIssueInboxFilters,
+        GitHubIssueInboxPage, GitHubIssueInboxScope, GitHubIssueLabelPage,
+        GitHubIssueMilestonePage, GitHubIssuePage, GitHubIssueSort, GitHubIssueState,
+        GitHubIssueTimelineItem, GitHubLoginAvailability, GitHubNotificationAction,
+        GitHubNotificationPage, GitHubPendingPullRequestReview, GitHubProfileActivityPage,
+        GitHubProfileConnectionKind, GitHubProjectDetail, GitHubProjectFilters, GitHubProjectItem,
+        GitHubProjectItemAction, GitHubProjectItemAddition, GitHubProjectItemFilters,
+        GitHubProjectItemUpdate, GitHubProjectPage, GitHubProjectSort, GitHubProjectStateFilter,
+        GitHubProjectSummary, GitHubProjectUpdate, GitHubPullRequest,
+        GitHubPullRequestAutoMergeStatus, GitHubPullRequestBranchUpdate,
+        GitHubPullRequestBranchUpdateStatus, GitHubPullRequestCommitPage,
+        GitHubPullRequestComparison, GitHubPullRequestDetailPage, GitHubPullRequestFilePage,
+        GitHubPullRequestFilters, GitHubPullRequestInboxFilters, GitHubPullRequestInboxScope,
+        GitHubPullRequestMergeMethod, GitHubPullRequestMergeQueueStatus, GitHubPullRequestPage,
+        GitHubPullRequestReview, GitHubPullRequestReviewAction, GitHubPullRequestReviewComment,
         GitHubPullRequestReviewTeamPage, GitHubPullRequestReviewThreadComment,
         GitHubPullRequestReviewThreadPage, GitHubPullRequestReviewThreadResolution,
         GitHubPullRequestReviewThreadState, GitHubPullRequestSort, GitHubPullRequestState,
         GitHubRelease, GitHubReleaseArchiveFormat, GitHubReleaseAsset, GitHubReleaseMutationInput,
         GitHubReleasePage, GitHubRepositoryCommitPage, GitHubRepositoryCreateInput,
         GitHubRepositoryCreationOptions, GitHubRepositoryFileCommit, GitHubRepositoryFileMutation,
-        GitHubRepositoryPage, GitHubRepositoryRelationship, GitHubRepositorySettings,
-        GitHubRepositorySettingsUpdate, GitHubRepositoryWatchLevel,
+        GitHubRepositoryInsightsContributors, GitHubRepositoryInsightsOverview,
+        GitHubRepositoryInsightsTraffic, GitHubRepositoryPage, GitHubRepositoryRelationship,
+        GitHubRepositorySettings, GitHubRepositorySettingsUpdate, GitHubRepositoryWatchLevel,
         GitHubSecretScanningLocationPage, GitHubSecurityAlertDetail, GitHubSecurityAlertFilters,
         GitHubSecurityAlertKind, GitHubSecurityAlertMutation, GitHubSecurityAlertPage,
         GitHubSecurityAlertSeverityFilter, GitHubSecurityAlertSort, GitHubSecurityAlertStateFilter,
@@ -2503,6 +2504,46 @@ pub async fn github_get_repository_code_overview(
     state
         .github
         .code_overview(repository.owner(), repository.name(), &reference)
+        .await
+}
+
+#[tauri::command]
+pub async fn github_get_repository_insights_overview(
+    owner: String,
+    repository: String,
+    state: State<'_, AppState>,
+) -> Result<GitHubRepositoryInsightsOverview, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .repository_insights_overview(repository.owner(), repository.name())
+        .await
+}
+
+#[tauri::command]
+pub async fn github_get_repository_insights_contributors(
+    owner: String,
+    repository: String,
+    state: State<'_, AppState>,
+) -> Result<GitHubRepositoryInsightsContributors, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .repository_insights_contributors(repository.owner(), repository.name())
+        .await
+}
+
+#[tauri::command]
+pub async fn github_get_repository_insights_traffic(
+    owner: String,
+    repository: String,
+    period: GitHubInsightsTrafficPeriod,
+    state: State<'_, AppState>,
+) -> Result<GitHubRepositoryInsightsTraffic, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .repository_insights_traffic(repository.owner(), repository.name(), period)
         .await
 }
 

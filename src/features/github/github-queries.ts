@@ -34,6 +34,7 @@ import type {
   GitHubIssuePage,
   GitHubIssueSort,
   GitHubIssueState,
+  GitHubInsightsTrafficPeriod,
   GitHubNotificationPage,
   GitHubContributionSummary,
   GitHubProfileActivityPage,
@@ -59,6 +60,9 @@ import type {
   GitHubRelease,
   GitHubReleasePage,
   GitHubRepositoryPage,
+  GitHubRepositoryInsightsContributors,
+  GitHubRepositoryInsightsOverview,
+  GitHubRepositoryInsightsTraffic,
   GitHubRepositoryCreationOptions,
   GitHubRepositoryRelationship,
   GitHubRepositorySettings,
@@ -101,6 +105,10 @@ type GitHubContentsTarget = GitHubCodeTarget & {
 };
 
 type GitHubRepositoryTarget = Pick<GitHubCodeTarget, "owner" | "repository">;
+
+type GitHubInsightsTrafficTarget = GitHubRepositoryTarget & {
+  period: GitHubInsightsTrafficPeriod;
+};
 
 export type GitHubDiscussionsTarget = GitHubRepositoryTarget & {
   categoryId: string | null;
@@ -320,6 +328,14 @@ export const githubQueryKeys = {
   repositoryCreationOptions: ["github", "repository-creation-options"] as const,
   repositorySettings: ({ owner, repository }: GitHubRepositoryTarget) =>
     ["github", "repository", owner, repository, "settings"] as const,
+  repositoryInsightsRoot: ({ owner, repository }: GitHubRepositoryTarget) =>
+    ["github", "repository", owner, repository, "insights"] as const,
+  repositoryInsightsOverview: ({ owner, repository }: GitHubRepositoryTarget) =>
+    ["github", "repository", owner, repository, "insights", "overview"] as const,
+  repositoryInsightsContributors: ({ owner, repository }: GitHubRepositoryTarget) =>
+    ["github", "repository", owner, repository, "insights", "contributors"] as const,
+  repositoryInsightsTraffic: ({ owner, repository, period }: GitHubInsightsTrafficTarget) =>
+    ["github", "repository", owner, repository, "insights", "traffic", period] as const,
   profile: ({ username }: GitHubProfileTarget) =>
     ["github", "profile", username ?? "viewer"] as const,
   profilesRoot: ["github", "profile"] as const,
@@ -831,6 +847,43 @@ export function personalRepositorySettingsQueryOptions(target: GitHubRepositoryT
     queryKey: githubQueryKeys.repositorySettings(target),
     queryFn: () =>
       invoke<GitHubRepositorySettings>("github_get_personal_repository_settings", target),
+    staleTime: GITHUB_QUERY_STALE_TIME,
+  });
+}
+
+export function repositoryInsightsOverviewQueryOptions(target: GitHubRepositoryTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.repositoryInsightsOverview(target),
+    queryFn: () =>
+      invoke<GitHubRepositoryInsightsOverview>("github_get_repository_insights_overview", target),
+    staleTime: GITHUB_QUERY_STALE_TIME,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      return data?.commitActivity.status === "building" || data?.codeFrequency.status === "building"
+        ? 5_000
+        : false;
+    },
+  });
+}
+
+export function repositoryInsightsContributorsQueryOptions(target: GitHubRepositoryTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.repositoryInsightsContributors(target),
+    queryFn: () =>
+      invoke<GitHubRepositoryInsightsContributors>(
+        "github_get_repository_insights_contributors",
+        target
+      ),
+    staleTime: GITHUB_QUERY_STALE_TIME,
+    refetchInterval: (query) => (query.state.data?.status === "building" ? 5_000 : false),
+  });
+}
+
+export function repositoryInsightsTrafficQueryOptions(target: GitHubInsightsTrafficTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.repositoryInsightsTraffic(target),
+    queryFn: () =>
+      invoke<GitHubRepositoryInsightsTraffic>("github_get_repository_insights_traffic", target),
     staleTime: GITHUB_QUERY_STALE_TIME,
   });
 }

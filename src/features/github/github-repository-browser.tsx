@@ -3,6 +3,7 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { isTauri } from "@tauri-apps/api/core";
 import {
   Archive,
+  BarChart3,
   BookMarked,
   CircleDot,
   Code2,
@@ -78,6 +79,10 @@ const GitHubSecurityView = lazy(() =>
   import("./github-security-view").then((module) => ({ default: module.GitHubSecurityView }))
 );
 
+const GitHubInsightsView = lazy(() =>
+  import("./github-insights-view").then((module) => ({ default: module.GitHubInsightsView }))
+);
+
 const GitHubRepositorySettingsView = lazy(() =>
   import("./github-repository-settings-view").then((module) => ({
     default: module.GitHubRepositorySettingsView,
@@ -92,6 +97,7 @@ type RepositoryTab =
   | "discussions"
   | "actions"
   | "security"
+  | "insights"
   | "settings";
 
 type RepositorySource = "mine" | "starred";
@@ -589,6 +595,9 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
                     <TabsTrigger value="security" className="px-1.5 text-xs">
                       <ShieldAlert /> {t("workspace.repositories.tabs.security")}
                     </TabsTrigger>
+                    <TabsTrigger value="insights" className="px-1.5 text-xs">
+                      <BarChart3 /> {t("workspace.repositories.tabs.insights")}
+                    </TabsTrigger>
                     {selectedRelationshipResult.data?.viewerOwnsRepository ? (
                       <TabsTrigger value="settings" className="px-1.5 text-xs">
                         <Settings2 /> {t("workspace.repositories.tabs.settings")}
@@ -641,6 +650,14 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
                 >
                   <Suspense fallback={<RepositoryTabSkeleton />}>
                     <GitHubSecurityView repository={selectedRepository} />
+                  </Suspense>
+                </TabsContent>
+                <TabsContent
+                  value="insights"
+                  className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+                >
+                  <Suspense fallback={<RepositoryTabSkeleton />}>
+                    <GitHubInsightsView repository={selectedRepository} />
                   </Suspense>
                 </TabsContent>
                 {selectedRelationshipResult.data?.viewerOwnsRepository ? (

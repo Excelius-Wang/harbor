@@ -22,6 +22,9 @@ import {
   repositoryIssueAssigneesQueryOptions,
   repositoryIssueLabelsQueryOptions,
   repositoryIssueMilestonesQueryOptions,
+  repositoryInsightsContributorsQueryOptions,
+  repositoryInsightsOverviewQueryOptions,
+  repositoryInsightsTrafficQueryOptions,
   repositoryIssuesQueryOptions,
   issueInboxQueryOptions,
   repositoriesQueryOptions,
@@ -534,6 +537,53 @@ describe("GitHub repository queries", () => {
     await client.fetchQuery(options);
 
     expect(invoke).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps repository Insights sections in focused caches with exact Tauri arguments", async () => {
+    const client = createTestQueryClient();
+    vi.mocked(invoke)
+      .mockResolvedValueOnce({
+        community: { healthPercentage: 75, files: [] },
+        commitActivity: { status: "ready", weeks: [] },
+        codeFrequency: { status: "ready", weeks: [] },
+      })
+      .mockResolvedValueOnce({ status: "ready", contributors: [] })
+      .mockResolvedValueOnce({
+        period: "week",
+        views: { count: 0, uniques: 0, points: [] },
+        clones: { count: 0, uniques: 0, points: [] },
+        referrers: [],
+        paths: [],
+      });
+    const target = { owner: "octocat", repository: "hello-world" };
+    const overviewOptions = repositoryInsightsOverviewQueryOptions(target);
+    const contributorsOptions = repositoryInsightsContributorsQueryOptions(target);
+    const trafficOptions = repositoryInsightsTrafficQueryOptions({ ...target, period: "week" });
+
+    await client.fetchQuery(overviewOptions);
+    await client.fetchQuery(contributorsOptions);
+    await client.fetchQuery(trafficOptions);
+
+    expect(overviewOptions.queryKey).toEqual([
+      "github",
+      "repository",
+      "octocat",
+      "hello-world",
+      "insights",
+      "overview",
+    ]);
+    expect(contributorsOptions.queryKey[5]).toBe("contributors");
+    expect(trafficOptions.queryKey.slice(-2)).toEqual(["traffic", "week"]);
+    expect(invoke).toHaveBeenNthCalledWith(1, "github_get_repository_insights_overview", target);
+    expect(invoke).toHaveBeenNthCalledWith(
+      2,
+      "github_get_repository_insights_contributors",
+      target
+    );
+    expect(invoke).toHaveBeenNthCalledWith(3, "github_get_repository_insights_traffic", {
+      ...target,
+      period: "week",
+    });
   });
 
   it("loads and caches a repository file by revision and path", async () => {

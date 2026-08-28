@@ -872,7 +872,78 @@
         "discussions": "Discussions",
         "actions": "Actions",
         "security": "Security",
+        "insights": "Insights",
         "settings": "Settings"
+      },
+      "insights": {
+        "title": "Repository insights",
+        "description": "Community health, contribution activity, and repository traffic.",
+        "refresh": "Refresh repository insights",
+        "tabs": {
+          "overview": "Overview",
+          "contributors": "Contributors",
+          "traffic": "Traffic"
+        },
+        "loadFailed": "Harbor could not load repository insights",
+        "refreshFailed": "The latest insights could not be loaded",
+        "trafficPermissionTitle": "Traffic requires push access",
+        "trafficPermissionDescription": "GitHub exposes views, clones, referrers, and popular content only to people with push access to this repository.",
+        "statistics": {
+          "building": {
+            "title": "GitHub is building these statistics",
+            "description": "Harbor will retry automatically. Large repositories can take a short time to finish."
+          },
+          "unavailable": {
+            "title": "These statistics are unavailable",
+            "description": "GitHub returned no graph data for this repository. Some graphs are unavailable for very large or inactive repositories."
+          }
+        },
+        "community": "Community health",
+        "communityDescription": "Recommended files that help people understand and contribute to this repository.",
+        "communityHealthLabel": "Community health is {{percentage}} percent",
+        "communityFiles": {
+          "readme": "README",
+          "code_of_conduct": "Code of conduct",
+          "contributing": "Contributing guide",
+          "license": "License",
+          "issue_template": "Issue template",
+          "pull_request_template": "Pull request template"
+        },
+        "documentation": "Documentation: {{documentation}}",
+        "commitActivity": "Commit activity",
+        "lastYear": "Weekly commits on the default branch over the last year.",
+        "codeFrequency": "Code frequency",
+        "codeFrequencyDescription": "Weekly additions and deletions on the default branch.",
+        "noContributors": "No contributor statistics",
+        "noContributorsDescription": "GitHub did not return contributor activity for this repository.",
+        "anonymous": "Anonymous {{number}}",
+        "topContributors": "Top contributors",
+        "contributorsDescription": "The ten contributors with the most non-merge commits.",
+        "contributorTotals": "Contributor totals",
+        "statisticsExcludeMerges": "GitHub statistics exclude merge commits and empty contributor commits.",
+        "contributor": "Contributor",
+        "commits": "Commits",
+        "additions": "Additions",
+        "deletions": "Deletions",
+        "period": "Traffic interval",
+        "periods": {
+          "day": "Daily",
+          "week": "Weekly"
+        },
+        "pageViews": "Page views",
+        "pageViewsDescription": "Repository visitors over GitHub's latest 14-day window.",
+        "clones": "Clones",
+        "clonesDescription": "Full repository clones over GitHub's latest 14-day window.",
+        "uniqueCount": "{{value}} unique",
+        "referrers": "Referring sites",
+        "referrersDescription": "The sources that sent the most visitors in the last 14 days.",
+        "source": "Source",
+        "views": "Views",
+        "unique": "Unique",
+        "noTrafficRows": "No traffic data in this window.",
+        "popularContent": "Popular content",
+        "popularContentDescription": "The repository pages with the most views in the last 14 days.",
+        "content": "Content"
       },
       "releases": "Releases",
       "releasesDescription": "Published versions, release notes, and downloadable assets.",
