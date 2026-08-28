@@ -437,7 +437,7 @@ function ContributorsPanel({ data }: { data: GitHubRepositoryInsightsContributor
               </TableRow>
             </TableHeader>
             <TableBody>
-              {topContributors.map((contributor, index) => {
+              {data.contributors.map((contributor, index) => {
                 const login =
                   contributor.login ??
                   t("workspace.repositories.insights.anonymous", { number: index + 1 });

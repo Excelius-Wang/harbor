@@ -393,7 +393,7 @@ page-level horizontal overflow, and the browser reports zero errors and warnings
 Repository Insights verification covers exact Overview, Contributors, and day or week Traffic Tauri
 contracts; official route construction; `202 Accepted`, `204 No Content`, and code-frequency `422`
 states; contributor aggregation; positive deletion presentation; safe repository-path links; and
-saved-credential delegation. `pnpm check` passes with 126 frontend tests; 230 Rust tests pass with one
+saved-credential delegation. `pnpm check` passes with 127 frontend tests; 231 Rust tests pass with one
 external DeepWiki test ignored by design; `cargo fmt --check`, `cargo check`, the production build,
 and `git diff --check` pass. A deterministic Playwright fixture verified all three Insights tabs,
 Traffic period switching, and exact IPC arguments at 1600x1000 and 900x620. Both sizes have no

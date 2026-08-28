@@ -49,7 +49,6 @@ pub struct GitHubCommunityProfile {
 pub struct GitHubCommitActivityWeek {
     pub week: i64,
     pub total: u64,
-    pub days: Vec<u64>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -84,22 +83,12 @@ pub struct GitHubRepositoryInsightsOverview {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct GitHubContributorWeek {
-    pub week: i64,
-    pub additions: u64,
-    pub deletions: u64,
-    pub commits: u64,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct GitHubInsightsContributor {
     pub login: Option<String>,
     pub avatar_url: Option<String>,
     pub total: u64,
     pub additions: u64,
     pub deletions: u64,
-    pub weeks: Vec<GitHubContributorWeek>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -228,8 +217,16 @@ impl GitHubInsightsClient for OctocrabGitHubClient {
         let code_frequency_route = code_frequency_route(owner, repository);
         let (community, commit_activity, code_frequency) = tokio::join!(
             repository_handler.get_community_profile_metrics(),
-            fetch_statistic::<Vec<RawCommitActivityWeek>>(&client, &commit_activity_route, false),
-            fetch_statistic::<Vec<RawCodeFrequencyWeek>>(&client, &code_frequency_route, true),
+            fetch_statistic::<Vec<RawCommitActivityWeek>>(
+                &client,
+                &commit_activity_route,
+                UnprocessableStatisticPolicy::Error,
+            ),
+            fetch_statistic::<Vec<RawCodeFrequencyWeek>>(
+                &client,
+                &code_frequency_route,
+                UnprocessableStatisticPolicy::Unavailable,
+            ),
         );
 
         Ok(GitHubRepositoryInsightsOverview {
@@ -249,7 +246,7 @@ impl GitHubInsightsClient for OctocrabGitHubClient {
         let statistic = fetch_statistic::<Vec<RawContributor>>(
             &client,
             &contributor_activity_route(owner, repository),
-            false,
+            UnprocessableStatisticPolicy::Error,
         )
         .await?;
         Ok(contributors_from_github(statistic))
@@ -316,7 +313,6 @@ struct TrafficParameters {
 struct RawCommitActivityWeek {
     week: i64,
     total: u64,
-    days: Vec<u64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -337,14 +333,10 @@ struct RawContributorAuthor {
 
 #[derive(Debug, Deserialize)]
 struct RawContributorWeek {
-    #[serde(rename = "w")]
-    week: i64,
     #[serde(rename = "a")]
     additions: u64,
     #[serde(rename = "d")]
     deletions: u64,
-    #[serde(rename = "c")]
-    commits: u64,
 }
 
 #[derive(Debug, Deserialize)]
@@ -389,21 +381,26 @@ enum StatisticResponse<T> {
     Unavailable,
 }
 
+#[derive(Clone, Copy)]
+enum UnprocessableStatisticPolicy {
+    Error,
+    Unavailable,
+}
+
 async fn fetch_statistic<T: DeserializeOwned>(
     client: &octocrab::Octocrab,
     route: &str,
-    unavailable_on_unprocessable: bool,
+    unprocessable_policy: UnprocessableStatisticPolicy,
 ) -> Result<StatisticResponse<T>, AppError> {
     let uri = route
         .parse::<http::Uri>()
         .map_err(|error| AppError::GitHub(error.to_string()))?;
     let response = client._get(uri).await.map_err(github_error)?;
+    if let Some(response) = statistic_response_without_body(response.status(), unprocessable_policy)
+    {
+        return Ok(response);
+    }
     match response.status() {
-        StatusCode::ACCEPTED => Ok(StatisticResponse::Building),
-        StatusCode::NO_CONTENT => Ok(StatisticResponse::Unavailable),
-        StatusCode::UNPROCESSABLE_ENTITY if unavailable_on_unprocessable => {
-            Ok(StatisticResponse::Unavailable)
-        }
         StatusCode::OK => {
             let bytes = response
                 .into_body()
@@ -423,6 +420,25 @@ async fn fetch_statistic<T: DeserializeOwned>(
                 "GitHub returned unexpected repository statistics status {status}"
             )))
         }
+    }
+}
+
+fn statistic_response_without_body<T>(
+    status: StatusCode,
+    unprocessable_policy: UnprocessableStatisticPolicy,
+) -> Option<StatisticResponse<T>> {
+    match status {
+        StatusCode::ACCEPTED => Some(StatisticResponse::Building),
+        StatusCode::NO_CONTENT => Some(StatisticResponse::Unavailable),
+        StatusCode::UNPROCESSABLE_ENTITY
+            if matches!(
+                unprocessable_policy,
+                UnprocessableStatisticPolicy::Unavailable
+            ) =>
+        {
+            Some(StatisticResponse::Unavailable)
+        }
+        _ => None,
     }
 }
 
@@ -485,7 +501,6 @@ fn commit_activity_from_github(
                 .map(|week| GitHubCommitActivityWeek {
                     week: week.week,
                     total: week.total,
-                    days: week.days,
                 })
                 .collect(),
         },
@@ -547,16 +562,6 @@ fn contributors_from_github(
                         total: contributor.total,
                         additions,
                         deletions,
-                        weeks: contributor
-                            .weeks
-                            .into_iter()
-                            .map(|week| GitHubContributorWeek {
-                                week: week.week,
-                                additions: week.additions,
-                                deletions: week.deletions,
-                                commits: week.commits,
-                            })
-                            .collect(),
                     }
                 })
                 .collect::<Vec<_>>();

@@ -326,7 +326,6 @@ export type GitHubCommunityProfile = {
 export type GitHubCommitActivityWeek = {
   week: number;
   total: number;
-  days: number[];
 };
 
 export type GitHubCodeFrequencyWeek = {
@@ -347,20 +346,12 @@ export type GitHubRepositoryInsightsOverview = {
   };
 };
 
-export type GitHubContributorWeek = {
-  week: number;
-  additions: number;
-  deletions: number;
-  commits: number;
-};
-
 export type GitHubInsightsContributor = {
   login?: string;
   avatarUrl?: string;
   total: number;
   additions: number;
   deletions: number;
-  weeks: GitHubContributorWeek[];
 };
 
 export type GitHubRepositoryInsightsContributors = {

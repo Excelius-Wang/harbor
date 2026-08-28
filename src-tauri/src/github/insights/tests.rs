@@ -32,7 +32,6 @@ impl GitHubInsightsClient for super::super::tests::FakeGitHubClient {
                 weeks: vec![GitHubCommitActivityWeek {
                     week: 1_786_665_600,
                     total: 12,
-                    days: vec![1, 2, 3, 4, 1, 1, 0],
                 }],
             },
             code_frequency: GitHubCodeFrequency {
@@ -62,12 +61,6 @@ impl GitHubInsightsClient for super::super::tests::FakeGitHubClient {
                 total: 12,
                 additions: 140,
                 deletions: 32,
-                weeks: vec![GitHubContributorWeek {
-                    week: 1_786_665_600,
-                    additions: 140,
-                    deletions: 32,
-                    commits: 12,
-                }],
             }],
         })
     }
@@ -160,10 +153,8 @@ fn contributor_activity_is_sorted_and_aggregated() {
             }),
             total: 3,
             weeks: vec![RawContributorWeek {
-                week: 1,
                 additions: 10,
                 deletions: 2,
-                commits: 3,
             }],
         },
         RawContributor {
@@ -173,10 +164,8 @@ fn contributor_activity_is_sorted_and_aggregated() {
             }),
             total: 8,
             weeks: vec![RawContributorWeek {
-                week: 1,
                 additions: 40,
                 deletions: 7,
-                commits: 8,
             }],
         },
     ]));
@@ -213,4 +202,36 @@ fn building_statistics_keep_an_explicit_state() {
     assert!(commits.weeks.is_empty());
     assert_eq!(contributors.status, GitHubInsightsStatisticStatus::Building);
     assert!(contributors.contributors.is_empty());
+}
+
+#[test]
+fn statistic_http_statuses_keep_their_documented_meaning() {
+    assert!(matches!(
+        statistic_response_without_body::<Vec<RawCommitActivityWeek>>(
+            StatusCode::ACCEPTED,
+            UnprocessableStatisticPolicy::Error,
+        ),
+        Some(StatisticResponse::Building)
+    ));
+    assert!(matches!(
+        statistic_response_without_body::<Vec<RawCommitActivityWeek>>(
+            StatusCode::NO_CONTENT,
+            UnprocessableStatisticPolicy::Error,
+        ),
+        Some(StatisticResponse::Unavailable)
+    ));
+    assert!(matches!(
+        statistic_response_without_body::<Vec<RawCodeFrequencyWeek>>(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            UnprocessableStatisticPolicy::Unavailable,
+        ),
+        Some(StatisticResponse::Unavailable)
+    ));
+    assert!(
+        statistic_response_without_body::<Vec<RawCommitActivityWeek>>(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            UnprocessableStatisticPolicy::Error,
+        )
+        .is_none()
+    );
 }

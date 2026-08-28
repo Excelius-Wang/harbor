@@ -586,6 +586,43 @@ describe("GitHub repository queries", () => {
     });
   });
 
+  it("polls repository statistics only while GitHub is building them", () => {
+    const target = { owner: "octocat", repository: "hello-world" };
+    const overviewInterval = repositoryInsightsOverviewQueryOptions(target).refetchInterval;
+    const contributorsInterval = repositoryInsightsContributorsQueryOptions(target).refetchInterval;
+
+    expect(typeof overviewInterval).toBe("function");
+    expect(typeof contributorsInterval).toBe("function");
+    if (typeof overviewInterval !== "function" || typeof contributorsInterval !== "function") {
+      throw new Error("Insights queries must use state-aware polling");
+    }
+
+    expect(
+      overviewInterval({
+        state: {
+          data: {
+            commitActivity: { status: "building" },
+            codeFrequency: { status: "ready" },
+          },
+        },
+      } as never)
+    ).toBe(5_000);
+    expect(
+      overviewInterval({
+        state: {
+          data: {
+            commitActivity: { status: "ready" },
+            codeFrequency: { status: "ready" },
+          },
+        },
+      } as never)
+    ).toBe(false);
+    expect(contributorsInterval({ state: { data: { status: "building" } } } as never)).toBe(5_000);
+    expect(contributorsInterval({ state: { data: { status: "unavailable" } } } as never)).toBe(
+      false
+    );
+  });
+
   it("loads and caches a repository file by revision and path", async () => {
     const client = createTestQueryClient();
     const preview: GitHubFilePreview = {
