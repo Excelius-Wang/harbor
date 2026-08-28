@@ -28,7 +28,7 @@ import { parseIpcError } from "@/lib/ipc-error";
 export type RailView = "overview" | "checks" | "comments" | "harbor";
 
 export type RepositoryTarget = {
-  id: string | number;
+  id?: string | number;
   owner: string;
   name: string;
   isPrivate?: boolean;
@@ -67,7 +67,7 @@ export function HarborRail({
     setAnswer(null);
     setAgentError("");
     setQuestion("");
-  }, [selectedRepository?.id]);
+  }, [selectedRepository?.owner, selectedRepository?.name]);
 
   const selectView = (view: RailView) => {
     onViewChange(view);

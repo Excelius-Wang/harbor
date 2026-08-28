@@ -1,19 +1,29 @@
 import { lazy, Suspense, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { invoke } from "@tauri-apps/api/core";
 import {
   BookOpenText,
   Box,
+  ArrowLeft,
   ChevronRight,
   ExternalLink,
   File,
   FileCode2,
+  FilePlus2,
   Folder,
   GitBranch,
+  GitBranchMinus,
+  GitBranchPlus,
   GitCommitHorizontal,
+  History,
   LockKeyhole,
   RefreshCw,
+  Search,
+  Tag,
+  Tags,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -23,6 +33,13 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Empty,
   EmptyContent,
@@ -37,6 +54,8 @@ import {
   SelectContent,
   SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -44,8 +63,32 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { parseIpcError } from "@/lib/ipc-error";
 import { openExternalUrl } from "@/lib/window";
-import type { GitHubContentEntry, GitHubRepository } from "./github-data";
+import {
+  GitHubCodeCreateBranchDialog,
+  GitHubCodeDeleteBranchDialog,
+} from "./github-code-branch-dialogs";
+import { GitHubCodeDeleteFileDialog } from "./github-code-delete-file-dialog";
+import { GitHubCodeFileDialog } from "./github-code-file-dialog";
+import {
+  refreshRepositoryAfterCodeMutation,
+  syncCreatedRepositoryBranch,
+  syncDeletedRepositoryBranch,
+  syncRepositoryFileCommit,
+} from "./github-code-mutations";
+import { GitHubCodeHistory } from "./github-code-history";
+import { GitHubCodeSearch } from "./github-code-search";
+import { GitHubCodeTags } from "./github-code-tags";
+import type {
+  GitHubCodeSearchResult,
+  GitHubBranch,
+  GitHubContentEntry,
+  GitHubFileDownloadResult,
+  GitHubRepository,
+  GitHubRepositoryFileCommit,
+} from "./github-data";
+import { GitHubFileBlame } from "./github-file-blame";
 import { GitHubFilePreviewPanel, GitHubFilePreviewSkeleton } from "./github-file-preview";
+import { formatBytes } from "./github-format";
 import {
   repositoryCodeQueryOptions,
   repositoryContentsQueryOptions,
@@ -54,16 +97,11 @@ import {
 
 const GitHubReadme = lazy(() => import("./github-readme"));
 
-function formatBytes(bytes: number, locale: string) {
-  if (bytes < 1_000) return `${bytes} B`;
-  if (bytes < 1_000_000)
-    return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(bytes / 1_000)} KB`;
-  return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(bytes / 1_000_000)} MB`;
-}
+type CodeSurface = "browser" | "file" | "history" | "tags" | "search" | "blame";
 
 function CodeSkeleton() {
   return (
-    <div className="space-y-4 p-4">
+    <div className="flex flex-col gap-4 p-4">
       <div className="flex gap-2">
         <Skeleton className="h-8 w-36" />
         <Skeleton className="h-8 flex-1" />
@@ -118,11 +156,42 @@ function FileRow({
   );
 }
 
-export function GitHubCodeView({ repository }: { repository: GitHubRepository }) {
+export function GitHubCodeView({
+  repository,
+  initialReference = repository.defaultBranch,
+  initialPath,
+  backLabel,
+  onBack,
+}: {
+  repository: GitHubRepository;
+  initialReference?: string;
+  initialPath?: string;
+  backLabel?: string;
+  onBack?: () => void;
+}) {
   const { t, i18n } = useTranslation();
-  const [reference, setReference] = useState(repository.defaultBranch);
-  const [path, setPath] = useState("");
-  const [selectedFile, setSelectedFile] = useState<GitHubContentEntry | null>(null);
+  const queryClient = useQueryClient();
+  const [reference, setReference] = useState(initialReference);
+  const [path, setPath] = useState(() => initialPath?.split("/").slice(0, -1).join("/") ?? "");
+  const [selectedFile, setSelectedFile] = useState<GitHubContentEntry | null>(() =>
+    initialPath
+      ? (() => {
+          const segments = initialPath.split("/");
+          return {
+            name: segments[segments.length - 1] ?? initialPath,
+            path: initialPath,
+            sha: "",
+            kind: "file",
+            size: 0,
+          };
+        })()
+      : null
+  );
+  const [surface, setSurface] = useState<CodeSurface>(initialPath ? "file" : "browser");
+  const [fileDialogOpen, setFileDialogOpen] = useState(false);
+  const [deleteFileDialogOpen, setDeleteFileDialogOpen] = useState(false);
+  const [createBranchDialogOpen, setCreateBranchDialogOpen] = useState(false);
+  const [deleteBranchDialogOpen, setDeleteBranchDialogOpen] = useState(false);
   const target = { owner: repository.owner, repository: repository.name, reference };
   const overviewResult = useQuery(repositoryCodeQueryOptions(target));
   const contentsResult = useQuery(repositoryContentsQueryOptions({ ...target, path }));
@@ -142,20 +211,61 @@ export function GitHubCodeView({ repository }: { repository: GitHubRepository })
     !listing && contentsResult.error ? parseIpcError(contentsResult.error) : null;
   const fileError =
     selectedFile && !filePreview && fileResult.error ? parseIpcError(fileResult.error) : null;
-  const activeError = overviewError ?? (selectedFile ? fileError : contentsError);
-
   const breadcrumbSegments = useMemo(() => path.split("/").filter(Boolean), [path]);
+  const tagOptions = useMemo(() => {
+    const branchNames = new Set((overview?.branches ?? []).map((branch) => branch.name));
+    return (overview?.tags ?? []).filter((tag) => !branchNames.has(tag.name));
+  }, [overview]);
+  const detachedReference =
+    !(overview?.branches ?? []).some((branch) => branch.name === reference) &&
+    !tagOptions.some((tag) => tag.name === reference);
   const latestCommit = overview?.commits[0];
+  const activeBranch = overview?.branches.find((branch) => branch.name === reference) ?? null;
+  const emptyRepository = Boolean(overview && overview.branches.length === 0);
+  const canWrite = Boolean(
+    overview?.canWrite && !overview.isArchived && (activeBranch || emptyRepository)
+  );
+  const activeError =
+    overviewError ??
+    (surface === "file" || surface === "blame"
+      ? fileError
+      : surface === "browser" && !emptyRepository
+        ? contentsError
+        : null);
+
+  const downloadMutation = useMutation({
+    mutationFn: (filePath: string) =>
+      invoke<GitHubFileDownloadResult>("github_download_repository_file", {
+        owner: repository.owner,
+        repository: repository.name,
+        reference,
+        path: filePath,
+      }),
+    onSuccess: (result) => {
+      if (result.saved) {
+        toast.success(t("workspace.repositories.downloadComplete"), {
+          description: result.path ?? undefined,
+        });
+      }
+    },
+    onError: (error) => {
+      toast.error(t("workspace.repositories.downloadFailed"), {
+        description: parseIpcError(error).message,
+      });
+    },
+  });
 
   const selectBranch = (nextReference: string) => {
     setPath("");
     setSelectedFile(null);
     setReference(nextReference);
+    setSurface("browser");
   };
 
   const navigateToPath = (nextPath: string) => {
     setSelectedFile(null);
     setPath(nextPath);
+    setSurface("browser");
   };
 
   const openEntry = (entry: GitHubContentEntry) => {
@@ -165,6 +275,7 @@ export function GitHubCodeView({ repository }: { repository: GitHubRepository })
     }
     if (entry.kind === "file") {
       setSelectedFile(entry);
+      setSurface("file");
       return;
     }
     if (entry.url) void openExternalUrl(entry.url);
@@ -179,18 +290,110 @@ export function GitHubCodeView({ repository }: { repository: GitHubRepository })
         .join("/")}`)
     : repository.url;
 
+  const openSearchResult = (result: GitHubCodeSearchResult) => {
+    const segments = result.path.split("/");
+    const name = segments.pop() ?? result.name;
+    setReference(repository.defaultBranch);
+    setPath(segments.join("/"));
+    setSelectedFile({
+      name,
+      path: result.path,
+      sha: result.sha,
+      kind: "file",
+      size: 0,
+      url: result.url,
+    });
+    setSurface("file");
+  };
+
+  const handleFileCommitted = (commit: GitHubRepositoryFileCommit) => {
+    const mutationTarget = { owner: repository.owner, repository: repository.name };
+    syncRepositoryFileCommit(queryClient, mutationTarget, commit);
+    setFileDialogOpen(false);
+    setDeleteFileDialogOpen(false);
+    setReference(commit.branch);
+    if (commit.file) {
+      setPath(commit.file.path.split("/").slice(0, -1).join("/"));
+      setSelectedFile(commit.file);
+      setSurface("file");
+    } else {
+      const previousPath = commit.previousPath ?? "";
+      setPath(previousPath.split("/").slice(0, -1).join("/"));
+      setSelectedFile(null);
+      setSurface("browser");
+    }
+    toast.success(t("workspace.repositories.repositoryFileCommitted"), {
+      description: t("workspace.repositories.repositoryFileCommittedDescription", {
+        branch: commit.branch,
+        sha: commit.shortSha,
+      }),
+    });
+    void refreshRepositoryAfterCodeMutation(queryClient, mutationTarget);
+  };
+
+  const handleBranchCreated = (branch: GitHubBranch) => {
+    const mutationTarget = { owner: repository.owner, repository: repository.name };
+    syncCreatedRepositoryBranch(queryClient, mutationTarget, branch);
+    setCreateBranchDialogOpen(false);
+    selectBranch(branch.name);
+    toast.success(t("workspace.repositories.branchCreated"), {
+      description: t("workspace.repositories.branchCreatedDescription", {
+        branch: branch.name,
+        sha: branch.sha.slice(0, 7),
+      }),
+    });
+    void refreshRepositoryAfterCodeMutation(queryClient, mutationTarget);
+  };
+
+  const handleBranchDeleted = () => {
+    if (!activeBranch) return;
+    const mutationTarget = { owner: repository.owner, repository: repository.name };
+    const deletedBranch = activeBranch.name;
+    syncDeletedRepositoryBranch(queryClient, mutationTarget, deletedBranch);
+    setDeleteBranchDialogOpen(false);
+    selectBranch(repository.defaultBranch);
+    toast.success(t("workspace.repositories.branchDeleted"), {
+      description: deletedBranch,
+    });
+    void refreshRepositoryAfterCodeMutation(queryClient, mutationTarget);
+  };
+
   if (overviewLoading && !overview && contentsLoading && !listing) return <CodeSkeleton />;
 
   return (
     <ScrollArea className="min-h-0 min-w-0 flex-1" constrainContentWidth>
-      <div className="mx-auto w-full max-w-[1040px] space-y-4 p-4 pb-10">
+      <div className="mx-auto flex w-full max-w-[1360px] flex-col gap-4 p-4 pb-10">
         <div className="flex flex-wrap items-center gap-2">
+          {onBack ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label={backLabel ?? t("workspace.history.back")}
+              onClick={onBack}
+            >
+              <ArrowLeft />
+            </Button>
+          ) : null}
           <Select value={reference} onValueChange={selectBranch}>
             <SelectTrigger size="sm" className="min-w-40 bg-white/[0.025] text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="harbor-popover">
+              {detachedReference ? (
+                <>
+                  <SelectGroup>
+                    <SelectLabel>{t("workspace.notifications.kinds.commit")}</SelectLabel>
+                    <SelectItem value={reference}>
+                      <GitCommitHorizontal />
+                      {reference.slice(0, 12)}
+                    </SelectItem>
+                  </SelectGroup>
+                  <SelectSeparator />
+                </>
+              ) : null}
               <SelectGroup>
+                <SelectLabel>{t("workspace.repositories.branches")}</SelectLabel>
                 {(overview?.branches ?? []).map((branch) => (
                   <SelectItem key={branch.name} value={branch.name}>
                     <GitBranch />
@@ -199,8 +402,61 @@ export function GitHubCodeView({ repository }: { repository: GitHubRepository })
                   </SelectItem>
                 ))}
               </SelectGroup>
+              {tagOptions.length ? (
+                <>
+                  <SelectSeparator />
+                  <SelectGroup>
+                    <SelectLabel>{t("workspace.repositories.tags")}</SelectLabel>
+                    {tagOptions.map((tag) => (
+                      <SelectItem key={tag.name} value={tag.name}>
+                        <Tag />
+                        {tag.name}
+                      </SelectItem>
+                    ))}
+                    {overview?.tagsHaveMore ? (
+                      <SelectItem value="__harbor_more_tags" disabled>
+                        {t("workspace.repositories.moreTagsAvailable")}
+                      </SelectItem>
+                    ) : null}
+                  </SelectGroup>
+                </>
+              ) : null}
             </SelectContent>
           </Select>
+
+          {overview?.canWrite && !overview.isArchived ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon-sm"
+                  aria-label={t("workspace.repositories.manageBranches")}
+                >
+                  <GitBranch />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    disabled={!overview.branches.length}
+                    onSelect={() => setCreateBranchDialogOpen(true)}
+                  >
+                    <GitBranchPlus />
+                    {t("workspace.repositories.createBranch")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    variant="destructive"
+                    disabled={!activeBranch || activeBranch.name === repository.defaultBranch}
+                    onSelect={() => setDeleteBranchDialogOpen(true)}
+                  >
+                    <GitBranchMinus />
+                    {t("workspace.repositories.deleteBranch")}
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
 
           <div className="flex h-8 min-w-0 flex-1 items-center rounded-md border border-white/[0.07] bg-white/[0.018] px-2.5">
             <Breadcrumb>
@@ -258,34 +514,60 @@ export function GitHubCodeView({ repository }: { repository: GitHubRepository })
             </Breadcrumb>
           </div>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon-sm"
-                aria-label={t("workspace.repositories.refreshCode")}
-                onClick={() => {
-                  void overviewResult.refetch();
-                  if (selectedFile) void fileResult.refetch();
-                  else void contentsResult.refetch();
-                }}
-                disabled={
-                  overviewResult.isFetching ||
-                  (selectedFile ? fileResult.isFetching : contentsResult.isFetching)
-                }
-              >
-                <RefreshCw
-                  className={
+          <Button type="button" variant="outline" size="sm" onClick={() => setSurface("history")}>
+            <History data-icon="inline-start" />
+            {t("workspace.repositories.history")}
+          </Button>
+          {surface === "browser" && canWrite ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setFileDialogOpen(true)}
+            >
+              <FilePlus2 data-icon="inline-start" />
+              {t("workspace.repositories.createRepositoryFile")}
+            </Button>
+          ) : null}
+          <Button type="button" variant="outline" size="sm" onClick={() => setSurface("tags")}>
+            <Tags data-icon="inline-start" />
+            {t("workspace.repositories.tags")}
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={() => setSurface("search")}>
+            <Search data-icon="inline-start" />
+            {t("workspace.repositories.searchAction")}
+          </Button>
+
+          {surface === "browser" || surface === "file" || surface === "blame" ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  aria-label={t("workspace.repositories.refreshCode")}
+                  onClick={() => {
+                    void overviewResult.refetch();
+                    if (selectedFile) void fileResult.refetch();
+                    else void contentsResult.refetch();
+                  }}
+                  disabled={
                     overviewResult.isFetching ||
                     (selectedFile ? fileResult.isFetching : contentsResult.isFetching)
-                      ? "animate-spin"
-                      : ""
                   }
-                />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t("workspace.repositories.refreshCode")}</TooltipContent>
-          </Tooltip>
+                >
+                  <RefreshCw
+                    className={
+                      overviewResult.isFetching ||
+                      (selectedFile ? fileResult.isFetching : contentsResult.isFetching)
+                        ? "animate-spin"
+                        : ""
+                    }
+                  />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t("workspace.repositories.refreshCode")}</TooltipContent>
+            </Tooltip>
+          ) : null}
         </div>
 
         {activeError ? (
@@ -311,6 +593,33 @@ export function GitHubCodeView({ repository }: { repository: GitHubRepository })
               </Button>
             </EmptyContent>
           </Empty>
+        ) : surface === "history" ? (
+          <GitHubCodeHistory
+            key={`${reference}:${selectedFile?.path ?? path}`}
+            repository={repository}
+            reference={reference}
+            path={selectedFile?.path ?? path}
+            onBack={() => setSurface(selectedFile ? "file" : "browser")}
+          />
+        ) : surface === "tags" ? (
+          <GitHubCodeTags
+            repository={repository}
+            onBack={() => setSurface("browser")}
+            onSelectTag={selectBranch}
+          />
+        ) : surface === "search" ? (
+          <GitHubCodeSearch
+            repository={repository}
+            onBack={() => setSurface("browser")}
+            onOpenResult={openSearchResult}
+          />
+        ) : surface === "blame" && filePreview?.kind === "text" ? (
+          <GitHubFileBlame
+            repository={repository}
+            reference={reference}
+            preview={filePreview}
+            onBack={() => setSurface("file")}
+          />
         ) : selectedFile ? (
           fileLoading && !filePreview ? (
             <GitHubFilePreviewSkeleton />
@@ -319,8 +628,17 @@ export function GitHubCodeView({ repository }: { repository: GitHubRepository })
               preview={filePreview}
               sizeLabel={formatBytes(filePreview.size, i18n.language)}
               externalUrl={selectedFileUrl}
-              onBack={() => setSelectedFile(null)}
+              onBack={() => {
+                setSelectedFile(null);
+                setSurface("browser");
+              }}
               onOpenExternal={(url) => void openExternalUrl(url)}
+              onShowBlame={() => setSurface("blame")}
+              onEdit={() => setFileDialogOpen(true)}
+              onDelete={() => setDeleteFileDialogOpen(true)}
+              onDownload={() => downloadMutation.mutate(selectedFile.path)}
+              downloading={downloadMutation.isPending}
+              canWrite={canWrite}
             />
           ) : null
         ) : (
@@ -410,7 +728,7 @@ export function GitHubCodeView({ repository }: { repository: GitHubRepository })
                     {t("workspace.repositories.viewSource")}
                   </Button>
                 </div>
-                <article className="harbor-markdown px-5 py-6 sm:px-7">
+                <article className="harbor-markdown mx-auto w-full max-w-[960px] px-5 py-6 sm:px-7">
                   <Suspense
                     fallback={
                       <div className="flex flex-col gap-3 py-2">
@@ -434,6 +752,61 @@ export function GitHubCodeView({ repository }: { repository: GitHubRepository })
             ) : null}
           </>
         )}
+
+        {overview?.branches.length ? (
+          <GitHubCodeCreateBranchDialog
+            open={createBranchDialogOpen}
+            repository={repository}
+            branches={overview.branches}
+            initialSource={activeBranch?.name ?? repository.defaultBranch}
+            onOpenChange={setCreateBranchDialogOpen}
+            onCreated={handleBranchCreated}
+          />
+        ) : null}
+        {activeBranch && activeBranch.name !== repository.defaultBranch ? (
+          <GitHubCodeDeleteBranchDialog
+            open={deleteBranchDialogOpen}
+            repository={repository}
+            branch={activeBranch}
+            onOpenChange={setDeleteBranchDialogOpen}
+            onDeleted={handleBranchDeleted}
+          />
+        ) : null}
+        {canWrite ? (
+          <GitHubCodeFileDialog
+            open={fileDialogOpen}
+            repository={repository}
+            branch={activeBranch?.name ?? repository.defaultBranch}
+            directory={path}
+            initialPath={
+              selectedFile && surface === "file" && filePreview?.kind === "text"
+                ? filePreview.path
+                : undefined
+            }
+            initialSha={
+              selectedFile && surface === "file" && filePreview?.kind === "text"
+                ? filePreview.sha
+                : undefined
+            }
+            initialContent={
+              selectedFile && surface === "file" && filePreview?.kind === "text"
+                ? filePreview.content
+                : undefined
+            }
+            onOpenChange={setFileDialogOpen}
+            onCommitted={handleFileCommitted}
+          />
+        ) : null}
+        {activeBranch && filePreview ? (
+          <GitHubCodeDeleteFileDialog
+            open={deleteFileDialogOpen}
+            repository={repository}
+            branch={activeBranch.name}
+            preview={filePreview}
+            onOpenChange={setDeleteFileDialogOpen}
+            onCommitted={handleFileCommitted}
+          />
+        ) : null}
       </div>
     </ScrollArea>
   );

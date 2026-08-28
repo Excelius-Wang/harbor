@@ -66,7 +66,7 @@ const languageLoads = new Map<SupportedSyntaxLanguage, Promise<void>>();
 
 function getHighlighter() {
   highlighterPromise ??= Promise.all([
-    import("@shikijs/themes/github-dark-default"),
+    import("@shikijs/themes/one-dark-pro"),
     import("@shikijs/themes/github-light-default"),
   ]).then(([darkTheme, lightTheme]) =>
     createHighlighterCore({
@@ -102,7 +102,7 @@ export async function highlightWithShiki({
   await loadLanguage(highlighter, language);
   const result = highlighter.codeToTokens(source, {
     lang: language,
-    theme: colorMode === "light" ? "github-light-default" : "github-dark-default",
+    theme: colorMode === "light" ? "github-light-default" : "one-dark-pro",
     tokenizeMaxLineLength: 20_000,
     tokenizeTimeLimit: 100,
   });

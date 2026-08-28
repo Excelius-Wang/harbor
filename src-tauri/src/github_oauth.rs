@@ -8,7 +8,7 @@ use async_trait::async_trait;
 use oauth2::{
     basic::BasicClient, reqwest, AuthType, AuthUrl, AuthorizationCode, ClientId, ClientSecret,
     CsrfToken, EndpointNotSet, EndpointSet, PkceCodeChallenge, PkceCodeVerifier, RedirectUrl,
-    RefreshToken, TokenResponse, TokenUrl,
+    RefreshToken, Scope, TokenResponse, TokenUrl,
 };
 use serde::{Deserialize, Serialize};
 use tokio::{
@@ -398,6 +398,13 @@ impl GitHubOAuthSession {
         let (authorization_url, csrf_token) = self
             .client
             .authorize_url(CsrfToken::new_random)
+            .add_scope(Scope::new("repo".to_string()))
+            .add_scope(Scope::new("workflow".to_string()))
+            .add_scope(Scope::new("security_events".to_string()))
+            .add_scope(Scope::new("project".to_string()))
+            .add_scope(Scope::new("delete_repo".to_string()))
+            .add_scope(Scope::new("gist".to_string()))
+            .add_scope(Scope::new("user".to_string()))
             .set_pkce_challenge(pkce_challenge)
             .url();
         let callback_state = csrf_token.secret().clone();
@@ -609,6 +616,10 @@ mod tests {
             Some(GITHUB_OAUTH_CALLBACK_URL)
         );
         assert_eq!(query.get("response_type").map(String::as_str), Some("code"));
+        assert_eq!(
+            query.get("scope").map(String::as_str),
+            Some("repo workflow security_events project delete_repo gist user")
+        );
         assert_eq!(
             query.get("code_challenge_method").map(String::as_str),
             Some("S256")

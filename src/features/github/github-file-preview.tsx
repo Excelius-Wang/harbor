@@ -1,6 +1,13 @@
-import { type CSSProperties, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ExternalLink, FileCode2, FileWarning } from "lucide-react";
-import { useTheme } from "@/components/theme-provider";
+import {
+  ArrowLeft,
+  Download,
+  ExternalLink,
+  FileCode2,
+  FilePenLine,
+  FileWarning,
+  ListTree,
+  Trash2,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,45 +22,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAppTranslation } from "@/hooks/use-app-translation";
 import type { GitHubFilePreview } from "./github-data";
-import {
-  detectSyntaxLanguage,
-  highlightSourceCode,
-  type HighlightedToken,
-} from "./github-syntax-highlighting";
-
-const SHIKI_FONT_STYLE_ITALIC = 1;
-const SHIKI_FONT_STYLE_BOLD = 2;
-const SHIKI_FONT_STYLE_UNDERLINE = 4;
-const SHIKI_FONT_STYLE_STRIKETHROUGH = 8;
-
-function plainSourceLines(content: string): HighlightedToken[][] {
-  if (!content) return [];
-  const lines = content.replace(/\r\n/g, "\n").split("\n");
-  if (lines[lines.length - 1] === "") lines.pop();
-  return lines.map((line) => [{ content: line }]);
-}
+import { GitHubSourceTokens, useGitHubSourceLines } from "./github-source-code";
+import { detectSyntaxLanguage } from "./github-syntax-highlighting";
 
 function fileExtension(name: string) {
   const segments = name.split(".");
   const extension = name.includes(".") ? segments[segments.length - 1] : null;
   return extension && extension !== name ? extension.toUpperCase() : null;
-}
-
-function tokenStyle(token: HighlightedToken): CSSProperties {
-  const fontStyle = token.fontStyle && token.fontStyle > 0 ? token.fontStyle : 0;
-  const textDecoration = [
-    fontStyle & SHIKI_FONT_STYLE_UNDERLINE ? "underline" : null,
-    fontStyle & SHIKI_FONT_STYLE_STRIKETHROUGH ? "line-through" : null,
-  ]
-    .filter(Boolean)
-    .join(" ");
-
-  return {
-    color: token.color,
-    fontStyle: fontStyle & SHIKI_FONT_STYLE_ITALIC ? "italic" : undefined,
-    fontWeight: fontStyle & SHIKI_FONT_STYLE_BOLD ? 600 : undefined,
-    textDecorationLine: textDecoration || undefined,
-  };
 }
 
 export function GitHubFilePreviewSkeleton() {
@@ -82,55 +57,36 @@ export function GitHubFilePreviewPanel({
   externalUrl,
   onBack,
   onOpenExternal,
+  onShowBlame,
+  onEdit,
+  onDelete,
+  onDownload,
+  downloading,
+  canWrite,
 }: {
   preview: GitHubFilePreview;
   sizeLabel: string;
   externalUrl: string;
   onBack: () => void;
   onOpenExternal: (url: string) => void;
+  onShowBlame: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  onDownload: () => void;
+  downloading: boolean;
+  canWrite: boolean;
 }) {
   const { t } = useAppTranslation();
-  const { theme } = useTheme();
-  const syntaxColorMode =
-    theme === "light" ||
-    (theme === "system" && window.matchMedia("(prefers-color-scheme: light)").matches)
-      ? "light"
-      : "dark";
-  const plainLines = useMemo(
-    () => (preview.kind === "text" ? plainSourceLines(preview.content) : []),
-    [preview]
-  );
-  const [highlightedLines, setHighlightedLines] = useState<HighlightedToken[][] | null>(null);
   const extension = fileExtension(preview.name);
   const syntaxLanguage = detectSyntaxLanguage(preview.name);
-
-  useEffect(() => {
-    setHighlightedLines(null);
-    if (preview.kind !== "text" || !preview.content) return;
-
-    let active = true;
-    void highlightSourceCode({
-      source: preview.content,
-      fileName: preview.name,
-      colorMode: syntaxColorMode,
-      size: preview.size,
-    })
-      .then((highlighted) => {
-        if (active) setHighlightedLines(highlighted?.lines ?? null);
-      })
-      .catch(() => {
-        if (active) setHighlightedLines(null);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [preview, syntaxColorMode]);
-
-  const lines = highlightedLines ?? plainLines;
+  const lines = useGitHubSourceLines({
+    content: preview.kind === "text" ? preview.content : "",
+    fileName: preview.name,
+    size: preview.size,
+  });
 
   return (
-    <section className="overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.018] shadow-[inset_0_1px_0_rgba(125,211,252,0.08)]">
+    <section className="overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.018] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--primary)_12%,transparent)]">
       <header className="flex min-h-12 flex-wrap items-center gap-2 border-b border-white/[0.07] px-2.5 py-2">
         <Tooltip>
           <TooltipTrigger asChild>
@@ -164,6 +120,40 @@ export function GitHubFilePreviewPanel({
             <span>{t("workspace.repositories.lineCount", { count: lines.length })}</span>
           ) : null}
         </div>
+        {preview.kind === "text" ? (
+          <Button type="button" variant="ghost" size="xs" onClick={onShowBlame}>
+            <ListTree data-icon="inline-start" />
+            {t("workspace.repositories.blame")}
+          </Button>
+        ) : null}
+        {canWrite && preview.kind === "text" ? (
+          <Button type="button" variant="ghost" size="xs" onClick={onEdit}>
+            <FilePenLine data-icon="inline-start" />
+            {t("workspace.repositories.editRepositoryFile")}
+          </Button>
+        ) : null}
+        {canWrite ? (
+          <Button type="button" variant="ghost" size="xs" onClick={onDelete}>
+            <Trash2 data-icon="inline-start" />
+            {t("workspace.repositories.deleteRepositoryFile")}
+          </Button>
+        ) : null}
+        {preview.rawUrl ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            onClick={() => onOpenExternal(preview.rawUrl ?? externalUrl)}
+          >
+            {t("workspace.repositories.raw")}
+          </Button>
+        ) : null}
+        <Button type="button" variant="ghost" size="xs" onClick={onDownload} disabled={downloading}>
+          <Download data-icon="inline-start" />
+          {downloading
+            ? t("workspace.repositories.downloading")
+            : t("workspace.repositories.download")}
+        </Button>
         <Button type="button" variant="ghost" size="xs" onClick={() => onOpenExternal(externalUrl)}>
           <ExternalLink data-icon="inline-end" />
           {t("workspace.repositories.openOnGitHub")}
@@ -213,13 +203,7 @@ export function GitHubFilePreviewPanel({
                 {index + 1}
               </span>
               <code role="cell" className="px-4 whitespace-pre [tab-size:2]">
-                {tokens.length
-                  ? tokens.map((token, tokenIndex) => (
-                      <span key={tokenIndex} style={tokenStyle(token)}>
-                        {token.content}
-                      </span>
-                    ))
-                  : " "}
+                <GitHubSourceTokens tokens={tokens} />
               </code>
             </div>
           ))}

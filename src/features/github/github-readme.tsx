@@ -1,17 +1,62 @@
 import type { MouseEvent } from "react";
+import type { Root } from "hast";
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
-import type { GitHubRepository } from "./github-data";
+import parseStyle from "style-to-object";
+import { visit } from "unist-util-visit";
+import type { GitHubRepositoryContentContext } from "./github-data";
 
 type GitHubReadmeProps = {
   content: string;
+  inline?: boolean;
   path: string;
   reference: string;
-  repository: GitHubRepository;
+  repository: GitHubRepositoryContentContext;
+  relativeBaseUrl?: string;
   onOpenExternal: (url: string) => void;
 };
+
+const MAX_IMAGE_DIMENSION = 4096;
+const PIXEL_DIMENSION = /^([1-9]\d*)px$/i;
+
+function normalizeImageDimension(value: unknown) {
+  const dimension =
+    typeof value === "number"
+      ? value
+      : typeof value === "string" && /^\d+$/.test(value)
+        ? Number(value)
+        : Number.NaN;
+  return Number.isInteger(dimension) && dimension > 0 && dimension <= MAX_IMAGE_DIMENSION
+    ? dimension
+    : undefined;
+}
+
+function parsePixelDimension(value: string | undefined) {
+  const match = value?.trim().match(PIXEL_DIMENSION);
+  return match ? normalizeImageDimension(match[1]) : undefined;
+}
+
+function rehypePreserveSafeImageDimensions() {
+  return (tree: Root) => {
+    visit(tree, "element", (node) => {
+      if (node.tagName !== "img" || typeof node.properties.style !== "string") return;
+
+      try {
+        const style = parseStyle(node.properties.style);
+        const width = parsePixelDimension(style?.width);
+        const height = parsePixelDimension(style?.height);
+        if (width) node.properties.width = width;
+        if (height) node.properties.height = height;
+      } catch {
+        // Invalid inline CSS is discarded with the rest of the untrusted style.
+      }
+
+      delete node.properties.style;
+    });
+  };
+}
 
 function isAbsoluteUrl(destination: string) {
   return /^[a-z][a-z\d+.-]*:/i.test(destination);
@@ -42,12 +87,14 @@ export function resolveReadmeDestination({
   path,
   reference,
   repository,
+  relativeBaseUrl,
 }: {
   destination: string;
   kind: "link" | "image";
   path: string;
   reference: string;
-  repository: GitHubRepository;
+  repository: GitHubRepositoryContentContext;
+  relativeBaseUrl?: string;
 }) {
   if (!destination || destination.startsWith("#") || isAbsoluteUrl(destination)) {
     return destination;
@@ -56,15 +103,18 @@ export function resolveReadmeDestination({
   if (destination.startsWith("/")) return `https://github.com${destination}`;
 
   const resolvedPath = resolveRelativePath(destination, path);
+  if (relativeBaseUrl) return `${relativeBaseUrl.replace(/\/+$/, "")}/${resolvedPath}`;
   const route = kind === "image" ? "raw" : "blob";
   return `${repository.url}/${route}/${encodeURIComponent(reference)}/${resolvedPath}`;
 }
 
 export function GitHubReadme({
   content,
+  inline = false,
   path,
   reference,
   repository,
+  relativeBaseUrl,
   onOpenExternal,
 }: GitHubReadmeProps) {
   const openExternal = (event: MouseEvent<HTMLAnchorElement>, destination: string) => {
@@ -75,8 +125,17 @@ export function GitHubReadme({
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
-      rehypePlugins={[rehypeRaw, [rehypeSanitize, defaultSchema]]}
+      rehypePlugins={[
+        rehypeRaw,
+        rehypePreserveSafeImageDimensions,
+        [rehypeSanitize, defaultSchema],
+      ]}
       components={{
+        ...(inline
+          ? {
+              p: ({ children }) => <span>{children}</span>,
+            }
+          : {}),
         a: ({ href, title, children }) => {
           if (!href) return <span>{children}</span>;
           const destination = resolveReadmeDestination({
@@ -85,6 +144,7 @@ export function GitHubReadme({
             path,
             reference,
             repository,
+            relativeBaseUrl,
           });
           if (destination.startsWith("#")) {
             return (
@@ -107,20 +167,24 @@ export function GitHubReadme({
         },
         img: ({ alt = "", src, title, width, height }) => {
           if (typeof src !== "string" || !src) return alt ? <span>{alt}</span> : null;
+          const imageWidth = normalizeImageDimension(width);
+          const imageHeight = normalizeImageDimension(height);
           const destination = resolveReadmeDestination({
             destination: src,
             kind: "image",
             path,
             reference,
             repository,
+            relativeBaseUrl,
           });
           return (
             <img
               alt={alt}
               src={destination}
               title={title}
-              width={width}
-              height={height}
+              width={imageWidth}
+              height={imageHeight}
+              style={imageHeight ? { height: imageHeight } : undefined}
               loading="lazy"
               decoding="async"
               referrerPolicy="no-referrer"

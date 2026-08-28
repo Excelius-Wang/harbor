@@ -17,6 +17,8 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-merged: var(--merged);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -44,32 +46,42 @@
   --accent-foreground: oklch(0.27 0.035 242);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.985 0 0);
+  --success: oklch(0.55 0.15 145);
+  --merged: oklch(0.55 0.16 305);
   --border: oklch(0.88 0.022 238);
   --input: oklch(0.88 0.022 238);
   --ring: oklch(0.58 0.145 236);
+  --harbor-chrome: oklch(0.985 0.013 236);
+  --harbor-canvas-edge: oklch(0.965 0.014 238);
   --radius: 0.55rem;
+  color-scheme: light;
 }
 
 .dark {
-  --background: oklch(0.155 0.026 247);
-  --foreground: oklch(0.93 0.018 235);
-  --card: oklch(0.185 0.028 246);
-  --card-foreground: oklch(0.93 0.018 235);
-  --popover: oklch(0.19 0.032 245);
-  --popover-foreground: oklch(0.93 0.018 235);
-  --primary: oklch(0.72 0.14 232);
-  --primary-foreground: oklch(0.15 0.035 248);
-  --secondary: oklch(0.23 0.03 245);
-  --secondary-foreground: oklch(0.91 0.018 235);
-  --muted: oklch(0.225 0.025 245);
-  --muted-foreground: oklch(0.69 0.028 238);
-  --accent: oklch(0.25 0.038 241);
-  --accent-foreground: oklch(0.94 0.018 235);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.3 0.035 242);
-  --input: oklch(0.28 0.032 242);
-  --ring: oklch(0.72 0.14 232);
+  --background: #23272e;
+  --foreground: #abb2bf;
+  --card: #282c34;
+  --card-foreground: #d7dae0;
+  --popover: #1e2227;
+  --popover-foreground: #abb2bf;
+  --primary: #61afef;
+  --primary-foreground: #15181e;
+  --secondary: #30333d;
+  --secondary-foreground: #c0bdbd;
+  --muted: #2c313c;
+  --muted-foreground: #9da5b4;
+  --accent: #2c313a;
+  --accent-foreground: #d7dae0;
+  --destructive: #c24038;
+  --destructive-foreground: #ffffff;
+  --success: #98c379;
+  --merged: #c678dd;
+  --border: #3e4452;
+  --input: #404754;
+  --ring: #528bff;
+  --harbor-chrome: #1e2227;
+  --harbor-canvas-edge: #181a1f;
+  color-scheme: dark;
 }
 
 @layer base {
@@ -131,16 +143,16 @@
 
   .harbor-glass {
     border-color: color-mix(in oklch, var(--foreground) 10%, transparent);
-    background: color-mix(in oklch, var(--background) 76%, transparent);
+    background: color-mix(in srgb, var(--harbor-chrome) 90%, transparent);
     box-shadow: inset 0 1px 0 color-mix(in srgb, white 5%, transparent);
-    backdrop-filter: saturate(125%) blur(22px);
-    -webkit-backdrop-filter: saturate(125%) blur(22px);
+    backdrop-filter: saturate(112%) blur(22px);
+    -webkit-backdrop-filter: saturate(112%) blur(22px);
   }
 
   .harbor-popover,
   .harbor-command,
   .harbor-sheet {
-    background: color-mix(in oklch, var(--popover) 92%, transparent);
+    background: color-mix(in srgb, var(--popover) 96%, transparent);
     box-shadow:
       0 24px 70px color-mix(in srgb, black 38%, transparent),
       inset 0 1px 0 color-mix(in srgb, white 6%, transparent);
@@ -155,14 +167,14 @@
   background:
     radial-gradient(
       900px 560px at 9% -16%,
-      color-mix(in oklch, var(--primary) 13%, transparent),
+      color-mix(in srgb, var(--primary) 8%, transparent),
       transparent 62%
     ),
     linear-gradient(
       145deg,
-      color-mix(in oklch, var(--background) 94%, #071827),
+      color-mix(in srgb, var(--background) 92%, var(--harbor-chrome)),
       var(--background) 54%,
-      color-mix(in oklch, var(--background) 94%, #06131f)
+      color-mix(in srgb, var(--background) 92%, var(--harbor-canvas-edge))
     );
   box-shadow:
     0 34px 90px rgb(0 0 0 / 34%),
@@ -173,10 +185,56 @@
   background:
     radial-gradient(
       900px 560px at 9% -16%,
-      color-mix(in oklch, var(--primary) 9%, transparent),
+      color-mix(in srgb, var(--primary) 9%, transparent),
       transparent 62%
     ),
-    linear-gradient(145deg, oklch(0.985 0.013 236), var(--background));
+    linear-gradient(145deg, var(--harbor-chrome), var(--background));
+}
+
+.harbor-diff {
+  --diff-background-color: transparent;
+  --diff-text-color: var(--foreground);
+  --diff-font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --diff-selection-background-color: color-mix(in srgb, var(--primary) 30%, transparent);
+  --diff-selection-text-color: var(--foreground);
+  --diff-gutter-insert-background-color: color-mix(in srgb, var(--success) 15%, transparent);
+  --diff-gutter-insert-text-color: var(--muted-foreground);
+  --diff-gutter-delete-background-color: color-mix(in srgb, var(--destructive) 18%, transparent);
+  --diff-gutter-delete-text-color: var(--muted-foreground);
+  --diff-code-insert-background-color: color-mix(in srgb, var(--success) 9%, transparent);
+  --diff-code-insert-text-color: var(--foreground);
+  --diff-code-delete-background-color: color-mix(in srgb, var(--destructive) 11%, transparent);
+  --diff-code-delete-text-color: var(--foreground);
+  --diff-code-insert-edit-background-color: color-mix(in srgb, var(--success) 22%, transparent);
+  --diff-code-delete-edit-background-color: color-mix(in srgb, var(--destructive) 26%, transparent);
+  --diff-code-selected-background-color: color-mix(in srgb, var(--primary) 12%, transparent);
+  --diff-gutter-selected-background-color: color-mix(in srgb, var(--primary) 16%, transparent);
+  --diff-omit-gutter-line-color: var(--muted-foreground);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.harbor-diff .diff-split {
+  min-width: 900px;
+}
+
+.harbor-diff .diff-gutter {
+  border-right: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+  color: var(--muted-foreground);
+}
+
+.harbor-diff .diff-decoration {
+  background: color-mix(in srgb, var(--primary) 8%, var(--background));
+  color: var(--muted-foreground);
+}
+
+.harbor-diff .diff-widget-content {
+  background: color-mix(in srgb, var(--primary) 4%, var(--background));
+  padding: 0.5rem 0.75rem 0.75rem;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--primary) 38%, transparent);
 }
 
 kbd {
@@ -328,8 +386,6 @@ kbd {
 .harbor-markdown img {
   display: inline-block;
   max-width: 100%;
-  height: auto;
-  border-radius: 0.35rem;
   vertical-align: middle;
 }
 

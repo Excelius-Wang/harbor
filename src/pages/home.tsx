@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { UpdaterDialog } from "@/components/updater-dialog";
+import { Toaster } from "@/components/ui/sonner";
 import { HarborWorkspace } from "@/features/workspace/harbor-workspace";
 import { useAppTranslation } from "@/hooks/use-app-translation";
 import { registerShortcut } from "@/lib/shortcut";
@@ -47,6 +48,7 @@ export default function HomePage() {
   return (
     <>
       {isTauri() ? <UpdaterDialog /> : null}
+      <Toaster />
       <HarborWorkspace />
     </>
   );
