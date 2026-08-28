@@ -256,7 +256,8 @@ GitHub's `202 Accepted` state explicit and polls only the focused query; unavail
 statistics stay distinct from errors. Traffic remains independently permission-gated so a missing
 push permission does not hide the public Overview or Contributors data. The frontend reuses TanStack
 Query, shadcn Cards, Charts, Tables, Tabs, Select, and existing repository navigation rather than
-adding a parallel data or component layer.
+adding a parallel data or component layer. The verified slice is open as pull request
+`https://github.com/Excelius-Wang/harbor/pull/1`.
 Harbor now has an account-level Notifications workspace backed by GitHub's official REST inbox.
 The focused `github/notification.rs` deep module owns its three-method Interface, Octocrab and fake
 Adapters, notification and repository mapping, subject-to-Web target policy, page bounds, read and
@@ -376,7 +377,8 @@ The workspace shell is responsive, starts at 1600x1000, and remains usable down 
 
 ## Next action
 
-Push the verified repository Insights slice and open its pull request against `main`.
+Review and merge repository Insights pull request #1, then audit the next missing
+personal-developer GitHub Web workflow.
 
 ## Verification
 
