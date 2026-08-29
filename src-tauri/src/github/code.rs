@@ -878,6 +878,9 @@ fn commit_detail_error(error: octocrab::Error) -> AppError {
 
 fn commit_detail_status_error(status: u16, message: String) -> Option<AppError> {
     match status {
+        404 => Some(AppError::GitHubPermission(
+            "the commit is unavailable or inaccessible".to_string(),
+        )),
         409 => Some(AppError::GitHubCodeConflict(message)),
         422 => Some(AppError::Validation(format!(
             "commit detail is unavailable: {message}"

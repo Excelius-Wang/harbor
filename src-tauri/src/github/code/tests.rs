@@ -543,11 +543,19 @@ fn commit_detail_maps_merge_identity_signature_rename_and_binary_files() {
 
 #[test]
 fn commit_detail_conflict_and_validation_statuses_have_non_retryable_ipc_codes() {
+    let not_found = commit_detail_status_error(404, "private transport detail".to_string())
+        .expect("404 should be classified");
     let conflict =
         commit_detail_status_error(409, "HTTP 409".to_string()).expect("409 should be classified");
     let validation =
         commit_detail_status_error(422, "HTTP 422".to_string()).expect("422 should be classified");
 
+    let not_found = serde_json::to_value(not_found).expect("serialize not found");
+    assert_eq!(not_found["code"], "githubPermission");
+    assert!(!not_found["message"]
+        .as_str()
+        .expect("not-found message")
+        .contains("private transport detail"));
     assert_eq!(
         serde_json::to_value(conflict).expect("serialize conflict")["code"],
         "githubCodeConflict"

@@ -4131,14 +4131,11 @@ fn validate_comment_mutation(
             comment_id,
             expected_updated_at,
             body,
-        } => {
-            validate_issue_comment(&body)?;
-            Ok(GitHubCommentMutation::Update {
-                comment_id: validate_graphql_node_id(comment_id, "comment")?,
-                expected_updated_at: validate_comment_updated_at(expected_updated_at)?,
-                body,
-            })
-        }
+        } => Ok(GitHubCommentMutation::Update {
+            comment_id: validate_graphql_node_id(comment_id, "comment")?,
+            expected_updated_at: validate_comment_updated_at(expected_updated_at)?,
+            body: validate_issue_body(body)?,
+        }),
         GitHubCommentMutation::Delete {
             comment_id,
             expected_updated_at,
@@ -4680,12 +4677,16 @@ mod tests {
                 ..
             } if expected_updated_at == "2026-08-29T08:01:00Z" && body == "  Markdown body  "
         ));
-        assert!(validate_comment_mutation(GitHubCommentMutation::Update {
+        let empty = validate_comment_mutation(GitHubCommentMutation::Update {
             comment_id: "IC_kwDOexample".to_string(),
             expected_updated_at: "2026-08-29T08:01:00Z".to_string(),
-            body: " \n ".to_string(),
+            body: String::new(),
         })
-        .is_err());
+        .expect("explicit empty comment update");
+        assert!(matches!(
+            empty,
+            GitHubCommentMutation::Update { body, .. } if body.is_empty()
+        ));
         assert!(validate_comment_mutation(GitHubCommentMutation::Delete {
             comment_id: "bad node".to_string(),
             expected_updated_at: "not-a-revision".to_string(),
