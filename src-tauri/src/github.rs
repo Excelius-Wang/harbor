@@ -36,8 +36,8 @@ pub use actions::{
 pub use checks::{GitHubCheckPage, GitHubCheckSuite};
 pub use code::write::{GitHubRepositoryFileCommit, GitHubRepositoryFileMutation};
 pub use code::{
-    GitHubBlame, GitHubCodeOverview, GitHubCodeSearchPage, GitHubContentListing, GitHubFilePreview,
-    GitHubRepositoryCommitPage, GitHubTagPage,
+    GitHubBlame, GitHubCodeOverview, GitHubCodeSearchPage, GitHubCommitDetailPage,
+    GitHubContentListing, GitHubFilePreview, GitHubRepositoryCommitPage, GitHubTagPage,
 };
 pub use discovery::{
     GitHubDeveloperFeedPage, GitHubDiscoverySearchKind, GitHubDiscoverySearchPage,
@@ -2701,6 +2701,15 @@ mod tests {
             .code_overview("octocat", "hello-world", "main")
             .await
             .expect("code overview");
+        let commit = service
+            .commit_detail(
+                "octocat",
+                "hello-world",
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                1,
+            )
+            .await
+            .expect("commit detail");
         let contents = service
             .contents("octocat", "hello-world", "main", "")
             .await
@@ -2760,6 +2769,7 @@ mod tests {
         assert_eq!(updated_release.tag_name, "v1.0.0");
         assert_eq!(uploaded_asset.name, "harbor.dmg");
         assert_eq!(overview.commits[0].short_sha, "abc1234");
+        assert_eq!(commit.commit.short_sha, "aaaaaaa");
         assert_eq!(contents.entries[0].path, "src");
         assert_eq!(workflows[0].name, "CI");
         assert_eq!(workflow_runs.page, 2);

@@ -171,6 +171,7 @@ pub fn run() {
             commands::github_request_workflow_job_rerun,
             commands::github_get_repository_code_overview,
             commands::github_list_repository_commits,
+            commands::github_get_repository_commit,
             commands::github_list_repository_tags,
             commands::github_get_repository_blame,
             commands::github_search_repository_code,

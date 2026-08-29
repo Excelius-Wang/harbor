@@ -41,6 +41,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { parseIpcError } from "@/lib/ipc-error";
+import { GitHubCommitDetail } from "./github-commit-detail";
 import { GitHubCommitList } from "./github-commit-list";
 import type {
   GitHubPullRequest,
@@ -70,8 +71,25 @@ function PullRequestComparisonSkeleton() {
   );
 }
 
-function PullRequestComparisonSummary({ comparison }: { comparison: GitHubPullRequestComparison }) {
+function PullRequestComparisonSummary({
+  comparison,
+  repository,
+}: {
+  comparison: GitHubPullRequestComparison;
+  repository: GitHubRepository;
+}) {
   const { t } = useTranslation();
+  const [selectedCommitSha, setSelectedCommitSha] = useState<string | null>(null);
+  if (selectedCommitSha) {
+    return (
+      <GitHubCommitDetail
+        repository={repository}
+        commitSha={selectedCommitSha}
+        onBack={() => setSelectedCommitSha(null)}
+        onSelectCommit={setSelectedCommitSha}
+      />
+    );
+  }
   return (
     <Card>
       <CardHeader>
@@ -120,7 +138,10 @@ function PullRequestComparisonSummary({ comparison }: { comparison: GitHubPullRe
               <p className="text-muted-foreground text-[10px] font-medium tracking-[0.08em] uppercase">
                 {t("workspace.repositories.pullRequestComparisonCommits")}
               </p>
-              <GitHubCommitList commits={comparison.commits} />
+              <GitHubCommitList
+                commits={comparison.commits}
+                onSelectCommit={setSelectedCommitSha}
+              />
             </div>
           </>
         ) : null}
@@ -389,7 +410,7 @@ export function GitHubPullRequestCreate({
             </Empty>
           ) : comparison && canCreate ? (
             <>
-              <PullRequestComparisonSummary comparison={comparison} />
+              <PullRequestComparisonSummary comparison={comparison} repository={repository} />
               <Card>
                 <CardHeader>
                   <CardTitle className="text-sm">

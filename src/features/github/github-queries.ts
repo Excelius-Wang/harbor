@@ -4,6 +4,7 @@ import type {
   GitHubBlame,
   GitHubCodeOverview,
   GitHubCodeSearchPage,
+  GitHubCommitDetailPage,
   GitHubCheckPage,
   GitHubCheckSuite,
   GitHubContentListing,
@@ -297,6 +298,10 @@ type GitHubRepositoryCommitsTarget = GitHubContentsTarget & {
   page: number;
 };
 
+export type GitHubCommitDetailTarget = GitHubRepositoryTarget & {
+  commitSha: string;
+};
+
 type GitHubTagsTarget = GitHubRepositoryTarget & {
   page: number;
 };
@@ -469,6 +474,8 @@ export const githubQueryKeys = {
     ["github", "repository", owner, repository, "file", reference, path] as const,
   commits: ({ owner, repository, reference, path, page }: GitHubRepositoryCommitsTarget) =>
     ["github", "repository", owner, repository, "commits", reference, path, page] as const,
+  commitDetail: ({ owner, repository, commitSha }: GitHubCommitDetailTarget) =>
+    ["github", "repository", owner, repository, "commit", commitSha] as const,
   tags: ({ owner, repository, page }: GitHubTagsTarget) =>
     ["github", "repository", owner, repository, "tags", page] as const,
   blame: ({ owner, repository, reference, path }: GitHubContentsTarget) =>
@@ -1096,6 +1103,22 @@ export function repositoryCommitsQueryOptions(target: GitHubRepositoryCommitsTar
         page: target.page,
       }),
     staleTime: GITHUB_QUERY_STALE_TIME,
+  });
+}
+
+export function repositoryCommitDetailQueryOptions(target: GitHubCommitDetailTarget) {
+  return infiniteQueryOptions({
+    queryKey: githubQueryKeys.commitDetail(target),
+    queryFn: ({ pageParam }) =>
+      invoke<GitHubCommitDetailPage>("github_get_repository_commit", {
+        owner: target.owner,
+        repository: target.repository,
+        commitSha: target.commitSha,
+        page: pageParam,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.page + 1 : undefined),
+    staleTime: 30 * GITHUB_QUERY_STALE_TIME,
   });
 }
 

@@ -9,15 +9,7 @@ import {
   RefreshCw,
   ShieldCheck,
 } from "lucide-react";
-import {
-  Diff,
-  Hunk,
-  getChangeKey,
-  parseDiff,
-  type ChangeData,
-  type FileData,
-  type ViewType,
-} from "react-diff-view";
+import { Diff, Hunk, getChangeKey, type ChangeData, type ViewType } from "react-diff-view";
 import "react-diff-view/style/index.css";
 import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
@@ -56,6 +48,7 @@ import type {
   GitHubPullRequestReviewThread,
 } from "./github-data";
 import { GitHubPagination } from "./github-issue-shared";
+import { parseGitHubFilePatch } from "./github-file-diff";
 import { GitHubPullRequestInlineComment } from "./github-pull-request-inline-comment";
 import {
   pullRequestReviewCommentKey,
@@ -78,24 +71,6 @@ import {
   pullRequestFilesQueryOptions,
   pullRequestReviewThreadsQueryOptions,
 } from "./github-queries";
-
-function parseFilePatch(file: GitHubPullRequestFile): FileData | null {
-  if (!file.patch) return null;
-  const oldPath = file.status === "added" ? "/dev/null" : `a/${file.previousPath ?? file.path}`;
-  const newPath = file.status === "removed" ? "/dev/null" : `b/${file.path}`;
-  const source = [
-    `diff --git a/${file.previousPath ?? file.path} b/${file.path}`,
-    `--- ${oldPath}`,
-    `+++ ${newPath}`,
-    file.patch,
-  ].join("\n");
-
-  try {
-    return parseDiff(source, { nearbySequences: "zip" })[0] ?? null;
-  } catch {
-    return null;
-  }
-}
 
 type OpenReviewComment = {
   changeKey: string;
@@ -132,7 +107,7 @@ function PullRequestFileDiff({
   const [openComment, setOpenComment] = useState<OpenReviewComment | null>(null);
   const [selection, setSelection] = useState<PullRequestReviewDiffSelection | null>(null);
   const drag = useRef<ReviewSelectionDrag | null>(null);
-  const diff = useMemo(() => parseFilePatch(file), [file]);
+  const diff = useMemo(() => parseGitHubFilePatch(file), [file]);
   const changes = useMemo(() => diff?.hunks.flatMap((hunk) => hunk.changes) ?? [], [diff]);
   const selectionRange = useMemo(
     () => (selection ? pullRequestReviewCommentRange(file.path, changes, selection) : null),

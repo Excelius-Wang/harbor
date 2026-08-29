@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, ExternalLink, ListTree, RefreshCw } from "lucide-react";
+import { ArrowLeft, ChevronRight, ListTree, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { parseIpcError } from "@/lib/ipc-error";
-import { openExternalUrl } from "@/lib/window";
 import type { GitHubBlameRange, GitHubFilePreview, GitHubRepository } from "./github-data";
 import { formatIssueDate } from "./github-issue-shared";
 import { repositoryBlameQueryOptions } from "./github-queries";
@@ -24,11 +23,13 @@ export function GitHubFileBlame({
   reference,
   preview,
   onBack,
+  onSelectCommit,
 }: {
   repository: GitHubRepository;
   reference: string;
   preview: Extract<GitHubFilePreview, { kind: "text" }>;
   onBack: () => void;
+  onSelectCommit: (sha: string) => void;
 }) {
   const { t, i18n } = useTranslation();
   const result = useQuery(
@@ -120,7 +121,11 @@ export function GitHubFileBlame({
               >
                 <span role="cell" className="border-r px-2 text-[10px] leading-5 whitespace-nowrap">
                   {startsRange && range ? (
-                    <BlameAttribution range={range} locale={i18n.language} />
+                    <BlameAttribution
+                      range={range}
+                      locale={i18n.language}
+                      onSelectCommit={onSelectCommit}
+                    />
                   ) : null}
                 </span>
                 <span
@@ -153,7 +158,15 @@ export function GitHubFileBlame({
   );
 }
 
-function BlameAttribution({ range, locale }: { range: GitHubBlameRange; locale: string }) {
+function BlameAttribution({
+  range,
+  locale,
+  onSelectCommit,
+}: {
+  range: GitHubBlameRange;
+  locale: string;
+  onSelectCommit: (sha: string) => void;
+}) {
   const { t } = useTranslation();
   const author = range.commit.authorLogin
     ? `@${range.commit.authorLogin}`
@@ -165,14 +178,14 @@ function BlameAttribution({ range, locale }: { range: GitHubBlameRange; locale: 
         type="button"
         className="text-foreground/85 min-w-0 truncate text-left hover:underline"
         title={range.commit.title}
-        onClick={() => void openExternalUrl(range.commit.url)}
+        onClick={() => onSelectCommit(range.commit.sha)}
       >
         {author}
       </button>
       <span className="text-muted-foreground shrink-0">
         {range.commit.committedAt ? formatIssueDate(range.commit.committedAt, locale) : null}
       </span>
-      <ExternalLink className="text-muted-foreground shrink-0" />
+      <ChevronRight className="text-muted-foreground shrink-0" />
     </span>
   );
 }

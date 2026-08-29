@@ -75,12 +75,14 @@ import {
   syncDeletedRepositoryBranch,
   syncRepositoryFileCommit,
 } from "./github-code-mutations";
+import { GitHubCommitDetail } from "./github-commit-detail";
 import { GitHubCodeHistory } from "./github-code-history";
 import { GitHubCodeSearch } from "./github-code-search";
 import { GitHubCodeTags } from "./github-code-tags";
 import type {
   GitHubCodeSearchResult,
   GitHubBranch,
+  GitHubChangedFile,
   GitHubContentEntry,
   GitHubFileDownloadResult,
   GitHubRepository,
@@ -97,7 +99,7 @@ import {
 
 const GitHubReadme = lazy(() => import("./github-readme"));
 
-type CodeSurface = "browser" | "file" | "history" | "tags" | "search" | "blame";
+type CodeSurface = "browser" | "file" | "history" | "tags" | "search" | "blame" | "commit";
 
 function CodeSkeleton() {
   return (
@@ -160,12 +162,14 @@ export function GitHubCodeView({
   repository,
   initialReference = repository.defaultBranch,
   initialPath,
+  initialCommitSha,
   backLabel,
   onBack,
 }: {
   repository: GitHubRepository;
   initialReference?: string;
   initialPath?: string;
+  initialCommitSha?: string;
   backLabel?: string;
   onBack?: () => void;
 }) {
@@ -187,7 +191,17 @@ export function GitHubCodeView({
         })()
       : null
   );
-  const [surface, setSurface] = useState<CodeSurface>(initialPath ? "file" : "browser");
+  const [selectedCommitSha, setSelectedCommitSha] = useState<string | null>(
+    initialCommitSha ?? null
+  );
+  const [commitReturnSurface, setCommitReturnSurface] = useState<"browser" | "history" | "blame">(
+    "browser"
+  );
+  const [commitReturnReference, setCommitReturnReference] = useState(initialReference);
+  const [commitReturnFile, setCommitReturnFile] = useState<GitHubContentEntry | null>(null);
+  const [surface, setSurface] = useState<CodeSurface>(
+    initialCommitSha ? "commit" : initialPath ? "file" : "browser"
+  );
   const [fileDialogOpen, setFileDialogOpen] = useState(false);
   const [deleteFileDialogOpen, setDeleteFileDialogOpen] = useState(false);
   const [createBranchDialogOpen, setCreateBranchDialogOpen] = useState(false);
@@ -258,17 +272,20 @@ export function GitHubCodeView({
   const selectBranch = (nextReference: string) => {
     setPath("");
     setSelectedFile(null);
+    setSelectedCommitSha(null);
     setReference(nextReference);
     setSurface("browser");
   };
 
   const navigateToPath = (nextPath: string) => {
     setSelectedFile(null);
+    setSelectedCommitSha(null);
     setPath(nextPath);
     setSurface("browser");
   };
 
   const openEntry = (entry: GitHubContentEntry) => {
+    setSelectedCommitSha(null);
     if (entry.kind === "dir") {
       navigateToPath(entry.path);
       return;
@@ -279,6 +296,40 @@ export function GitHubCodeView({
       return;
     }
     if (entry.url) void openExternalUrl(entry.url);
+  };
+
+  const openCommit = (sha: string, returnSurface: "browser" | "history" | "blame") => {
+    setCommitReturnReference(reference);
+    setCommitReturnSurface(returnSurface);
+    setCommitReturnFile(selectedFile);
+    setSelectedCommitSha(sha);
+    setSurface("commit");
+  };
+
+  const closeCommit = () => {
+    if (initialCommitSha && onBack) {
+      onBack();
+      return;
+    }
+    setSelectedCommitSha(null);
+    setSelectedFile(commitReturnFile);
+    setReference(commitReturnReference);
+    setSurface(commitReturnSurface);
+  };
+
+  const openCommitFile = (file: GitHubChangedFile, fileReference: string) => {
+    if (!selectedCommitSha) return;
+    setReference(fileReference);
+    setPath(file.path.split("/").slice(0, -1).join("/"));
+    setSelectedFile({
+      name: file.path.split("/").pop() ?? file.path,
+      path: file.path,
+      sha: file.sha ?? "",
+      kind: "file",
+      size: 0,
+      url: file.blobUrl,
+    });
+    setSurface("file");
   };
 
   const selectedFileUrl = selectedFile
@@ -311,6 +362,7 @@ export function GitHubCodeView({
     syncRepositoryFileCommit(queryClient, mutationTarget, commit);
     setFileDialogOpen(false);
     setDeleteFileDialogOpen(false);
+    setSelectedCommitSha(null);
     setReference(commit.branch);
     if (commit.file) {
       setPath(commit.file.path.split("/").slice(0, -1).join("/"));
@@ -593,6 +645,18 @@ export function GitHubCodeView({
               </Button>
             </EmptyContent>
           </Empty>
+        ) : surface === "commit" && selectedCommitSha ? (
+          <GitHubCommitDetail
+            key={selectedCommitSha}
+            repository={repository}
+            commitSha={selectedCommitSha}
+            backLabel={
+              initialCommitSha && backLabel ? backLabel : t("workspace.repositories.backToCommits")
+            }
+            onBack={closeCommit}
+            onSelectCommit={setSelectedCommitSha}
+            onOpenFile={openCommitFile}
+          />
         ) : surface === "history" ? (
           <GitHubCodeHistory
             key={`${reference}:${selectedFile?.path ?? path}`}
@@ -600,6 +664,7 @@ export function GitHubCodeView({
             reference={reference}
             path={selectedFile?.path ?? path}
             onBack={() => setSurface(selectedFile ? "file" : "browser")}
+            onSelectCommit={(sha) => openCommit(sha, "history")}
           />
         ) : surface === "tags" ? (
           <GitHubCodeTags
@@ -619,6 +684,7 @@ export function GitHubCodeView({
             reference={reference}
             preview={filePreview}
             onBack={() => setSurface("file")}
+            onSelectCommit={(sha) => openCommit(sha, "blame")}
           />
         ) : selectedFile ? (
           fileLoading && !filePreview ? (
@@ -630,7 +696,12 @@ export function GitHubCodeView({
               externalUrl={selectedFileUrl}
               onBack={() => {
                 setSelectedFile(null);
-                setSurface("browser");
+                if (selectedCommitSha) {
+                  setReference(commitReturnReference);
+                  setSurface("commit");
+                } else {
+                  setSurface("browser");
+                }
               }}
               onOpenExternal={(url) => void openExternalUrl(url)}
               onShowBlame={() => setSurface("blame")}
@@ -645,21 +716,32 @@ export function GitHubCodeView({
           <>
             <section className="overflow-hidden rounded-lg border border-white/[0.075] bg-white/[0.018] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
               {latestCommit && path === "" ? (
-                <button
-                  type="button"
-                  onClick={() => void openExternalUrl(latestCommit.url)}
-                  className="group bg-primary/[0.035] flex h-11 w-full items-center gap-2.5 border-b border-white/[0.07] px-3 text-left"
-                >
-                  <GitCommitHorizontal className="text-primary" />
-                  <span className="min-w-0 flex-1 truncate text-xs font-medium">
-                    {latestCommit.title}
-                  </span>
-                  <span className="text-muted-foreground hidden text-[10px] sm:inline">
-                    {latestCommit.author ?? t("workspace.repositories.unknownAuthor")}
-                  </span>
-                  <code className="text-primary/80 text-[10px]">{latestCommit.shortSha}</code>
-                  <ExternalLink className="text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-                </button>
+                <div className="group bg-primary/[0.035] flex h-11 w-full items-center gap-1 border-b border-white/[0.07] px-2">
+                  <button
+                    type="button"
+                    onClick={() => openCommit(latestCommit.sha, "browser")}
+                    className="focus-visible:ring-ring flex min-w-0 flex-1 items-center gap-2.5 rounded-sm px-1 text-left outline-none focus-visible:ring-2"
+                  >
+                    <GitCommitHorizontal className="text-primary" />
+                    <span className="min-w-0 flex-1 truncate text-xs font-medium">
+                      {latestCommit.title}
+                    </span>
+                    <span className="text-muted-foreground hidden text-[10px] sm:inline">
+                      {latestCommit.author ?? t("workspace.repositories.unknownAuthor")}
+                    </span>
+                    <code className="text-primary/80 text-[10px]">{latestCommit.shortSha}</code>
+                    <ChevronRight className="text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                  </button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    aria-label={t("workspace.openOnGitHub")}
+                    onClick={() => void openExternalUrl(latestCommit.url)}
+                  >
+                    <ExternalLink />
+                  </Button>
+                </div>
               ) : null}
 
               {contentsLoading && !listing ? (
@@ -695,18 +777,31 @@ export function GitHubCodeView({
                 </div>
                 <div className="divide-y divide-white/[0.055]">
                   {overview.commits.map((commit) => (
-                    <button
+                    <div
                       key={commit.sha}
-                      type="button"
-                      onClick={() => void openExternalUrl(commit.url)}
-                      className="group flex min-h-10 w-full items-center gap-3 px-3 py-2 text-left hover:bg-white/[0.025]"
+                      className="group flex min-h-10 w-full items-center gap-1 px-2 py-1 hover:bg-white/[0.025]"
                     >
-                      <span className="min-w-0 flex-1 truncate text-[11px]">{commit.title}</span>
-                      <span className="text-muted-foreground hidden text-[10px] sm:inline">
-                        {commit.author ?? t("workspace.repositories.unknownAuthor")}
-                      </span>
-                      <code className="text-primary/75 text-[10px]">{commit.shortSha}</code>
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => openCommit(commit.sha, "browser")}
+                        className="focus-visible:ring-ring flex min-w-0 flex-1 items-center gap-3 rounded-sm px-1 py-1 text-left outline-none focus-visible:ring-2"
+                      >
+                        <span className="min-w-0 flex-1 truncate text-[11px]">{commit.title}</span>
+                        <span className="text-muted-foreground hidden text-[10px] sm:inline">
+                          {commit.author ?? t("workspace.repositories.unknownAuthor")}
+                        </span>
+                        <code className="text-primary/75 text-[10px]">{commit.shortSha}</code>
+                      </button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        aria-label={t("workspace.openOnGitHub")}
+                        onClick={() => void openExternalUrl(commit.url)}
+                      >
+                        <ExternalLink />
+                      </Button>
+                    </div>
                   ))}
                 </div>
               </section>

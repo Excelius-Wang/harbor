@@ -16,6 +16,7 @@ import {
   repositoryBlameQueryOptions,
   repositoryCodeSearchQueryOptions,
   repositoryCodeQueryOptions,
+  repositoryCommitDetailQueryOptions,
   repositoryCommitsQueryOptions,
   repositoryFileQueryOptions,
   repositoryIssueDetailQueryOptions,
@@ -633,6 +634,57 @@ describe("GitHub repository queries", () => {
     expect(new Set([commits.queryKey, tags.queryKey, blame.queryKey, search.queryKey]).size).toBe(
       4
     );
+  });
+
+  it("loads immutable commit details through hasMore-driven file pages", async () => {
+    const client = createTestQueryClient();
+    const sha = "a".repeat(40);
+    vi.mocked(invoke)
+      .mockResolvedValueOnce({
+        commit: { sha },
+        files: [{ path: "src/a.ts" }],
+        page: 1,
+        hasMore: true,
+      })
+      .mockResolvedValueOnce({
+        commit: { sha },
+        files: [{ path: "src/b.ts" }],
+        page: 2,
+        hasMore: false,
+      });
+    const options = repositoryCommitDetailQueryOptions({
+      owner: "octocat",
+      repository: "hello-world",
+      commitSha: sha,
+    });
+
+    await client.fetchInfiniteQuery(options);
+    const observer = new InfiniteQueryObserver(client, options);
+    const unsubscribe = observer.subscribe(() => undefined);
+    await observer.fetchNextPage();
+    unsubscribe();
+
+    expect(options.queryKey).toEqual([
+      "github",
+      "repository",
+      "octocat",
+      "hello-world",
+      "commit",
+      sha,
+    ]);
+    expect(invoke).toHaveBeenNthCalledWith(1, "github_get_repository_commit", {
+      owner: "octocat",
+      repository: "hello-world",
+      commitSha: sha,
+      page: 1,
+    });
+    expect(invoke).toHaveBeenNthCalledWith(2, "github_get_repository_commit", {
+      owner: "octocat",
+      repository: "hello-world",
+      commitSha: sha,
+      page: 2,
+    });
+    expect(observer.getCurrentResult().data?.pages.map((page) => page.page)).toEqual([1, 2]);
   });
 
   it("keys and invokes Issue pages with their complete server-side filters", async () => {

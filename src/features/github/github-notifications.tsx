@@ -433,7 +433,7 @@ export function GitHubNotifications({
         <GitHubCodeView
           key={selectedNotification.id}
           repository={selectedNotification.repository}
-          initialReference={selectedNotification.subject.commitSha}
+          initialCommitSha={selectedNotification.subject.commitSha}
           backLabel={t("workspace.notifications.back")}
           onBack={() => setSelectedNotification(null)}
         />
