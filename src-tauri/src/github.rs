@@ -16,6 +16,7 @@ pub(crate) mod discovery;
 pub(crate) mod discussion;
 pub(crate) mod download;
 pub(crate) mod gist;
+pub(crate) mod insights;
 pub(crate) mod issue;
 pub(crate) mod item_metadata;
 pub(crate) mod notification;
@@ -54,6 +55,10 @@ pub use gist::{
     GitHubGist, GitHubGistComment, GitHubGistCommentMutation, GitHubGistCommentPage,
     GitHubGistCreateInput, GitHubGistFileInput, GitHubGistFileMutation, GitHubGistPage,
     GitHubGistRevisionDetail, GitHubGistRevisionPage, GitHubGistSource, GitHubGistUpdateInput,
+};
+pub use insights::{
+    GitHubInsightsTrafficPeriod, GitHubRepositoryInsightsContributors,
+    GitHubRepositoryInsightsOverview, GitHubRepositoryInsightsTraffic,
 };
 #[cfg(test)]
 use issue::GitHubIssueTimelineKind;
@@ -566,6 +571,7 @@ pub(crate) trait GitHubClient:
     + discussion::GitHubDiscussionClient
     + discovery::GitHubDiscoveryClient
     + gist::GitHubGistClient
+    + insights::GitHubInsightsClient
     + issue::GitHubIssueClient
     + notification::GitHubNotificationClient
     + pending_review::GitHubPendingReviewClient
@@ -3313,6 +3319,36 @@ mod tests {
 
         assert_eq!(branch.name, "feature/code-write");
         assert_eq!(branch.sha, expected_sha);
+    }
+
+    #[tokio::test]
+    async fn repository_insights_use_the_saved_connection() {
+        let credentials = Arc::new(MemoryCredentialStore::default());
+        credentials
+            .save_github_credentials(&oauth_credentials())
+            .expect("seed credentials");
+        let service = GitHubService::new(
+            Arc::new(FakeGitHubClient),
+            credentials,
+            Some(oauth_session("github-user-access-token")),
+        );
+
+        let overview = service
+            .repository_insights_overview("octocat", "hello-world")
+            .await
+            .expect("repository insights overview");
+        let contributors = service
+            .repository_insights_contributors("octocat", "hello-world")
+            .await
+            .expect("repository insights contributors");
+        let traffic = service
+            .repository_insights_traffic("octocat", "hello-world", GitHubInsightsTrafficPeriod::Day)
+            .await
+            .expect("repository insights traffic");
+
+        assert_eq!(overview.community.health_percentage, 75);
+        assert_eq!(contributors.contributors[0].total, 12);
+        assert_eq!(traffic.views.count, 42);
     }
 
     #[tokio::test]

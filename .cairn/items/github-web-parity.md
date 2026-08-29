@@ -246,6 +246,18 @@ write. The Merge Panel uses one focused polling cache, preserves Auto-merge only
 a queue, and reuses the shared revision guard and installed shadcn dialogs. Code and API-schema
 verification pass; deterministic desktop interaction and responsive visual checks remain pending
 because no in-app browser instance was available.
+The pending Merge Queue desktop checks are complete, and the repository Code write workflow now has
+deterministic coverage for create, edit, atomic rename or move, delete, branch creation, and branch
+deletion at both supported viewport sizes.
+Repository Insights now has a native Overview, Contributors, and Traffic workspace. The focused
+three-method `GitHubInsightsClient` owns community profile metrics, commit activity, code frequency,
+contributor activity, views, clones, referrers, and popular paths. Statistics generation keeps
+GitHub's `202 Accepted` state explicit and polls only the focused query; unavailable large-history
+statistics stay distinct from errors. Traffic remains independently permission-gated so a missing
+push permission does not hide the public Overview or Contributors data. The frontend reuses TanStack
+Query, shadcn Cards, Charts, Tables, Tabs, Select, and existing repository navigation rather than
+adding a parallel data or component layer. The verified slice is open as pull request
+`https://github.com/Excelius-Wang/harbor/pull/1`.
 Harbor now has an account-level Notifications workspace backed by GitHub's official REST inbox.
 The focused `github/notification.rs` deep module owns its three-method Interface, Octocrab and fake
 Adapters, notification and repository mapping, subject-to-Web target policy, page bounds, read and
@@ -365,9 +377,8 @@ The workspace shell is responsive, starts at 1600x1000, and remains usable down 
 
 ## Next action
 
-Complete the remaining deterministic desktop checks for repository file rename, file deletion, and
-the 900x620 layout, then audit the next missing personal-developer GitHub Web workflow. Keep
-organization administration, Enterprise controls, and advanced organization security out of scope.
+Review and merge repository Insights pull request #1, then audit the next missing
+personal-developer GitHub Web workflow.
 
 ## Verification
 
@@ -377,11 +388,18 @@ Run `pnpm check`, the Rust check suite when Rust changes, and a focused desktop 
 
 Repository Code mutation verification covers exact Tauri contracts, atomic rename payloads, stale
 file and branch guards, Git-compatible branch validation, empty-repository initialization, stable
-conflict errors, saved-credential delegation, and focused query reconciliation. `pnpm check` passes
-with 125 frontend tests; 224 Rust tests pass with one external DeepWiki test ignored by design;
-`cargo fmt --check`, `cargo check`, the production build, and `git diff --check` pass. The desktop
-fixture verified exact-SHA branch creation, branch switching, first-file creation, and rendered source
-content. Rename, deletion, and the final 900x620 interaction pass remain the next recovery action.
+conflict errors, saved-credential delegation, and focused query reconciliation. The desktop fixture
+verified exact-SHA branch creation and deletion, branch switching, first-file creation, edit, atomic
+rename or move, deletion, and rendered source content at 1600x1000 and 900x620. Both sizes have no
+page-level horizontal overflow, and the browser reports zero errors and warnings.
+Repository Insights verification covers exact Overview, Contributors, and day or week Traffic Tauri
+contracts; official route construction; `202 Accepted`, `204 No Content`, and code-frequency `422`
+states; contributor aggregation; positive deletion presentation; safe repository-path links; and
+saved-credential delegation. `pnpm check` passes with 127 frontend tests; 231 Rust tests pass with one
+external DeepWiki test ignored by design; `cargo fmt --check`, `cargo check`, the production build,
+and `git diff --check` pass. A deterministic Playwright fixture verified all three Insights tabs,
+Traffic period switching, and exact IPC arguments at 1600x1000 and 900x620. Both sizes have no
+page-level horizontal overflow, and the browser reports zero errors and warnings.
 
 Success: `pnpm check` passes; a 70-repository Playwright fixture with a 240-character unbroken token
 keeps `scrollWidth === clientWidth` at both 1600x1000 and 900x620, with 12px between descriptions and
@@ -859,6 +877,12 @@ page-level overflow, and the browser reports zero errors and zero warnings.
 
 ## Decisions
 
+- Keep repository Insights behind the focused three-method `GitHubInsightsClient`. Reuse Octocrab's
+  community metrics API and authenticated transport, while owning only the statistics and Traffic
+  routes Octocrab does not wrap. Represent GitHub's asynchronous statistics generation and
+  unavailable histories explicitly, poll only while building, and keep Traffic in a separate query
+  because it requires push access. Treat Wiki as a separate `.wiki.git` repository rather than
+  pretending the Contents API covers it.
 - Define the requested GitHub Web parity as the personal-developer product: personal accounts,
   personal repositories, and API-supported developer workflows. Exclude organization and Team
   administration, Enterprise identity and policy, organization billing, and organization advanced

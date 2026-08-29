@@ -868,7 +868,78 @@
         "discussions": "讨论",
         "actions": "Actions",
         "security": "安全",
+        "insights": "洞察",
         "settings": "设置"
+      },
+      "insights": {
+        "title": "仓库洞察",
+        "description": "查看社区健康度、贡献活动和仓库流量。",
+        "refresh": "刷新仓库洞察",
+        "tabs": {
+          "overview": "概览",
+          "contributors": "贡献者",
+          "traffic": "流量"
+        },
+        "loadFailed": "Harbor 暂时无法读取仓库洞察",
+        "refreshFailed": "最新数据没有读取成功",
+        "trafficPermissionTitle": "需要推送权限才能查看流量",
+        "trafficPermissionDescription": "GitHub 只向拥有仓库推送权限的人提供访问量、克隆量、来源网站和热门内容。",
+        "statistics": {
+          "building": {
+            "title": "GitHub 正在生成统计数据",
+            "description": "Harbor 会自动重试。仓库较大时，生成过程可能需要一点时间。"
+          },
+          "unavailable": {
+            "title": "这项统计目前不可用",
+            "description": "GitHub 没有返回图表数据。仓库过大或近期没有活动时，部分统计可能不会生成。"
+          }
+        },
+        "community": "社区健康度",
+        "communityDescription": "这些文件能帮助其他人了解仓库并参与贡献。",
+        "communityHealthLabel": "社区健康度为 {{percentage}}%",
+        "communityFiles": {
+          "readme": "README",
+          "code_of_conduct": "行为准则",
+          "contributing": "贡献指南",
+          "license": "开源许可证",
+          "issue_template": "Issue 模板",
+          "pull_request_template": "拉取请求模板"
+        },
+        "documentation": "文档：{{documentation}}",
+        "commitActivity": "提交活动",
+        "lastYear": "默认分支过去一年的每周提交量。",
+        "codeFrequency": "代码增减",
+        "codeFrequencyDescription": "默认分支每周新增和删除的代码行数。",
+        "noContributors": "没有贡献者统计",
+        "noContributorsDescription": "GitHub 没有返回这个仓库的贡献活动。",
+        "anonymous": "匿名贡献者 {{number}}",
+        "topContributors": "主要贡献者",
+        "contributorsDescription": "按非合并提交数展示前十位贡献者。",
+        "contributorTotals": "贡献汇总",
+        "statisticsExcludeMerges": "GitHub 的统计不计入合并提交，贡献者统计也不计入空提交。",
+        "contributor": "贡献者",
+        "commits": "提交",
+        "additions": "新增",
+        "deletions": "删除",
+        "period": "流量统计周期",
+        "periods": {
+          "day": "按天",
+          "week": "按周"
+        },
+        "pageViews": "页面访问",
+        "pageViewsDescription": "GitHub 最近 14 天记录的仓库访问情况。",
+        "clones": "仓库克隆",
+        "clonesDescription": "GitHub 最近 14 天记录的完整克隆次数。",
+        "uniqueCount": "独立用户 {{value}}",
+        "referrers": "来源网站",
+        "referrersDescription": "最近 14 天为仓库带来最多访问的网站。",
+        "source": "来源",
+        "views": "访问",
+        "unique": "独立用户",
+        "noTrafficRows": "这个时间段内没有流量数据。",
+        "popularContent": "热门内容",
+        "popularContentDescription": "最近 14 天访问量最高的仓库页面。",
+        "content": "内容"
       },
       "releases": "版本发布",
       "releasesDescription": "查看已发布版本、更新说明和可下载文件。",
