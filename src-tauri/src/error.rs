@@ -23,6 +23,8 @@ pub enum AppError {
     GitHubPullRequestAutoMergeConflict(String),
     #[error("GitHub could not update the pull request merge queue: {0}")]
     GitHubPullRequestMergeQueueConflict(String),
+    #[error("GitHub could not dismiss the pull request review: {0}")]
+    GitHubPullRequestReviewDismissalConflict(String),
     #[error("GitHub could not commit the repository change: {0}")]
     GitHubCodeConflict(String),
     #[error("GitHub could not update the package: {0}")]
@@ -74,6 +76,9 @@ impl Serialize for AppError {
             Self::GitHubPullRequestCreationConflict(_) => "githubPullRequestCreationConflict",
             Self::GitHubPullRequestAutoMergeConflict(_) => "githubPullRequestAutoMergeConflict",
             Self::GitHubPullRequestMergeQueueConflict(_) => "githubPullRequestMergeQueueConflict",
+            Self::GitHubPullRequestReviewDismissalConflict(_) => {
+                "githubPullRequestReviewDismissalConflict"
+            }
             Self::GitHubCodeConflict(_) => "githubCodeConflict",
             Self::GitHubPackageConflict(_) => "githubPackageConflict",
             Self::GitHubWikiConflict(_) => "githubWikiConflict",
@@ -236,6 +241,22 @@ mod tests {
             serde_json::json!({
                 "code": "githubPullRequestMergeQueueConflict",
                 "message": "GitHub could not update the pull request merge queue: the pull request head changed"
+            })
+        );
+    }
+
+    #[test]
+    fn pull_request_review_dismissal_conflict_has_a_stable_ipc_code() {
+        let payload = serde_json::to_value(AppError::GitHubPullRequestReviewDismissalConflict(
+            "the review changed on GitHub".to_string(),
+        ))
+        .expect("serialize error");
+
+        assert_eq!(
+            payload,
+            serde_json::json!({
+                "code": "githubPullRequestReviewDismissalConflict",
+                "message": "GitHub could not dismiss the pull request review: the review changed on GitHub"
             })
         );
     }
