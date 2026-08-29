@@ -3,7 +3,9 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { isTauri } from "@tauri-apps/api/core";
 import {
   Archive,
+  BarChart3,
   BookMarked,
+  BookOpen,
   CircleDot,
   Code2,
   ExternalLink,
@@ -74,8 +76,16 @@ const GitHubReleaseView = lazy(() =>
   import("./github-release-view").then((module) => ({ default: module.GitHubReleaseView }))
 );
 
+const GitHubWikiView = lazy(() =>
+  import("./github-wiki-view").then((module) => ({ default: module.GitHubWikiView }))
+);
+
 const GitHubSecurityView = lazy(() =>
   import("./github-security-view").then((module) => ({ default: module.GitHubSecurityView }))
+);
+
+const GitHubInsightsView = lazy(() =>
+  import("./github-insights-view").then((module) => ({ default: module.GitHubInsightsView }))
 );
 
 const GitHubRepositorySettingsView = lazy(() =>
@@ -86,12 +96,14 @@ const GitHubRepositorySettingsView = lazy(() =>
 
 type RepositoryTab =
   | "code"
+  | "wiki"
   | "releases"
   | "issues"
   | "pullRequests"
   | "discussions"
   | "actions"
   | "security"
+  | "insights"
   | "settings";
 
 type RepositorySource = "mine" | "starred";
@@ -571,6 +583,9 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
                     <TabsTrigger value="code" className="px-1.5 text-xs">
                       <Code2 /> {t("workspace.repositories.tabs.code")}
                     </TabsTrigger>
+                    <TabsTrigger value="wiki" className="px-1.5 text-xs">
+                      <BookOpen /> {t("workspace.repositories.tabs.wiki")}
+                    </TabsTrigger>
                     <TabsTrigger value="releases" className="px-1.5 text-xs">
                       <Rocket /> {t("workspace.repositories.tabs.releases")}
                     </TabsTrigger>
@@ -589,6 +604,9 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
                     <TabsTrigger value="security" className="px-1.5 text-xs">
                       <ShieldAlert /> {t("workspace.repositories.tabs.security")}
                     </TabsTrigger>
+                    <TabsTrigger value="insights" className="px-1.5 text-xs">
+                      <BarChart3 /> {t("workspace.repositories.tabs.insights")}
+                    </TabsTrigger>
                     {selectedRelationshipResult.data?.viewerOwnsRepository ? (
                       <TabsTrigger value="settings" className="px-1.5 text-xs">
                         <Settings2 /> {t("workspace.repositories.tabs.settings")}
@@ -599,6 +617,11 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
                 <TabsContent value="code" className="flex min-h-0 min-w-0 flex-col overflow-hidden">
                   <Suspense fallback={<RepositoryTabSkeleton />}>
                     <GitHubCodeView key={selectedRepository.id} repository={selectedRepository} />
+                  </Suspense>
+                </TabsContent>
+                <TabsContent value="wiki" className="flex min-h-0 min-w-0 flex-col overflow-hidden">
+                  <Suspense fallback={<RepositoryTabSkeleton />}>
+                    <GitHubWikiView repository={selectedRepository} />
                   </Suspense>
                 </TabsContent>
                 <TabsContent
@@ -643,13 +666,24 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
                     <GitHubSecurityView repository={selectedRepository} />
                   </Suspense>
                 </TabsContent>
+                <TabsContent
+                  value="insights"
+                  className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+                >
+                  <Suspense fallback={<RepositoryTabSkeleton />}>
+                    <GitHubInsightsView repository={selectedRepository} />
+                  </Suspense>
+                </TabsContent>
                 {selectedRelationshipResult.data?.viewerOwnsRepository ? (
                   <TabsContent
                     value="settings"
                     className="flex min-h-0 min-w-0 flex-col overflow-hidden"
                   >
                     <Suspense fallback={<RepositoryTabSkeleton />}>
-                      <GitHubRepositorySettingsView repository={selectedRepository} />
+                      <GitHubRepositorySettingsView
+                        repository={selectedRepository}
+                        onOpenActions={() => setTab("actions")}
+                      />
                     </Suspense>
                   </TabsContent>
                 ) : null}

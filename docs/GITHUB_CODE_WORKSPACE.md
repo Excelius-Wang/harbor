@@ -143,12 +143,12 @@ window and read from GitHub again.
 
 The frontend caches only the connected account name and avatar for display. It does not probe
 Keyring on startup or when opening the connection dialog. Rust loads OAuth credentials lazily when
-a GitHub data request or an explicit credential action needs them. Builds without GitHub App
+a GitHub data request or an explicit credential action needs them. Builds without classic OAuth App
 configuration return disconnected without opening Keyring.
 
 ## Manual verification
 
-1. Build Harbor with its GitHub App configuration and run `pnpm tauri:dev`. Sign in through GitHub;
+1. Build Harbor with its classic OAuth App configuration and run `pnpm tauri:dev`. Sign in through GitHub;
    the browser returns to Harbor's short-lived listener on `127.0.0.1`.
 2. Open **Repositories** and select a repository.
 3. In **Code**, switch branches or tags, enter a folder, return through the breadcrumb, open a file,
@@ -180,7 +180,7 @@ cargo test --manifest-path src-tauri/Cargo.toml
 cargo check --manifest-path src-tauri/Cargo.toml
 ```
 
-## GitHub App configuration
+## GitHub OAuth App configuration
 
 Harbor expects these values at Rust compile time:
 
@@ -192,17 +192,17 @@ For local development, declare them in the repository-root `.env.local`. The `pn
 receives the same values. Existing shell or CI environment variables keep precedence. Cargo also
 tracks both variables and recompiles Harbor when either value changes.
 
-Configure the GitHub App callback URL as
+Create a classic OAuth App under the developer settings for the account that owns Harbor. Configure
+its callback URL as
 `http://127.0.0.1:49152/oauth/github/callback`. Keep the values in the release environment; do not
 commit them. GitHub requires the client secret during the token exchange even though an installed
 desktop application cannot treat an embedded secret as a strong security boundary, so Harbor also
 uses PKCE and callback state validation. Harbor opens the listener only for an active login and
 closes it after one valid callback or the ten-minute timeout.
 
-Grant repository **Metadata: Read-only** (GitHub enables this automatically), **Contents: Read-only**,
-**Issues: Read and write**, **Pull requests: Read and write**,
-**Checks: Read-only**, and **Actions: Read-only**. Install the GitHub App on the accounts and
-repositories that Harbor should be able to show; a user access token cannot exceed the repositories
-selected for the installation.
-After changing an existing GitHub App's permissions, approve the permission update for its
-installation and reconnect Harbor if GitHub requests a new authorization.
+Harbor's authorization request asks GitHub for `repo`, `workflow`, `security_events`, `project`,
+`delete_repo`, `gist`, `user`, `read:packages`, `write:packages`, and `delete:packages`. GitHub shows
+these scopes before approval. A GitHub App client ID, including the current `Iv` prefix, is rejected:
+GitHub App user tokens do not carry these OAuth scopes and fail the Personal Packages route in the
+live GitHub API. After changing the requested scopes, reconnect Harbor and approve the updated OAuth
+authorization.

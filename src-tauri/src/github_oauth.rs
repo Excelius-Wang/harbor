@@ -37,17 +37,38 @@ pub struct GitHubOAuthConfig {
 }
 
 impl GitHubOAuthConfig {
-    pub fn from_build_environment() -> Option<Self> {
-        let client_id = option_env!("HARBOR_GITHUB_CLIENT_ID")?.trim();
-        let client_secret = option_env!("HARBOR_GITHUB_CLIENT_SECRET")?.trim();
+    pub fn new(client_id: String, client_secret: String) -> Result<Self, AppError> {
+        let client_id = client_id.trim();
+        let client_secret = client_secret.trim();
         if client_id.is_empty() || client_secret.is_empty() {
-            return None;
+            return Err(AppError::Validation(
+                "GitHub OAuth configuration is incomplete".to_string(),
+            ));
         }
-        Some(Self {
+        ensure_classic_oauth_app_client_id(client_id)?;
+        Ok(Self {
             client_id: client_id.to_string(),
             client_secret: client_secret.to_string(),
         })
     }
+
+    pub fn from_build_environment() -> Option<Self> {
+        Self::new(
+            option_env!("HARBOR_GITHUB_CLIENT_ID")?.to_string(),
+            option_env!("HARBOR_GITHUB_CLIENT_SECRET")?.to_string(),
+        )
+        .ok()
+    }
+}
+
+fn ensure_classic_oauth_app_client_id(client_id: &str) -> Result<(), AppError> {
+    if client_id.starts_with("Iv") {
+        return Err(AppError::Validation(
+            "Harbor requires a classic GitHub OAuth App client ID; GitHub App client IDs do not support OAuth scopes"
+                .to_string(),
+        ));
+    }
+    Ok(())
 }
 
 fn configured_callback_url() -> Result<oauth2::url::Url, AppError> {
@@ -287,6 +308,8 @@ pub struct GitHubOAuthCredentials {
     pub access_token: String,
     pub refresh_token: Option<String>,
     pub expires_at: Option<u64>,
+    #[serde(default)]
+    pub scopes: Vec<String>,
 }
 
 struct PendingLogin {
@@ -405,6 +428,9 @@ impl GitHubOAuthSession {
             .add_scope(Scope::new("delete_repo".to_string()))
             .add_scope(Scope::new("gist".to_string()))
             .add_scope(Scope::new("user".to_string()))
+            .add_scope(Scope::new("read:packages".to_string()))
+            .add_scope(Scope::new("write:packages".to_string()))
+            .add_scope(Scope::new("delete:packages".to_string()))
             .set_pkce_challenge(pkce_challenge)
             .url();
         let callback_state = csrf_token.secret().clone();
@@ -480,7 +506,12 @@ impl GitHubOAuthSession {
             (code, pending_login.pkce_verifier)
         };
 
-        self.token_exchange.exchange_code(code, pkce_verifier).await
+        let credentials = self
+            .token_exchange
+            .exchange_code(code, pkce_verifier)
+            .await?;
+        ensure_classic_oauth_app_credentials(&credentials)?;
+        Ok(credentials)
     }
 
     pub async fn refresh_if_needed(
@@ -499,8 +530,12 @@ impl GitHubOAuthSession {
             AppError::GitHubAuthentication("GitHub login expired; sign in again".to_string())
         })?;
         let mut refreshed = self.token_exchange.refresh_token(refresh_token).await?;
+        ensure_classic_oauth_app_credentials(&refreshed)?;
         if refreshed.refresh_token.is_none() {
             refreshed.refresh_token = credentials.refresh_token;
+        }
+        if refreshed.scopes.is_empty() {
+            refreshed.scopes = credentials.scopes;
         }
         Ok(refreshed)
     }
@@ -514,6 +549,7 @@ fn github_oauth_client(
             "GitHub OAuth configuration is incomplete".to_string(),
         ));
     }
+    ensure_classic_oauth_app_client_id(&config.client_id)?;
     Ok(BasicClient::new(ClientId::new(config.client_id.clone()))
         .set_client_secret(ClientSecret::new(config.client_secret.clone()))
         .set_auth_uri(
@@ -531,10 +567,33 @@ fn github_oauth_client(
         .set_auth_type(AuthType::RequestBody))
 }
 
+pub(crate) fn ensure_classic_oauth_app_credentials(
+    credentials: &GitHubOAuthCredentials,
+) -> Result<(), AppError> {
+    if credentials.access_token.starts_with("ghu_") {
+        return Err(AppError::GitHubAuthentication(
+            "GitHub returned a GitHub App user token; Harbor requires a classic OAuth App authorization for personal GitHub workflows"
+                .to_string(),
+        ));
+    }
+    Ok(())
+}
+
 fn credentials_from_token_response(
     response: &oauth2::basic::BasicTokenResponse,
 ) -> GitHubOAuthCredentials {
     let now = std::time::Duration::from_secs(unix_timestamp());
+    let mut scopes = response
+        .scopes()
+        .into_iter()
+        .flatten()
+        .flat_map(|scope| scope.split(','))
+        .map(str::trim)
+        .filter(|scope| !scope.is_empty())
+        .map(|scope| scope.to_ascii_lowercase())
+        .collect::<Vec<_>>();
+    scopes.sort();
+    scopes.dedup();
     GitHubOAuthCredentials {
         access_token: response.access_token().secret().clone(),
         refresh_token: response.refresh_token().map(|token| token.secret().clone()),
@@ -542,6 +601,7 @@ fn credentials_from_token_response(
             .expires_in()
             .and_then(|duration| now.checked_add(duration))
             .map(|expires_at| expires_at.as_secs()),
+        scopes,
     }
 }
 
@@ -556,7 +616,11 @@ fn unix_timestamp() -> u64 {
 mod tests {
     use std::collections::HashMap;
 
-    use oauth2::url::Url;
+    use oauth2::{
+        basic::{BasicTokenResponse, BasicTokenType},
+        url::Url,
+        AccessToken, EmptyExtraTokenFields,
+    };
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
     use super::*;
@@ -570,6 +634,8 @@ mod tests {
 
     struct SuccessfulTokenExchange;
 
+    struct GitHubAppTokenExchange;
+
     #[async_trait]
     impl GitHubTokenExchange for SuccessfulTokenExchange {
         async fn exchange_code(
@@ -581,6 +647,7 @@ mod tests {
                 access_token: "github-user-access-token".to_string(),
                 refresh_token: Some("github-refresh-token".to_string()),
                 expires_at: Some(1_809_000_000),
+                scopes: vec!["read:packages".to_string()],
             })
         }
 
@@ -592,8 +659,54 @@ mod tests {
                 access_token: "refreshed-user-access-token".to_string(),
                 refresh_token: Some("rotated-refresh-token".to_string()),
                 expires_at: Some(1_900_000_000),
+                scopes: Vec::new(),
             })
         }
+    }
+
+    #[async_trait]
+    impl GitHubTokenExchange for GitHubAppTokenExchange {
+        async fn exchange_code(
+            &self,
+            _code: String,
+            _pkce_verifier: PkceCodeVerifier,
+        ) -> Result<GitHubOAuthCredentials, AppError> {
+            Ok(GitHubOAuthCredentials {
+                access_token: "ghu_github-app-user-token".to_string(),
+                refresh_token: None,
+                expires_at: None,
+                scopes: Vec::new(),
+            })
+        }
+
+        async fn refresh_token(
+            &self,
+            _refresh_token: String,
+        ) -> Result<GitHubOAuthCredentials, AppError> {
+            unreachable!("the regression token does not expire")
+        }
+    }
+
+    #[test]
+    fn scope_oauth_rejects_github_app_client_ids() {
+        let result = GitHubOAuthConfig::new(
+            "Iv1.github-app-client".to_string(),
+            "github-client-secret".to_string(),
+        );
+
+        assert!(
+            matches!(result, Err(AppError::Validation(message)) if message.contains("OAuth App"))
+        );
+    }
+
+    #[test]
+    fn scope_oauth_accepts_oauth_app_client_ids() {
+        let result = GitHubOAuthConfig::new(
+            "Ov23li.oauth-app-client".to_string(),
+            "github-client-secret".to_string(),
+        );
+
+        assert!(result.is_ok());
     }
 
     #[test]
@@ -618,7 +731,9 @@ mod tests {
         assert_eq!(query.get("response_type").map(String::as_str), Some("code"));
         assert_eq!(
             query.get("scope").map(String::as_str),
-            Some("repo workflow security_events project delete_repo gist user")
+            Some(
+                "repo workflow security_events project delete_repo gist user read:packages write:packages delete:packages"
+            )
         );
         assert_eq!(
             query.get("code_challenge_method").map(String::as_str),
@@ -628,6 +743,38 @@ mod tests {
             .get("code_challenge")
             .is_some_and(|value| value.len() >= 43));
         assert!(query.get("state").is_some_and(|value| value.len() >= 22));
+    }
+
+    #[test]
+    fn token_response_preserves_normalized_github_scopes() {
+        let mut response = BasicTokenResponse::new(
+            AccessToken::new("github-user-access-token".to_string()),
+            BasicTokenType::Bearer,
+            EmptyExtraTokenFields {},
+        );
+        response.set_scopes(Some(vec![
+            Scope::new("write:packages, read:packages".to_string()),
+            Scope::new("READ:PACKAGES".to_string()),
+        ]));
+
+        let credentials = credentials_from_token_response(&response);
+
+        assert_eq!(
+            credentials.scopes,
+            vec!["read:packages".to_string(), "write:packages".to_string()]
+        );
+    }
+
+    #[test]
+    fn stored_credentials_without_scope_metadata_remain_readable() {
+        let credentials: GitHubOAuthCredentials = serde_json::from_value(serde_json::json!({
+            "accessToken": "github-user-access-token",
+            "refreshToken": null,
+            "expiresAt": null
+        }))
+        .expect("legacy credentials");
+
+        assert!(credentials.scopes.is_empty());
     }
 
     #[tokio::test]
@@ -670,11 +817,35 @@ mod tests {
                 access_token: "github-user-access-token".to_string(),
                 refresh_token: Some("github-refresh-token".to_string()),
                 expires_at: Some(1_809_000_000),
+                scopes: vec!["read:packages".to_string()],
             }
         );
 
         let replay = session.complete_login(&callback).await;
         assert!(matches!(replay, Err(AppError::GitHubAuthentication(_))));
+    }
+
+    #[tokio::test]
+    async fn login_rejects_a_github_app_user_token() {
+        let session = GitHubOAuthSession::with_token_exchange(
+            test_config(),
+            Arc::new(GitHubAppTokenExchange),
+        )
+        .expect("OAuth session");
+        let attempt = session.begin_login().expect("login attempt");
+        let authorization_url = Url::parse(&attempt.authorization_url).expect("authorization URL");
+        let state = authorization_url
+            .query_pairs()
+            .find_map(|(key, value)| (key == "state").then(|| value.into_owned()))
+            .expect("state");
+
+        let callback = format!("{GITHUB_OAUTH_CALLBACK_URL}?code=temporary-code&state={state}");
+        let result = session.complete_login(&callback).await;
+
+        assert!(matches!(
+            result,
+            Err(AppError::GitHubAuthentication(message)) if message.contains("OAuth App")
+        ));
     }
 
     #[tokio::test]
@@ -690,6 +861,7 @@ mod tests {
                 access_token: "expired-user-access-token".to_string(),
                 refresh_token: Some("github-refresh-token".to_string()),
                 expires_at: Some(1),
+                scopes: vec!["read:packages".to_string()],
             })
             .await
             .expect("refreshed credentials");
@@ -699,6 +871,7 @@ mod tests {
             refreshed.refresh_token.as_deref(),
             Some("rotated-refresh-token")
         );
+        assert_eq!(refreshed.scopes, vec!["read:packages"]);
     }
 
     #[tokio::test]

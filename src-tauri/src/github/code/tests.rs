@@ -79,6 +79,25 @@ impl GitHubCodeClient for super::super::tests::FakeGitHubClient {
         })
     }
 
+    async fn repository_commit_detail(
+        &self,
+        token: &str,
+        owner: &str,
+        repository: &str,
+        commit_sha: &str,
+        page: u32,
+    ) -> Result<GitHubCommitDetailPage, AppError> {
+        assert_eq!(token, "github-user-access-token");
+        assert_eq!((owner, repository), ("octocat", "hello-world"));
+        assert_eq!(commit_sha, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+        Ok(commit_detail_page_from_raw(
+            raw_commit_detail(vec![raw_changed_file("modified", Some("@@ -1 +1 @@"))]),
+            commit_sha,
+            page,
+            false,
+        )?)
+    }
+
     async fn repository_tags(
         &self,
         token: &str,
@@ -225,6 +244,69 @@ fn content_json(name: &str, path: &str, kind: &str) -> serde_json::Value {
         },
         "license": null
     })
+}
+
+fn raw_changed_file(status: &str, patch: Option<&str>) -> RawChangedFile {
+    RawChangedFile {
+        sha: Some("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb".to_string()),
+        filename: "src/lib.rs".to_string(),
+        previous_filename: None,
+        status: status.to_string(),
+        additions: 3,
+        deletions: 1,
+        changes: 4,
+        patch: patch.map(str::to_string),
+        blob_url: Some(
+            "https://github.com/octocat/hello-world/blob/aaaaaaaa/src/lib.rs".to_string(),
+        ),
+        raw_url: Some("https://github.com/octocat/hello-world/raw/aaaaaaaa/src/lib.rs".to_string()),
+    }
+}
+
+fn raw_commit_detail(files: Vec<RawChangedFile>) -> RawCommitDetail {
+    RawCommitDetail {
+        sha: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".to_string(),
+        html_url: "https://github.com/octocat/hello-world/commit/aaaaaaaa".to_string(),
+        commit: RawGitCommit {
+            message: "Ship native commit detail\n\nKeep every diff in Harbor.".to_string(),
+            author: Some(RawGitActor {
+                name: Some("Octo Cat".to_string()),
+                email: Some("octocat@example.com".to_string()),
+                date: Some("2026-08-29T08:00:00Z".to_string()),
+            }),
+            committer: Some(RawGitActor {
+                name: Some("GitHub".to_string()),
+                email: Some("noreply@github.com".to_string()),
+                date: Some("2026-08-29T08:01:00Z".to_string()),
+            }),
+            verification: Some(RawCommitVerification {
+                verified: true,
+                reason: "valid".to_string(),
+                verified_at: Some("2026-08-29T08:01:01Z".to_string()),
+            }),
+        },
+        author: Some(RawCommitAccount {
+            login: "octocat".to_string(),
+            avatar_url: "https://github.com/octocat.png".to_string(),
+        }),
+        committer: None,
+        parents: vec![
+            RawCommitParent {
+                sha: "1111111111111111111111111111111111111111".to_string(),
+                html_url: "https://github.com/octocat/hello-world/commit/1111111".to_string(),
+            },
+            RawCommitParent {
+                sha: "2222222222222222222222222222222222222222".to_string(),
+                html_url: "https://github.com/octocat/hello-world/commit/2222222".to_string(),
+            },
+        ],
+        stats: Some(RawCommitStats {
+            additions: 3,
+            deletions: 1,
+            total: 4,
+        }),
+        files: Some(files),
+    }
 }
 
 #[test]
@@ -412,4 +494,138 @@ fn code_search_result_uses_the_first_available_text_fragment() {
 
     assert_eq!(result.path, "src/main.rs");
     assert_eq!(result.fragment.as_deref(), Some("fn render() {}"));
+}
+
+#[test]
+fn commit_detail_maps_merge_identity_signature_rename_and_binary_files() {
+    let mut renamed = raw_changed_file("renamed", Some("@@ -1 +1 @@"));
+    renamed.filename = "src/native.rs".to_string();
+    renamed.previous_filename = Some("src/web.rs".to_string());
+    let binary = raw_changed_file("future_binary", None);
+
+    let page = commit_detail_page_from_raw(
+        raw_commit_detail(vec![renamed, binary]),
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        1,
+        true,
+    )
+    .expect("commit detail");
+
+    assert_eq!(page.commit.short_sha, "aaaaaaa");
+    assert_eq!(page.commit.parents.len(), 2);
+    assert_eq!(
+        page.commit
+            .author
+            .as_ref()
+            .and_then(|actor| actor.login.as_deref()),
+        Some("octocat")
+    );
+    assert_eq!(
+        page.commit
+            .committer
+            .as_ref()
+            .and_then(|actor| actor.name.as_deref()),
+        Some("GitHub")
+    );
+    assert_eq!(
+        page.commit
+            .verification
+            .as_ref()
+            .map(|verification| verification.reason.as_str()),
+        Some("valid")
+    );
+    assert_eq!(page.files[0].previous_path.as_deref(), Some("src/web.rs"));
+    assert_eq!(page.files[1].status, "future_binary");
+    assert!(page.files[1].patch.is_none());
+    assert!(page.has_more);
+    assert!(!page.files_at_limit);
+}
+
+#[test]
+fn commit_detail_conflict_and_validation_statuses_have_non_retryable_ipc_codes() {
+    let not_found = commit_detail_status_error(404, "private transport detail".to_string())
+        .expect("404 should be classified");
+    let conflict =
+        commit_detail_status_error(409, "HTTP 409".to_string()).expect("409 should be classified");
+    let validation =
+        commit_detail_status_error(422, "HTTP 422".to_string()).expect("422 should be classified");
+
+    let not_found = serde_json::to_value(not_found).expect("serialize not found");
+    assert_eq!(not_found["code"], "githubPermission");
+    assert!(!not_found["message"]
+        .as_str()
+        .expect("not-found message")
+        .contains("private transport detail"));
+    assert_eq!(
+        serde_json::to_value(conflict).expect("serialize conflict")["code"],
+        "githubCodeConflict"
+    );
+    assert_eq!(
+        serde_json::to_value(validation).expect("serialize validation")["code"],
+        "validation"
+    );
+    assert!(commit_detail_status_error(502, "HTTP 502".to_string()).is_none());
+}
+
+#[test]
+fn commit_detail_keeps_root_nulls_and_rejects_a_different_sha() {
+    let mut raw = raw_commit_detail(Vec::new());
+    raw.author = None;
+    raw.commit.author = None;
+    raw.commit.committer = None;
+    raw.commit.verification = None;
+    raw.parents.clear();
+    raw.stats = None;
+    raw.files = None;
+
+    let page =
+        commit_detail_page_from_raw(raw, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 1, false)
+            .expect("root commit detail");
+
+    assert!(page.commit.author.is_none());
+    assert!(page.commit.committer.is_none());
+    assert!(page.commit.parents.is_empty());
+    assert!(page.commit.stats.is_none());
+    assert!(page.commit.verification.is_none());
+    assert!(page.files.is_empty());
+
+    assert!(commit_detail_page_from_raw(
+        raw_commit_detail(Vec::new()),
+        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        1,
+        false,
+    )
+    .is_err());
+}
+
+#[test]
+fn commit_file_pagination_uses_link_headers_and_stops_at_githubs_limit() {
+    let link = "<https://api.github.com/repositories/1/commits/aaa?per_page=100&page=2>; rel=\"next\", <https://api.github.com/repositories/1/commits/aaa?per_page=100&page=30>; rel=\"last\"";
+    assert!(link_header_has_next(link));
+    assert!(!link_header_has_next(
+        "<https://api.github.com/repositories/1/commits/aaa?per_page=100&page=1>; rel=\"prev\""
+    ));
+    assert_eq!(
+        commit_detail_route(
+            "octocat",
+            "hello-world",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            2,
+        ),
+        "/repos/octocat/hello-world/commits/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa?per_page=100&page=2"
+    );
+
+    let files = (0..usize::from(COMMIT_FILE_PAGE_SIZE))
+        .map(|_| raw_changed_file("modified", Some("@@ -1 +1 @@")))
+        .collect();
+    let page = commit_detail_page_from_raw(
+        raw_commit_detail(files),
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        MAX_COMMIT_FILE_PAGES,
+        true,
+    )
+    .expect("last exposed commit file page");
+
+    assert!(!page.has_more);
+    assert!(page.files_at_limit);
 }

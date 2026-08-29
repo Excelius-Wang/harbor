@@ -2,9 +2,12 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    authenticated_client, github_error, item_metadata, pull_request_review_state_from_octocrab,
+    authenticated_client,
+    comment::{enrich_issue_timeline_comments, GitHubConversationCommentKind},
+    github_error, item_metadata, pull_request_review_state_from_octocrab,
     repository_coordinates_from_search_value, serialized_enum_name, GitHubPullRequestReviewState,
-    GitHubService, OctocrabGitHubClient, SearchParameters,
+    GitHubReactionSubjectKind, GitHubReactionSubjectRef, GitHubService, OctocrabGitHubClient,
+    SearchParameters,
 };
 use crate::error::AppError;
 
@@ -16,6 +19,8 @@ const ISSUE_TIMELINE_PAGE_SIZE: u8 = 100;
 pub struct GitHubIssueLabel {
     pub name: String,
     pub color: String,
+    pub description: Option<String>,
+    pub is_default: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -71,6 +76,7 @@ pub struct GitHubIssueInboxFilters {
 #[serde(rename_all = "camelCase")]
 pub struct GitHubIssue {
     pub id: u64,
+    pub reaction_subject: GitHubReactionSubjectRef,
     pub number: u64,
     pub title: String,
     pub body: Option<String>,
@@ -176,6 +182,7 @@ pub enum GitHubIssueTimelineKind {
 #[serde(rename_all = "camelCase")]
 pub struct GitHubIssueTimelineItem {
     pub id: String,
+    pub reaction_subject: Option<GitHubReactionSubjectRef>,
     pub kind: GitHubIssueTimelineKind,
     pub event: String,
     pub actor: Option<String>,
@@ -185,6 +192,10 @@ pub struct GitHubIssueTimelineItem {
     pub url: Option<String>,
     pub created_at: Option<String>,
     pub updated_at: Option<String>,
+    pub viewer_can_update: bool,
+    pub viewer_can_delete: bool,
+    pub is_minimized: bool,
+    pub minimized_reason: Option<String>,
     pub label: Option<GitHubIssueLabel>,
     pub assignee: Option<String>,
     pub milestone: Option<String>,
@@ -607,18 +618,30 @@ impl GitHubIssueClient for OctocrabGitHubClient {
         let issue = issue.map_err(github_error)?;
         ensure_octocrab_issue(&issue)?;
         let timeline = timeline.map_err(github_error)?;
+        let timeline_has_more = timeline.next.is_some();
+
+        let timeline = timeline
+            .items
+            .into_iter()
+            .enumerate()
+            .map(|(index, event)| timeline_item_from_octocrab(event, index))
+            .collect();
+        let timeline = enrich_issue_timeline_comments(
+            &client,
+            owner,
+            repository,
+            issue_number,
+            GitHubConversationCommentKind::Issue,
+            timeline,
+        )
+        .await?;
 
         Ok(GitHubIssueDetailPage {
             issue: issue_from_octocrab(issue),
-            timeline: timeline
-                .items
-                .into_iter()
-                .enumerate()
-                .map(|(index, event)| timeline_item_from_octocrab(event, index))
-                .collect(),
+            timeline,
             timeline_page,
             timeline_has_previous: timeline_page > 1,
-            timeline_has_more: timeline.next.is_some(),
+            timeline_has_more,
         })
     }
 
@@ -713,7 +736,18 @@ impl GitHubIssueClient for OctocrabGitHubClient {
             .await
             .map_err(github_error)?;
 
-        Ok(timeline_item_from_issue_comment(comment))
+        let timeline = enrich_issue_timeline_comments(
+            &client,
+            owner,
+            repository,
+            issue_number,
+            GitHubConversationCommentKind::Issue,
+            vec![timeline_item_from_issue_comment(comment)],
+        )
+        .await?;
+        timeline.into_iter().next().ok_or_else(|| {
+            AppError::GitHub("GitHub did not return the created issue comment".to_string())
+        })
     }
 
     async fn update_issue_state(
@@ -898,6 +932,10 @@ fn issue_from_octocrab(issue: octocrab::models::issues::Issue) -> GitHubIssue {
         .and_then(|milestone| u64::try_from(milestone.number).ok());
     GitHubIssue {
         id: issue.id.into_inner(),
+        reaction_subject: GitHubReactionSubjectRef {
+            id: issue.node_id,
+            kind: GitHubReactionSubjectKind::Issue,
+        },
         number: issue.number,
         title: issue.title,
         body: issue.body,
@@ -921,6 +959,8 @@ fn issue_from_octocrab(issue: octocrab::models::issues::Issue) -> GitHubIssue {
             .map(|label| GitHubIssueLabel {
                 name: label.name,
                 color: label.color,
+                description: None,
+                is_default: false,
             })
             .collect(),
         milestone: issue.milestone.map(|milestone| milestone.title),
@@ -970,7 +1010,11 @@ pub(super) fn timeline_item_from_issue_comment(
     comment: octocrab::models::issues::Comment,
 ) -> GitHubIssueTimelineItem {
     GitHubIssueTimelineItem {
-        id: comment.node_id,
+        id: comment.node_id.clone(),
+        reaction_subject: Some(GitHubReactionSubjectRef {
+            id: comment.node_id,
+            kind: GitHubReactionSubjectKind::IssueComment,
+        }),
         kind: GitHubIssueTimelineKind::Comment,
         event: "commented".to_string(),
         actor: Some(comment.user.login),
@@ -983,6 +1027,10 @@ pub(super) fn timeline_item_from_issue_comment(
         url: Some(comment.html_url.to_string()),
         created_at: Some(comment.created_at.to_rfc3339()),
         updated_at: comment.updated_at.map(|updated_at| updated_at.to_rfc3339()),
+        viewer_can_update: false,
+        viewer_can_delete: false,
+        is_minimized: false,
+        minimized_reason: None,
         label: None,
         assignee: None,
         milestone: None,
@@ -997,10 +1045,12 @@ pub(super) fn issue_label_from_octocrab(label: octocrab::models::Label) -> GitHu
     GitHubIssueLabel {
         name: label.name,
         color: label.color,
+        description: label.description,
+        is_default: label.default,
     }
 }
 
-fn issue_milestone_from_octocrab(
+pub(super) fn issue_milestone_from_octocrab(
     milestone: octocrab::models::Milestone,
 ) -> Result<GitHubIssueMilestone, AppError> {
     let number = u64::try_from(milestone.number)
@@ -1042,12 +1092,21 @@ pub(super) fn timeline_item_from_octocrab(
 
     let review_state = event.state.map(pull_request_review_state_from_octocrab);
     let created_at = event.created_at.or(event.submitted_at);
+    let reaction_subject = event.node_id.clone().and_then(|id| {
+        let kind = match event_name.as_str() {
+            "commented" => GitHubReactionSubjectKind::IssueComment,
+            "reviewed" => GitHubReactionSubjectKind::PullRequestReview,
+            _ => return None,
+        };
+        Some(GitHubReactionSubjectRef { id, kind })
+    });
 
     GitHubIssueTimelineItem {
         id: event
             .node_id
             .clone()
             .unwrap_or_else(|| format!("{event_name}-{index}")),
+        reaction_subject,
         kind: if event_name == "commented" {
             GitHubIssueTimelineKind::Comment
         } else {
@@ -1061,9 +1120,15 @@ pub(super) fn timeline_item_from_octocrab(
         url: event.html_url,
         created_at: created_at.map(|created_at| created_at.to_rfc3339()),
         updated_at: event.updated_at.map(|updated_at| updated_at.to_rfc3339()),
+        viewer_can_update: false,
+        viewer_can_delete: false,
+        is_minimized: false,
+        minimized_reason: None,
         label: event.label.map(|label| GitHubIssueLabel {
             name: label.name,
             color: label.color,
+            description: None,
+            is_default: false,
         }),
         assignee: assignee.map(|assignee| assignee.login.clone()),
         milestone: event.milestone.map(|milestone| milestone.title),

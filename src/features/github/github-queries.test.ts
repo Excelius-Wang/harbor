@@ -16,24 +16,37 @@ import {
   repositoryBlameQueryOptions,
   repositoryCodeSearchQueryOptions,
   repositoryCodeQueryOptions,
+  repositoryCommitDetailQueryOptions,
   repositoryCommitsQueryOptions,
+  repositoryConversationControlsQueryOptions,
   repositoryFileQueryOptions,
   repositoryIssueDetailQueryOptions,
   repositoryIssueAssigneesQueryOptions,
   repositoryIssueLabelsQueryOptions,
   repositoryIssueMilestonesQueryOptions,
+  repositoryInsightsContributorsQueryOptions,
+  repositoryInsightsOverviewQueryOptions,
+  repositoryInsightsTrafficQueryOptions,
   repositoryIssuesQueryOptions,
   issueInboxQueryOptions,
   repositoriesQueryOptions,
   repositoryRelationshipQueryOptions,
   repositoryCreationOptionsQueryOptions,
   personalRepositorySettingsQueryOptions,
+  personalRepositoryCollaboratorsQueryOptions,
+  personalRepositoryInvitationsQueryOptions,
+  repositoryPagesHealthQueryOptions,
+  repositoryPagesQueryOptions,
   profileActivityQueryOptions,
   profileConnectionsQueryOptions,
   starredRepositoriesQueryOptions,
   userContributionsQueryOptions,
   userProfileQueryOptions,
   notificationsQueryOptions,
+  personalPackageQueryOptions,
+  personalPackagesQueryOptions,
+  personalPackageVersionsQueryOptions,
+  receivedRepositoryInvitationsQueryOptions,
   pendingPullRequestReviewQueryOptions,
   pullRequestAutoMergeStatusQueryOptions,
   pullRequestBranchUpdateStatusQueryOptions,
@@ -114,6 +127,28 @@ describe("GitHub repository queries", () => {
     expect(observer.getCurrentResult().data?.pages.map((page) => page.page)).toEqual([1, 2]);
   });
 
+  it("loads received repository invitations through one paginated account cache", async () => {
+    const client = createTestQueryClient();
+    vi.mocked(invoke)
+      .mockResolvedValueOnce({ invitations: [{ id: 73 }], page: 1, hasMore: true })
+      .mockResolvedValueOnce({ invitations: [{ id: 74 }], page: 2, hasMore: false });
+    const options = receivedRepositoryInvitationsQueryOptions();
+
+    await client.fetchInfiniteQuery(options);
+    const observer = new InfiniteQueryObserver(client, options);
+    const unsubscribe = observer.subscribe(() => undefined);
+    await observer.fetchNextPage();
+    unsubscribe();
+
+    expect(options.queryKey).toEqual(["github", "repository-invitations"]);
+    expect(invoke).toHaveBeenNthCalledWith(1, "github_list_received_repository_invitations", {
+      page: 1,
+    });
+    expect(invoke).toHaveBeenNthCalledWith(2, "github_list_received_repository_invitations", {
+      page: 2,
+    });
+  });
+
   it("loads the signed-in user's starred workspace and repository relationship state", async () => {
     const client = createTestQueryClient();
     vi.mocked(invoke)
@@ -167,6 +202,75 @@ describe("GitHub repository queries", () => {
     });
   });
 
+  it("keeps personal collaborators and invitations in separate paginated caches", async () => {
+    const client = createTestQueryClient();
+    vi.mocked(invoke)
+      .mockResolvedValueOnce({ collaborators: [], page: 1, hasMore: false })
+      .mockResolvedValueOnce({ invitations: [], page: 1, hasMore: false });
+    const target = { owner: "octocat", repository: "harbor" };
+    const collaborators = personalRepositoryCollaboratorsQueryOptions(target);
+    const invitations = personalRepositoryInvitationsQueryOptions(target);
+
+    await client.fetchInfiniteQuery(collaborators);
+    await client.fetchInfiniteQuery(invitations);
+
+    expect(collaborators.queryKey).toEqual([
+      "github",
+      "repository",
+      "octocat",
+      "harbor",
+      "access",
+      "collaborators",
+    ]);
+    expect(invitations.queryKey).toEqual([
+      "github",
+      "repository",
+      "octocat",
+      "harbor",
+      "access",
+      "invitations",
+    ]);
+    expect(invoke).toHaveBeenNthCalledWith(1, "github_list_personal_repository_collaborators", {
+      ...target,
+      page: 1,
+    });
+    expect(invoke).toHaveBeenNthCalledWith(2, "github_list_personal_repository_invitations", {
+      ...target,
+      page: 1,
+    });
+  });
+
+  it("keeps Pages history pages and domain health in focused caches", async () => {
+    const client = createTestQueryClient();
+    vi.mocked(invoke)
+      .mockResolvedValueOnce({ site: { status: "built" }, builds: [], page: 2 })
+      .mockResolvedValueOnce({ pending: false, domain: { valid: true } });
+    const pages = repositoryPagesQueryOptions({
+      owner: "octocat",
+      repository: "harbor",
+      page: 2,
+    });
+    const health = repositoryPagesHealthQueryOptions({
+      owner: "octocat",
+      repository: "harbor",
+    });
+
+    await client.fetchQuery(pages);
+    await client.fetchQuery(health);
+
+    expect(pages.queryKey).toEqual(["github", "repository", "octocat", "harbor", "pages", 2]);
+    expect(health.queryKey).toEqual(["github", "repository", "octocat", "harbor", "pages-health"]);
+    expect(invoke).toHaveBeenNthCalledWith(1, "github_get_repository_pages", {
+      owner: "octocat",
+      repository: "harbor",
+      page: 2,
+    });
+    expect(invoke).toHaveBeenNthCalledWith(2, "github_get_repository_pages_health", {
+      owner: "octocat",
+      repository: "harbor",
+    });
+  });
+
   it("keeps Gist lists, details, revisions, and comments in focused caches", async () => {
     const client = createTestQueryClient();
     vi.mocked(invoke)
@@ -208,6 +312,60 @@ describe("GitHub repository queries", () => {
     expect(invoke).toHaveBeenNthCalledWith(5, "github_list_gist_comments", {
       gistId: "abc123",
       page: 1,
+    });
+  });
+
+  it("keeps personal package inventory, detail, and version pages in focused caches", async () => {
+    const client = createTestQueryClient();
+    vi.mocked(invoke)
+      .mockResolvedValueOnce({ packages: [], page: 2, hasPrevious: true, hasMore: false })
+      .mockResolvedValueOnce({ id: 41, name: "@harbor/desktop", packageType: "npm" })
+      .mockResolvedValueOnce({ versions: [], state: "deleted", page: 3, hasMore: false });
+    const list = personalPackagesQueryOptions({
+      packageType: "npm",
+      visibility: "private",
+      page: 2,
+    });
+    const detail = personalPackageQueryOptions({
+      packageType: "npm",
+      packageName: "@harbor/desktop",
+    });
+    const versions = personalPackageVersionsQueryOptions({
+      packageType: "npm",
+      packageName: "@harbor/desktop",
+      state: "deleted",
+      page: 3,
+    });
+
+    await client.fetchQuery(list);
+    await client.fetchQuery(detail);
+    await client.fetchQuery(versions);
+
+    expect(list.queryKey).toEqual(["github", "personal-packages", "npm", "private", 2]);
+    expect(detail.queryKey).toEqual(["github", "personal-package", "npm", "@harbor/desktop"]);
+    expect(versions.queryKey).toEqual([
+      "github",
+      "personal-package",
+      "npm",
+      "@harbor/desktop",
+      "versions",
+      "deleted",
+      3,
+    ]);
+    expect(invoke).toHaveBeenNthCalledWith(1, "github_list_personal_packages", {
+      packageType: "npm",
+      visibility: "private",
+      page: 2,
+    });
+    expect(invoke).toHaveBeenNthCalledWith(2, "github_get_personal_package", {
+      packageType: "npm",
+      packageName: "@harbor/desktop",
+    });
+    expect(invoke).toHaveBeenNthCalledWith(3, "github_list_personal_package_versions", {
+      packageType: "npm",
+      packageName: "@harbor/desktop",
+      versionState: "deleted",
+      page: 3,
     });
   });
 
@@ -536,6 +694,90 @@ describe("GitHub repository queries", () => {
     expect(invoke).toHaveBeenCalledTimes(2);
   });
 
+  it("keeps repository Insights sections in focused caches with exact Tauri arguments", async () => {
+    const client = createTestQueryClient();
+    vi.mocked(invoke)
+      .mockResolvedValueOnce({
+        community: { healthPercentage: 75, files: [] },
+        commitActivity: { status: "ready", weeks: [] },
+        codeFrequency: { status: "ready", weeks: [] },
+      })
+      .mockResolvedValueOnce({ status: "ready", contributors: [] })
+      .mockResolvedValueOnce({
+        period: "week",
+        views: { count: 0, uniques: 0, points: [] },
+        clones: { count: 0, uniques: 0, points: [] },
+        referrers: [],
+        paths: [],
+      });
+    const target = { owner: "octocat", repository: "hello-world" };
+    const overviewOptions = repositoryInsightsOverviewQueryOptions(target);
+    const contributorsOptions = repositoryInsightsContributorsQueryOptions(target);
+    const trafficOptions = repositoryInsightsTrafficQueryOptions({ ...target, period: "week" });
+
+    await client.fetchQuery(overviewOptions);
+    await client.fetchQuery(contributorsOptions);
+    await client.fetchQuery(trafficOptions);
+
+    expect(overviewOptions.queryKey).toEqual([
+      "github",
+      "repository",
+      "octocat",
+      "hello-world",
+      "insights",
+      "overview",
+    ]);
+    expect(contributorsOptions.queryKey[5]).toBe("contributors");
+    expect(trafficOptions.queryKey.slice(-2)).toEqual(["traffic", "week"]);
+    expect(invoke).toHaveBeenNthCalledWith(1, "github_get_repository_insights_overview", target);
+    expect(invoke).toHaveBeenNthCalledWith(
+      2,
+      "github_get_repository_insights_contributors",
+      target
+    );
+    expect(invoke).toHaveBeenNthCalledWith(3, "github_get_repository_insights_traffic", {
+      ...target,
+      period: "week",
+    });
+  });
+
+  it("polls repository statistics only while GitHub is building them", () => {
+    const target = { owner: "octocat", repository: "hello-world" };
+    const overviewInterval = repositoryInsightsOverviewQueryOptions(target).refetchInterval;
+    const contributorsInterval = repositoryInsightsContributorsQueryOptions(target).refetchInterval;
+
+    expect(typeof overviewInterval).toBe("function");
+    expect(typeof contributorsInterval).toBe("function");
+    if (typeof overviewInterval !== "function" || typeof contributorsInterval !== "function") {
+      throw new Error("Insights queries must use state-aware polling");
+    }
+
+    expect(
+      overviewInterval({
+        state: {
+          data: {
+            commitActivity: { status: "building" },
+            codeFrequency: { status: "ready" },
+          },
+        },
+      } as never)
+    ).toBe(5_000);
+    expect(
+      overviewInterval({
+        state: {
+          data: {
+            commitActivity: { status: "ready" },
+            codeFrequency: { status: "ready" },
+          },
+        },
+      } as never)
+    ).toBe(false);
+    expect(contributorsInterval({ state: { data: { status: "building" } } } as never)).toBe(5_000);
+    expect(contributorsInterval({ state: { data: { status: "unavailable" } } } as never)).toBe(
+      false
+    );
+  });
+
   it("loads and caches a repository file by revision and path", async () => {
     const client = createTestQueryClient();
     const preview: GitHubFilePreview = {
@@ -635,6 +877,57 @@ describe("GitHub repository queries", () => {
     );
   });
 
+  it("loads immutable commit details through hasMore-driven file pages", async () => {
+    const client = createTestQueryClient();
+    const sha = "a".repeat(40);
+    vi.mocked(invoke)
+      .mockResolvedValueOnce({
+        commit: { sha },
+        files: [{ path: "src/a.ts" }],
+        page: 1,
+        hasMore: true,
+      })
+      .mockResolvedValueOnce({
+        commit: { sha },
+        files: [{ path: "src/b.ts" }],
+        page: 2,
+        hasMore: false,
+      });
+    const options = repositoryCommitDetailQueryOptions({
+      owner: "octocat",
+      repository: "hello-world",
+      commitSha: sha,
+    });
+
+    await client.fetchInfiniteQuery(options);
+    const observer = new InfiniteQueryObserver(client, options);
+    const unsubscribe = observer.subscribe(() => undefined);
+    await observer.fetchNextPage();
+    unsubscribe();
+
+    expect(options.queryKey).toEqual([
+      "github",
+      "repository",
+      "octocat",
+      "hello-world",
+      "commit",
+      sha,
+    ]);
+    expect(invoke).toHaveBeenNthCalledWith(1, "github_get_repository_commit", {
+      owner: "octocat",
+      repository: "hello-world",
+      commitSha: sha,
+      page: 1,
+    });
+    expect(invoke).toHaveBeenNthCalledWith(2, "github_get_repository_commit", {
+      owner: "octocat",
+      repository: "hello-world",
+      commitSha: sha,
+      page: 2,
+    });
+    expect(observer.getCurrentResult().data?.pages.map((page) => page.page)).toEqual([1, 2]);
+  });
+
   it("keys and invokes Issue pages with their complete server-side filters", async () => {
     const client = createTestQueryClient();
     vi.mocked(invoke).mockResolvedValueOnce({
@@ -708,6 +1001,38 @@ describe("GitHub repository queries", () => {
       issueNumber: 7,
       timelinePage: 2,
     });
+  });
+
+  it("keys shared conversation controls by repository, kind, and number", async () => {
+    const client = createTestQueryClient();
+    vi.mocked(invoke).mockResolvedValueOnce({
+      kind: "pullRequest",
+      number: 12,
+      locked: false,
+      viewerCanLock: true,
+      viewerCanSubscribe: true,
+      viewerSubscription: "unsubscribed",
+    });
+    const target = {
+      owner: "octocat",
+      repository: "hello-world",
+      conversationKind: "pullRequest" as const,
+      conversationNumber: 12,
+    };
+    const options = repositoryConversationControlsQueryOptions(target);
+
+    await client.fetchQuery(options);
+
+    expect(options.queryKey).toEqual([
+      "github",
+      "repository",
+      "octocat",
+      "hello-world",
+      "conversation-controls",
+      "pullRequest",
+      12,
+    ]);
+    expect(invoke).toHaveBeenCalledWith("github_get_repository_conversation_controls", target);
   });
 
   it("keys and invokes account Issue pages with their complete scope", async () => {

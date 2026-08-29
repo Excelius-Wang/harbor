@@ -16,6 +16,10 @@ impl GitHubIssueClient for super::super::tests::FakeGitHubClient {
         Ok(GitHubIssuePage {
             issues: vec![GitHubIssue {
                 id: 2,
+                reaction_subject: GitHubReactionSubjectRef {
+                    id: "I_2".to_string(),
+                    kind: GitHubReactionSubjectKind::Issue,
+                },
                 number: 7,
                 title: "Keep the example focused".to_string(),
                 body: Some("Issue body".to_string()),
@@ -29,6 +33,8 @@ impl GitHubIssueClient for super::super::tests::FakeGitHubClient {
                 labels: vec![GitHubIssueLabel {
                     name: "good first issue".to_string(),
                     color: "7057ff".to_string(),
+                    description: None,
+                    is_default: false,
                 }],
                 milestone: None,
                 milestone_number: None,
@@ -100,6 +106,8 @@ impl GitHubIssueClient for super::super::tests::FakeGitHubClient {
             labels: vec![GitHubIssueLabel {
                 name: "good first issue".to_string(),
                 color: "7057ff".to_string(),
+                description: None,
+                is_default: false,
             }],
         })
     }
@@ -233,6 +241,8 @@ impl GitHubIssueClient for super::super::tests::FakeGitHubClient {
             .map(|name| GitHubIssueLabel {
                 name: name.clone(),
                 color: "7057ff".to_string(),
+                description: None,
+                is_default: false,
             })
             .collect();
         issue.assignees = assignees.to_vec();
@@ -256,6 +266,10 @@ impl GitHubIssueClient for super::super::tests::FakeGitHubClient {
         );
         Ok(GitHubIssueTimelineItem {
             id: "IC_84".to_string(),
+            reaction_subject: Some(GitHubReactionSubjectRef {
+                id: "IC_84".to_string(),
+                kind: GitHubReactionSubjectKind::IssueComment,
+            }),
             kind: GitHubIssueTimelineKind::Comment,
             event: "commented".to_string(),
             actor: Some("octocat".to_string()),
@@ -267,6 +281,10 @@ impl GitHubIssueClient for super::super::tests::FakeGitHubClient {
             ),
             created_at: Some("2026-08-26T10:00:00+00:00".to_string()),
             updated_at: Some("2026-08-26T10:00:00+00:00".to_string()),
+            viewer_can_update: true,
+            viewer_can_delete: true,
+            is_minimized: false,
+            minimized_reason: None,
             label: None,
             assignee: None,
             milestone: None,

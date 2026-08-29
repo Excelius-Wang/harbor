@@ -1,6 +1,14 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, CircleDot, Plus, RefreshCw, Search, TriangleAlert } from "lucide-react";
+import {
+  CheckCircle2,
+  CircleDot,
+  Plus,
+  RefreshCw,
+  Search,
+  Tags,
+  TriangleAlert,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -44,6 +52,12 @@ import {
 
 const ALL_LABELS = "__all__";
 
+const GitHubIssueTaxonomyView = lazy(() =>
+  import("./github-issue-taxonomy-view").then((module) => ({
+    default: module.GitHubIssueTaxonomyView,
+  }))
+);
+
 function IssueSkeletons() {
   return (
     <div className="flex flex-col">
@@ -79,6 +93,7 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
   const [page, setPage] = useState(1);
   const [selectedIssueNumber, setSelectedIssueNumber] = useState<number | null>(null);
   const [creatingIssue, setCreatingIssue] = useState(false);
+  const [managingTaxonomy, setManagingTaxonomy] = useState(false);
   const issuesResult = useQuery({
     ...repositoryIssuesQueryOptions({
       owner: repository.owner,
@@ -114,7 +129,19 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
     setPage(1);
     setSelectedIssueNumber(null);
     setCreatingIssue(false);
+    setManagingTaxonomy(false);
   }, [repository.id]);
+
+  if (managingTaxonomy) {
+    return (
+      <Suspense fallback={<IssueSkeletons />}>
+        <GitHubIssueTaxonomyView
+          repository={repository}
+          onBack={() => setManagingTaxonomy(false)}
+        />
+      </Suspense>
+    );
+  }
 
   if (creatingIssue) {
     return (
@@ -168,6 +195,15 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
                 ? t("workspace.repositories.issueCount", { count: issuePage.totalCount })
                 : null}
             </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setManagingTaxonomy(true)}
+            >
+              <Tags data-icon="inline-start" />
+              {t("workspace.repositories.manageTaxonomy")}
+            </Button>
             <Button type="button" size="sm" onClick={() => setCreatingIssue(true)}>
               <Plus data-icon="inline-start" />
               {t("workspace.repositories.newIssue")}

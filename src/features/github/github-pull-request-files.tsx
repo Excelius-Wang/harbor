@@ -9,15 +9,7 @@ import {
   RefreshCw,
   ShieldCheck,
 } from "lucide-react";
-import {
-  Diff,
-  Hunk,
-  getChangeKey,
-  parseDiff,
-  type ChangeData,
-  type FileData,
-  type ViewType,
-} from "react-diff-view";
+import { Diff, Hunk, getChangeKey, type ChangeData, type ViewType } from "react-diff-view";
 import "react-diff-view/style/index.css";
 import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +35,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { parseIpcError } from "@/lib/ipc-error";
 import { openExternalUrl } from "@/lib/window";
 import type {
@@ -52,10 +45,12 @@ import type {
   GitHubPullRequestFile,
   GitHubPullRequestReviewComment,
   GitHubPullRequestReviewCommentSide,
+  GitHubReactionSubjectRef,
   GitHubPullRequestRepository,
   GitHubPullRequestReviewThread,
 } from "./github-data";
 import { GitHubPagination } from "./github-issue-shared";
+import { parseGitHubFilePatch } from "./github-file-diff";
 import { GitHubPullRequestInlineComment } from "./github-pull-request-inline-comment";
 import {
   pullRequestReviewCommentKey,
@@ -67,6 +62,7 @@ import {
 } from "./github-pull-request-review-comments";
 import { GitHubPullRequestReviewDialog } from "./github-pull-request-review-dialog";
 import { GitHubPullRequestReviewThreadView } from "./github-pull-request-review-thread";
+import { GitHubReactionsProvider } from "./github-reactions-provider";
 import {
   deletePendingRepositoryPullRequestReviewComment,
   markPullRequestReviewThreadsStale,
@@ -78,24 +74,6 @@ import {
   pullRequestFilesQueryOptions,
   pullRequestReviewThreadsQueryOptions,
 } from "./github-queries";
-
-function parseFilePatch(file: GitHubPullRequestFile): FileData | null {
-  if (!file.patch) return null;
-  const oldPath = file.status === "added" ? "/dev/null" : `a/${file.previousPath ?? file.path}`;
-  const newPath = file.status === "removed" ? "/dev/null" : `b/${file.path}`;
-  const source = [
-    `diff --git a/${file.previousPath ?? file.path} b/${file.path}`,
-    `--- ${oldPath}`,
-    `+++ ${newPath}`,
-    file.patch,
-  ].join("\n");
-
-  try {
-    return parseDiff(source, { nearbySequences: "zip" })[0] ?? null;
-  } catch {
-    return null;
-  }
-}
 
 type OpenReviewComment = {
   changeKey: string;
@@ -132,7 +110,7 @@ function PullRequestFileDiff({
   const [openComment, setOpenComment] = useState<OpenReviewComment | null>(null);
   const [selection, setSelection] = useState<PullRequestReviewDiffSelection | null>(null);
   const drag = useRef<ReviewSelectionDrag | null>(null);
-  const diff = useMemo(() => parseFilePatch(file), [file]);
+  const diff = useMemo(() => parseGitHubFilePatch(file), [file]);
   const changes = useMemo(() => diff?.hunks.flatMap((hunk) => hunk.changes) ?? [], [diff]);
   const selectionRange = useMemo(
     () => (selection ? pullRequestReviewCommentRange(file.path, changes, selection) : null),
@@ -512,6 +490,11 @@ export function GitHubPullRequestFiles({
   const reviewThreads = (
     reviewThreadsResult.data?.pages.flatMap((threadPage) => threadPage.threads) ?? []
   ).filter((thread) => !thread.comments.some((comment) => pendingCommentIds.has(comment.id)));
+  const reactionSubjects = reviewThreads.flatMap((thread) =>
+    thread.comments.flatMap((comment): GitHubReactionSubjectRef[] =>
+      comment.pending ? [] : [{ id: comment.id, kind: "pullRequestReviewComment" }]
+    )
+  );
   const reviewThreadsError = reviewThreadsResult.error
     ? parseIpcError(reviewThreadsResult.error)
     : null;
@@ -545,233 +528,240 @@ export function GitHubPullRequestFiles({
   };
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <div className="flex min-h-12 items-center justify-between gap-3 border-b px-4 py-2">
-        <p className="text-muted-foreground text-[11px]">
-          {data
-            ? t("workspace.repositories.changedFileCount", { count: data.files.length })
-            : t("workspace.repositories.filesChanged")}
-        </p>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          {reviewThreadsResult.isPending || pendingReviewResult.isPending ? (
-            <span className="text-muted-foreground inline-flex items-center gap-1.5 text-[10px]">
-              <Spinner className="size-3" />
-              {t("workspace.repositories.reviewThreadsLoading")}
-            </span>
-          ) : null}
-          <Select value={viewType} onValueChange={(value) => setViewType(value as ViewType)}>
-            <SelectTrigger size="sm" className="w-[140px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="unified">{t("workspace.repositories.unifiedDiff")}</SelectItem>
-                <SelectItem value="split">{t("workspace.repositories.splitDiff")}</SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-          {pullRequest.state === "open" && !pullRequest.merged ? (
-            <Button
-              type="button"
-              size="sm"
-              disabled={pendingReviewResult.isPending || Boolean(pendingReviewError)}
-              onClick={() => setReviewOpen(true)}
-            >
-              <ShieldCheck data-icon="inline-start" />
-              {t("workspace.repositories.reviewChanges")}
-              {comments.length + (pendingReview?.uneditableCommentCount ?? 0) ? (
-                <Badge className="bg-primary-foreground/15 text-primary-foreground ml-1 rounded-sm px-1 py-0 text-[9px]">
-                  {comments.length + (pendingReview?.uneditableCommentCount ?? 0)}
-                </Badge>
-              ) : null}
-            </Button>
-          ) : null}
-        </div>
-      </div>
-      <ScrollArea className="min-h-0 min-w-0 flex-1" constrainContentWidth>
-        <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-3 px-4 py-5 sm:px-5">
-          {reviewThreadsError ? (
-            <Alert variant="destructive">
-              <CircleAlert />
-              <AlertTitle>{t("workspace.repositories.reviewThreadsLoadFailed")}</AlertTitle>
-              <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
-                <span>{reviewThreadsError.message}</span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="xs"
-                  onClick={() => void reviewThreadsResult.refetch()}
-                >
-                  <RefreshCw data-icon="inline-start" />
-                  {t("workspace.repositories.retry")}
-                </Button>
-              </AlertDescription>
-            </Alert>
-          ) : null}
-          {pendingReviewError ? (
-            <Alert variant="destructive">
-              <CircleAlert />
-              <AlertTitle>{t("workspace.repositories.pendingReviewLoadFailed")}</AlertTitle>
-              <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
-                <span>{pendingReviewError.message}</span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="xs"
-                  onClick={() => void pendingReviewResult.refetch()}
-                >
-                  <RefreshCw data-icon="inline-start" />
-                  {t("workspace.repositories.retry")}
-                </Button>
-              </AlertDescription>
-            </Alert>
-          ) : null}
-          {pendingReview && !pendingReviewError ? (
-            <Alert>
-              <ShieldCheck />
-              <AlertTitle>
-                {t(
-                  stalePendingReview
-                    ? "workspace.repositories.pendingReviewOutdated"
-                    : "workspace.repositories.pendingReviewRestored"
-                )}
-              </AlertTitle>
-              <AlertDescription>
-                {t(
-                  stalePendingReview
-                    ? "workspace.repositories.pendingReviewOutdatedDescription"
-                    : "workspace.repositories.pendingReviewRestoredDescription",
-                  {
-                    count: comments.length + (pendingReview.uneditableCommentCount ?? 0),
-                  }
-                )}
-              </AlertDescription>
-            </Alert>
-          ) : null}
-          {result.isPending ? (
-            Array.from({ length: 4 }, (_, index) => (
-              <Skeleton key={index} className="h-32 w-full" />
-            ))
-          ) : error ? (
-            <Empty className="min-h-80">
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <FileDiff />
-                </EmptyMedia>
-                <EmptyTitle>{t("workspace.repositories.pullRequestFilesLoadFailed")}</EmptyTitle>
-                <EmptyDescription>{error.message}</EmptyDescription>
-              </EmptyHeader>
-              <EmptyContent>
-                <Button variant="outline" onClick={() => void result.refetch()}>
-                  <RefreshCw data-icon="inline-start" />
-                  {t("workspace.repositories.retry")}
-                </Button>
-              </EmptyContent>
-            </Empty>
-          ) : data?.files.length ? (
-            data.files.map((file, index) => (
-              <Collapsible
-                key={`${file.sha ?? file.path}-${file.path}`}
-                defaultOpen={index < 2}
-                className="overflow-hidden rounded-lg border"
-              >
-                <div className="bg-card/45 flex min-w-0 items-center gap-2 border-b px-2 py-1.5">
-                  <CollapsibleTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="group min-w-0 flex-1 justify-start"
-                    >
-                      <ChevronDown className="transition-transform group-data-[state=closed]:-rotate-90" />
-                      <span className="truncate font-mono text-[11px]">{file.path}</span>
-                    </Button>
-                  </CollapsibleTrigger>
-                  <Badge variant="outline" className="shrink-0 rounded-md text-[9px]">
-                    {t(`workspace.repositories.fileStatuses.${file.status}`, {
-                      defaultValue: file.status,
-                    })}
-                  </Badge>
-                  <span className="text-success text-[10px]">+{file.additions}</span>
-                  <span className="text-destructive text-[10px]">-{file.deletions}</span>
-                  {file.blobUrl ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-xs"
-                      aria-label={t("workspace.repositories.viewSource")}
-                      onClick={() => file.blobUrl && void openExternalUrl(file.blobUrl)}
-                    >
-                      <ExternalLink />
-                    </Button>
-                  ) : null}
-                </div>
-                <CollapsibleContent>
-                  <PullRequestFileDiff
-                    file={file}
-                    viewType={viewType}
-                    repository={repository}
-                    pullRequest={pullRequest}
-                    comments={comments}
-                    threads={reviewThreads}
-                    canCreateComment={
-                      !pendingReviewResult.isPending && !pendingReviewError && !stalePendingReview
-                    }
-                    onSaveComment={saveComment}
-                    onDeleteComment={deleteComment}
-                  />
-                </CollapsibleContent>
-              </Collapsible>
-            ))
-          ) : (
-            <Empty className="min-h-80">
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <FileDiff />
-                </EmptyMedia>
-                <EmptyTitle>{t("workspace.repositories.noPullRequestFiles")}</EmptyTitle>
-              </EmptyHeader>
-            </Empty>
-          )}
-          {data ? (
-            <GitHubPagination
-              page={data.page}
-              hasPrevious={data.hasPrevious}
-              hasMore={data.hasMore}
-              onPageChange={onPageChange}
-              ariaLabel={t("workspace.repositories.pullRequestFilePagination")}
-            />
-          ) : null}
-          {reviewThreadsResult.hasNextPage ? (
-            <div className="border-border/50 flex justify-center border-t pt-3">
+    <GitHubReactionsProvider repository={repository} subjects={reactionSubjects}>
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className="flex min-h-12 items-center justify-between gap-3 border-b px-4 py-2">
+          <p className="text-muted-foreground text-[11px]">
+            {data
+              ? t("workspace.repositories.changedFileCount", { count: data.files.length })
+              : t("workspace.repositories.filesChanged")}
+          </p>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {reviewThreadsResult.isPending || pendingReviewResult.isPending ? (
+              <span className="text-muted-foreground inline-flex items-center gap-1.5 text-[10px]">
+                <Spinner className="size-3" />
+                {t("workspace.repositories.reviewThreadsLoading")}
+              </span>
+            ) : null}
+            <Select value={viewType} onValueChange={(value) => setViewType(value as ViewType)}>
+              <SelectTrigger size="sm" className="w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="unified">{t("workspace.repositories.unifiedDiff")}</SelectItem>
+                  <SelectItem value="split">{t("workspace.repositories.splitDiff")}</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            {pullRequest.state === "open" && !pullRequest.merged ? (
               <Button
                 type="button"
-                variant="outline"
                 size="sm"
-                disabled={reviewThreadsResult.isFetchingNextPage}
-                onClick={() => void reviewThreadsResult.fetchNextPage()}
+                disabled={pendingReviewResult.isPending || Boolean(pendingReviewError)}
+                onClick={() => setReviewOpen(true)}
               >
-                {reviewThreadsResult.isFetchingNextPage ? (
-                  <Spinner data-icon="inline-start" />
+                <ShieldCheck data-icon="inline-start" />
+                {t("workspace.repositories.reviewChanges")}
+                {comments.length + (pendingReview?.uneditableCommentCount ?? 0) ? (
+                  <Badge className="bg-primary-foreground/15 text-primary-foreground ml-1 rounded-sm px-1 py-0 text-[9px]">
+                    {comments.length + (pendingReview?.uneditableCommentCount ?? 0)}
+                  </Badge>
                 ) : null}
-                {t(
-                  reviewThreadsResult.isFetchingNextPage
-                    ? "workspace.repositories.loadingMoreReviewThreads"
-                    : "workspace.repositories.loadMoreReviewThreads"
-                )}
               </Button>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
         </div>
-      </ScrollArea>
-      <GitHubPullRequestReviewDialog
-        repository={repository}
-        pullRequest={pullRequest}
-        open={reviewOpen}
-        onOpenChange={setReviewOpen}
-        pendingReview={pendingReview}
-        onPendingReviewChange={setPendingReview}
-      />
-    </div>
+        <ScrollArea className="min-h-0 min-w-0 flex-1" constrainContentWidth>
+          <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-3 px-4 py-5 sm:px-5">
+            {reviewThreadsError ? (
+              <Alert variant="destructive">
+                <CircleAlert />
+                <AlertTitle>{t("workspace.repositories.reviewThreadsLoadFailed")}</AlertTitle>
+                <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
+                  <span>{reviewThreadsError.message}</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    onClick={() => void reviewThreadsResult.refetch()}
+                  >
+                    <RefreshCw data-icon="inline-start" />
+                    {t("workspace.repositories.retry")}
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            ) : null}
+            {pendingReviewError ? (
+              <Alert variant="destructive">
+                <CircleAlert />
+                <AlertTitle>{t("workspace.repositories.pendingReviewLoadFailed")}</AlertTitle>
+                <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
+                  <span>{pendingReviewError.message}</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    onClick={() => void pendingReviewResult.refetch()}
+                  >
+                    <RefreshCw data-icon="inline-start" />
+                    {t("workspace.repositories.retry")}
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            ) : null}
+            {pendingReview && !pendingReviewError ? (
+              <Alert>
+                <ShieldCheck />
+                <AlertTitle>
+                  {t(
+                    stalePendingReview
+                      ? "workspace.repositories.pendingReviewOutdated"
+                      : "workspace.repositories.pendingReviewRestored"
+                  )}
+                </AlertTitle>
+                <AlertDescription>
+                  {t(
+                    stalePendingReview
+                      ? "workspace.repositories.pendingReviewOutdatedDescription"
+                      : "workspace.repositories.pendingReviewRestoredDescription",
+                    {
+                      count: comments.length + (pendingReview.uneditableCommentCount ?? 0),
+                    }
+                  )}
+                </AlertDescription>
+              </Alert>
+            ) : null}
+            {result.isPending ? (
+              Array.from({ length: 4 }, (_, index) => (
+                <Skeleton key={index} className="h-32 w-full" />
+              ))
+            ) : error ? (
+              <Empty className="min-h-80">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <FileDiff />
+                  </EmptyMedia>
+                  <EmptyTitle>{t("workspace.repositories.pullRequestFilesLoadFailed")}</EmptyTitle>
+                  <EmptyDescription>{error.message}</EmptyDescription>
+                </EmptyHeader>
+                <EmptyContent>
+                  <Button variant="outline" onClick={() => void result.refetch()}>
+                    <RefreshCw data-icon="inline-start" />
+                    {t("workspace.repositories.retry")}
+                  </Button>
+                </EmptyContent>
+              </Empty>
+            ) : data?.files.length ? (
+              data.files.map((file, index) => (
+                <Collapsible
+                  key={`${file.sha ?? file.path}-${file.path}`}
+                  defaultOpen={index < 2}
+                  className="overflow-hidden rounded-lg border"
+                >
+                  <div className="bg-card/45 flex min-w-0 items-center gap-2 border-b px-2 py-1.5">
+                    <CollapsibleTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="group min-w-0 flex-1 justify-start"
+                      >
+                        <ChevronDown className="transition-transform group-data-[state=closed]:-rotate-90" />
+                        <span className="truncate font-mono text-[11px]">{file.path}</span>
+                      </Button>
+                    </CollapsibleTrigger>
+                    <Badge variant="outline" className="shrink-0 rounded-md text-[9px]">
+                      {t(`workspace.repositories.fileStatuses.${file.status}`, {
+                        defaultValue: file.status,
+                      })}
+                    </Badge>
+                    <span className="text-success text-[10px]">+{file.additions}</span>
+                    <span className="text-destructive text-[10px]">-{file.deletions}</span>
+                    {file.blobUrl ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-xs"
+                            aria-label={t("workspace.repositories.viewSource")}
+                            onClick={() => file.blobUrl && void openExternalUrl(file.blobUrl)}
+                          >
+                            <ExternalLink />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>{t("workspace.repositories.viewSource")}</TooltipContent>
+                      </Tooltip>
+                    ) : null}
+                  </div>
+                  <CollapsibleContent>
+                    <PullRequestFileDiff
+                      file={file}
+                      viewType={viewType}
+                      repository={repository}
+                      pullRequest={pullRequest}
+                      comments={comments}
+                      threads={reviewThreads}
+                      canCreateComment={
+                        !pendingReviewResult.isPending && !pendingReviewError && !stalePendingReview
+                      }
+                      onSaveComment={saveComment}
+                      onDeleteComment={deleteComment}
+                    />
+                  </CollapsibleContent>
+                </Collapsible>
+              ))
+            ) : (
+              <Empty className="min-h-80">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <FileDiff />
+                  </EmptyMedia>
+                  <EmptyTitle>{t("workspace.repositories.noPullRequestFiles")}</EmptyTitle>
+                </EmptyHeader>
+              </Empty>
+            )}
+            {data ? (
+              <GitHubPagination
+                page={data.page}
+                hasPrevious={data.hasPrevious}
+                hasMore={data.hasMore}
+                onPageChange={onPageChange}
+                ariaLabel={t("workspace.repositories.pullRequestFilePagination")}
+              />
+            ) : null}
+            {reviewThreadsResult.hasNextPage ? (
+              <div className="border-border/50 flex justify-center border-t pt-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={reviewThreadsResult.isFetchingNextPage}
+                  onClick={() => void reviewThreadsResult.fetchNextPage()}
+                >
+                  {reviewThreadsResult.isFetchingNextPage ? (
+                    <Spinner data-icon="inline-start" />
+                  ) : null}
+                  {t(
+                    reviewThreadsResult.isFetchingNextPage
+                      ? "workspace.repositories.loadingMoreReviewThreads"
+                      : "workspace.repositories.loadMoreReviewThreads"
+                  )}
+                </Button>
+              </div>
+            ) : null}
+          </div>
+        </ScrollArea>
+        <GitHubPullRequestReviewDialog
+          repository={repository}
+          pullRequest={pullRequest}
+          open={reviewOpen}
+          onOpenChange={setReviewOpen}
+          pendingReview={pendingReview}
+          onPendingReviewChange={setPendingReview}
+        />
+      </div>
+    </GitHubReactionsProvider>
   );
 }

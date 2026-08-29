@@ -8,25 +8,32 @@ use crate::{
     error::AppError,
     github::{
         GitHubAuthEvent, GitHubBlame, GitHubCheckPage, GitHubCheckSuite, GitHubCodeOverview,
-        GitHubCodeScanningInstancePage, GitHubCodeSearchPage, GitHubConnection,
-        GitHubContentListing, GitHubContributionSummary, GitHubDeveloperFeedPage,
-        GitHubDiscoverySearchKind, GitHubDiscoverySearchPage, GitHubDiscoverySearchSort,
-        GitHubDiscussionAnsweredFilter, GitHubDiscussionCategoryPage, GitHubDiscussionCloseReason,
-        GitHubDiscussionComment, GitHubDiscussionCommentDeletion, GitHubDiscussionDeletion,
-        GitHubDiscussionDetailPage, GitHubDiscussionFilters, GitHubDiscussionPage,
-        GitHubDiscussionPoll, GitHubDiscussionSort, GitHubDiscussionState,
+        GitHubCodeScanningInstancePage, GitHubCodeSearchPage, GitHubCommentMutation,
+        GitHubCommitDetailPage, GitHubConnection, GitHubContentListing, GitHubContributionSummary,
+        GitHubConversationControls, GitHubConversationKind, GitHubConversationLockAction,
+        GitHubConversationLockReason, GitHubConversationSubscriptionAction,
+        GitHubDeveloperFeedPage, GitHubDiscoverySearchKind, GitHubDiscoverySearchPage,
+        GitHubDiscoverySearchSort, GitHubDiscussionAnsweredFilter, GitHubDiscussionCategoryPage,
+        GitHubDiscussionCloseReason, GitHubDiscussionComment, GitHubDiscussionCommentDeletion,
+        GitHubDiscussionDeletion, GitHubDiscussionDetailPage, GitHubDiscussionFilters,
+        GitHubDiscussionPage, GitHubDiscussionPoll, GitHubDiscussionSort, GitHubDiscussionState,
         GitHubDiscussionStateFilter, GitHubDiscussionSummary, GitHubDiscussionVote,
         GitHubFileDownload, GitHubFileDownloadResult, GitHubFilePreview, GitHubForkInput,
         GitHubForkResult, GitHubGist, GitHubGistComment, GitHubGistCommentMutation,
         GitHubGistCommentPage, GitHubGistCreateInput, GitHubGistFileInput, GitHubGistFileMutation,
         GitHubGistPage, GitHubGistRevisionDetail, GitHubGistRevisionPage, GitHubGistSource,
-        GitHubGistUpdateInput, GitHubIssue, GitHubIssueAssigneePage, GitHubIssueAssignment,
-        GitHubIssueDetailPage, GitHubIssueFilters, GitHubIssueInboxFilters, GitHubIssueInboxPage,
-        GitHubIssueInboxScope, GitHubIssueLabelPage, GitHubIssueMilestonePage, GitHubIssuePage,
-        GitHubIssueSort, GitHubIssueState, GitHubIssueTimelineItem, GitHubLoginAvailability,
-        GitHubNotificationAction, GitHubNotificationPage, GitHubPendingPullRequestReview,
-        GitHubProfileActivityPage, GitHubProfileConnectionKind, GitHubProjectDetail,
-        GitHubProjectFilters, GitHubProjectItem, GitHubProjectItemAction,
+        GitHubGistUpdateInput, GitHubInsightsTrafficPeriod, GitHubIssue, GitHubIssueAssigneePage,
+        GitHubIssueAssignment, GitHubIssueDetailPage, GitHubIssueFilters, GitHubIssueInboxFilters,
+        GitHubIssueInboxPage, GitHubIssueInboxScope, GitHubIssueLabel, GitHubIssueLabelMutation,
+        GitHubIssueLabelPage, GitHubIssueMilestone, GitHubIssueMilestoneMutation,
+        GitHubIssueMilestonePage, GitHubIssuePage, GitHubIssueSort, GitHubIssueState,
+        GitHubIssueTimelineItem, GitHubLoginAvailability, GitHubNotificationAction,
+        GitHubNotificationPage, GitHubPackage, GitHubPackagePage, GitHubPackageType,
+        GitHubPackageVersionMutationInput, GitHubPackageVersionMutationResult,
+        GitHubPackageVersionPage, GitHubPackageVersionState, GitHubPackageVisibility,
+        GitHubPagesHealth, GitHubPagesMutation, GitHubPagesWorkspace,
+        GitHubPendingPullRequestReview, GitHubProfileActivityPage, GitHubProfileConnectionKind,
+        GitHubProjectDetail, GitHubProjectFilters, GitHubProjectItem, GitHubProjectItemAction,
         GitHubProjectItemAddition, GitHubProjectItemFilters, GitHubProjectItemUpdate,
         GitHubProjectPage, GitHubProjectSort, GitHubProjectStateFilter, GitHubProjectSummary,
         GitHubProjectUpdate, GitHubPullRequest, GitHubPullRequestAutoMergeStatus,
@@ -39,16 +46,23 @@ use crate::{
         GitHubPullRequestReviewTeamPage, GitHubPullRequestReviewThreadComment,
         GitHubPullRequestReviewThreadPage, GitHubPullRequestReviewThreadResolution,
         GitHubPullRequestReviewThreadState, GitHubPullRequestSort, GitHubPullRequestState,
+        GitHubReactionContent, GitHubReactionSubject, GitHubReactionSubjectRef,
+        GitHubReceivedRepositoryInvitationAction, GitHubReceivedRepositoryInvitationPage,
         GitHubRelease, GitHubReleaseArchiveFormat, GitHubReleaseAsset, GitHubReleaseMutationInput,
-        GitHubReleasePage, GitHubRepositoryCommitPage, GitHubRepositoryCreateInput,
-        GitHubRepositoryCreationOptions, GitHubRepositoryFileCommit, GitHubRepositoryFileMutation,
-        GitHubRepositoryPage, GitHubRepositoryRelationship, GitHubRepositorySettings,
-        GitHubRepositorySettingsUpdate, GitHubRepositoryWatchLevel,
-        GitHubSecretScanningLocationPage, GitHubSecurityAlertDetail, GitHubSecurityAlertFilters,
-        GitHubSecurityAlertKind, GitHubSecurityAlertMutation, GitHubSecurityAlertPage,
-        GitHubSecurityAlertSeverityFilter, GitHubSecurityAlertSort, GitHubSecurityAlertStateFilter,
-        GitHubStarredRepositoryPage, GitHubStarredRepositorySort, GitHubTagPage, GitHubUserPage,
-        GitHubUserProfile, GitHubUserProfileUpdate, GitHubWorkflow, GitHubWorkflowArtifactPage,
+        GitHubReleasePage, GitHubRepositoryCollaboratorPage, GitHubRepositoryCommitPage,
+        GitHubRepositoryCreateInput, GitHubRepositoryCreationOptions, GitHubRepositoryFileCommit,
+        GitHubRepositoryFileMutation, GitHubRepositoryInsightsContributors,
+        GitHubRepositoryInsightsOverview, GitHubRepositoryInsightsTraffic,
+        GitHubRepositoryInvitationPage, GitHubRepositoryInviteResult, GitHubRepositoryPage,
+        GitHubRepositoryRelationship, GitHubRepositorySettings, GitHubRepositorySettingsUpdate,
+        GitHubRepositoryWatchLevel, GitHubSecretScanningLocationPage, GitHubSecurityAlertDetail,
+        GitHubSecurityAlertFilters, GitHubSecurityAlertKind, GitHubSecurityAlertMutation,
+        GitHubSecurityAlertPage, GitHubSecurityAlertSeverityFilter, GitHubSecurityAlertSort,
+        GitHubSecurityAlertStateFilter, GitHubStarredRepositoryPage, GitHubStarredRepositorySort,
+        GitHubTagPage, GitHubUserPage, GitHubUserProfile, GitHubUserProfileUpdate,
+        GitHubWikiComparison, GitHubWikiHistoryPage, GitHubWikiMutationResult, GitHubWikiOverview,
+        GitHubWikiPage, GitHubWikiPageMutationInput, GitHubWikiRevertInput, GitHubWikiRevision,
+        GitHubWikiSearchResult, GitHubWorkflow, GitHubWorkflowArtifactPage,
         GitHubWorkflowDispatchConfig, GitHubWorkflowDispatchOptions, GitHubWorkflowJobLog,
         GitHubWorkflowJobPage, GitHubWorkflowRun, GitHubWorkflowRunAction,
         GitHubWorkflowRunFilterOptions, GitHubWorkflowRunFilters, GitHubWorkflowRunPage,
@@ -224,6 +238,77 @@ pub async fn github_update_user_follow(
 }
 
 #[tauri::command]
+pub async fn github_list_personal_packages(
+    package_type: GitHubPackageType,
+    visibility: Option<GitHubPackageVisibility>,
+    page: u32,
+    state: State<'_, AppState>,
+) -> Result<GitHubPackagePage, AppError> {
+    state
+        .github
+        .personal_packages(
+            package_type,
+            visibility,
+            crate::github::packages::validate_package_page(page)?,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_get_personal_package(
+    package_type: GitHubPackageType,
+    package_name: String,
+    state: State<'_, AppState>,
+) -> Result<GitHubPackage, AppError> {
+    state
+        .github
+        .personal_package(
+            package_type,
+            &crate::github::packages::normalize_package_name(&package_name)?,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_list_personal_package_versions(
+    package_type: GitHubPackageType,
+    package_name: String,
+    version_state: GitHubPackageVersionState,
+    page: u32,
+    state: State<'_, AppState>,
+) -> Result<GitHubPackageVersionPage, AppError> {
+    state
+        .github
+        .personal_package_versions(
+            package_type,
+            &crate::github::packages::normalize_package_name(&package_name)?,
+            version_state,
+            crate::github::packages::validate_package_page(page)?,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_mutate_personal_package_version(
+    input: GitHubPackageVersionMutationInput,
+    state: State<'_, AppState>,
+) -> Result<GitHubPackageVersionMutationResult, AppError> {
+    if input.expected_package_id == 0 || input.version_id == 0 {
+        return Err(AppError::Validation(
+            "package and version identifiers must be positive".to_string(),
+        ));
+    }
+    let input = GitHubPackageVersionMutationInput {
+        package_name: crate::github::packages::normalize_package_name(&input.package_name)?,
+        expected_version_name: crate::github::packages::normalize_package_version_name(
+            &input.expected_version_name,
+        )?,
+        ..input
+    };
+    state.github.mutate_personal_package_version(&input).await
+}
+
+#[tauri::command]
 pub async fn github_list_repositories(
     page: u32,
     state: State<'_, AppState>,
@@ -338,6 +423,96 @@ pub async fn github_get_personal_repository_settings(
 }
 
 #[tauri::command]
+pub async fn github_list_personal_repository_collaborators(
+    owner: String,
+    repository: String,
+    page: u32,
+    state: State<'_, AppState>,
+) -> Result<GitHubRepositoryCollaboratorPage, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .personal_repository_collaborators(
+            repository.owner(),
+            repository.name(),
+            validate_page(page)?,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_list_personal_repository_invitations(
+    owner: String,
+    repository: String,
+    page: u32,
+    state: State<'_, AppState>,
+) -> Result<GitHubRepositoryInvitationPage, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .personal_repository_invitations(
+            repository.owner(),
+            repository.name(),
+            validate_page(page)?,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_invite_personal_repository_collaborator(
+    owner: String,
+    repository: String,
+    username: String,
+    state: State<'_, AppState>,
+) -> Result<GitHubRepositoryInviteResult, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .invite_personal_repository_collaborator(
+            repository.owner(),
+            repository.name(),
+            &crate::github::profile::normalize_user_login(&username)?,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_cancel_personal_repository_invitation(
+    owner: String,
+    repository: String,
+    invitation_id: u64,
+    state: State<'_, AppState>,
+) -> Result<(), AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .cancel_personal_repository_invitation(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(invitation_id, "repository invitation")?,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_remove_personal_repository_collaborator(
+    owner: String,
+    repository: String,
+    username: String,
+    state: State<'_, AppState>,
+) -> Result<(), AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .remove_personal_repository_collaborator(
+            repository.owner(),
+            repository.name(),
+            &crate::github::profile::normalize_user_login(&username)?,
+        )
+        .await
+}
+
+#[tauri::command]
 pub async fn github_update_personal_repository_settings(
     owner: String,
     repository: String,
@@ -370,6 +545,47 @@ pub async fn github_delete_personal_repository(
             repository.name(),
             &validate_repository_deletion_confirmation(confirmation)?,
         )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_get_repository_pages(
+    owner: String,
+    repository: String,
+    page: u32,
+    state: State<'_, AppState>,
+) -> Result<GitHubPagesWorkspace, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .repository_pages(repository.owner(), repository.name(), validate_page(page)?)
+        .await
+}
+
+#[tauri::command]
+pub async fn github_get_repository_pages_health(
+    owner: String,
+    repository: String,
+    state: State<'_, AppState>,
+) -> Result<GitHubPagesHealth, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .repository_pages_health(repository.owner(), repository.name())
+        .await
+}
+
+#[tauri::command]
+pub async fn github_mutate_repository_pages(
+    owner: String,
+    repository: String,
+    mutation: GitHubPagesMutation,
+    state: State<'_, AppState>,
+) -> Result<GitHubPagesWorkspace, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .mutate_repository_pages(repository.owner(), repository.name(), mutation)
         .await
 }
 
@@ -532,6 +748,32 @@ pub async fn github_mark_all_notifications_read(
     state: State<'_, AppState>,
 ) -> Result<(), AppError> {
     state.github.mark_all_notifications_read().await
+}
+
+#[tauri::command]
+pub async fn github_list_received_repository_invitations(
+    page: u32,
+    state: State<'_, AppState>,
+) -> Result<GitHubReceivedRepositoryInvitationPage, AppError> {
+    state
+        .github
+        .received_repository_invitations(validate_page(page)?)
+        .await
+}
+
+#[tauri::command]
+pub async fn github_update_received_repository_invitation(
+    invitation_id: u64,
+    action: GitHubReceivedRepositoryInvitationAction,
+    state: State<'_, AppState>,
+) -> Result<(), AppError> {
+    state
+        .github
+        .update_received_repository_invitation(
+            validate_item_number(invitation_id, "repository invitation")?,
+            action,
+        )
+        .await
 }
 
 #[tauri::command]
@@ -1020,6 +1262,44 @@ pub async fn github_delete_repository_discussion_comment(
 }
 
 #[tauri::command]
+pub async fn github_get_repository_reactions(
+    owner: String,
+    repository: String,
+    subjects: Vec<GitHubReactionSubjectRef>,
+    state: State<'_, AppState>,
+) -> Result<Vec<GitHubReactionSubject>, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    let subjects = crate::github::reaction::normalize_reaction_subjects(subjects)?;
+    state
+        .github
+        .reaction_subjects(repository.owner(), repository.name(), &subjects)
+        .await
+}
+
+#[tauri::command]
+pub async fn github_update_repository_reaction(
+    owner: String,
+    repository: String,
+    subject: GitHubReactionSubjectRef,
+    content: GitHubReactionContent,
+    reacted: bool,
+    state: State<'_, AppState>,
+) -> Result<GitHubReactionSubject, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    let subject = crate::github::reaction::normalize_reaction_subject(subject)?;
+    state
+        .github
+        .update_reaction(
+            repository.owner(),
+            repository.name(),
+            &subject,
+            content,
+            reacted,
+        )
+        .await
+}
+
+#[tauri::command]
 pub async fn github_list_repository_releases(
     owner: String,
     repository: String,
@@ -1289,6 +1569,34 @@ pub async fn github_list_repository_issue_milestones(
 }
 
 #[tauri::command]
+pub async fn github_mutate_repository_issue_label(
+    owner: String,
+    repository: String,
+    mutation: GitHubIssueLabelMutation,
+    state: State<'_, AppState>,
+) -> Result<Option<GitHubIssueLabel>, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .mutate_issue_label(repository.owner(), repository.name(), mutation)
+        .await
+}
+
+#[tauri::command]
+pub async fn github_mutate_repository_issue_milestone(
+    owner: String,
+    repository: String,
+    mutation: GitHubIssueMilestoneMutation,
+    state: State<'_, AppState>,
+) -> Result<Option<GitHubIssueMilestone>, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .mutate_issue_milestone(repository.owner(), repository.name(), mutation)
+        .await
+}
+
+#[tauri::command]
 pub async fn github_get_repository_issue(
     owner: String,
     repository: String,
@@ -1304,6 +1612,72 @@ pub async fn github_get_repository_issue(
             repository.name(),
             validate_item_number(issue_number, "issue")?,
             validate_page(timeline_page)?,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_get_repository_conversation_controls(
+    owner: String,
+    repository: String,
+    conversation_number: u64,
+    conversation_kind: GitHubConversationKind,
+    state: State<'_, AppState>,
+) -> Result<GitHubConversationControls, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .conversation_controls(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(conversation_number, "conversation")?,
+            conversation_kind,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_update_repository_conversation_lock(
+    owner: String,
+    repository: String,
+    conversation_number: u64,
+    conversation_kind: GitHubConversationKind,
+    action: GitHubConversationLockAction,
+    reason: Option<GitHubConversationLockReason>,
+    state: State<'_, AppState>,
+) -> Result<GitHubConversationControls, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .update_conversation_lock(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(conversation_number, "conversation")?,
+            conversation_kind,
+            action,
+            reason,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_update_repository_conversation_subscription(
+    owner: String,
+    repository: String,
+    conversation_number: u64,
+    conversation_kind: GitHubConversationKind,
+    action: GitHubConversationSubscriptionAction,
+    state: State<'_, AppState>,
+) -> Result<GitHubConversationControls, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .update_conversation_subscription(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(conversation_number, "conversation")?,
+            conversation_kind,
+            action,
         )
         .await
 }
@@ -1394,6 +1768,26 @@ pub async fn github_create_repository_issue_comment(
             repository.name(),
             validate_item_number(issue_number, "issue")?,
             validate_issue_comment(&body)?,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_mutate_repository_issue_comment(
+    owner: String,
+    repository: String,
+    issue_number: u64,
+    mutation: GitHubCommentMutation,
+    state: State<'_, AppState>,
+) -> Result<Option<GitHubIssueTimelineItem>, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .mutate_issue_comment(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(issue_number, "issue")?,
+            &validate_comment_mutation(mutation)?,
         )
         .await
 }
@@ -1891,6 +2285,26 @@ pub async fn github_create_repository_pull_request_comment(
 }
 
 #[tauri::command]
+pub async fn github_mutate_repository_pull_request_comment(
+    owner: String,
+    repository: String,
+    pull_request_number: u64,
+    mutation: GitHubCommentMutation,
+    state: State<'_, AppState>,
+) -> Result<Option<GitHubIssueTimelineItem>, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .mutate_pull_request_comment(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(pull_request_number, "pull request")?,
+            &validate_comment_mutation(mutation)?,
+        )
+        .await
+}
+
+#[tauri::command]
 pub async fn github_create_repository_pull_request_review(
     owner: String,
     repository: String,
@@ -2138,6 +2552,26 @@ pub async fn github_reply_to_pull_request_review_thread(
     state
         .github
         .reply_to_pull_request_review_thread(&thread_id, &body)
+        .await
+}
+
+#[tauri::command]
+pub async fn github_mutate_repository_pull_request_review_comment(
+    owner: String,
+    repository: String,
+    pull_request_number: u64,
+    mutation: GitHubCommentMutation,
+    state: State<'_, AppState>,
+) -> Result<Option<GitHubPullRequestReviewThreadComment>, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .mutate_pull_request_review_comment(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(pull_request_number, "pull request")?,
+            &validate_comment_mutation(mutation)?,
+        )
         .await
 }
 
@@ -2507,6 +2941,46 @@ pub async fn github_get_repository_code_overview(
 }
 
 #[tauri::command]
+pub async fn github_get_repository_insights_overview(
+    owner: String,
+    repository: String,
+    state: State<'_, AppState>,
+) -> Result<GitHubRepositoryInsightsOverview, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .repository_insights_overview(repository.owner(), repository.name())
+        .await
+}
+
+#[tauri::command]
+pub async fn github_get_repository_insights_contributors(
+    owner: String,
+    repository: String,
+    state: State<'_, AppState>,
+) -> Result<GitHubRepositoryInsightsContributors, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .repository_insights_contributors(repository.owner(), repository.name())
+        .await
+}
+
+#[tauri::command]
+pub async fn github_get_repository_insights_traffic(
+    owner: String,
+    repository: String,
+    period: GitHubInsightsTrafficPeriod,
+    state: State<'_, AppState>,
+) -> Result<GitHubRepositoryInsightsTraffic, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .repository_insights_traffic(repository.owner(), repository.name(), period)
+        .await
+}
+
+#[tauri::command]
 pub async fn github_list_repository_commits(
     owner: String,
     repository: String,
@@ -2524,6 +2998,26 @@ pub async fn github_list_repository_commits(
             &validate_reference(reference)?,
             &validate_repository_path(path)?,
             validate_page(page)?,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_get_repository_commit(
+    owner: String,
+    repository: String,
+    commit_sha: String,
+    page: u32,
+    state: State<'_, AppState>,
+) -> Result<GitHubCommitDetailPage, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .commit_detail(
+            repository.owner(),
+            repository.name(),
+            &validate_full_commit_sha(commit_sha)?,
+            validate_commit_file_page(page)?,
         )
         .await
 }
@@ -2716,6 +3210,219 @@ pub async fn github_delete_repository_branch(
             &crate::github::code::write::normalize_git_sha(&expected_sha)?,
         )
         .await
+}
+
+#[tauri::command]
+pub async fn github_get_repository_wiki(
+    owner: String,
+    repository: String,
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<GitHubWikiOverview, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .repository_wiki_overview(
+            wiki_cache_root(&app)?,
+            repository.owner(),
+            repository.name(),
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_get_repository_wiki_page(
+    owner: String,
+    repository: String,
+    repository_id: u64,
+    head_sha: String,
+    path: String,
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<GitHubWikiPage, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .repository_wiki_page(
+            wiki_cache_root(&app)?,
+            repository_id,
+            repository.owner(),
+            repository.name(),
+            &head_sha,
+            &path,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_search_repository_wiki(
+    owner: String,
+    repository: String,
+    repository_id: u64,
+    head_sha: String,
+    query: String,
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<GitHubWikiSearchResult, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .search_repository_wiki(
+            wiki_cache_root(&app)?,
+            repository_id,
+            repository.owner(),
+            repository.name(),
+            &head_sha,
+            &query,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_list_repository_wiki_history(
+    owner: String,
+    repository: String,
+    repository_id: u64,
+    head_sha: String,
+    path: String,
+    page: u32,
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<GitHubWikiHistoryPage, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .repository_wiki_history(
+            wiki_cache_root(&app)?,
+            repository_id,
+            repository.owner(),
+            repository.name(),
+            &head_sha,
+            &path,
+            page,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_get_repository_wiki_revision(
+    owner: String,
+    repository: String,
+    repository_id: u64,
+    commit_sha: String,
+    path: String,
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<GitHubWikiRevision, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .repository_wiki_revision(
+            wiki_cache_root(&app)?,
+            repository_id,
+            repository.owner(),
+            repository.name(),
+            &commit_sha,
+            &path,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_compare_repository_wiki_revisions(
+    owner: String,
+    repository: String,
+    repository_id: u64,
+    path: String,
+    base_sha: String,
+    head_sha: String,
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<GitHubWikiComparison, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .compare_repository_wiki_revisions(
+            wiki_cache_root(&app)?,
+            repository_id,
+            repository.owner(),
+            repository.name(),
+            &path,
+            &base_sha,
+            &head_sha,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_mutate_repository_wiki_page(
+    owner: String,
+    repository: String,
+    input: GitHubWikiPageMutationInput,
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<GitHubWikiMutationResult, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .mutate_repository_wiki_page(
+            wiki_cache_root(&app)?,
+            repository.owner(),
+            repository.name(),
+            input,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_delete_repository_wiki_page(
+    owner: String,
+    repository: String,
+    path: String,
+    expected_head: String,
+    expected_blob_sha: String,
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<GitHubWikiMutationResult, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .delete_repository_wiki_page(
+            wiki_cache_root(&app)?,
+            repository.owner(),
+            repository.name(),
+            &path,
+            &expected_head,
+            &expected_blob_sha,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_revert_repository_wiki_page(
+    owner: String,
+    repository: String,
+    input: GitHubWikiRevertInput,
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<GitHubWikiMutationResult, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .revert_repository_wiki_page(
+            wiki_cache_root(&app)?,
+            repository.owner(),
+            repository.name(),
+            input,
+        )
+        .await
+}
+
+fn wiki_cache_root(app: &AppHandle) -> Result<PathBuf, AppError> {
+    app.path()
+        .app_cache_dir()
+        .map(|path| path.join("github-wikis"))
+        .map_err(|error| AppError::FileSystem(error.to_string()))
 }
 
 async fn choose_open_file(app: &AppHandle) -> Result<Option<PathBuf>, AppError> {
@@ -3416,6 +4123,43 @@ fn validate_issue_comment(body: &str) -> Result<&str, AppError> {
     Ok(body)
 }
 
+fn validate_comment_mutation(
+    mutation: GitHubCommentMutation,
+) -> Result<GitHubCommentMutation, AppError> {
+    match mutation {
+        GitHubCommentMutation::Update {
+            comment_id,
+            expected_updated_at,
+            body,
+        } => Ok(GitHubCommentMutation::Update {
+            comment_id: validate_graphql_node_id(comment_id, "comment")?,
+            expected_updated_at: validate_comment_updated_at(expected_updated_at)?,
+            body: validate_issue_body(body)?,
+        }),
+        GitHubCommentMutation::Delete {
+            comment_id,
+            expected_updated_at,
+        } => Ok(GitHubCommentMutation::Delete {
+            comment_id: validate_graphql_node_id(comment_id, "comment")?,
+            expected_updated_at: validate_comment_updated_at(expected_updated_at)?,
+        }),
+    }
+}
+
+fn validate_comment_updated_at(updated_at: String) -> Result<String, AppError> {
+    let updated_at = updated_at.trim().to_string();
+    if updated_at.is_empty()
+        || updated_at.len() > 128
+        || updated_at.chars().any(char::is_control)
+        || !updated_at.contains('T')
+    {
+        return Err(AppError::Validation(
+            "GitHub comment revision is invalid".to_string(),
+        ));
+    }
+    Ok(updated_at)
+}
+
 fn validate_commit_id(commit_id: String) -> Result<String, AppError> {
     let commit_id = commit_id.trim().to_string();
     if !(7..=128).contains(&commit_id.len())
@@ -3424,6 +4168,16 @@ fn validate_commit_id(commit_id: String) -> Result<String, AppError> {
         return Err(AppError::Validation("commit id is invalid".to_string()));
     }
     Ok(commit_id)
+}
+
+fn validate_full_commit_sha(commit_sha: String) -> Result<String, AppError> {
+    let commit_sha = validate_commit_id(commit_sha)?;
+    if commit_sha.len() != 40 {
+        return Err(AppError::Validation(
+            "a full 40-character commit SHA is required".to_string(),
+        ));
+    }
+    Ok(commit_sha)
 }
 
 fn validate_optional_commit_title(title: Option<String>) -> Result<Option<String>, AppError> {
@@ -3515,6 +4269,15 @@ fn validate_pull_request_review_comments(
 fn validate_page(page: u32) -> Result<u32, AppError> {
     if !(1..=1_000).contains(&page) {
         return Err(AppError::Validation("page is out of range".to_string()));
+    }
+    Ok(page)
+}
+
+fn validate_commit_file_page(page: u32) -> Result<u32, AppError> {
+    if !(1..=30).contains(&page) {
+        return Err(AppError::Validation(
+            "commit file page is out of range".to_string(),
+        ));
     }
     Ok(page)
 }
@@ -3841,6 +4604,23 @@ mod tests {
     }
 
     #[test]
+    fn commit_detail_requires_a_full_sha_and_bounded_file_page() {
+        assert_eq!(
+            validate_full_commit_sha(" aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ".to_string())
+                .expect("full commit SHA"),
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        );
+        assert!(validate_full_commit_sha("abcdef1".to_string()).is_err());
+        assert!(
+            validate_full_commit_sha("gggggggggggggggggggggggggggggggggggggggg".to_string())
+                .is_err()
+        );
+        assert_eq!(validate_commit_file_page(30).expect("last page"), 30);
+        assert!(validate_commit_file_page(0).is_err());
+        assert!(validate_commit_file_page(31).is_err());
+    }
+
+    #[test]
     fn developer_feed_pages_match_githubs_three_hundred_event_window() {
         assert_eq!(validate_developer_feed_page(1).expect("first page"), 1);
         assert_eq!(validate_developer_feed_page(10).expect("last page"), 10);
@@ -3878,6 +4658,40 @@ mod tests {
         let body = "  ```rust\nfn harbor() {}\n```  ";
         assert_eq!(validate_issue_comment(body).expect("comment"), body);
         assert!(validate_issue_comment(" \n\t ").is_err());
+    }
+
+    #[test]
+    fn comment_mutations_validate_node_revision_and_body() {
+        let mutation = validate_comment_mutation(GitHubCommentMutation::Update {
+            comment_id: "  IC_kwDOexample  ".to_string(),
+            expected_updated_at: " 2026-08-29T08:01:00Z ".to_string(),
+            body: "  Markdown body  ".to_string(),
+        })
+        .expect("comment update");
+        assert_eq!(mutation.comment_id(), "IC_kwDOexample");
+        assert!(matches!(
+            mutation,
+            GitHubCommentMutation::Update {
+                expected_updated_at,
+                body,
+                ..
+            } if expected_updated_at == "2026-08-29T08:01:00Z" && body == "  Markdown body  "
+        ));
+        let empty = validate_comment_mutation(GitHubCommentMutation::Update {
+            comment_id: "IC_kwDOexample".to_string(),
+            expected_updated_at: "2026-08-29T08:01:00Z".to_string(),
+            body: String::new(),
+        })
+        .expect("explicit empty comment update");
+        assert!(matches!(
+            empty,
+            GitHubCommentMutation::Update { body, .. } if body.is_empty()
+        ));
+        assert!(validate_comment_mutation(GitHubCommentMutation::Delete {
+            comment_id: "bad node".to_string(),
+            expected_updated_at: "not-a-revision".to_string(),
+        })
+        .is_err());
     }
 
     #[test]

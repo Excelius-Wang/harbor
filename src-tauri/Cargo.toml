@@ -3,6 +3,9 @@ name = "harbor"
 version = "0.1.0"
 description = "A focused GitHub desktop workspace"
 edition = "2021"
+authors = ["Excelius-Wang"]
+license = "AGPL-3.0-only"
+repository = "https://github.com/Excelius-Wang/harbor"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -25,6 +28,7 @@ serde_json = "1"
 serde_yaml_ng = "0.10"
 async-trait = "0.1"
 base64 = "0.22"
+git2 = { version = "0.21", features = ["https", "vendored-libgit2"] }
 httparse = "1"
 keyring = "4.1.6"
 octocrab = "0.54.1"
@@ -33,6 +37,7 @@ reqwest = { version = "0.13", default-features = false, features = ["rustls", "s
 thiserror = "2"
 tokio = { version = "1", features = ["fs", "io-util", "macros", "net", "rt-multi-thread", "sync", "time"] }
 tokio-util = { version = "0.7", features = ["io"] }
+url = "2.5"
 oauth2 = { version = "5.0.0", features = ["timing-resistant-secret-traits"] }
 tauri-plugin-dialog = "2"
 http = "1"
@@ -42,3 +47,6 @@ percent-encoding = "2"
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-single-instance = "2"
 tauri-plugin-updater = "2"
+
+[dev-dependencies]
+tempfile = "3"

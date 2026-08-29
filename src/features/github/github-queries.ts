@@ -4,8 +4,11 @@ import type {
   GitHubBlame,
   GitHubCodeOverview,
   GitHubCodeSearchPage,
+  GitHubCommitDetailPage,
   GitHubCheckPage,
   GitHubCheckSuite,
+  GitHubConversationControls,
+  GitHubConversationKind,
   GitHubContentListing,
   GitHubDiscussionAnsweredFilter,
   GitHubDiscussionCategoryPage,
@@ -34,7 +37,17 @@ import type {
   GitHubIssuePage,
   GitHubIssueSort,
   GitHubIssueState,
+  GitHubInsightsTrafficPeriod,
   GitHubNotificationPage,
+  GitHubPackage,
+  GitHubPackagePage,
+  GitHubPackageType,
+  GitHubPackageVersionPage,
+  GitHubPackageVersionState,
+  GitHubPackageVisibility,
+  GitHubReceivedRepositoryInvitationPage,
+  GitHubPagesHealth,
+  GitHubPagesWorkspace,
   GitHubContributionSummary,
   GitHubProfileActivityPage,
   GitHubProfileConnectionKind,
@@ -56,10 +69,17 @@ import type {
   GitHubPullRequestReviewTeamPage,
   GitHubPullRequestSort,
   GitHubPullRequestState,
+  GitHubReactionSubject,
+  GitHubReactionSubjectRef,
   GitHubRelease,
   GitHubReleasePage,
   GitHubRepositoryPage,
+  GitHubRepositoryInsightsContributors,
+  GitHubRepositoryInsightsOverview,
+  GitHubRepositoryInsightsTraffic,
+  GitHubRepositoryCollaboratorPage,
   GitHubRepositoryCreationOptions,
+  GitHubRepositoryInvitationPage,
   GitHubRepositoryRelationship,
   GitHubRepositorySettings,
   GitHubRepositoryCommitPage,
@@ -84,6 +104,12 @@ import type {
   GitHubWorkflowRunPage,
   GitHubWorkflowRunFilterOptions,
   GitHubWorkflowRunFilters,
+  GitHubWikiOverview,
+  GitHubWikiComparison,
+  GitHubWikiHistoryPage,
+  GitHubWikiPage,
+  GitHubWikiRevision,
+  GitHubWikiSearchResult,
   GitHubUserPage,
   GitHubUserProfile,
 } from "./github-data";
@@ -100,7 +126,48 @@ type GitHubContentsTarget = GitHubCodeTarget & {
   path: string;
 };
 
-type GitHubRepositoryTarget = Pick<GitHubCodeTarget, "owner" | "repository">;
+export type GitHubRepositoryTarget = Pick<GitHubCodeTarget, "owner" | "repository">;
+
+export type GitHubReactionsTarget = GitHubRepositoryTarget & {
+  subjects: GitHubReactionSubjectRef[];
+};
+
+export type GitHubReactionTarget = GitHubRepositoryTarget & {
+  subject: GitHubReactionSubjectRef;
+};
+
+type GitHubInsightsTrafficTarget = GitHubRepositoryTarget & {
+  period: GitHubInsightsTrafficPeriod;
+};
+
+export type GitHubWikiPageTarget = GitHubRepositoryTarget & {
+  repositoryId: number;
+  headSha: string;
+  path: string;
+};
+
+export type GitHubWikiHistoryTarget = GitHubWikiPageTarget & {
+  page: number;
+};
+
+export type GitHubWikiRevisionTarget = GitHubRepositoryTarget & {
+  repositoryId: number;
+  commitSha: string;
+  path: string;
+};
+
+export type GitHubWikiComparisonTarget = GitHubRepositoryTarget & {
+  repositoryId: number;
+  path: string;
+  baseSha: string;
+  headSha: string;
+};
+
+export type GitHubWikiSearchTarget = GitHubRepositoryTarget & {
+  repositoryId: number;
+  headSha: string;
+  query: string;
+};
 
 export type GitHubDiscussionsTarget = GitHubRepositoryTarget & {
   categoryId: string | null;
@@ -111,6 +178,11 @@ export type GitHubDiscussionsTarget = GitHubRepositoryTarget & {
 
 export type GitHubDiscussionTarget = GitHubRepositoryTarget & {
   discussionNumber: number;
+};
+
+export type GitHubConversationTarget = GitHubRepositoryTarget & {
+  conversationNumber: number;
+  conversationKind: GitHubConversationKind;
 };
 
 export type GitHubReleasesTarget = GitHubRepositoryTarget & {
@@ -178,6 +250,22 @@ export type GitHubGistsTarget = {
   source: GitHubGistSource;
 };
 
+export type GitHubPackagesTarget = {
+  packageType: GitHubPackageType;
+  visibility: GitHubPackageVisibility | null;
+  page: number;
+};
+
+export type GitHubPackageTarget = {
+  packageType: GitHubPackageType;
+  packageName: string;
+};
+
+export type GitHubPackageVersionsTarget = GitHubPackageTarget & {
+  state: GitHubPackageVersionState;
+  page: number;
+};
+
 export type GitHubGistTarget = {
   gistId: string;
 };
@@ -210,6 +298,10 @@ export type GitHubProjectTarget = {
   number: number;
   query: string;
   archived: boolean;
+};
+
+export type GitHubPagesTarget = GitHubRepositoryTarget & {
+  page: number;
 };
 
 export type GitHubSecurityAlertsTarget = GitHubRepositoryTarget & {
@@ -297,6 +389,10 @@ type GitHubRepositoryCommitsTarget = GitHubContentsTarget & {
   page: number;
 };
 
+export type GitHubCommitDetailTarget = GitHubRepositoryTarget & {
+  commitSha: string;
+};
+
 type GitHubTagsTarget = GitHubRepositoryTarget & {
   page: number;
 };
@@ -320,6 +416,44 @@ export const githubQueryKeys = {
   repositoryCreationOptions: ["github", "repository-creation-options"] as const,
   repositorySettings: ({ owner, repository }: GitHubRepositoryTarget) =>
     ["github", "repository", owner, repository, "settings"] as const,
+  repositoryInsightsRoot: ({ owner, repository }: GitHubRepositoryTarget) =>
+    ["github", "repository", owner, repository, "insights"] as const,
+  repositoryInsightsOverview: ({ owner, repository }: GitHubRepositoryTarget) =>
+    ["github", "repository", owner, repository, "insights", "overview"] as const,
+  repositoryInsightsContributors: ({ owner, repository }: GitHubRepositoryTarget) =>
+    ["github", "repository", owner, repository, "insights", "contributors"] as const,
+  repositoryInsightsTraffic: ({ owner, repository, period }: GitHubInsightsTrafficTarget) =>
+    ["github", "repository", owner, repository, "insights", "traffic", period] as const,
+  repositoryWiki: ({ owner, repository }: GitHubRepositoryTarget) =>
+    ["github", "repository", owner, repository, "wiki"] as const,
+  repositoryWikiPage: ({ owner, repository, headSha, path }: GitHubWikiPageTarget) =>
+    ["github", "repository", owner, repository, "wiki", "page", headSha, path] as const,
+  repositoryWikiSearch: ({ owner, repository, headSha, query }: GitHubWikiSearchTarget) =>
+    ["github", "repository", owner, repository, "wiki", "search", headSha, query] as const,
+  repositoryWikiHistory: ({ owner, repository, headSha, path, page }: GitHubWikiHistoryTarget) =>
+    ["github", "repository", owner, repository, "wiki", "history", headSha, path, page] as const,
+  repositoryWikiRevision: ({ owner, repository, commitSha, path }: GitHubWikiRevisionTarget) =>
+    ["github", "repository", owner, repository, "wiki", "revision", commitSha, path] as const,
+  repositoryWikiComparison: ({
+    owner,
+    repository,
+    baseSha,
+    headSha,
+    path,
+  }: GitHubWikiComparisonTarget) =>
+    ["github", "repository", owner, repository, "wiki", "compare", baseSha, headSha, path] as const,
+  repositoryAccess: ({ owner, repository }: GitHubRepositoryTarget) =>
+    ["github", "repository", owner, repository, "access"] as const,
+  repositoryCollaborators: ({ owner, repository }: GitHubRepositoryTarget) =>
+    ["github", "repository", owner, repository, "access", "collaborators"] as const,
+  repositoryInvitations: ({ owner, repository }: GitHubRepositoryTarget) =>
+    ["github", "repository", owner, repository, "access", "invitations"] as const,
+  repositoryPages: ({ owner, repository, page }: GitHubPagesTarget) =>
+    ["github", "repository", owner, repository, "pages", page] as const,
+  repositoryPagesRoot: ({ owner, repository }: GitHubRepositoryTarget) =>
+    ["github", "repository", owner, repository, "pages"] as const,
+  repositoryPagesHealth: ({ owner, repository }: GitHubRepositoryTarget) =>
+    ["github", "repository", owner, repository, "pages-health"] as const,
   profile: ({ username }: GitHubProfileTarget) =>
     ["github", "profile", username ?? "viewer"] as const,
   profilesRoot: ["github", "profile"] as const,
@@ -333,6 +467,15 @@ export const githubQueryKeys = {
     ["github", "profile", username, "activity"] as const,
   gists: ({ source }: GitHubGistsTarget) => ["github", "gists", source] as const,
   gistsRoot: ["github", "gists"] as const,
+  packages: ({ packageType, visibility, page }: GitHubPackagesTarget) =>
+    ["github", "personal-packages", packageType, visibility ?? "all", page] as const,
+  packagesRoot: ["github", "personal-packages"] as const,
+  package: ({ packageType, packageName }: GitHubPackageTarget) =>
+    ["github", "personal-package", packageType, packageName] as const,
+  packageVersions: ({ packageType, packageName, state, page }: GitHubPackageVersionsTarget) =>
+    ["github", "personal-package", packageType, packageName, "versions", state, page] as const,
+  packageVersionsRoot: ({ packageType, packageName }: GitHubPackageTarget) =>
+    ["github", "personal-package", packageType, packageName, "versions"] as const,
   gist: ({ gistId }: GitHubGistTarget) => ["github", "gist", gistId] as const,
   gistRoot: (gistId: string) => ["github", "gist", gistId] as const,
   gistRevisions: ({ gistId }: GitHubGistTarget) => ["github", "gist", gistId, "revisions"] as const,
@@ -342,6 +485,7 @@ export const githubQueryKeys = {
   notifications: ({ participating, page }: GitHubNotificationsTarget) =>
     ["github", "notifications", participating ? "participating" : "all", page] as const,
   notificationsRoot: ["github", "notifications"] as const,
+  receivedRepositoryInvitations: ["github", "repository-invitations"] as const,
   projects: ({ state, query, sort }: GitHubProjectsTarget) =>
     ["github", "personal-projects", state, query, sort] as const,
   projectsRoot: ["github", "personal-projects"] as const,
@@ -453,6 +597,28 @@ export const githubQueryKeys = {
     ["github", "repository", owner, repository, "discussions"] as const,
   discussionDetail: ({ owner, repository, discussionNumber }: GitHubDiscussionTarget) =>
     ["github", "repository", owner, repository, "discussion", discussionNumber] as const,
+  reactions: ({ owner, repository, subjects }: GitHubReactionsTarget) =>
+    [
+      "github",
+      "repository",
+      owner,
+      repository,
+      "reactions",
+      ...subjects.map((subject) => `${subject.kind}:${subject.id}`),
+    ] as const,
+  reaction: ({ owner, repository, subject }: GitHubReactionTarget) =>
+    [
+      "github",
+      "repository",
+      owner,
+      repository,
+      "reactions",
+      "subject",
+      subject.kind,
+      subject.id,
+    ] as const,
+  reactionsRoot: ({ owner, repository }: GitHubRepositoryTarget) =>
+    ["github", "repository", owner, repository, "reactions"] as const,
   releases: ({ owner, repository, page }: GitHubReleasesTarget) =>
     ["github", "repository", owner, repository, "releases", page] as const,
   releasesRoot: ({ owner, repository }: GitHubRepositoryTarget) =>
@@ -469,6 +635,8 @@ export const githubQueryKeys = {
     ["github", "repository", owner, repository, "file", reference, path] as const,
   commits: ({ owner, repository, reference, path, page }: GitHubRepositoryCommitsTarget) =>
     ["github", "repository", owner, repository, "commits", reference, path, page] as const,
+  commitDetail: ({ owner, repository, commitSha }: GitHubCommitDetailTarget) =>
+    ["github", "repository", owner, repository, "commit", commitSha] as const,
   tags: ({ owner, repository, page }: GitHubTagsTarget) =>
     ["github", "repository", owner, repository, "tags", page] as const,
   blame: ({ owner, repository, reference, path }: GitHubContentsTarget) =>
@@ -516,6 +684,21 @@ export const githubQueryKeys = {
     ] as const,
   issueRoot: ({ owner, repository, issueNumber }: Omit<GitHubIssueDetailTarget, "timelinePage">) =>
     ["github", "repository", owner, repository, "issue", issueNumber] as const,
+  conversationControls: ({
+    owner,
+    repository,
+    conversationKind,
+    conversationNumber,
+  }: GitHubConversationTarget) =>
+    [
+      "github",
+      "repository",
+      owner,
+      repository,
+      "conversation-controls",
+      conversationKind,
+      conversationNumber,
+    ] as const,
   issueLabels: ({ owner, repository }: GitHubRepositoryTarget) =>
     ["github", "repository", owner, repository, "issue-labels"] as const,
   issueAssignees: ({ owner, repository }: GitHubRepositoryTarget) =>
@@ -835,6 +1018,135 @@ export function personalRepositorySettingsQueryOptions(target: GitHubRepositoryT
   });
 }
 
+export function repositoryInsightsOverviewQueryOptions(target: GitHubRepositoryTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.repositoryInsightsOverview(target),
+    queryFn: () =>
+      invoke<GitHubRepositoryInsightsOverview>("github_get_repository_insights_overview", target),
+    staleTime: GITHUB_QUERY_STALE_TIME,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      return data?.commitActivity.status === "building" || data?.codeFrequency.status === "building"
+        ? 5_000
+        : false;
+    },
+  });
+}
+
+export function repositoryInsightsContributorsQueryOptions(target: GitHubRepositoryTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.repositoryInsightsContributors(target),
+    queryFn: () =>
+      invoke<GitHubRepositoryInsightsContributors>(
+        "github_get_repository_insights_contributors",
+        target
+      ),
+    staleTime: GITHUB_QUERY_STALE_TIME,
+    refetchInterval: (query) => (query.state.data?.status === "building" ? 5_000 : false),
+  });
+}
+
+export function repositoryInsightsTrafficQueryOptions(target: GitHubInsightsTrafficTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.repositoryInsightsTraffic(target),
+    queryFn: () =>
+      invoke<GitHubRepositoryInsightsTraffic>("github_get_repository_insights_traffic", target),
+    staleTime: GITHUB_QUERY_STALE_TIME,
+  });
+}
+
+export function repositoryPagesQueryOptions(target: GitHubPagesTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.repositoryPages(target),
+    queryFn: () => invoke<GitHubPagesWorkspace>("github_get_repository_pages", target),
+    staleTime: GITHUB_QUERY_STALE_TIME,
+  });
+}
+
+export function repositoryPagesHealthQueryOptions(target: GitHubRepositoryTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.repositoryPagesHealth(target),
+    queryFn: () => invoke<GitHubPagesHealth>("github_get_repository_pages_health", target),
+    staleTime: GITHUB_QUERY_STALE_TIME,
+  });
+}
+
+export function personalRepositoryCollaboratorsQueryOptions(target: GitHubRepositoryTarget) {
+  return infiniteQueryOptions({
+    queryKey: githubQueryKeys.repositoryCollaborators(target),
+    queryFn: ({ pageParam }) =>
+      invoke<GitHubRepositoryCollaboratorPage>("github_list_personal_repository_collaborators", {
+        ...target,
+        page: pageParam,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.page + 1 : undefined),
+    staleTime: GITHUB_QUERY_STALE_TIME,
+  });
+}
+
+export function personalRepositoryInvitationsQueryOptions(target: GitHubRepositoryTarget) {
+  return infiniteQueryOptions({
+    queryKey: githubQueryKeys.repositoryInvitations(target),
+    queryFn: ({ pageParam }) =>
+      invoke<GitHubRepositoryInvitationPage>("github_list_personal_repository_invitations", {
+        ...target,
+        page: pageParam,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.page + 1 : undefined),
+    staleTime: GITHUB_QUERY_STALE_TIME,
+  });
+}
+
+export function repositoryWikiQueryOptions(target: GitHubRepositoryTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.repositoryWiki(target),
+    queryFn: () => invoke<GitHubWikiOverview>("github_get_repository_wiki", target),
+    staleTime: GITHUB_QUERY_STALE_TIME,
+  });
+}
+
+export function repositoryWikiPageQueryOptions(target: GitHubWikiPageTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.repositoryWikiPage(target),
+    queryFn: () => invoke<GitHubWikiPage>("github_get_repository_wiki_page", target),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+}
+
+export function repositoryWikiSearchQueryOptions(target: GitHubWikiSearchTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.repositoryWikiSearch(target),
+    queryFn: () => invoke<GitHubWikiSearchResult>("github_search_repository_wiki", target),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+}
+
+export function repositoryWikiHistoryQueryOptions(target: GitHubWikiHistoryTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.repositoryWikiHistory(target),
+    queryFn: () => invoke<GitHubWikiHistoryPage>("github_list_repository_wiki_history", target),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+}
+
+export function repositoryWikiRevisionQueryOptions(target: GitHubWikiRevisionTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.repositoryWikiRevision(target),
+    queryFn: () => invoke<GitHubWikiRevision>("github_get_repository_wiki_revision", target),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+}
+
+export function repositoryWikiComparisonQueryOptions(target: GitHubWikiComparisonTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.repositoryWikiComparison(target),
+    queryFn: () => invoke<GitHubWikiComparison>("github_compare_repository_wiki_revisions", target),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+}
+
 export function userProfileQueryOptions(target: GitHubProfileTarget) {
   return queryOptions({
     queryKey: githubQueryKeys.profile(target),
@@ -893,6 +1205,41 @@ export function gistsQueryOptions(target: GitHubGistsTarget) {
   });
 }
 
+export function personalPackagesQueryOptions(target: GitHubPackagesTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.packages(target),
+    queryFn: () =>
+      invoke<GitHubPackagePage>("github_list_personal_packages", {
+        packageType: target.packageType,
+        visibility: target.visibility,
+        page: target.page,
+      }),
+    staleTime: GITHUB_QUERY_STALE_TIME,
+  });
+}
+
+export function personalPackageQueryOptions(target: GitHubPackageTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.package(target),
+    queryFn: () => invoke<GitHubPackage>("github_get_personal_package", target),
+    staleTime: GITHUB_QUERY_STALE_TIME,
+  });
+}
+
+export function personalPackageVersionsQueryOptions(target: GitHubPackageVersionsTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.packageVersions(target),
+    queryFn: () =>
+      invoke<GitHubPackageVersionPage>("github_list_personal_package_versions", {
+        packageType: target.packageType,
+        packageName: target.packageName,
+        versionState: target.state,
+        page: target.page,
+      }),
+    staleTime: GITHUB_QUERY_STALE_TIME,
+  });
+}
+
 export function gistQueryOptions(target: GitHubGistTarget) {
   return queryOptions({
     queryKey: githubQueryKeys.gist(target),
@@ -947,6 +1294,20 @@ export function notificationsQueryOptions(target: GitHubNotificationsTarget) {
       }),
     staleTime: 30_000,
     refetchInterval: 60_000,
+  });
+}
+
+export function receivedRepositoryInvitationsQueryOptions() {
+  return infiniteQueryOptions({
+    queryKey: githubQueryKeys.receivedRepositoryInvitations,
+    queryFn: ({ pageParam }) =>
+      invoke<GitHubReceivedRepositoryInvitationPage>(
+        "github_list_received_repository_invitations",
+        { page: pageParam }
+      ),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.page + 1 : undefined),
+    staleTime: 30_000,
   });
 }
 
@@ -1099,6 +1460,22 @@ export function repositoryCommitsQueryOptions(target: GitHubRepositoryCommitsTar
   });
 }
 
+export function repositoryCommitDetailQueryOptions(target: GitHubCommitDetailTarget) {
+  return infiniteQueryOptions({
+    queryKey: githubQueryKeys.commitDetail(target),
+    queryFn: ({ pageParam }) =>
+      invoke<GitHubCommitDetailPage>("github_get_repository_commit", {
+        owner: target.owner,
+        repository: target.repository,
+        commitSha: target.commitSha,
+        page: pageParam,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.page + 1 : undefined),
+    staleTime: 30 * GITHUB_QUERY_STALE_TIME,
+  });
+}
+
 export function repositoryTagsQueryOptions(target: GitHubTagsTarget) {
   return queryOptions({
     queryKey: githubQueryKeys.tags(target),
@@ -1205,6 +1582,14 @@ export function discussionDetailQueryOptions(target: GitHubDiscussionTarget) {
   });
 }
 
+export function repositoryReactionsQueryOptions(target: GitHubReactionsTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.reactions(target),
+    queryFn: () => invoke<GitHubReactionSubject[]>("github_get_repository_reactions", target),
+    staleTime: GITHUB_QUERY_STALE_TIME,
+  });
+}
+
 export function repositoryReleasesQueryOptions(target: GitHubReleasesTarget) {
   return queryOptions({
     queryKey: githubQueryKeys.releases(target),
@@ -1256,6 +1641,15 @@ export function repositoryIssueDetailQueryOptions(target: GitHubIssueDetailTarge
         issueNumber: target.issueNumber,
         timelinePage: target.timelinePage,
       }),
+    staleTime: GITHUB_QUERY_STALE_TIME,
+  });
+}
+
+export function repositoryConversationControlsQueryOptions(target: GitHubConversationTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.conversationControls(target),
+    queryFn: () =>
+      invoke<GitHubConversationControls>("github_get_repository_conversation_controls", target),
     staleTime: GITHUB_QUERY_STALE_TIME,
   });
 }

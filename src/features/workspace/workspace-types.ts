@@ -4,6 +4,7 @@ export type WorkspaceSection =
   | "pullRequests"
   | "projects"
   | "gists"
+  | "packages"
   | "profile"
   | "repositories"
   | "discover";

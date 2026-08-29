@@ -1,15 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Check,
-  CircleAlert,
-  CircleSlash2,
-  Flag,
-  LockKeyhole,
-  Pencil,
-  Tag,
-  UserRound,
-} from "lucide-react";
+import { Check, CircleAlert, CircleSlash2, Flag, Pencil, Tag, UserRound } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -43,6 +34,7 @@ import type {
   GitHubItemMetadataValue,
   GitHubRepositoryIdentity,
 } from "./github-data";
+import { GitHubConversationControls } from "./github-conversation-controls";
 import {
   invalidateRepositoryIssue,
   syncUpdatedIssue,
@@ -592,14 +584,12 @@ export function GitHubIssueMetadata({
           void invalidateRepositoryIssue(queryClient, target);
         }}
       />
-      {issue.locked ? (
-        <>
-          <Separator />
-          <p className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
-            <LockKeyhole /> {t("workspace.repositories.lockedConversation")}
-          </p>
-        </>
-      ) : null}
+      <Separator />
+      <GitHubConversationControls
+        repository={repository}
+        conversationKind="issue"
+        conversationNumber={issue.number}
+      />
     </aside>
   );
 }

@@ -29,7 +29,7 @@ pub enum GitHubNotificationSubjectKind {
     CodeScanningAlert,
     SecretScanningAlert,
     SecurityAlert,
-    Repository,
+    RepositoryInvitation,
     Other,
 }
 
@@ -428,7 +428,7 @@ fn notification_subject_kind(subject_type: &str) -> GitHubNotificationSubjectKin
         "CodeScanningAlert" => GitHubNotificationSubjectKind::CodeScanningAlert,
         "SecretScanningAlert" => GitHubNotificationSubjectKind::SecretScanningAlert,
         "SecurityAdvisory" => GitHubNotificationSubjectKind::SecurityAlert,
-        "RepositoryInvitation" => GitHubNotificationSubjectKind::Repository,
+        "RepositoryInvitation" => GitHubNotificationSubjectKind::RepositoryInvitation,
         _ => GitHubNotificationSubjectKind::Other,
     }
 }
@@ -591,6 +591,12 @@ mod tests {
             "hello-world",
             repository_url,
         );
+        let repository_invitation = notification_subject_from_octocrab(
+            notification("RepositoryInvitation", None).subject,
+            "octocat",
+            "hello-world",
+            repository_url,
+        );
 
         assert_eq!(issue.number, Some(9));
         assert_eq!(issue.url, "https://github.com/octocat/hello-world/issues/9");
@@ -614,6 +620,11 @@ mod tests {
             "https://github.com/octocat/hello-world/releases"
         );
         assert_eq!(release.release_id, Some(88));
+        assert_eq!(
+            repository_invitation.kind,
+            GitHubNotificationSubjectKind::RepositoryInvitation
+        );
+        assert_eq!(repository_invitation.url, repository_url);
     }
 
     #[test]

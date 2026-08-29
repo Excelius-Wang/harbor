@@ -6,27 +6,40 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     error::AppError,
-    github_oauth::{GitHubLoginAttempt, GitHubOAuthCredentials, GitHubOAuthSession},
+    github_oauth::{
+        ensure_classic_oauth_app_credentials, GitHubLoginAttempt, GitHubOAuthCredentials,
+        GitHubOAuthSession,
+    },
 };
 
 pub(crate) mod actions;
 pub(crate) mod checks;
 pub(crate) mod code;
+pub(crate) mod comment;
+pub(crate) mod conversation;
 pub(crate) mod discovery;
 pub(crate) mod discussion;
 pub(crate) mod download;
 pub(crate) mod gist;
+pub(crate) mod insights;
 pub(crate) mod issue;
+pub(crate) mod issue_taxonomy;
 pub(crate) mod item_metadata;
 pub(crate) mod notification;
+pub(crate) mod packages;
 pub(crate) mod pending_review;
 pub(crate) mod profile;
 pub(crate) mod projects;
 pub(crate) mod pull_request;
+pub(crate) mod reaction;
 pub(crate) mod release;
+pub(crate) mod repository_access;
+pub(crate) mod repository_invitations;
+pub(crate) mod repository_pages;
 pub(crate) mod repository_relationships;
 pub(crate) mod repository_settings;
 pub(crate) mod security;
+pub(crate) mod wiki;
 pub use actions::{
     GitHubWorkflow, GitHubWorkflowArtifactPage, GitHubWorkflowDispatchConfig,
     GitHubWorkflowDispatchOptions, GitHubWorkflowJobLog, GitHubWorkflowJobPage, GitHubWorkflowRun,
@@ -36,8 +49,13 @@ pub use actions::{
 pub use checks::{GitHubCheckPage, GitHubCheckSuite};
 pub use code::write::{GitHubRepositoryFileCommit, GitHubRepositoryFileMutation};
 pub use code::{
-    GitHubBlame, GitHubCodeOverview, GitHubCodeSearchPage, GitHubContentListing, GitHubFilePreview,
-    GitHubRepositoryCommitPage, GitHubTagPage,
+    GitHubBlame, GitHubCodeOverview, GitHubCodeSearchPage, GitHubCommitDetailPage,
+    GitHubContentListing, GitHubFilePreview, GitHubRepositoryCommitPage, GitHubTagPage,
+};
+pub use comment::GitHubCommentMutation;
+pub use conversation::{
+    GitHubConversationControls, GitHubConversationKind, GitHubConversationLockAction,
+    GitHubConversationLockReason, GitHubConversationSubscriptionAction,
 };
 pub use discovery::{
     GitHubDeveloperFeedPage, GitHubDiscoverySearchKind, GitHubDiscoverySearchPage,
@@ -55,15 +73,29 @@ pub use gist::{
     GitHubGistCreateInput, GitHubGistFileInput, GitHubGistFileMutation, GitHubGistPage,
     GitHubGistRevisionDetail, GitHubGistRevisionPage, GitHubGistSource, GitHubGistUpdateInput,
 };
+pub use insights::{
+    GitHubInsightsTrafficPeriod, GitHubRepositoryInsightsContributors,
+    GitHubRepositoryInsightsOverview, GitHubRepositoryInsightsTraffic,
+};
 #[cfg(test)]
 use issue::GitHubIssueTimelineKind;
 pub use issue::{
     GitHubIssue, GitHubIssueAssigneePage, GitHubIssueAssignment, GitHubIssueDetailPage,
     GitHubIssueFilters, GitHubIssueInboxFilters, GitHubIssueInboxPage, GitHubIssueInboxScope,
-    GitHubIssueLabel, GitHubIssueLabelPage, GitHubIssueMilestonePage, GitHubIssuePage,
-    GitHubIssueSort, GitHubIssueState, GitHubIssueTimelineItem,
+    GitHubIssueLabel, GitHubIssueLabelPage, GitHubIssueMilestone, GitHubIssueMilestonePage,
+    GitHubIssuePage, GitHubIssueSort, GitHubIssueState, GitHubIssueTimelineItem,
 };
+#[cfg(test)]
+use issue_taxonomy::GitHubIssueMilestoneState;
+pub use issue_taxonomy::{GitHubIssueLabelMutation, GitHubIssueMilestoneMutation};
 pub use notification::{GitHubNotificationAction, GitHubNotificationPage};
+#[cfg(test)]
+use packages::GitHubPackageVersionAction;
+pub use packages::{
+    GitHubPackage, GitHubPackagePage, GitHubPackageType, GitHubPackageVersionMutationInput,
+    GitHubPackageVersionMutationResult, GitHubPackageVersionPage, GitHubPackageVersionState,
+    GitHubPackageVisibility,
+};
 pub use profile::{
     GitHubContributionSummary, GitHubProfileActivityPage, GitHubProfileConnectionKind,
     GitHubUserPage, GitHubUserProfile, GitHubUserProfileUpdate,
@@ -85,10 +117,21 @@ pub use pull_request::reviewer::{GitHubPullRequestReviewTeam, GitHubPullRequestR
 pub use pull_request::update_branch::{
     GitHubPullRequestBranchUpdate, GitHubPullRequestBranchUpdateStatus,
 };
+pub use reaction::{
+    GitHubReactionContent, GitHubReactionSubject, GitHubReactionSubjectKind,
+    GitHubReactionSubjectRef,
+};
 pub use release::{
     GitHubRelease, GitHubReleaseArchiveFormat, GitHubReleaseAsset, GitHubReleaseMutationInput,
     GitHubReleasePage,
 };
+pub use repository_access::{
+    GitHubRepositoryCollaboratorPage, GitHubRepositoryInvitationPage, GitHubRepositoryInviteResult,
+};
+pub use repository_invitations::{
+    GitHubReceivedRepositoryInvitationAction, GitHubReceivedRepositoryInvitationPage,
+};
+pub use repository_pages::{GitHubPagesHealth, GitHubPagesMutation, GitHubPagesWorkspace};
 pub use repository_relationships::{
     GitHubForkInput, GitHubForkResult, GitHubRepositoryRelationship, GitHubRepositoryWatchLevel,
     GitHubStarredRepositoryPage, GitHubStarredRepositorySort,
@@ -102,6 +145,11 @@ pub use security::{
     GitHubSecurityAlertFilters, GitHubSecurityAlertKind, GitHubSecurityAlertMutation,
     GitHubSecurityAlertPage, GitHubSecurityAlertSeverityFilter, GitHubSecurityAlertSort,
     GitHubSecurityAlertStateFilter,
+};
+pub use wiki::{
+    GitHubWikiComparison, GitHubWikiHistoryPage, GitHubWikiMutationResult, GitHubWikiOverview,
+    GitHubWikiPage, GitHubWikiPageMutationInput, GitHubWikiRevertInput, GitHubWikiRevision,
+    GitHubWikiSearchResult,
 };
 
 const PULL_REQUEST_SEARCH_PAGE_SIZE: u64 = 30;
@@ -252,6 +300,7 @@ pub struct GitHubPullRequestPage {
 #[serde(rename_all = "camelCase")]
 pub struct GitHubPullRequest {
     pub id: u64,
+    pub reaction_subject: Option<GitHubReactionSubjectRef>,
     pub number: u64,
     pub title: String,
     pub body: Option<String>,
@@ -478,6 +527,11 @@ pub struct GitHubPullRequestReviewThreadComment {
     pub created_at: String,
     pub updated_at: String,
     pub pending: bool,
+    pub viewer_can_update: bool,
+    pub viewer_can_delete: bool,
+    pub is_minimized: bool,
+    pub minimized_reason: Option<String>,
+    pub outdated: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -563,11 +617,16 @@ pub(crate) trait GitHubClient:
     + checks::GitHubCheckClient
     + code::GitHubCodeClient
     + code::write::GitHubCodeMutationClient
+    + comment::GitHubCommentClient
+    + conversation::GitHubConversationClient
     + discussion::GitHubDiscussionClient
     + discovery::GitHubDiscoveryClient
     + gist::GitHubGistClient
+    + insights::GitHubInsightsClient
     + issue::GitHubIssueClient
+    + issue_taxonomy::GitHubIssueTaxonomyClient
     + notification::GitHubNotificationClient
+    + packages::GitHubPackagesClient
     + pending_review::GitHubPendingReviewClient
     + profile::GitHubProfileClient
     + projects::GitHubProjectsClient
@@ -578,10 +637,15 @@ pub(crate) trait GitHubClient:
     + pull_request::merge_queue::GitHubPullRequestMergeQueueClient
     + pull_request::reviewer::GitHubPullRequestReviewerClient
     + pull_request::update_branch::GitHubPullRequestBranchClient
+    + reaction::GitHubReactionClient
     + release::GitHubReleaseClient
+    + repository_access::GitHubRepositoryAccessClient
+    + repository_invitations::GitHubRepositoryInvitationClient
+    + repository_pages::GitHubRepositoryPagesClient
     + repository_relationships::GitHubRepositoryRelationshipsClient
     + repository_settings::GitHubRepositorySettingsClient
     + security::GitHubSecurityClient
+    + wiki::GitHubWikiClient
     + Send
     + Sync
 {
@@ -658,6 +722,7 @@ pub trait CredentialStore: Send + Sync {
 
 pub struct GitHubService {
     client: Arc<dyn GitHubClient>,
+    wiki_store: Arc<dyn wiki::WikiRepositoryStore>,
     credential_store: Arc<dyn CredentialStore>,
     oauth: Option<Arc<GitHubOAuthSession>>,
     session_credentials: RwLock<Option<GitHubOAuthCredentials>>,
@@ -672,6 +737,7 @@ impl GitHubService {
     ) -> Self {
         Self {
             client,
+            wiki_store: Arc::new(wiki::GitWikiRepositoryStore),
             credential_store,
             oauth,
             session_credentials: RwLock::new(None),
@@ -880,6 +946,10 @@ impl GitHubService {
     }
 
     async fn load_access_token(&self) -> Result<String, AppError> {
+        Ok(self.load_credentials().await?.access_token)
+    }
+
+    async fn load_credentials(&self) -> Result<GitHubOAuthCredentials, AppError> {
         if self.oauth.is_none() {
             return Err(AppError::GitHubNotConnected);
         }
@@ -898,6 +968,7 @@ impl GitHubService {
                     .ok_or(AppError::GitHubNotConnected)?
             }
         };
+        ensure_classic_oauth_app_credentials(&credentials)?;
         let refreshed = match &self.oauth {
             Some(oauth) => oauth.refresh_if_needed(credentials.clone()).await?,
             None => credentials.clone(),
@@ -911,13 +982,12 @@ impl GitHubService {
             .await
             .map_err(|error| AppError::Credentials(error.to_string()))??;
         }
-        let access_token = refreshed.access_token.clone();
         *self
             .session_credentials
             .write()
             .map_err(|_| AppError::GitHub("connection state is unavailable".to_string()))? =
-            Some(refreshed);
-        Ok(access_token)
+            Some(refreshed.clone());
+        Ok(refreshed)
     }
 }
 
@@ -1060,15 +1130,26 @@ impl GitHubClient for OctocrabGitHubClient {
         let pull_request = pull_request.map_err(github_error)?;
         let timeline = timeline.map_err(github_error)?;
         let reviews = reviews.map_err(github_error)?;
+        let timeline_has_more = timeline.next.is_some();
+        let timeline = timeline
+            .items
+            .into_iter()
+            .enumerate()
+            .map(|(index, event)| timeline_item_from_octocrab(event, index))
+            .collect();
+        let timeline = comment::enrich_issue_timeline_comments(
+            &client,
+            owner,
+            repository,
+            pull_request_number,
+            comment::GitHubConversationCommentKind::PullRequest,
+            timeline,
+        )
+        .await?;
 
         Ok(GitHubPullRequestDetailPage {
             pull_request: pull_request_from_octocrab(pull_request),
-            timeline: timeline
-                .items
-                .into_iter()
-                .enumerate()
-                .map(|(index, event)| timeline_item_from_octocrab(event, index))
-                .collect(),
+            timeline,
             reviews: reviews
                 .items
                 .into_iter()
@@ -1077,7 +1158,7 @@ impl GitHubClient for OctocrabGitHubClient {
             reviews_have_more: reviews.next.is_some(),
             timeline_page,
             timeline_has_previous: timeline_page > 1,
-            timeline_has_more: timeline.next.is_some(),
+            timeline_has_more,
         })
     }
 
@@ -1328,13 +1409,18 @@ mutation AddPullRequestReviewThreadReply($threadId: ID!, $body: String!) {
   ) {
     comment {
       id
-      databaseId
+      databaseId: fullDatabaseId
       body
       url
       createdAt
       updatedAt
       authorAssociation
       state
+      isMinimized
+      minimizedReason
+      outdated
+      viewerCanUpdate
+      viewerCanDelete
       author {
         login
         avatarUrl
@@ -1449,13 +1535,18 @@ query PullRequestReviewThreads(
           comments(first: $commentsFirst) {
             nodes {
               id
-              databaseId
+              databaseId: fullDatabaseId
               body
               url
               createdAt
               updatedAt
               authorAssociation
               state
+              isMinimized
+              minimizedReason
+              outdated
+              viewerCanUpdate
+              viewerCanDelete
               author {
                 login
                 avatarUrl
@@ -1533,6 +1624,7 @@ struct PullRequestReviewThreadCommentsConnection {
 #[serde(rename_all = "camelCase")]
 struct PullRequestReviewThreadCommentNode {
     id: String,
+    #[serde(default, deserialize_with = "deserialize_optional_graphql_u64")]
     database_id: Option<u64>,
     author: Option<GraphQlActor>,
     author_association: Option<String>,
@@ -1541,6 +1633,31 @@ struct PullRequestReviewThreadCommentNode {
     created_at: String,
     updated_at: String,
     state: String,
+    is_minimized: bool,
+    minimized_reason: Option<String>,
+    outdated: bool,
+    viewer_can_update: bool,
+    viewer_can_delete: bool,
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum GraphQlU64 {
+    Number(u64),
+    String(String),
+}
+
+fn deserialize_optional_graphql_u64<'de, D>(deserializer: D) -> Result<Option<u64>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = Option::<GraphQlU64>::deserialize(deserializer)?;
+    value
+        .map(|value| match value {
+            GraphQlU64::Number(value) => Ok(value),
+            GraphQlU64::String(value) => value.parse().map_err(serde::de::Error::custom),
+        })
+        .transpose()
 }
 
 #[derive(Deserialize)]
@@ -1798,6 +1915,10 @@ fn pull_request_from_octocrab(
 
     GitHubPullRequest {
         id: pull_request.id.into_inner(),
+        reaction_subject: pull_request.node_id.map(|id| GitHubReactionSubjectRef {
+            id,
+            kind: GitHubReactionSubjectKind::PullRequest,
+        }),
         number: pull_request.number,
         title: pull_request
             .title
@@ -2013,6 +2134,11 @@ fn pull_request_review_thread_comment_from_graphql(
         created_at: comment.created_at,
         updated_at: comment.updated_at,
         pending: comment.state.eq_ignore_ascii_case("PENDING"),
+        viewer_can_update: comment.viewer_can_update,
+        viewer_can_delete: comment.viewer_can_delete,
+        is_minimized: comment.is_minimized,
+        minimized_reason: comment.minimized_reason,
+        outdated: comment.outdated,
     }
 }
 
@@ -2246,6 +2372,10 @@ mod tests {
             Ok(GitHubPullRequestDetailPage {
                 pull_request: GitHubPullRequest {
                     id: 3,
+                    reaction_subject: Some(GitHubReactionSubjectRef {
+                        id: "PR_3".to_string(),
+                        kind: GitHubReactionSubjectKind::PullRequest,
+                    }),
                     number: pull_request_number,
                     title: "Ship the PR workspace".to_string(),
                     body: Some("Pull request body".to_string()),
@@ -2383,6 +2513,11 @@ mod tests {
                 created_at: "2026-08-27T08:00:00Z".to_string(),
                 updated_at: "2026-08-27T08:00:00Z".to_string(),
                 pending: false,
+                viewer_can_update: true,
+                viewer_can_delete: true,
+                is_minimized: false,
+                minimized_reason: None,
+                outdated: false,
             })
         }
 
@@ -2448,6 +2583,7 @@ mod tests {
                 access_token: self.access_token.to_string(),
                 refresh_token: Some("github-refresh-token".to_string()),
                 expires_at: None,
+                scopes: Vec::new(),
             })
         }
 
@@ -2459,6 +2595,7 @@ mod tests {
                 access_token: self.access_token.to_string(),
                 refresh_token: Some("rotated-refresh-token".to_string()),
                 expires_at: None,
+                scopes: Vec::new(),
             })
         }
     }
@@ -2468,6 +2605,7 @@ mod tests {
             access_token: "github-user-access-token".to_string(),
             refresh_token: Some("github-refresh-token".to_string()),
             expires_at: None,
+            scopes: Vec::new(),
         }
     }
 
@@ -2558,6 +2696,31 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn status_rejects_a_saved_github_app_user_token() {
+        let credentials = Arc::new(MemoryCredentialStore::default());
+        credentials
+            .save_github_credentials(&GitHubOAuthCredentials {
+                access_token: "ghu_saved-github-app-token".to_string(),
+                refresh_token: None,
+                expires_at: None,
+                scopes: Vec::new(),
+            })
+            .expect("seed credentials");
+        let service = GitHubService::new(
+            Arc::new(FakeGitHubClient),
+            credentials,
+            Some(oauth_session("github-user-access-token")),
+        );
+
+        let result = service.status().await;
+
+        assert!(matches!(
+            result,
+            Err(AppError::GitHubAuthentication(message)) if message.contains("OAuth App")
+        ));
+    }
+
+    #[tokio::test]
     async fn disconnect_removes_credentials_and_cached_identity() {
         let credentials = Arc::new(MemoryCredentialStore::default());
         credentials
@@ -2595,6 +2758,10 @@ mod tests {
 
         let repositories = service.repositories(1).await.expect("repositories");
         let notifications = service.notifications(true, 2).await.expect("notifications");
+        let repository_invitations = service
+            .received_repository_invitations(1)
+            .await
+            .expect("repository invitations");
         let issue_filters = GitHubIssueFilters {
             state: GitHubIssueState::Open,
             assignment: GitHubIssueAssignment::All,
@@ -2639,6 +2806,28 @@ mod tests {
             .discussion_detail("octocat", "hello-world", 42, None)
             .await
             .expect("discussion detail");
+        let reaction_subject = GitHubReactionSubjectRef {
+            id: "I_kwDOA".to_string(),
+            kind: GitHubReactionSubjectKind::Issue,
+        };
+        let reactions = service
+            .reaction_subjects(
+                "octocat",
+                "hello-world",
+                std::slice::from_ref(&reaction_subject),
+            )
+            .await
+            .expect("reaction subjects");
+        let updated_reaction = service
+            .update_reaction(
+                "octocat",
+                "hello-world",
+                &reaction_subject,
+                GitHubReactionContent::Heart,
+                true,
+            )
+            .await
+            .expect("updated reaction");
         let releases = service
             .releases("octocat", "hello-world", 2)
             .await
@@ -2701,6 +2890,15 @@ mod tests {
             .code_overview("octocat", "hello-world", "main")
             .await
             .expect("code overview");
+        let commit = service
+            .commit_detail(
+                "octocat",
+                "hello-world",
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                1,
+            )
+            .await
+            .expect("commit detail");
         let contents = service
             .contents("octocat", "hello-world", "main", "")
             .await
@@ -2747,11 +2945,14 @@ mod tests {
             "octocat/hello-world"
         );
         assert_eq!(notifications.page, 2);
+        assert_eq!(repository_invitations.page, 1);
         assert_eq!(issues.issues[0].number, 7);
         assert_eq!(issue_inbox.issues[0].issue.number, 7);
         assert!(discussion_categories.enabled);
         assert_eq!(discussions.discussions[0].number, 42);
         assert_eq!(discussion.comments[0].body, "A focused answer.");
+        assert_eq!(reactions[0].id, reaction_subject.id);
+        assert!(updated_reaction.groups[0].viewer_has_reacted);
         assert_eq!(releases.page, 2);
         assert_eq!(release.tag_name, "v1.0.0");
         assert_eq!(release_asset.bytes, b"release-asset");
@@ -2760,6 +2961,7 @@ mod tests {
         assert_eq!(updated_release.tag_name, "v1.0.0");
         assert_eq!(uploaded_asset.name, "harbor.dmg");
         assert_eq!(overview.commits[0].short_sha, "abc1234");
+        assert_eq!(commit.commit.short_sha, "aaaaaaa");
         assert_eq!(contents.entries[0].path, "src");
         assert_eq!(workflows[0].name, "CI");
         assert_eq!(workflow_runs.page, 2);
@@ -2791,6 +2993,104 @@ mod tests {
             .mark_all_notifications_read()
             .await
             .expect("mark all notifications read");
+        service
+            .update_received_repository_invitation(
+                73,
+                GitHubReceivedRepositoryInvitationAction::Accept,
+            )
+            .await
+            .expect("accept repository invitation");
+    }
+
+    #[tokio::test]
+    async fn conversation_controls_use_the_saved_connection() {
+        let credentials = Arc::new(MemoryCredentialStore::default());
+        credentials
+            .save_github_credentials(&oauth_credentials())
+            .expect("seed credentials");
+        let service = GitHubService::new(
+            Arc::new(FakeGitHubClient),
+            credentials,
+            Some(oauth_session("github-user-access-token")),
+        );
+
+        let controls = service
+            .conversation_controls("octocat", "hello-world", 7, GitHubConversationKind::Issue)
+            .await
+            .expect("conversation controls");
+        let locked = service
+            .update_conversation_lock(
+                "octocat",
+                "hello-world",
+                7,
+                GitHubConversationKind::Issue,
+                GitHubConversationLockAction::Lock,
+                Some(GitHubConversationLockReason::Resolved),
+            )
+            .await
+            .expect("lock conversation");
+        let subscribed = service
+            .update_conversation_subscription(
+                "octocat",
+                "hello-world",
+                7,
+                GitHubConversationKind::Issue,
+                GitHubConversationSubscriptionAction::Subscribe,
+            )
+            .await
+            .expect("subscribe to conversation");
+
+        assert!(!controls.locked);
+        assert!(locked.locked);
+        assert_eq!(
+            locked.lock_reason,
+            Some(GitHubConversationLockReason::Resolved)
+        );
+        assert_eq!(
+            subscribed.viewer_subscription,
+            Some(conversation::GitHubConversationSubscriptionState::Subscribed)
+        );
+    }
+
+    #[tokio::test]
+    async fn repository_access_uses_the_saved_connection() {
+        let credentials = Arc::new(MemoryCredentialStore::default());
+        credentials
+            .save_github_credentials(&oauth_credentials())
+            .expect("seed credentials");
+        let service = GitHubService::new(
+            Arc::new(FakeGitHubClient),
+            credentials,
+            Some(oauth_session("github-user-access-token")),
+        );
+
+        let collaborators = service
+            .personal_repository_collaborators("octocat", "hello-world", 1)
+            .await
+            .expect("repository collaborators");
+        let invitations = service
+            .personal_repository_invitations("octocat", "hello-world", 1)
+            .await
+            .expect("repository invitations");
+        let invited = service
+            .invite_personal_repository_collaborator("octocat", "hello-world", "hubot")
+            .await
+            .expect("invite collaborator");
+        service
+            .cancel_personal_repository_invitation("octocat", "hello-world", 7)
+            .await
+            .expect("cancel invitation");
+        service
+            .remove_personal_repository_collaborator("octocat", "hello-world", "hubot")
+            .await
+            .expect("remove collaborator");
+
+        assert_eq!(collaborators.collaborators[0].login, "hubot");
+        assert!(invitations.invitations.is_empty());
+        assert_eq!(
+            invited.status,
+            repository_access::GitHubRepositoryInviteStatus::Invited
+        );
     }
 
     #[tokio::test]
@@ -2876,10 +3176,52 @@ mod tests {
             .create_issue_comment("octocat", "hello-world", 7, "Fixed in #41.")
             .await
             .expect("issue comment");
+        let updated_comment = service
+            .mutate_issue_comment(
+                "octocat",
+                "hello-world",
+                7,
+                &GitHubCommentMutation::Update {
+                    comment_id: "IC_84".to_string(),
+                    expected_updated_at: "2026-08-26T10:00:00+00:00".to_string(),
+                    body: "Updated Issue comment.".to_string(),
+                },
+            )
+            .await
+            .expect("updated issue comment")
+            .expect("returned issue comment");
         let issue = service
             .update_issue_state("octocat", "hello-world", 7, GitHubIssueState::Closed)
             .await
             .expect("closed issue");
+        let label = service
+            .mutate_issue_label(
+                "octocat",
+                "hello-world",
+                GitHubIssueLabelMutation::Create {
+                    name: " needs-triage ".to_string(),
+                    color: "#A1B2C3".to_string(),
+                    description: " Sort new reports ".to_string(),
+                },
+            )
+            .await
+            .expect("created label")
+            .expect("returned label");
+        let milestone = service
+            .mutate_issue_milestone(
+                "octocat",
+                "hello-world",
+                GitHubIssueMilestoneMutation::Update {
+                    number: 3,
+                    title: " Harbor 1.0 ".to_string(),
+                    description: " Ship the desktop workflow. ".to_string(),
+                    due_on: Some("2026-09-30".to_string()),
+                    state: GitHubIssueMilestoneState::Closed,
+                },
+            )
+            .await
+            .expect("updated milestone")
+            .expect("returned milestone");
 
         assert_eq!(created.number, 9);
         assert_eq!(created.title, "Keep Issue work in Harbor");
@@ -2892,8 +3234,17 @@ mod tests {
         assert_eq!(metadata.milestone_number, Some(3));
         assert_eq!(comment.kind, GitHubIssueTimelineKind::Comment);
         assert_eq!(comment.body.as_deref(), Some("Fixed in #41."));
+        assert_eq!(
+            updated_comment.body.as_deref(),
+            Some("Updated Issue comment.")
+        );
         assert_eq!(issue.state, GitHubIssueState::Closed);
         assert_eq!(issue.state_reason.as_deref(), Some("completed"));
+        assert_eq!(label.name, "needs-triage");
+        assert_eq!(label.color, "a1b2c3");
+        assert_eq!(milestone.title, "Harbor 1.0");
+        assert_eq!(milestone.state, "closed");
+        assert_eq!(milestone.due_on.as_deref(), Some("2026-09-30T00:00:00Z"));
     }
 
     #[tokio::test]
@@ -3126,6 +3477,20 @@ mod tests {
             )
             .await
             .expect("unresolved pull request review thread");
+        let updated_review_comment = service
+            .mutate_pull_request_review_comment(
+                "octocat",
+                "hello-world",
+                12,
+                &GitHubCommentMutation::Update {
+                    comment_id: "PRRC_2".to_string(),
+                    expected_updated_at: "2026-08-27T08:00:00Z".to_string(),
+                    body: "Updated submitted review comment.".to_string(),
+                },
+            )
+            .await
+            .expect("updated submitted review comment")
+            .expect("returned submitted review comment");
 
         assert_eq!(comparison.ahead_by, 1);
         assert_eq!(comparison.head, "feature/create");
@@ -3209,10 +3574,65 @@ mod tests {
         assert!(thread_page.has_more);
         assert_eq!(thread_reply.id, "PRRC_2");
         assert_eq!(thread_reply.body, "Covered by the new regression test.");
+        assert_eq!(
+            updated_review_comment.body,
+            "Updated submitted review comment."
+        );
         assert!(resolved_thread.is_resolved);
         assert!(resolved_thread.viewer_can_unresolve);
         assert!(!unresolved_thread.is_resolved);
         assert!(unresolved_thread.viewer_can_resolve);
+    }
+
+    #[tokio::test]
+    async fn personal_packages_use_the_saved_connection() {
+        let credentials = Arc::new(MemoryCredentialStore::default());
+        credentials
+            .save_github_credentials(&oauth_credentials())
+            .expect("seed credentials");
+        let service = GitHubService::new(
+            Arc::new(FakeGitHubClient),
+            credentials,
+            Some(oauth_session("github-user-access-token")),
+        );
+
+        let page = service
+            .personal_packages(
+                GitHubPackageType::Container,
+                Some(GitHubPackageVisibility::Private),
+                1,
+            )
+            .await
+            .expect("personal packages");
+        let package = service
+            .personal_package(GitHubPackageType::Container, "harbor/desktop")
+            .await
+            .expect("personal package");
+        let versions = service
+            .personal_package_versions(
+                GitHubPackageType::Container,
+                "harbor/desktop",
+                GitHubPackageVersionState::Active,
+                1,
+            )
+            .await
+            .expect("package versions");
+        let mutation = service
+            .mutate_personal_package_version(&GitHubPackageVersionMutationInput {
+                package_type: GitHubPackageType::Container,
+                package_name: "harbor/desktop".to_string(),
+                expected_package_id: 42,
+                version_id: 84,
+                expected_version_name: "sha256:abc123".to_string(),
+                action: GitHubPackageVersionAction::Delete,
+            })
+            .await
+            .expect("package version mutation");
+
+        assert_eq!(page.packages[0].id, 42);
+        assert_eq!(package.name, "harbor/desktop");
+        assert_eq!(versions.versions[0].id, 84);
+        assert_eq!(mutation.action, GitHubPackageVersionAction::Delete);
     }
 
     #[tokio::test]
@@ -3313,6 +3733,78 @@ mod tests {
 
         assert_eq!(branch.name, "feature/code-write");
         assert_eq!(branch.sha, expected_sha);
+    }
+
+    #[tokio::test]
+    async fn repository_insights_use_the_saved_connection() {
+        let credentials = Arc::new(MemoryCredentialStore::default());
+        credentials
+            .save_github_credentials(&oauth_credentials())
+            .expect("seed credentials");
+        let service = GitHubService::new(
+            Arc::new(FakeGitHubClient),
+            credentials,
+            Some(oauth_session("github-user-access-token")),
+        );
+
+        let overview = service
+            .repository_insights_overview("octocat", "hello-world")
+            .await
+            .expect("repository insights overview");
+        let contributors = service
+            .repository_insights_contributors("octocat", "hello-world")
+            .await
+            .expect("repository insights contributors");
+        let traffic = service
+            .repository_insights_traffic("octocat", "hello-world", GitHubInsightsTrafficPeriod::Day)
+            .await
+            .expect("repository insights traffic");
+
+        assert_eq!(overview.community.health_percentage, 75);
+        assert_eq!(contributors.contributors[0].total, 12);
+        assert_eq!(traffic.views.count, 42);
+    }
+
+    #[tokio::test]
+    async fn repository_pages_uses_the_saved_connection() {
+        let credentials = Arc::new(MemoryCredentialStore::default());
+        credentials
+            .save_github_credentials(&oauth_credentials())
+            .expect("seed credentials");
+        let service = GitHubService::new(
+            Arc::new(FakeGitHubClient),
+            credentials,
+            Some(oauth_session("github-user-access-token")),
+        );
+
+        let workspace = service
+            .repository_pages("octocat", "hello-world", 2)
+            .await
+            .expect("Pages workspace");
+        let health = service
+            .repository_pages_health("octocat", "hello-world")
+            .await
+            .expect("Pages health");
+        let updated = service
+            .mutate_repository_pages(
+                "octocat",
+                "hello-world",
+                repository_pages::GitHubPagesMutation::Configure {
+                    configuration: repository_pages::GitHubPagesConfiguration {
+                        build_type: repository_pages::GitHubPagesBuildType::Legacy,
+                        branch: Some(" main ".to_string()),
+                        source_path: Some(repository_pages::GitHubPagesSourcePath::Docs),
+                        custom_domain: Some(" Docs.Example.COM. ".to_string()),
+                        https_enforced: true,
+                    },
+                },
+            )
+            .await
+            .expect("updated Pages workspace");
+
+        assert_eq!(workspace.page, 2);
+        assert!(health.domain.expect("domain health").valid);
+        assert_eq!(updated.page, 1);
     }
 
     #[tokio::test]
@@ -3554,6 +4046,13 @@ mod tests {
         assert_eq!(item.actor.as_deref(), Some("hubot"));
         assert_eq!(item.body.as_deref(), Some("Fixed by **#41**."));
         assert_eq!(item.author_association.as_deref(), Some("CONTRIBUTOR"));
+        assert_eq!(
+            item.reaction_subject,
+            Some(GitHubReactionSubjectRef {
+                id: "IC_42".to_string(),
+                kind: GitHubReactionSubjectKind::IssueComment,
+            })
+        );
     }
 
     #[test]
@@ -3580,6 +4079,13 @@ mod tests {
         assert_eq!(item.body.as_deref(), Some("Fixed in **#41**."));
         assert_eq!(item.author_association.as_deref(), Some("OWNER"));
         assert!(item.updated_at.is_some());
+        assert_eq!(
+            item.reaction_subject,
+            Some(GitHubReactionSubjectRef {
+                id: "IC_84".to_string(),
+                kind: GitHubReactionSubjectKind::IssueComment,
+            })
+        );
     }
 
     #[test]
@@ -3607,6 +4113,13 @@ mod tests {
         assert_eq!(item.actor.as_deref(), Some("reviewer"));
         assert!(item.created_at.is_some());
         assert_eq!(item.body.as_deref(), Some("Looks good."));
+        assert_eq!(
+            item.reaction_subject,
+            Some(GitHubReactionSubjectRef {
+                id: "PRR_43".to_string(),
+                kind: GitHubReactionSubjectKind::PullRequestReview,
+            })
+        );
     }
 
     #[test]
@@ -3672,6 +4185,11 @@ mod tests {
                     created_at: "2026-08-26T12:00:00Z".to_string(),
                     updated_at: "2026-08-26T12:05:00Z".to_string(),
                     state: "PENDING".to_string(),
+                    is_minimized: false,
+                    minimized_reason: None,
+                    outdated: true,
+                    viewer_can_update: true,
+                    viewer_can_delete: true,
                 }],
                 page_info: GraphQlPageInfo {
                     has_next_page: true,
@@ -3689,5 +4207,33 @@ mod tests {
         assert!(thread.comments_have_more);
         assert_eq!(thread.comments[0].author, "reviewer");
         assert!(thread.comments[0].pending);
+    }
+
+    #[test]
+    fn review_comment_database_id_accepts_current_graphql_bigint() {
+        let comment: PullRequestReviewThreadCommentNode =
+            serde_json::from_value(serde_json::json!({
+                "id": "PRRC_5448457835",
+                "databaseId": "5448457835",
+                "author": null,
+                "authorAssociation": "NONE",
+                "body": "A submitted comment",
+                "url": "https://github.com/octocat/hello-world/pull/12#discussion_r5448457835",
+                "createdAt": "2026-08-29T08:00:00Z",
+                "updatedAt": "2026-08-29T08:01:00Z",
+                "state": "SUBMITTED",
+                "isMinimized": false,
+                "minimizedReason": null,
+                "outdated": false,
+                "viewerCanUpdate": true,
+                "viewerCanDelete": true
+            }))
+            .expect("GraphQL BigInt comment fixture");
+
+        assert_eq!(comment.database_id, Some(5_448_457_835));
+        assert!(PULL_REQUEST_REVIEW_THREADS_QUERY.contains("databaseId: fullDatabaseId"));
+        assert!(
+            ADD_PULL_REQUEST_REVIEW_THREAD_REPLY_MUTATION.contains("databaseId: fullDatabaseId")
+        );
     }
 }

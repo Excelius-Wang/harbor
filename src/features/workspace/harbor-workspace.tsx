@@ -9,6 +9,7 @@ import {
   GitPullRequest,
   LayoutGrid,
   Library,
+  PackageOpen,
   Settings,
   UserRound,
 } from "lucide-react";
@@ -61,6 +62,12 @@ const GitHubGists = lazy(() =>
   }))
 );
 
+const GitHubPackages = lazy(() =>
+  import("@/features/github/github-packages-view").then((module) => ({
+    default: module.GitHubPackagesView,
+  }))
+);
+
 const GitHubProfile = lazy(() =>
   import("@/features/github/github-profile-view").then((module) => ({
     default: module.GitHubProfileView,
@@ -76,6 +83,7 @@ const navItems: Array<{
   { id: "pullRequests", icon: GitPullRequest },
   { id: "projects", icon: LayoutGrid },
   { id: "gists", icon: FileCode2 },
+  { id: "packages", icon: PackageOpen },
   { id: "repositories", icon: Library },
   { id: "discover", icon: Compass },
 ];
@@ -274,6 +282,10 @@ export function HarborWorkspace() {
       ) : activeSection === "gists" ? (
         <Suspense fallback={<WorkspaceFallback />}>
           <GitHubGists />
+        </Suspense>
+      ) : activeSection === "packages" ? (
+        <Suspense fallback={<WorkspaceFallback />}>
+          <GitHubPackages />
         </Suspense>
       ) : activeSection === "profile" ? (
         <Suspense fallback={<WorkspaceFallback />}>

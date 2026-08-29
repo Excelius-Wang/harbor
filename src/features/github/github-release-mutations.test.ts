@@ -30,6 +30,7 @@ const target = {
 
 const release: GitHubRelease = {
   id: 88,
+  reactionSubject: { id: "RE_kwDOA", kind: "release" },
   tagName: "v1.0.0",
   targetCommitish: "main",
   url: "https://github.com/octocat/hello-world/releases/tag/v1.0.0",

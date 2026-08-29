@@ -25,6 +25,18 @@ pub enum AppError {
     GitHubPullRequestMergeQueueConflict(String),
     #[error("GitHub could not commit the repository change: {0}")]
     GitHubCodeConflict(String),
+    #[error("GitHub could not update the package: {0}")]
+    GitHubPackageConflict(String),
+    #[error("GitHub Wiki changed: {0}")]
+    GitHubWikiConflict(String),
+    #[error("GitHub Wiki cache miss: {0}")]
+    GitHubWikiCacheMiss(String),
+    #[error("GitHub Wiki content is too large: {0}")]
+    GitHubWikiTooLarge(String),
+    #[error("GitHub Wiki path is unsupported: {0}")]
+    GitHubWikiUnsupportedPath(String),
+    #[error("GitHub comment changed: {0}")]
+    GitHubCommentConflict(String),
     #[error("GitHub workflow artifact has expired")]
     GitHubArtifactExpired,
     #[error("GitHub authentication error: {0}")]
@@ -63,6 +75,12 @@ impl Serialize for AppError {
             Self::GitHubPullRequestAutoMergeConflict(_) => "githubPullRequestAutoMergeConflict",
             Self::GitHubPullRequestMergeQueueConflict(_) => "githubPullRequestMergeQueueConflict",
             Self::GitHubCodeConflict(_) => "githubCodeConflict",
+            Self::GitHubPackageConflict(_) => "githubPackageConflict",
+            Self::GitHubWikiConflict(_) => "githubWikiConflict",
+            Self::GitHubWikiCacheMiss(_) => "githubWikiCacheMiss",
+            Self::GitHubWikiTooLarge(_) => "githubWikiTooLarge",
+            Self::GitHubWikiUnsupportedPath(_) => "githubWikiUnsupportedPath",
+            Self::GitHubCommentConflict(_) => "githubCommentConflict",
             Self::GitHubArtifactExpired => "githubArtifactExpired",
             Self::GitHubAuthentication(_) => "githubAuthentication",
             Self::GitHubNotConnected => "githubNotConnected",
@@ -234,6 +252,38 @@ mod tests {
             serde_json::json!({
                 "code": "githubCodeConflict",
                 "message": "GitHub could not commit the repository change: the file changed before the commit was created"
+            })
+        );
+    }
+
+    #[test]
+    fn github_package_conflict_has_a_stable_ipc_code() {
+        let payload = serde_json::to_value(AppError::GitHubPackageConflict(
+            "the selected version changed".to_string(),
+        ))
+        .expect("serialize error");
+
+        assert_eq!(
+            payload,
+            serde_json::json!({
+                "code": "githubPackageConflict",
+                "message": "GitHub could not update the package: the selected version changed"
+            })
+        );
+    }
+
+    #[test]
+    fn github_comment_conflict_has_a_stable_ipc_code() {
+        let payload = serde_json::to_value(AppError::GitHubCommentConflict(
+            "the comment changed after it was loaded".to_string(),
+        ))
+        .expect("serialize error");
+
+        assert_eq!(
+            payload,
+            serde_json::json!({
+                "code": "githubCommentConflict",
+                "message": "GitHub comment changed: the comment changed after it was loaded"
             })
         );
     }

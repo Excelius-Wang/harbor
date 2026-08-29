@@ -7,7 +7,8 @@ use tokio_util::io::ReaderStream;
 
 use super::{
     authenticated_client, download::safe_download_name, download::safe_download_name_with_suffix,
-    github_error, AppError, GitHubFileDownload, GitHubService, OctocrabGitHubClient,
+    github_error, AppError, GitHubFileDownload, GitHubReactionSubjectKind,
+    GitHubReactionSubjectRef, GitHubService, OctocrabGitHubClient,
 };
 
 const RELEASE_PAGE_SIZE: u8 = 30;
@@ -41,6 +42,7 @@ pub struct GitHubReleaseAsset {
 #[serde(rename_all = "camelCase")]
 pub struct GitHubRelease {
     pub id: u64,
+    pub reaction_subject: GitHubReactionSubjectRef,
     pub tag_name: String,
     pub target_commitish: String,
     pub name: Option<String>,
@@ -796,6 +798,10 @@ fn release_from_octocrab(release: Release) -> Result<GitHubRelease, AppError> {
         .map(|author| (author.login, Some(author.avatar_url.to_string())));
     Ok(GitHubRelease {
         id: release.id.into_inner(),
+        reaction_subject: GitHubReactionSubjectRef {
+            id: release.node_id,
+            kind: GitHubReactionSubjectKind::Release,
+        },
         tag_name: release.tag_name,
         target_commitish: release.target_commitish,
         name: release.name,

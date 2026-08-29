@@ -22,6 +22,137 @@ export type GitHubRepositoryPage = {
   hasMore: boolean;
 };
 
+export type GitHubWikiPageKind = "home" | "page" | "sidebar" | "footer";
+
+export type GitHubWikiPageSummary = {
+  path: string;
+  title: string;
+  kind: GitHubWikiPageKind;
+  markdown: boolean;
+  blobSha: string;
+  byteSize: number;
+};
+
+export type GitHubWikiOverview = {
+  repositoryId: number;
+  enabled: boolean;
+  initialized: boolean;
+  canEdit: boolean;
+  archived: boolean;
+  defaultBranch?: string;
+  headSha?: string;
+  pages: GitHubWikiPageSummary[];
+  sidebar?: GitHubWikiPageSummary;
+  footer?: GitHubWikiPageSummary;
+  unsupportedFileCount: number;
+  truncated: boolean;
+  stale: boolean;
+  fetchedAt?: number;
+  webUrl: string;
+};
+
+export type GitHubWikiPage = GitHubWikiPageSummary & {
+  content: string;
+  headSha: string;
+};
+
+export type GitHubWikiSearchResult = {
+  pages: GitHubWikiPageSummary[];
+  truncated: boolean;
+};
+
+export type GitHubWikiPageMutationInput = {
+  originalPath?: string;
+  title: string;
+  content: string;
+  expectedHead: string;
+  expectedBlobSha?: string;
+  message?: string;
+};
+
+export type GitHubWikiMutationResult = {
+  overview: GitHubWikiOverview;
+  page?: GitHubWikiPage;
+};
+
+export type GitHubWikiRevisionSummary = {
+  sha: string;
+  shortSha: string;
+  message: string;
+  authorName?: string;
+  authoredAt: number;
+};
+
+export type GitHubWikiHistoryPage = {
+  revisions: GitHubWikiRevisionSummary[];
+  page: number;
+  hasMore: boolean;
+  truncated: boolean;
+};
+
+export type GitHubWikiRevision = {
+  revision: GitHubWikiRevisionSummary;
+  path: string;
+  blobSha?: string;
+  content?: string;
+  deleted: boolean;
+  markdown: boolean;
+};
+
+export type GitHubWikiComparison = {
+  path: string;
+  baseSha: string;
+  headSha: string;
+  patch: string;
+  additions: number;
+  deletions: number;
+  truncated: boolean;
+};
+
+export type GitHubWikiRevertInput = {
+  path: string;
+  expectedHead: string;
+  expectedBlobSha: string;
+  sourceCommitSha: string;
+  message?: string;
+};
+
+export type GitHubReactionSubjectKind =
+  | "issue"
+  | "pullRequest"
+  | "issueComment"
+  | "pullRequestReview"
+  | "pullRequestReviewComment"
+  | "discussion"
+  | "discussionComment"
+  | "release";
+
+export type GitHubReactionSubjectRef = {
+  id: string;
+  kind: GitHubReactionSubjectKind;
+};
+
+export type GitHubReactionContent =
+  | "thumbsUp"
+  | "thumbsDown"
+  | "laugh"
+  | "hooray"
+  | "confused"
+  | "heart"
+  | "rocket"
+  | "eyes";
+
+export type GitHubReactionGroup = {
+  content: GitHubReactionContent;
+  count: number;
+  viewerHasReacted: boolean;
+};
+
+export type GitHubReactionSubject = GitHubReactionSubjectRef & {
+  viewerCanReact: boolean;
+  groups: GitHubReactionGroup[];
+};
+
 export type GitHubDiscoverySearchKind =
   | "repositories"
   | "code"
@@ -304,6 +435,212 @@ export type GitHubRepositorySettingsUpdate = Omit<GitHubRepositorySettings, "rep
   confirmArchiveChange: boolean;
 };
 
+export type GitHubInsightsTrafficPeriod = "day" | "week";
+
+export type GitHubInsightsStatisticStatus = "ready" | "building" | "unavailable";
+
+export type GitHubCommunityFile = {
+  key: string;
+  name: string;
+  url?: string;
+  present: boolean;
+};
+
+export type GitHubCommunityProfile = {
+  healthPercentage: number;
+  description?: string;
+  documentation?: string;
+  updatedAt?: string;
+  files: GitHubCommunityFile[];
+};
+
+export type GitHubCommitActivityWeek = {
+  week: number;
+  total: number;
+};
+
+export type GitHubCodeFrequencyWeek = {
+  week: number;
+  additions: number;
+  deletions: number;
+};
+
+export type GitHubRepositoryInsightsOverview = {
+  community: GitHubCommunityProfile;
+  commitActivity: {
+    status: GitHubInsightsStatisticStatus;
+    weeks: GitHubCommitActivityWeek[];
+  };
+  codeFrequency: {
+    status: GitHubInsightsStatisticStatus;
+    weeks: GitHubCodeFrequencyWeek[];
+  };
+};
+
+export type GitHubInsightsContributor = {
+  login?: string;
+  avatarUrl?: string;
+  total: number;
+  additions: number;
+  deletions: number;
+};
+
+export type GitHubRepositoryInsightsContributors = {
+  status: GitHubInsightsStatisticStatus;
+  contributors: GitHubInsightsContributor[];
+};
+
+export type GitHubTrafficPoint = {
+  timestamp: string;
+  count: number;
+  uniques: number;
+};
+
+export type GitHubTrafficSeries = {
+  count: number;
+  uniques: number;
+  points: GitHubTrafficPoint[];
+};
+
+export type GitHubTrafficReferrer = {
+  referrer: string;
+  count: number;
+  uniques: number;
+};
+
+export type GitHubTrafficPath = {
+  path: string;
+  title: string;
+  url?: string;
+  count: number;
+  uniques: number;
+};
+
+export type GitHubRepositoryInsightsTraffic = {
+  period: GitHubInsightsTrafficPeriod;
+  views: GitHubTrafficSeries;
+  clones: GitHubTrafficSeries;
+  referrers: GitHubTrafficReferrer[];
+  paths: GitHubTrafficPath[];
+};
+
+export type GitHubRepositoryAccessUser = {
+  id: number;
+  login: string;
+  avatarUrl: string;
+  url: string;
+};
+
+export type GitHubRepositoryCollaboratorPage = {
+  collaborators: GitHubRepositoryAccessUser[];
+  page: number;
+  hasPrevious: boolean;
+  hasMore: boolean;
+};
+
+export type GitHubRepositoryInvitation = {
+  id: number;
+  invitee: GitHubRepositoryAccessUser;
+  inviter: GitHubRepositoryAccessUser;
+  createdAt: string;
+};
+
+export type GitHubRepositoryInvitationPage = {
+  invitations: GitHubRepositoryInvitation[];
+  page: number;
+  hasPrevious: boolean;
+  hasMore: boolean;
+};
+
+export type GitHubRepositoryInviteResult = {
+  status: "invited" | "alreadyCollaborator";
+  invitation?: GitHubRepositoryInvitation | null;
+};
+
+export type GitHubPagesBuildType = "legacy" | "workflow";
+
+export type GitHubPagesSourcePath = "root" | "docs";
+
+export type GitHubPagesConfiguration = {
+  buildType: GitHubPagesBuildType;
+  branch: string | null;
+  sourcePath: GitHubPagesSourcePath | null;
+  customDomain: string | null;
+  httpsEnforced: boolean;
+};
+
+export type GitHubPagesMutation =
+  | { action: "configure"; configuration: GitHubPagesConfiguration }
+  | { action: "requestBuild" }
+  | { action: "disable"; confirmation: string };
+
+export type GitHubPagesSource = {
+  branch: string;
+  path: GitHubPagesSourcePath;
+};
+
+export type GitHubPagesCertificate = {
+  state: string;
+  description?: string;
+  domains: string[];
+  expiresAt?: string;
+};
+
+export type GitHubPagesSite = {
+  status: string;
+  url: string;
+  buildType: GitHubPagesBuildType;
+  source?: GitHubPagesSource;
+  customDomain?: string;
+  custom404: boolean;
+  public: boolean;
+  httpsEnforced: boolean;
+  certificate?: GitHubPagesCertificate;
+  protectedDomainState?: string;
+  pendingDomainUnverifiedAt?: string;
+};
+
+export type GitHubPagesBuild = {
+  url?: string;
+  status: string;
+  error?: string;
+  pusher?: string;
+  pusherAvatarUrl?: string;
+  commit?: string;
+  durationMilliseconds?: number;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type GitHubPagesWorkspace = {
+  site?: GitHubPagesSite;
+  builds: GitHubPagesBuild[];
+  page: number;
+  hasPrevious: boolean;
+  hasMore: boolean;
+  isArchived: boolean;
+};
+
+export type GitHubPagesDomainHealth = {
+  host?: string;
+  uri?: string;
+  dnsResolves: boolean;
+  proxied: boolean;
+  valid: boolean;
+  reason?: string;
+  respondsToHttps: boolean;
+  enforcesHttps: boolean;
+  httpsEligible: boolean;
+  httpsError?: string;
+  caaError?: string;
+};
+
+export type GitHubPagesHealth = {
+  pending: boolean;
+  domain?: GitHubPagesDomainHealth;
+  alternateDomain?: GitHubPagesDomainHealth;
+};
+
 export type GitHubGistSource = "mine" | "starred" | "public";
 
 export type GitHubGistFile = {
@@ -419,6 +756,74 @@ export type GitHubGistCommentMutation =
   | { action: "update"; commentId: number; body: string }
   | { action: "delete"; commentId: number };
 
+export type GitHubPackageType = "npm" | "maven" | "rubygems" | "nuget" | "container" | "docker";
+
+export type GitHubPackageVisibility = "public" | "private";
+
+export type GitHubPackageVisibilityValue =
+  | { kind: GitHubPackageVisibility | "internal" }
+  | { kind: "unknown"; value: string };
+
+export type GitHubPackageVersionState = "active" | "deleted";
+
+export type GitHubPackageVersionAction = "delete" | "restore";
+
+export type GitHubPackageRepository = {
+  name: string;
+  fullName: string;
+  url: string;
+};
+
+export type GitHubPackage = {
+  id: number;
+  name: string;
+  packageType: GitHubPackageType;
+  visibility: GitHubPackageVisibilityValue;
+  versionCount: number;
+  owner: string;
+  url: string;
+  createdAt: string;
+  updatedAt: string;
+  repository?: GitHubPackageRepository;
+};
+
+export type GitHubPackagePage = {
+  packages: GitHubPackage[];
+  page: number;
+  hasPrevious: boolean;
+  hasMore: boolean;
+};
+
+export type GitHubPackageVersion = {
+  id: number;
+  name: string;
+  state: GitHubPackageVersionState;
+  metadata: { kind: "container"; tags: string[] } | { kind: "unknown"; raw: unknown };
+  description?: string;
+  license?: string;
+  deletedAt?: string;
+  url: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type GitHubPackageVersionPage = {
+  versions: GitHubPackageVersion[];
+  state: GitHubPackageVersionState;
+  page: number;
+  hasPrevious: boolean;
+  hasMore: boolean;
+};
+
+export type GitHubPackageVersionMutationResult = {
+  packageId: number;
+  packageType: GitHubPackageType;
+  packageName: string;
+  versionId: number;
+  versionName: string;
+  action: GitHubPackageVersionAction;
+};
+
 export type GitHubRepositoryIdentity = Pick<GitHubRepository, "owner" | "name">;
 export type GitHubRepositoryContentContext = Pick<
   GitHubRepository,
@@ -426,6 +831,29 @@ export type GitHubRepositoryContentContext = Pick<
 >;
 
 export type GitHubNotificationAction = "read" | "done";
+export type GitHubReceivedRepositoryInvitationAction = "accept" | "decline";
+
+export type GitHubRepositoryInvitationActor = {
+  id: number;
+  login: string;
+  avatarUrl: string;
+  url: string;
+};
+
+export type GitHubReceivedRepositoryInvitation = {
+  id: number;
+  repository: GitHubRepository;
+  inviter: GitHubRepositoryInvitationActor;
+  permission: string;
+  createdAt: string;
+};
+
+export type GitHubReceivedRepositoryInvitationPage = {
+  invitations: GitHubReceivedRepositoryInvitation[];
+  page: number;
+  hasPrevious: boolean;
+  hasMore: boolean;
+};
 
 export type GitHubNotificationSubjectKind =
   | "issue"
@@ -439,7 +867,7 @@ export type GitHubNotificationSubjectKind =
   | "codeScanningAlert"
   | "secretScanningAlert"
   | "securityAlert"
-  | "repository"
+  | "repositoryInvitation"
   | "other";
 
 export type GitHubNotificationSubject = {
@@ -825,6 +1253,7 @@ export type GitHubReleaseAsset = {
 
 export type GitHubRelease = {
   id: number;
+  reactionSubject: GitHubReactionSubjectRef;
   tagName: string;
   targetCommitish: string;
   name?: string;
@@ -861,7 +1290,34 @@ export type GitHubReleaseMutationInput = {
 export type GitHubIssueLabel = {
   name: string;
   color: string;
+  description?: string;
+  isDefault?: boolean;
 };
+
+export type GitHubIssueLabelMutation =
+  | { action: "create"; name: string; color: string; description: string }
+  | {
+      action: "update";
+      originalName: string;
+      name: string;
+      color: string;
+      description: string;
+    }
+  | { action: "delete"; name: string; confirmation: string };
+
+export type GitHubIssueMilestoneState = "open" | "closed";
+
+export type GitHubIssueMilestoneMutation =
+  | { action: "create"; title: string; description: string; dueOn: string | null }
+  | {
+      action: "update";
+      number: number;
+      title: string;
+      description: string;
+      dueOn: string | null;
+      state: GitHubIssueMilestoneState;
+    }
+  | { action: "delete"; number: number; confirmation: string };
 
 export type GitHubItemMetadataValue = {
   labels: string[];
@@ -874,8 +1330,29 @@ export type GitHubIssueAssignment = "all" | "unassigned";
 export type GitHubIssueSort = "updated" | "created" | "comments";
 export type GitHubIssueInboxScope = "authored" | "assigned" | "mentioned";
 
+export type GitHubConversationKind = "issue" | "pullRequest";
+export type GitHubConversationLockAction = "lock" | "unlock";
+export type GitHubConversationLockReason = "offTopic" | "tooHeated" | "resolved" | "spam";
+export type GitHubConversationSubscriptionAction = "subscribe" | "unsubscribe";
+export type GitHubConversationSubscriptionState =
+  | "subscribed"
+  | "unsubscribed"
+  | "ignored"
+  | "unknown";
+
+export type GitHubConversationControls = {
+  kind: GitHubConversationKind;
+  number: number;
+  locked: boolean;
+  lockReason?: GitHubConversationLockReason | null;
+  viewerCanLock: boolean;
+  viewerCanSubscribe: boolean;
+  viewerSubscription?: GitHubConversationSubscriptionState | null;
+};
+
 export type GitHubIssue = {
   id: number;
+  reactionSubject: GitHubReactionSubjectRef;
   number: number;
   title: string;
   body?: string;
@@ -923,6 +1400,7 @@ export type GitHubIssueInboxPage = {
 
 export type GitHubIssueTimelineItem = {
   id: string;
+  reactionSubject?: GitHubReactionSubjectRef;
   kind: "comment" | "event";
   event: string;
   actor?: string;
@@ -932,6 +1410,10 @@ export type GitHubIssueTimelineItem = {
   url?: string;
   createdAt?: string;
   updatedAt?: string;
+  viewerCanUpdate: boolean;
+  viewerCanDelete: boolean;
+  isMinimized: boolean;
+  minimizedReason?: string;
   label?: GitHubIssueLabel;
   assignee?: string;
   milestone?: string;
@@ -1092,6 +1574,7 @@ export type GitHubPullRequestPage = {
 
 export type GitHubPullRequest = {
   id: number;
+  reactionSubject?: GitHubReactionSubjectRef;
   number: number;
   title: string;
   body?: string;
@@ -1197,6 +1680,66 @@ export type GitHubCommit = {
   verified: boolean | null;
 };
 
+export type GitHubCommitActor = {
+  name: string | null;
+  email: string | null;
+  login: string | null;
+  avatarUrl: string | null;
+  date: string | null;
+};
+
+export type GitHubCommitParent = {
+  sha: string;
+  shortSha: string;
+  url: string;
+};
+
+export type GitHubCommitStats = {
+  additions: number;
+  deletions: number;
+  total: number;
+};
+
+export type GitHubCommitVerification = {
+  verified: boolean;
+  reason: string;
+  verifiedAt: string | null;
+};
+
+export type GitHubChangedFile = {
+  sha?: string;
+  path: string;
+  previousPath?: string;
+  status: string;
+  additions: number;
+  deletions: number;
+  changes: number;
+  patch?: string;
+  blobUrl?: string;
+  rawUrl?: string;
+};
+
+export type GitHubCommitDetail = {
+  sha: string;
+  shortSha: string;
+  message: string;
+  url: string;
+  author: GitHubCommitActor | null;
+  committer: GitHubCommitActor | null;
+  parents: GitHubCommitParent[];
+  stats: GitHubCommitStats | null;
+  verification: GitHubCommitVerification | null;
+};
+
+export type GitHubCommitDetailPage = {
+  commit: GitHubCommitDetail;
+  files: GitHubChangedFile[];
+  page: number;
+  hasPrevious: boolean;
+  hasMore: boolean;
+  filesAtLimit: boolean;
+};
+
 export type GitHubPullRequestCommit = GitHubCommit;
 
 export type GitHubPullRequestCommitPage = {
@@ -1236,7 +1779,25 @@ export type GitHubPullRequestReviewThreadComment = {
   createdAt: string;
   updatedAt: string;
   pending: boolean;
+  viewerCanUpdate: boolean;
+  viewerCanDelete: boolean;
+  isMinimized: boolean;
+  minimizedReason?: string;
+  outdated: boolean;
 };
+
+export type GitHubCommentMutation =
+  | {
+      action: "update";
+      commentId: string;
+      expectedUpdatedAt: string;
+      body: string;
+    }
+  | {
+      action: "delete";
+      commentId: string;
+      expectedUpdatedAt: string;
+    };
 
 export type GitHubPullRequestReviewThread = {
   id: string;
@@ -1473,7 +2034,7 @@ export type GitHubIssueMilestone = {
   number: number;
   title: string;
   description?: string;
-  state: string;
+  state: GitHubIssueMilestoneState;
   openIssues: number;
   closedIssues: number;
   dueOn?: string;

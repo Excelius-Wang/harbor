@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use base64::Engine;
+use http_body_util::BodyExt;
 use serde::{Deserialize, Serialize};
 
 use super::{
@@ -15,6 +16,8 @@ const MAX_FILE_PREVIEW_LINES: usize = 10_000;
 const CODE_PAGE_SIZE: u8 = 30;
 const CODE_REFERENCE_PAGE_SIZE: u8 = 100;
 const CODE_SEARCH_RESULT_LIMIT: u64 = 1_000;
+const COMMIT_FILE_PAGE_SIZE: u8 = 100;
+const MAX_COMMIT_FILE_PAGES: u32 = 30;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -56,6 +59,80 @@ pub struct GitHubRepositoryCommitPage {
     pub page: u32,
     pub has_previous: bool,
     pub has_more: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitHubCommitActor {
+    pub name: Option<String>,
+    pub email: Option<String>,
+    pub login: Option<String>,
+    pub avatar_url: Option<String>,
+    pub date: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitHubCommitParent {
+    pub sha: String,
+    pub short_sha: String,
+    pub url: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitHubCommitStats {
+    pub additions: u64,
+    pub deletions: u64,
+    pub total: u64,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitHubCommitVerification {
+    pub verified: bool,
+    pub reason: String,
+    pub verified_at: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitHubChangedFile {
+    pub sha: Option<String>,
+    pub path: String,
+    pub previous_path: Option<String>,
+    pub status: String,
+    pub additions: u64,
+    pub deletions: u64,
+    pub changes: u64,
+    pub patch: Option<String>,
+    pub blob_url: Option<String>,
+    pub raw_url: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitHubCommitDetail {
+    pub sha: String,
+    pub short_sha: String,
+    pub message: String,
+    pub url: String,
+    pub author: Option<GitHubCommitActor>,
+    pub committer: Option<GitHubCommitActor>,
+    pub parents: Vec<GitHubCommitParent>,
+    pub stats: Option<GitHubCommitStats>,
+    pub verification: Option<GitHubCommitVerification>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitHubCommitDetailPage {
+    pub commit: GitHubCommitDetail,
+    pub files: Vec<GitHubChangedFile>,
+    pub page: u32,
+    pub has_previous: bool,
+    pub has_more: bool,
+    pub files_at_limit: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -201,6 +278,15 @@ pub(crate) trait GitHubCodeClient: Send + Sync {
         page: u32,
     ) -> Result<GitHubRepositoryCommitPage, AppError>;
 
+    async fn repository_commit_detail(
+        &self,
+        token: &str,
+        owner: &str,
+        repository: &str,
+        commit_sha: &str,
+        page: u32,
+    ) -> Result<GitHubCommitDetailPage, AppError>;
+
     async fn repository_tags(
         &self,
         token: &str,
@@ -279,6 +365,19 @@ impl GitHubService {
         let token = self.load_access_token().await?;
         self.client
             .repository_commits(&token, owner, repository, reference, path, page)
+            .await
+    }
+
+    pub async fn commit_detail(
+        &self,
+        owner: &str,
+        repository: &str,
+        commit_sha: &str,
+        page: u32,
+    ) -> Result<GitHubCommitDetailPage, AppError> {
+        let token = self.load_access_token().await?;
+        self.client
+            .repository_commit_detail(&token, owner, repository, commit_sha, page)
             .await
     }
 
@@ -452,6 +551,18 @@ impl GitHubCodeClient for OctocrabGitHubClient {
             has_previous: page > 1,
             has_more: commits.next.is_some(),
         })
+    }
+
+    async fn repository_commit_detail(
+        &self,
+        token: &str,
+        owner: &str,
+        repository: &str,
+        commit_sha: &str,
+        page: u32,
+    ) -> Result<GitHubCommitDetailPage, AppError> {
+        let client = authenticated_client(token)?;
+        request_repository_commit_detail(&client, owner, repository, commit_sha, page).await
     }
 
     async fn repository_tags(
@@ -652,6 +763,242 @@ struct CodeSearchItem {
 #[derive(Deserialize)]
 struct CodeSearchTextMatch {
     fragment: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct RawCommitDetail {
+    sha: String,
+    html_url: String,
+    commit: RawGitCommit,
+    author: Option<RawCommitAccount>,
+    committer: Option<RawCommitAccount>,
+    parents: Vec<RawCommitParent>,
+    stats: Option<RawCommitStats>,
+    files: Option<Vec<RawChangedFile>>,
+}
+
+#[derive(Deserialize)]
+struct RawGitCommit {
+    message: String,
+    author: Option<RawGitActor>,
+    committer: Option<RawGitActor>,
+    verification: Option<RawCommitVerification>,
+}
+
+#[derive(Deserialize)]
+struct RawGitActor {
+    name: Option<String>,
+    email: Option<String>,
+    date: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct RawCommitAccount {
+    login: String,
+    avatar_url: String,
+}
+
+#[derive(Deserialize)]
+struct RawCommitParent {
+    sha: String,
+    html_url: String,
+}
+
+#[derive(Deserialize)]
+struct RawCommitStats {
+    additions: u64,
+    deletions: u64,
+    total: u64,
+}
+
+#[derive(Deserialize)]
+struct RawCommitVerification {
+    verified: bool,
+    reason: String,
+    verified_at: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct RawChangedFile {
+    sha: Option<String>,
+    filename: String,
+    previous_filename: Option<String>,
+    status: String,
+    additions: u64,
+    deletions: u64,
+    changes: u64,
+    patch: Option<String>,
+    blob_url: Option<String>,
+    raw_url: Option<String>,
+}
+
+async fn request_repository_commit_detail(
+    client: &octocrab::Octocrab,
+    owner: &str,
+    repository: &str,
+    commit_sha: &str,
+    page: u32,
+) -> Result<GitHubCommitDetailPage, AppError> {
+    let request = http::Request::builder()
+        .method(http::Method::GET)
+        .uri(commit_detail_route(owner, repository, commit_sha, page))
+        .header(http::header::ACCEPT, "application/vnd.github+json")
+        .header("X-GitHub-Api-Version", "2026-03-10");
+    let request = client
+        .build_request(request, None::<&()>)
+        .map_err(github_error)?;
+    let response = client.execute(request).await.map_err(github_error)?;
+    let response = octocrab::map_github_error(response)
+        .await
+        .map_err(commit_detail_error)?;
+    let has_more_from_link = response
+        .headers()
+        .get(http::header::LINK)
+        .and_then(|value| value.to_str().ok())
+        .is_some_and(link_header_has_next);
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .map_err(github_error)?
+        .to_bytes();
+    let raw: RawCommitDetail = serde_json::from_slice(&bytes)
+        .map_err(|error| AppError::GitHub(format!("GitHub returned an invalid commit: {error}")))?;
+
+    commit_detail_page_from_raw(raw, commit_sha, page, has_more_from_link)
+}
+
+fn commit_detail_error(error: octocrab::Error) -> AppError {
+    let status = match &error {
+        octocrab::Error::GitHub { source, .. } => source.status_code.as_u16(),
+        _ => return github_error(error),
+    };
+    commit_detail_status_error(status, error.to_string()).unwrap_or_else(|| github_error(error))
+}
+
+fn commit_detail_status_error(status: u16, message: String) -> Option<AppError> {
+    match status {
+        404 => Some(AppError::GitHubPermission(
+            "the commit is unavailable or inaccessible".to_string(),
+        )),
+        409 => Some(AppError::GitHubCodeConflict(message)),
+        422 => Some(AppError::Validation(format!(
+            "commit detail is unavailable: {message}"
+        ))),
+        _ => None,
+    }
+}
+
+fn commit_detail_route(owner: &str, repository: &str, commit_sha: &str, page: u32) -> String {
+    format!(
+        "/repos/{owner}/{repository}/commits/{commit_sha}?per_page={COMMIT_FILE_PAGE_SIZE}&page={page}"
+    )
+}
+
+fn link_header_has_next(value: &str) -> bool {
+    value.split(',').any(|part| {
+        part.split(';')
+            .skip(1)
+            .any(|parameter| parameter.trim() == "rel=\"next\"")
+    })
+}
+
+fn commit_detail_page_from_raw(
+    raw: RawCommitDetail,
+    requested_sha: &str,
+    page: u32,
+    has_more_from_link: bool,
+) -> Result<GitHubCommitDetailPage, AppError> {
+    if raw.sha != requested_sha {
+        return Err(AppError::GitHub(
+            "GitHub returned a different repository commit".to_string(),
+        ));
+    }
+
+    let RawCommitDetail {
+        sha,
+        html_url,
+        commit,
+        author,
+        committer,
+        parents,
+        stats,
+        files,
+    } = raw;
+    let files = files.unwrap_or_default();
+    let files_at_limit = page == MAX_COMMIT_FILE_PAGES
+        && (has_more_from_link || files.len() == usize::from(COMMIT_FILE_PAGE_SIZE));
+    let has_more = page < MAX_COMMIT_FILE_PAGES && has_more_from_link;
+    let RawGitCommit {
+        message,
+        author: git_author,
+        committer: git_committer,
+        verification,
+    } = commit;
+
+    Ok(GitHubCommitDetailPage {
+        commit: GitHubCommitDetail {
+            short_sha: sha.chars().take(7).collect(),
+            sha,
+            message,
+            url: html_url,
+            author: commit_actor_from_raw(git_author, author),
+            committer: commit_actor_from_raw(git_committer, committer),
+            parents: parents
+                .into_iter()
+                .map(|parent| GitHubCommitParent {
+                    short_sha: parent.sha.chars().take(7).collect(),
+                    sha: parent.sha,
+                    url: parent.html_url,
+                })
+                .collect(),
+            stats: stats.map(|stats| GitHubCommitStats {
+                additions: stats.additions,
+                deletions: stats.deletions,
+                total: stats.total,
+            }),
+            verification: verification.map(|verification| GitHubCommitVerification {
+                verified: verification.verified,
+                reason: verification.reason,
+                verified_at: verification.verified_at,
+            }),
+        },
+        files: files
+            .into_iter()
+            .map(|file| GitHubChangedFile {
+                sha: file.sha,
+                path: file.filename,
+                previous_path: file.previous_filename,
+                status: file.status,
+                additions: file.additions,
+                deletions: file.deletions,
+                changes: file.changes,
+                patch: file.patch,
+                blob_url: file.blob_url,
+                raw_url: file.raw_url,
+            })
+            .collect(),
+        page,
+        has_previous: page > 1,
+        has_more,
+        files_at_limit,
+    })
+}
+
+fn commit_actor_from_raw(
+    actor: Option<RawGitActor>,
+    account: Option<RawCommitAccount>,
+) -> Option<GitHubCommitActor> {
+    if actor.is_none() && account.is_none() {
+        return None;
+    }
+    Some(GitHubCommitActor {
+        name: actor.as_ref().and_then(|actor| actor.name.clone()),
+        email: actor.as_ref().and_then(|actor| actor.email.clone()),
+        date: actor.and_then(|actor| actor.date),
+        login: account.as_ref().map(|account| account.login.clone()),
+        avatar_url: account.map(|account| account.avatar_url),
+    })
 }
 
 const REPOSITORY_BLAME_QUERY: &str = r#"
