@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, CircleAlert, CircleStop, RotateCcw, Trash2 } from "lucide-react";
+import { ChevronDown, CircleAlert, CircleStop, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -27,15 +27,19 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { parseIpcError } from "@/lib/ipc-error";
 import {
-  deleteWorkflowRun,
   invalidateWorkflowRunAction,
-  reconcileWorkflowRunDeletion,
   requestWorkflowRunAction,
   workflowRunCanCancel,
   workflowRunCanDelete,
   workflowRunCanRerun,
   workflowRunHasFailedJobs,
 } from "./github-actions-mutations";
+import {
+  GitHubWorkflowRunDeleteButton,
+  GitHubWorkflowRunDeleteConfirmation,
+  GitHubWorkflowRunDeleteMenuItem,
+  useGitHubWorkflowRunDeletion,
+} from "./github-actions-run-delete";
 import type { GitHubRepository, GitHubWorkflowRun, GitHubWorkflowRunAction } from "./github-data";
 
 function successMessage(action: GitHubWorkflowRunAction) {
@@ -63,12 +67,12 @@ export function GitHubWorkflowRunActions({
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [cancelOpen, setCancelOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
   const target = {
     owner: repository.owner,
     repository: repository.name,
     runId: run.id,
   };
+  const deletion = useGitHubWorkflowRunDeletion({ repository, run, onDeleted });
   const mutation = useMutation({
     mutationFn: (action: GitHubWorkflowRunAction) => requestWorkflowRunAction(target, action),
     onSuccess: async (_, action) => {
@@ -92,38 +96,6 @@ export function GitHubWorkflowRunActions({
       }
     },
   });
-  const deletion = useMutation({
-    mutationFn: () =>
-      deleteWorkflowRun({
-        ...target,
-        expectedWorkflowId: run.workflowId,
-        expectedUpdatedAt: run.updatedAt,
-      }),
-    onSuccess: async (deleted) => {
-      setDeleteOpen(false);
-      toast.success(
-        t("workspace.repositories.workflowRunDeleted", {
-          number: run.runNumber,
-        })
-      );
-      onDeleted();
-      await reconcileWorkflowRunDeletion(
-        queryClient,
-        {
-          ...target,
-          expectedWorkflowId: run.workflowId,
-          expectedUpdatedAt: run.updatedAt,
-        },
-        deleted
-      );
-    },
-    onError: (reason) => {
-      const error = parseIpcError(reason);
-      if (error.code === "validation") {
-        void invalidateWorkflowRunAction(queryClient, target);
-      }
-    },
-  });
   const error = mutation.error ? parseIpcError(mutation.error) : null;
   const cancelError = mutation.variables === "cancel" ? error : null;
   const cancelErrorMessage = cancelError
@@ -132,68 +104,12 @@ export function GitHubWorkflowRunActions({
       : cancelError.message
     : null;
   const pendingAction = mutation.isPending ? mutation.variables : null;
-  const deletionError = deletion.error ? parseIpcError(deletion.error) : null;
-  const deletionErrorMessage = deletionError
-    ? deletionError.code === "githubPermission"
-      ? t("workspace.repositories.workflowRunWritePermissionDenied")
-      : deletionError.code === "validation"
-        ? t("workspace.repositories.workflowRunDeleteConflict")
-        : deletionError.message
-    : null;
 
   function changeCancelOpen(nextOpen: boolean) {
     if (mutation.isPending) return;
     setCancelOpen(nextOpen);
     if (nextOpen) mutation.reset();
   }
-
-  function changeDeleteOpen(nextOpen: boolean) {
-    if (deletion.isPending) return;
-    setDeleteOpen(nextOpen);
-    if (nextOpen) deletion.reset();
-  }
-
-  const deleteConfirmation = (
-    <AlertDialog open={deleteOpen} onOpenChange={changeDeleteOpen}>
-      <AlertDialogContent aria-busy={deletion.isPending}>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {t("workspace.repositories.deleteWorkflowRunTitle", {
-              number: run.runNumber,
-            })}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {t("workspace.repositories.deleteWorkflowRunDescription")}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        {deletionErrorMessage ? (
-          <Alert variant="destructive">
-            <CircleAlert />
-            <AlertTitle>{t("workspace.repositories.workflowRunDeleteFailed")}</AlertTitle>
-            <AlertDescription>{deletionErrorMessage}</AlertDescription>
-          </Alert>
-        ) : null}
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={deletion.isPending}>
-            {t("workspace.repositories.cancel")}
-          </AlertDialogCancel>
-          <AlertDialogAction
-            variant="destructive"
-            disabled={deletion.isPending}
-            onClick={(event) => {
-              event.preventDefault();
-              deletion.mutate();
-            }}
-          >
-            {deletion.isPending ? <Spinner data-icon="inline-start" /> : null}
-            {deletion.isPending
-              ? t("workspace.repositories.deletingWorkflowRun")
-              : t("workspace.repositories.deleteWorkflowRun")}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
 
   if (workflowRunCanCancel(run)) {
     return (
@@ -249,19 +165,8 @@ export function GitHubWorkflowRunActions({
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-        {workflowRunCanDelete(run) ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={deletion.isPending}
-            onClick={() => changeDeleteOpen(true)}
-          >
-            <Trash2 data-icon="inline-start" />
-            {t("workspace.repositories.deleteWorkflowRun")}
-          </Button>
-        ) : null}
-        {deleteConfirmation}
+        {workflowRunCanDelete(run) ? <GitHubWorkflowRunDeleteButton controller={deletion} /> : null}
+        <GitHubWorkflowRunDeleteConfirmation run={run} controller={deletion} />
       </>
     );
   }
@@ -301,16 +206,13 @@ export function GitHubWorkflowRunActions({
             <>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
-                <DropdownMenuItem variant="destructive" onSelect={() => changeDeleteOpen(true)}>
-                  <Trash2 />
-                  {t("workspace.repositories.deleteWorkflowRun")}
-                </DropdownMenuItem>
+                <GitHubWorkflowRunDeleteMenuItem controller={deletion} />
               </DropdownMenuGroup>
             </>
           ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
-      {deleteConfirmation}
+      <GitHubWorkflowRunDeleteConfirmation run={run} controller={deletion} />
     </>
   );
 }

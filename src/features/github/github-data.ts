@@ -1903,11 +1903,18 @@ export type GitHubWorkflowDispatchInputType =
   | "environment"
   | "string";
 
+export type GitHubWorkflowState =
+  | "active"
+  | "disabled_manually"
+  | "disabled_inactivity"
+  | "disabled_fork"
+  | "deleted";
+
 export type GitHubWorkflow = {
   id: number;
   name: string;
   path: string;
-  state: string;
+  state: GitHubWorkflowState;
   url: string;
 };
 

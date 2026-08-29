@@ -1520,6 +1520,7 @@ describe("GitHub repository queries", () => {
     const log = workflowJobLogQueryOptions({
       owner: "octocat",
       repository: "hello-world",
+      runId: 42,
       jobId: 84,
     });
     const artifacts = workflowRunArtifactsQueryOptions({
@@ -1576,6 +1577,17 @@ describe("GitHub repository queries", () => {
       repository: "hello-world",
       jobId: 84,
     });
+    expect(log.queryKey).toEqual([
+      "github",
+      "repository",
+      "octocat",
+      "hello-world",
+      "workflow-run",
+      42,
+      "job",
+      84,
+      "log",
+    ]);
     expect(
       new Set([filters.queryKey, runs.queryKey, jobs.queryKey, artifacts.queryKey, log.queryKey])
         .size

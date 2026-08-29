@@ -381,7 +381,7 @@ export type GitHubWorkflowArtifactsTarget = GitHubWorkflowRunTarget & {
   page: number;
 };
 
-type GitHubWorkflowJobLogTarget = GitHubRepositoryTarget & {
+type GitHubWorkflowJobLogTarget = GitHubWorkflowRunTarget & {
   jobId: number;
 };
 
@@ -938,8 +938,18 @@ export const githubQueryKeys = {
     ["github", "repository", owner, repository, "workflow-run", runId, "artifacts", page] as const,
   workflowArtifactsRoot: ({ owner, repository, runId }: GitHubWorkflowRunTarget) =>
     ["github", "repository", owner, repository, "workflow-run", runId, "artifacts"] as const,
-  workflowJobLog: ({ owner, repository, jobId }: GitHubWorkflowJobLogTarget) =>
-    ["github", "repository", owner, repository, "workflow-job", jobId, "log"] as const,
+  workflowJobLog: ({ owner, repository, runId, jobId }: GitHubWorkflowJobLogTarget) =>
+    [
+      "github",
+      "repository",
+      owner,
+      repository,
+      "workflow-run",
+      runId,
+      "job",
+      jobId,
+      "log",
+    ] as const,
 };
 
 export async function resetGitHubQueryCache(queryClient: QueryClient) {

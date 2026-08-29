@@ -1970,6 +1970,7 @@
       "workflowJobRerunRequested": "Re-run requested for {{name}}",
       "workflowJobRerunFailed": "Harbor could not re-run {{name}}",
       "workflowRunActionFailed": "Harbor could not update this workflow run",
+      "workflowRunActions": "Workflow run actions",
       "workflowRunWritePermissionDenied": "Your GitHub account needs Actions write permission for this repository. If you connected before this update, reconnect GitHub once.",
       "deleteWorkflowRun": "Delete workflow run",
       "deletingWorkflowRun": "Deleting…",

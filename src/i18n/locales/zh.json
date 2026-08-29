@@ -1963,6 +1963,7 @@
       "workflowJobRerunRequested": "已提交 {{name}} 的重新运行请求",
       "workflowJobRerunFailed": "Harbor 无法重新运行 {{name}}",
       "workflowRunActionFailed": "Harbor 无法更新这次工作流运行",
+      "workflowRunActions": "运行记录操作",
       "workflowRunWritePermissionDenied": "你的 GitHub 账号需要这个仓库的 Actions 写入权限；如果登录发生在本次更新前，请重新连接一次 GitHub。",
       "deleteWorkflowRun": "删除运行记录",
       "deletingWorkflowRun": "正在删除…",

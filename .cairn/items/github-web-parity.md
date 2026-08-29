@@ -27,9 +27,17 @@ shadcn controls, and English/Chinese copy. Review added an observed `workflow_id
 maps GitHub 404/409 deletion responses to refreshable conflicts, keeps selected workflow state in
 sync after a stale mutation, navigates away before clearing a deleted run's caches, and uses the
 documented shadcn menu grouping. The deletion regression test asserts list, detail, Jobs, artifacts,
-and known Job-log cache behavior.
+and Job-log cache behavior.
 
-`pnpm check` passes 33 frontend files and 178 tests. Rust library tests pass 321 tests with two
+Standards and Spec reviews found no hard standards violations and no scope creep. Their confirmed
+findings are fixed: eligible runs now expose deletion in the run-list destructive menu and detail
+header; every Job log is nested under the run cache root; the backend rejects no-op workflow state
+transitions; workflow states use a shared frontend union and presentation policy; and local HTTP
+tests verify workflow `GET → PUT → GET`, run `GET → DELETE → 204`, and delete-time `409` behavior.
+The shared deletion controller also removes duplicated confirmation logic, and static rendering
+tests cover eligible and ineligible run-list placement.
+
+`pnpm check` passes 34 frontend files and 180 tests. Rust library tests pass 324 tests with two
 intentional ignores. Clippy passes with the 15 existing warnings; `cargo check`, rustfmt, and
 `git diff --check` also pass. Draft [PR #13](https://github.com/Excelius-Wang/harbor/pull/13) is open
 from the pushed `feat/github-actions-administration` branch into `main`.
@@ -42,7 +50,7 @@ refresh tokens, or Keychain contents.
 
 ## Next action
 
-Run Standards and Spec reviews on PR #13, then fix every confirmed finding.
+Commit and push the verified review fixes, mark PR #13 Ready, then squash-merge it.
 
 ## Verification
 

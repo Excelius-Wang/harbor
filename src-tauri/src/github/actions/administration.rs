@@ -52,18 +52,15 @@ impl GitHubActionsAdministrationClient for OctocrabGitHubClient {
         enabled: bool,
     ) -> Result<GitHubWorkflow, AppError> {
         let client = authenticated_client(token)?;
-        let current = load_workflow(&client, owner, repository, workflow_id).await?;
-        ensure_workflow_state_matches(&current, workflow_id, expected_state)?;
-        ensure_workflow_state_change_allowed(&current, enabled)?;
-
-        let desired_state = workflow_state(enabled);
-        if current.state != desired_state {
-            request_workflow_state_change(&client, owner, repository, workflow_id, enabled).await?;
-        }
-
-        let updated = load_workflow(&client, owner, repository, workflow_id).await?;
-        ensure_workflow_state_response(&updated, workflow_id, desired_state)?;
-        Ok(workflow_from_github(updated))
+        set_workflow_enabled_with_client(
+            &client,
+            owner,
+            repository,
+            workflow_id,
+            expected_state,
+            enabled,
+        )
+        .await
     }
 
     async fn delete_workflow_run(
@@ -76,36 +73,75 @@ impl GitHubActionsAdministrationClient for OctocrabGitHubClient {
         expected_updated_at: &str,
     ) -> Result<GitHubWorkflowRunDeletion, AppError> {
         let client = authenticated_client(token)?;
-        let run: RawWorkflowRun = client
-            .get(workflow_run_route(owner, repository, run_id), None::<&()>)
-            .await
-            .map_err(workflow_run_deletion_error)?;
-        ensure_workflow_run_can_be_deleted(
-            &run,
+        delete_workflow_run_with_client(
+            &client,
             owner,
             repository,
             run_id,
             expected_workflow_id,
             expected_updated_at,
-            Utc::now(),
-        )?;
-
-        let response = client
-            ._delete(workflow_run_route(owner, repository, run_id), None::<&()>)
-            .await
-            .map_err(github_error)?;
-        let status = response.status();
-        octocrab::map_github_error(response)
-            .await
-            .map_err(workflow_run_deletion_error)?;
-        if status != StatusCode::NO_CONTENT {
-            return Err(AppError::GitHub(format!(
-                "GitHub returned unexpected workflow run deletion status {status}"
-            )));
-        }
-
-        Ok(GitHubWorkflowRunDeletion { run_id })
+        )
+        .await
     }
+}
+
+async fn set_workflow_enabled_with_client(
+    client: &octocrab::Octocrab,
+    owner: &str,
+    repository: &str,
+    workflow_id: u64,
+    expected_state: &str,
+    enabled: bool,
+) -> Result<GitHubWorkflow, AppError> {
+    let current = load_workflow(client, owner, repository, workflow_id).await?;
+    ensure_workflow_state_matches(&current, workflow_id, expected_state)?;
+    ensure_workflow_state_change_allowed(&current, enabled)?;
+
+    let desired_state = workflow_state(enabled);
+    request_workflow_state_change(client, owner, repository, workflow_id, enabled).await?;
+
+    let updated = load_workflow(client, owner, repository, workflow_id).await?;
+    ensure_workflow_state_response(&updated, workflow_id, desired_state)?;
+    Ok(workflow_from_github(updated))
+}
+
+async fn delete_workflow_run_with_client(
+    client: &octocrab::Octocrab,
+    owner: &str,
+    repository: &str,
+    run_id: u64,
+    expected_workflow_id: u64,
+    expected_updated_at: &str,
+) -> Result<GitHubWorkflowRunDeletion, AppError> {
+    let run: RawWorkflowRun = client
+        .get(workflow_run_route(owner, repository, run_id), None::<&()>)
+        .await
+        .map_err(workflow_run_deletion_error)?;
+    ensure_workflow_run_can_be_deleted(
+        &run,
+        owner,
+        repository,
+        run_id,
+        expected_workflow_id,
+        expected_updated_at,
+        Utc::now(),
+    )?;
+
+    let response = client
+        ._delete(workflow_run_route(owner, repository, run_id), None::<&()>)
+        .await
+        .map_err(github_error)?;
+    let status = response.status();
+    octocrab::map_github_error(response)
+        .await
+        .map_err(workflow_run_deletion_error)?;
+    if status != StatusCode::NO_CONTENT {
+        return Err(AppError::GitHub(format!(
+            "GitHub returned unexpected workflow run deletion status {status}"
+        )));
+    }
+
+    Ok(GitHubWorkflowRunDeletion { run_id })
 }
 
 impl GitHubService {
@@ -247,8 +283,7 @@ fn ensure_workflow_state_change_allowed(
 ) -> Result<(), AppError> {
     let allowed = matches!(
         (enabled, workflow.state.as_str()),
-        (true, "active" | "disabled_manually" | "disabled_inactivity")
-            | (false, "active" | "disabled_manually")
+        (true, "disabled_manually" | "disabled_inactivity") | (false, "active")
     );
     if allowed {
         Ok(())
@@ -387,6 +422,108 @@ mod tests {
     use super::super::RawWorkflowRepository;
     use super::*;
     use chrono::TimeZone;
+    use std::sync::{Arc, Mutex};
+    use tokio::{
+        io::{AsyncReadExt, AsyncWriteExt},
+        net::TcpListener,
+    };
+
+    struct MockResponse {
+        status: &'static str,
+        body: String,
+    }
+
+    async fn mock_github(
+        responses: Vec<MockResponse>,
+    ) -> (
+        octocrab::Octocrab,
+        Arc<Mutex<Vec<String>>>,
+        tokio::task::JoinHandle<()>,
+    ) {
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("mock bind");
+        let address = listener.local_addr().expect("mock address");
+        let requests = Arc::new(Mutex::new(Vec::new()));
+        let captured = Arc::clone(&requests);
+        let server = tokio::spawn(async move {
+            for response in responses {
+                let (mut stream, _) = listener.accept().await.expect("mock accept");
+                let mut buffer = Vec::new();
+                loop {
+                    let mut chunk = [0_u8; 1024];
+                    let read = stream.read(&mut chunk).await.expect("mock read");
+                    if read == 0 {
+                        break;
+                    }
+                    buffer.extend_from_slice(&chunk[..read]);
+                    if buffer.windows(4).any(|window| window == b"\r\n\r\n") {
+                        break;
+                    }
+                }
+                let request = String::from_utf8(buffer).expect("request utf8");
+                captured
+                    .lock()
+                    .expect("request lock")
+                    .push(request.lines().next().unwrap_or_default().to_string());
+                let payload = format!(
+                    "HTTP/1.1 {}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                    response.status,
+                    response.body.len(),
+                    response.body
+                );
+                stream
+                    .write_all(payload.as_bytes())
+                    .await
+                    .expect("mock write");
+            }
+        });
+        let client = octocrab::Octocrab::builder()
+            .base_uri(format!("http://{address}"))
+            .expect("mock base uri")
+            .personal_token("github-user-access-token".to_string())
+            .build()
+            .expect("mock client");
+        (client, requests, server)
+    }
+
+    fn workflow_api_json(state: &str) -> String {
+        serde_json::json!({
+            "id": 7,
+            "node_id": "workflow-7",
+            "name": "CI",
+            "path": ".github/workflows/ci.yml",
+            "state": state,
+            "created_at": "2026-08-01T00:00:00Z",
+            "updated_at": "2026-08-29T00:00:00Z",
+            "url": "https://api.github.com/repos/octocat/hello-world/actions/workflows/7",
+            "html_url": "https://github.com/octocat/hello-world/actions/workflows/ci.yml",
+            "badge_url": "https://github.com/octocat/hello-world/actions/workflows/ci.yml/badge.svg"
+        })
+        .to_string()
+    }
+
+    fn workflow_run_api_json() -> String {
+        serde_json::json!({
+            "id": 42,
+            "workflow_id": 7,
+            "name": "CI",
+            "display_title": "Keep Actions inside Harbor",
+            "run_number": 19,
+            "run_attempt": 1,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "head_branch": "main",
+            "head_sha": "abcdef123456",
+            "head_commit": null,
+            "actor": null,
+            "repository": { "full_name": "octocat/hello-world" },
+            "created_at": "2026-08-26T08:00:00Z",
+            "updated_at": "2026-08-26T08:05:00Z",
+            "run_started_at": "2026-08-26T08:00:05Z",
+            "html_url": "https://github.com/octocat/hello-world/actions/runs/42"
+        })
+        .to_string()
+    }
 
     fn workflow(id: u64, state: &str) -> octocrab::models::workflows::WorkFlow {
         serde_json::from_value(serde_json::json!({
@@ -465,6 +602,10 @@ mod tests {
         );
         assert!(
             ensure_workflow_state_change_allowed(&workflow(7, "disabled_inactivity"), true).is_ok()
+        );
+        assert!(ensure_workflow_state_change_allowed(&workflow(7, "active"), true).is_err());
+        assert!(
+            ensure_workflow_state_change_allowed(&workflow(7, "disabled_manually"), false).is_err()
         );
         assert!(ensure_workflow_state_change_allowed(&workflow(7, "disabled_fork"), true).is_err());
         assert!(ensure_workflow_state_change_allowed(&workflow(7, "deleted"), true).is_err());
@@ -559,5 +700,108 @@ mod tests {
             ));
         }
         assert!(workflow_run_deletion_status_error(500).is_none());
+    }
+
+    #[tokio::test]
+    async fn workflow_state_transport_reads_writes_and_verifies() {
+        let (client, requests, server) = mock_github(vec![
+            MockResponse {
+                status: "200 OK",
+                body: workflow_api_json("active"),
+            },
+            MockResponse {
+                status: "204 No Content",
+                body: String::new(),
+            },
+            MockResponse {
+                status: "200 OK",
+                body: workflow_api_json("disabled_manually"),
+            },
+        ])
+        .await;
+
+        let updated =
+            set_workflow_enabled_with_client(&client, "octocat", "hello-world", 7, "active", false)
+                .await
+                .expect("workflow disable");
+        server.await.expect("mock server");
+
+        assert_eq!(updated.state, "disabled_manually");
+        assert_eq!(
+            *requests.lock().expect("request lock"),
+            [
+                "GET /repos/octocat/hello-world/actions/workflows/7 HTTP/1.1",
+                "PUT /repos/octocat/hello-world/actions/workflows/7/disable HTTP/1.1",
+                "GET /repos/octocat/hello-world/actions/workflows/7 HTTP/1.1",
+            ]
+        );
+    }
+
+    #[tokio::test]
+    async fn workflow_run_deletion_transport_preflights_before_no_content() {
+        let (client, requests, server) = mock_github(vec![
+            MockResponse {
+                status: "200 OK",
+                body: workflow_run_api_json(),
+            },
+            MockResponse {
+                status: "204 No Content",
+                body: String::new(),
+            },
+        ])
+        .await;
+
+        let deletion = delete_workflow_run_with_client(
+            &client,
+            "octocat",
+            "hello-world",
+            42,
+            7,
+            "2026-08-26T08:05:00Z",
+        )
+        .await
+        .expect("workflow run deletion");
+        server.await.expect("mock server");
+
+        assert_eq!(deletion.run_id, 42);
+        assert_eq!(
+            *requests.lock().expect("request lock"),
+            [
+                "GET /repos/octocat/hello-world/actions/runs/42 HTTP/1.1",
+                "DELETE /repos/octocat/hello-world/actions/runs/42 HTTP/1.1",
+            ]
+        );
+    }
+
+    #[tokio::test]
+    async fn workflow_run_deletion_transport_keeps_delete_conflicts_refreshable() {
+        let (client, requests, server) = mock_github(vec![
+            MockResponse {
+                status: "200 OK",
+                body: workflow_run_api_json(),
+            },
+            MockResponse {
+                status: "409 Conflict",
+                body: serde_json::json!({ "message": "Conflict" }).to_string(),
+            },
+        ])
+        .await;
+
+        let error = delete_workflow_run_with_client(
+            &client,
+            "octocat",
+            "hello-world",
+            42,
+            7,
+            "2026-08-26T08:05:00Z",
+        )
+        .await
+        .expect_err("delete conflict");
+        server.await.expect("mock server");
+
+        assert!(
+            matches!(error, AppError::Validation(message) if message.contains("refresh Actions"))
+        );
+        assert_eq!(requests.lock().expect("request lock").len(), 2);
     }
 }

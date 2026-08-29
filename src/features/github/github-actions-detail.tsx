@@ -193,6 +193,7 @@ export function GitHubActionsDetail({
     ...workflowJobLogQueryOptions({
       owner: repository.owner,
       repository: repository.name,
+      runId: run.id,
       jobId: selectedJobId ?? 0,
     }),
     enabled: selectedJobId !== null,

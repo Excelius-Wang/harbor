@@ -7,11 +7,11 @@ import type {
   GitHubWorkflow,
   GitHubWorkflowDispatchValue,
   GitHubWorkflowJob,
-  GitHubWorkflowJobPage,
   GitHubWorkflowRun,
   GitHubWorkflowRunAction,
   GitHubWorkflowRunDeletion,
   GitHubWorkflowRunPage,
+  GitHubWorkflowState,
 } from "./github-data";
 import { githubQueryKeys } from "./github-queries";
 
@@ -25,7 +25,7 @@ export type GitHubWorkflowStateMutationTarget = {
   owner: string;
   repository: string;
   workflowId: number;
-  expectedState: string;
+  expectedState: GitHubWorkflowState;
   enabled: boolean;
 };
 
@@ -211,9 +211,6 @@ export async function reconcileWorkflowRunDeletion(
   deletion: GitHubWorkflowRunDeletion
 ) {
   const runTarget = { owner: target.owner, repository: target.repository, runId: deletion.runId };
-  const jobPages = queryClient.getQueriesData<GitHubWorkflowJobPage>({
-    queryKey: githubQueryKeys.workflowJobsRoot(runTarget),
-  });
 
   queryClient.setQueriesData<GitHubWorkflowRunPage>(
     { queryKey: githubQueryKeys.workflowRunsRoot(target) },
@@ -227,17 +224,6 @@ export async function reconcileWorkflowRunDeletion(
     }
   );
   queryClient.removeQueries({ queryKey: githubQueryKeys.workflowRun(runTarget) });
-  for (const [, page] of jobPages) {
-    for (const job of page?.jobs ?? []) {
-      queryClient.removeQueries({
-        queryKey: githubQueryKeys.workflowJobLog({
-          owner: target.owner,
-          repository: target.repository,
-          jobId: job.id,
-        }),
-      });
-    }
-  }
 
   await queryClient.invalidateQueries({ queryKey: githubQueryKeys.workflowRunsRoot(target) });
 }
@@ -259,10 +245,25 @@ export function workflowRunCanDelete(
   return Number.isFinite(createdAt) && createdAt <= now - 14 * 24 * 60 * 60 * 1_000;
 }
 
-export function workflowStateAction(state: string): "enable" | "disable" | null {
+export function workflowStateAction(state: GitHubWorkflowState): "enable" | "disable" | null {
   if (state === "active") return "disable";
   if (state === "disabled_manually" || state === "disabled_inactivity") return "enable";
   return null;
+}
+
+export function workflowStateLabel(state: GitHubWorkflowState) {
+  switch (state) {
+    case "active":
+      return null;
+    case "disabled_manually":
+      return "workspace.repositories.workflowDisabled";
+    case "disabled_inactivity":
+      return "workspace.repositories.workflowDisabledInactivity";
+    case "disabled_fork":
+      return "workspace.repositories.workflowDisabledFork";
+    case "deleted":
+      return "workspace.repositories.workflowDeleted";
+  }
 }
 
 export function workflowRunHasFailedJobs(run: Pick<GitHubWorkflowRun, "status" | "conclusion">) {

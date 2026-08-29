@@ -20,6 +20,7 @@ import {
   workflowRunCanRerun,
   workflowRunHasFailedJobs,
   workflowStateAction,
+  workflowStateLabel,
 } from "./github-actions-mutations";
 import type {
   GitHubWorkflowArtifactPage,
@@ -286,7 +287,7 @@ describe("GitHub Actions mutations", () => {
   it("reconciles workflow inventory and dispatch caches after a state change", async () => {
     const queryClient = new QueryClient();
     const repositoryTarget = { owner: target.owner, repository: target.repository };
-    const updated = { ...dispatchConfig.workflow, state: "disabled_manually" };
+    const updated = { ...dispatchConfig.workflow, state: "disabled_manually" as const };
     queryClient.setQueryData(githubQueryKeys.workflows(repositoryTarget), [
       dispatchConfig.workflow,
     ]);
@@ -380,6 +381,7 @@ describe("GitHub Actions mutations", () => {
       githubQueryKeys.workflowJobLog({
         owner: target.owner,
         repository: target.repository,
+        runId: target.runId,
         jobId: job.id,
       }),
       { jobId: job.id, content: "Finished", truncated: false }
@@ -411,6 +413,7 @@ describe("GitHub Actions mutations", () => {
         githubQueryKeys.workflowJobLog({
           owner: target.owner,
           repository: target.repository,
+          runId: target.runId,
           jobId: job.id,
         })
       )
@@ -447,6 +450,13 @@ describe("GitHub Actions mutations", () => {
     expect(workflowStateAction("disabled_inactivity")).toBe("enable");
     expect(workflowStateAction("disabled_fork")).toBeNull();
     expect(workflowStateAction("deleted")).toBeNull();
+    expect(workflowStateLabel("active")).toBeNull();
+    expect(workflowStateLabel("disabled_manually")).toBe("workspace.repositories.workflowDisabled");
+    expect(workflowStateLabel("disabled_inactivity")).toBe(
+      "workspace.repositories.workflowDisabledInactivity"
+    );
+    expect(workflowStateLabel("disabled_fork")).toBe("workspace.repositories.workflowDisabledFork");
+    expect(workflowStateLabel("deleted")).toBe("workspace.repositories.workflowDeleted");
   });
 
   it("only exposes a Job rerun after GitHub marks the Job completed", () => {
