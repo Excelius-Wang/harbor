@@ -51,7 +51,9 @@ setup; initial Spec review found no action on historical timeline reviews, gener
 malformed successful REST responses, and partial pagination/postflight tests. All findings are fixed:
 one reusable dismissal action owns the menu/dialog/mutation, eligible timeline cards retain numeric
 review IDs, malformed `200` payloads remain refreshable conflicts, and focused tests traverse two
-Review pages plus null and mismatched postflight responses. Independent re-review is pending.
+Review pages plus null and mismatched postflight responses. Spec re-review has no unresolved
+findings. Standards re-review found one new component using the legacy translation hook; it now uses
+Harbor's multi-window-safe hook, with final Standards re-review pending.
 
 Post-fix verification passes `pnpm check` with 36 frontend files and 199 tests, and Rust library tests
 with 337 passing and two intentional ignores. `cargo check`, rustfmt, and `git diff --check` pass.
@@ -74,8 +76,8 @@ refresh tokens, or Keychain contents.
 
 ## Next action
 
-Commit and push the PR #15 review fixes, obtain clean Standards and Spec re-reviews, then mark Ready
-and squash-merge when clean.
+Commit and push the final translation-hook fix, obtain a clean Standards re-review, then mark PR #15
+Ready and squash-merge when clean.
 
 ## Verification
 

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAppTranslation } from "@/hooks/use-app-translation";
 import { openExternalUrl } from "@/lib/window";
 import type {
   GitHubIssue,
@@ -192,7 +193,7 @@ function PullRequestReviewConversationCard({
   locale: string;
   target: GitHubConversationCommentTarget;
 }) {
-  const { t } = useTranslation();
+  const { t } = useAppTranslation();
   const review = pullRequestReviewFromTimelineItem(item);
   if (!item.actor) return null;
 
