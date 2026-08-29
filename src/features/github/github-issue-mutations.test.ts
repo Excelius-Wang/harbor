@@ -54,6 +54,9 @@ const comment: GitHubIssueTimelineItem = {
   actor: "octocat",
   body: "Fixed in #41.",
   createdAt: "2026-08-26T10:00:00Z",
+  viewerCanUpdate: true,
+  viewerCanDelete: true,
+  isMinimized: false,
 };
 
 const summary: GitHubIssueSummary = {

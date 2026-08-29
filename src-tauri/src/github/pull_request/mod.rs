@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use serde::Serialize;
 
+use super::comment::{enrich_issue_timeline_comments, GitHubConversationCommentKind};
 use super::{
     authenticated_client, github_error, pull_request_from_octocrab,
     pull_request_review_from_octocrab, timeline_item_from_issue_comment, AppError,
@@ -235,7 +236,18 @@ impl GitHubPullRequestMutationClient for OctocrabGitHubClient {
             .await
             .map_err(github_error)?;
 
-        Ok(timeline_item_from_issue_comment(comment))
+        let timeline = enrich_issue_timeline_comments(
+            &client,
+            owner,
+            repository,
+            pull_request_number,
+            GitHubConversationCommentKind::PullRequest,
+            vec![timeline_item_from_issue_comment(comment)],
+        )
+        .await?;
+        timeline.into_iter().next().ok_or_else(|| {
+            AppError::GitHub("GitHub did not return the created pull request comment".to_string())
+        })
     }
 
     async fn create_pull_request_review(
@@ -571,6 +583,10 @@ impl GitHubPullRequestMutationClient for super::tests::FakeGitHubClient {
             url: Some("https://github.com/octocat/hello-world/pull/12#issuecomment-85".to_string()),
             created_at: Some("2026-08-26T11:00:00+00:00".to_string()),
             updated_at: Some("2026-08-26T11:00:00+00:00".to_string()),
+            viewer_can_update: true,
+            viewer_can_delete: true,
+            is_minimized: false,
+            minimized_reason: None,
             label: None,
             assignee: None,
             milestone: None,

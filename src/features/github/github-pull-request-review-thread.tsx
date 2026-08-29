@@ -11,6 +11,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -26,11 +27,17 @@ import type {
   GitHubPullRequestReviewThreadComment,
   GitHubRepositoryContentContext,
 } from "./github-data";
+import {
+  mutateRepositoryPullRequestReviewComment,
+  syncUpdatedPullRequestReviewComment,
+} from "./github-comment-mutations";
+import { GitHubCommentActions } from "./github-comment-actions";
 import { formatIssueDate } from "./github-issue-shared";
 import { GitHubMarkdownEditor } from "./github-markdown-editor";
 import { GitHubReactionBar } from "./github-reaction-bar";
 import {
   markPullRequestReviewThreadsStale,
+  invalidateRepositoryPullRequest,
   replyToPullRequestReviewThread,
   resolvePullRequestReviewThread,
   syncPullRequestReviewThreadReply,
@@ -50,13 +57,17 @@ function ReviewThreadComment({
   repository,
   reference,
   path,
+  target,
 }: {
   comment: GitHubPullRequestReviewThreadComment;
   repository: GitHubRepositoryContentContext;
   reference: string;
   path: string;
+  target: GitHubPullRequestMutationTarget;
 }) {
   const { t, i18n } = useTranslation();
+  const queryClient = useQueryClient();
+  const invalidate = () => invalidateRepositoryPullRequest(queryClient, target);
   return (
     <article className="min-w-0 border-b last:border-b-0">
       <header className="bg-card/50 flex min-h-10 min-w-0 items-center gap-2 px-3 py-2">
@@ -92,18 +103,53 @@ function ReviewThreadComment({
         >
           <ExternalLink />
         </Button>
-      </header>
-      <div className="harbor-markdown min-w-0 px-3 py-3 text-[12px]">
-        <Suspense fallback={<Skeleton className="h-10 w-full" />}>
-          <GitHubReadme
-            content={comment.body}
-            path={path}
-            reference={reference}
+        {!comment.pending ? (
+          <GitHubCommentActions<GitHubPullRequestReviewThreadComment>
+            comment={comment}
             repository={repository}
-            onOpenExternal={(url) => void openExternalUrl(url)}
+            reference={reference}
+            permissionMessage={t("workspace.repositories.pullRequestWritePermissionDenied")}
+            mutateComment={(mutation) => mutateRepositoryPullRequestReviewComment(target, mutation)}
+            onConflict={() => void invalidate()}
+            onSuccess={(result, mutation) => {
+              if (mutation.action === "update" && result) {
+                syncUpdatedPullRequestReviewComment(queryClient, target, result);
+                toast.success(t("workspace.repositories.commentUpdated"));
+              } else if (mutation.action === "delete") {
+                toast.success(t("workspace.repositories.commentDeleted"));
+              }
+              void invalidate();
+            }}
           />
-        </Suspense>
-      </div>
+        ) : null}
+      </header>
+      <Collapsible defaultOpen={!comment.isMinimized}>
+        {comment.isMinimized ? (
+          <CollapsibleTrigger asChild>
+            <Button type="button" variant="ghost" size="sm" className="m-2">
+              <ChevronDown data-icon="inline-start" />
+              {comment.minimizedReason
+                ? t("workspace.repositories.commentMinimizedReason", {
+                    reason: comment.minimizedReason,
+                  })
+                : t("workspace.repositories.commentMinimized")}
+            </Button>
+          </CollapsibleTrigger>
+        ) : null}
+        <CollapsibleContent>
+          <div className="harbor-markdown min-w-0 px-3 py-3 text-[12px]">
+            <Suspense fallback={<Skeleton className="h-10 w-full" />}>
+              <GitHubReadme
+                content={comment.body}
+                path={path}
+                reference={reference}
+                repository={repository}
+                onOpenExternal={(url) => void openExternalUrl(url)}
+              />
+            </Suspense>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
       {!comment.pending ? (
         <footer className="flex min-h-9 items-center border-t px-3 py-1">
           <GitHubReactionBar subject={{ id: comment.id, kind: "pullRequestReviewComment" }} />
@@ -320,6 +366,7 @@ export function GitHubPullRequestReviewThreadView({
             repository={repository}
             reference={reference}
             path={thread.path}
+            target={target}
           />
         ))}
         {thread.commentsHaveMore ? (

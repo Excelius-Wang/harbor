@@ -12,6 +12,7 @@ use crate::{
 pub(crate) mod actions;
 pub(crate) mod checks;
 pub(crate) mod code;
+pub(crate) mod comment;
 pub(crate) mod discovery;
 pub(crate) mod discussion;
 pub(crate) mod download;
@@ -43,6 +44,7 @@ pub use code::{
     GitHubBlame, GitHubCodeOverview, GitHubCodeSearchPage, GitHubContentListing, GitHubFilePreview,
     GitHubRepositoryCommitPage, GitHubTagPage,
 };
+pub use comment::GitHubCommentMutation;
 pub use discovery::{
     GitHubDeveloperFeedPage, GitHubDiscoverySearchKind, GitHubDiscoverySearchPage,
     GitHubDiscoverySearchSort,
@@ -502,6 +504,11 @@ pub struct GitHubPullRequestReviewThreadComment {
     pub created_at: String,
     pub updated_at: String,
     pub pending: bool,
+    pub viewer_can_update: bool,
+    pub viewer_can_delete: bool,
+    pub is_minimized: bool,
+    pub minimized_reason: Option<String>,
+    pub outdated: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -587,6 +594,7 @@ pub(crate) trait GitHubClient:
     + checks::GitHubCheckClient
     + code::GitHubCodeClient
     + code::write::GitHubCodeMutationClient
+    + comment::GitHubCommentClient
     + discussion::GitHubDiscussionClient
     + discovery::GitHubDiscoveryClient
     + gist::GitHubGistClient
@@ -1091,15 +1099,26 @@ impl GitHubClient for OctocrabGitHubClient {
         let pull_request = pull_request.map_err(github_error)?;
         let timeline = timeline.map_err(github_error)?;
         let reviews = reviews.map_err(github_error)?;
+        let timeline_has_more = timeline.next.is_some();
+        let timeline = timeline
+            .items
+            .into_iter()
+            .enumerate()
+            .map(|(index, event)| timeline_item_from_octocrab(event, index))
+            .collect();
+        let timeline = comment::enrich_issue_timeline_comments(
+            &client,
+            owner,
+            repository,
+            pull_request_number,
+            comment::GitHubConversationCommentKind::PullRequest,
+            timeline,
+        )
+        .await?;
 
         Ok(GitHubPullRequestDetailPage {
             pull_request: pull_request_from_octocrab(pull_request),
-            timeline: timeline
-                .items
-                .into_iter()
-                .enumerate()
-                .map(|(index, event)| timeline_item_from_octocrab(event, index))
-                .collect(),
+            timeline,
             reviews: reviews
                 .items
                 .into_iter()
@@ -1108,7 +1127,7 @@ impl GitHubClient for OctocrabGitHubClient {
             reviews_have_more: reviews.next.is_some(),
             timeline_page,
             timeline_has_previous: timeline_page > 1,
-            timeline_has_more: timeline.next.is_some(),
+            timeline_has_more,
         })
     }
 
@@ -1359,13 +1378,18 @@ mutation AddPullRequestReviewThreadReply($threadId: ID!, $body: String!) {
   ) {
     comment {
       id
-      databaseId
+      databaseId: fullDatabaseId
       body
       url
       createdAt
       updatedAt
       authorAssociation
       state
+      isMinimized
+      minimizedReason
+      outdated
+      viewerCanUpdate
+      viewerCanDelete
       author {
         login
         avatarUrl
@@ -1480,13 +1504,18 @@ query PullRequestReviewThreads(
           comments(first: $commentsFirst) {
             nodes {
               id
-              databaseId
+              databaseId: fullDatabaseId
               body
               url
               createdAt
               updatedAt
               authorAssociation
               state
+              isMinimized
+              minimizedReason
+              outdated
+              viewerCanUpdate
+              viewerCanDelete
               author {
                 login
                 avatarUrl
@@ -1564,6 +1593,7 @@ struct PullRequestReviewThreadCommentsConnection {
 #[serde(rename_all = "camelCase")]
 struct PullRequestReviewThreadCommentNode {
     id: String,
+    #[serde(default, deserialize_with = "deserialize_optional_graphql_u64")]
     database_id: Option<u64>,
     author: Option<GraphQlActor>,
     author_association: Option<String>,
@@ -1572,6 +1602,31 @@ struct PullRequestReviewThreadCommentNode {
     created_at: String,
     updated_at: String,
     state: String,
+    is_minimized: bool,
+    minimized_reason: Option<String>,
+    outdated: bool,
+    viewer_can_update: bool,
+    viewer_can_delete: bool,
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum GraphQlU64 {
+    Number(u64),
+    String(String),
+}
+
+fn deserialize_optional_graphql_u64<'de, D>(deserializer: D) -> Result<Option<u64>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = Option::<GraphQlU64>::deserialize(deserializer)?;
+    value
+        .map(|value| match value {
+            GraphQlU64::Number(value) => Ok(value),
+            GraphQlU64::String(value) => value.parse().map_err(serde::de::Error::custom),
+        })
+        .transpose()
 }
 
 #[derive(Deserialize)]
@@ -2048,6 +2103,11 @@ fn pull_request_review_thread_comment_from_graphql(
         created_at: comment.created_at,
         updated_at: comment.updated_at,
         pending: comment.state.eq_ignore_ascii_case("PENDING"),
+        viewer_can_update: comment.viewer_can_update,
+        viewer_can_delete: comment.viewer_can_delete,
+        is_minimized: comment.is_minimized,
+        minimized_reason: comment.minimized_reason,
+        outdated: comment.outdated,
     }
 }
 
@@ -2422,6 +2482,11 @@ mod tests {
                 created_at: "2026-08-27T08:00:00Z".to_string(),
                 updated_at: "2026-08-27T08:00:00Z".to_string(),
                 pending: false,
+                viewer_can_update: true,
+                viewer_can_delete: true,
+                is_minimized: false,
+                minimized_reason: None,
+                outdated: false,
             })
         }
 
@@ -2942,6 +3007,20 @@ mod tests {
             .create_issue_comment("octocat", "hello-world", 7, "Fixed in #41.")
             .await
             .expect("issue comment");
+        let updated_comment = service
+            .mutate_issue_comment(
+                "octocat",
+                "hello-world",
+                7,
+                &GitHubCommentMutation::Update {
+                    comment_id: "IC_84".to_string(),
+                    expected_updated_at: "2026-08-26T10:00:00+00:00".to_string(),
+                    body: "Updated Issue comment.".to_string(),
+                },
+            )
+            .await
+            .expect("updated issue comment")
+            .expect("returned issue comment");
         let issue = service
             .update_issue_state("octocat", "hello-world", 7, GitHubIssueState::Closed)
             .await
@@ -2958,6 +3037,10 @@ mod tests {
         assert_eq!(metadata.milestone_number, Some(3));
         assert_eq!(comment.kind, GitHubIssueTimelineKind::Comment);
         assert_eq!(comment.body.as_deref(), Some("Fixed in #41."));
+        assert_eq!(
+            updated_comment.body.as_deref(),
+            Some("Updated Issue comment.")
+        );
         assert_eq!(issue.state, GitHubIssueState::Closed);
         assert_eq!(issue.state_reason.as_deref(), Some("completed"));
     }
@@ -3192,6 +3275,20 @@ mod tests {
             )
             .await
             .expect("unresolved pull request review thread");
+        let updated_review_comment = service
+            .mutate_pull_request_review_comment(
+                "octocat",
+                "hello-world",
+                12,
+                &GitHubCommentMutation::Update {
+                    comment_id: "PRRC_2".to_string(),
+                    expected_updated_at: "2026-08-27T08:00:00Z".to_string(),
+                    body: "Updated submitted review comment.".to_string(),
+                },
+            )
+            .await
+            .expect("updated submitted review comment")
+            .expect("returned submitted review comment");
 
         assert_eq!(comparison.ahead_by, 1);
         assert_eq!(comparison.head, "feature/create");
@@ -3275,6 +3372,10 @@ mod tests {
         assert!(thread_page.has_more);
         assert_eq!(thread_reply.id, "PRRC_2");
         assert_eq!(thread_reply.body, "Covered by the new regression test.");
+        assert_eq!(
+            updated_review_comment.body,
+            "Updated submitted review comment."
+        );
         assert!(resolved_thread.is_resolved);
         assert!(resolved_thread.viewer_can_unresolve);
         assert!(!unresolved_thread.is_resolved);
@@ -3840,6 +3941,11 @@ mod tests {
                     created_at: "2026-08-26T12:00:00Z".to_string(),
                     updated_at: "2026-08-26T12:05:00Z".to_string(),
                     state: "PENDING".to_string(),
+                    is_minimized: false,
+                    minimized_reason: None,
+                    outdated: true,
+                    viewer_can_update: true,
+                    viewer_can_delete: true,
                 }],
                 page_info: GraphQlPageInfo {
                     has_next_page: true,
@@ -3857,5 +3963,33 @@ mod tests {
         assert!(thread.comments_have_more);
         assert_eq!(thread.comments[0].author, "reviewer");
         assert!(thread.comments[0].pending);
+    }
+
+    #[test]
+    fn review_comment_database_id_accepts_current_graphql_bigint() {
+        let comment: PullRequestReviewThreadCommentNode =
+            serde_json::from_value(serde_json::json!({
+                "id": "PRRC_5448457835",
+                "databaseId": "5448457835",
+                "author": null,
+                "authorAssociation": "NONE",
+                "body": "A submitted comment",
+                "url": "https://github.com/octocat/hello-world/pull/12#discussion_r5448457835",
+                "createdAt": "2026-08-29T08:00:00Z",
+                "updatedAt": "2026-08-29T08:01:00Z",
+                "state": "SUBMITTED",
+                "isMinimized": false,
+                "minimizedReason": null,
+                "outdated": false,
+                "viewerCanUpdate": true,
+                "viewerCanDelete": true
+            }))
+            .expect("GraphQL BigInt comment fixture");
+
+        assert_eq!(comment.database_id, Some(5_448_457_835));
+        assert!(PULL_REQUEST_REVIEW_THREADS_QUERY.contains("databaseId: fullDatabaseId"));
+        assert!(
+            ADD_PULL_REQUEST_REVIEW_THREAD_REPLY_MUTATION.contains("databaseId: fullDatabaseId")
+        );
     }
 }

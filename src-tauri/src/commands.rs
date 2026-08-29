@@ -8,8 +8,8 @@ use crate::{
     error::AppError,
     github::{
         GitHubAuthEvent, GitHubBlame, GitHubCheckPage, GitHubCheckSuite, GitHubCodeOverview,
-        GitHubCodeScanningInstancePage, GitHubCodeSearchPage, GitHubConnection,
-        GitHubContentListing, GitHubContributionSummary, GitHubDeveloperFeedPage,
+        GitHubCodeScanningInstancePage, GitHubCodeSearchPage, GitHubCommentMutation,
+        GitHubConnection, GitHubContentListing, GitHubContributionSummary, GitHubDeveloperFeedPage,
         GitHubDiscoverySearchKind, GitHubDiscoverySearchPage, GitHubDiscoverySearchSort,
         GitHubDiscussionAnsweredFilter, GitHubDiscussionCategoryPage, GitHubDiscussionCloseReason,
         GitHubDiscussionComment, GitHubDiscussionCommentDeletion, GitHubDiscussionDeletion,
@@ -25,8 +25,8 @@ use crate::{
         GitHubIssueInboxPage, GitHubIssueInboxScope, GitHubIssueLabelPage,
         GitHubIssueMilestonePage, GitHubIssuePage, GitHubIssueSort, GitHubIssueState,
         GitHubIssueTimelineItem, GitHubLoginAvailability, GitHubNotificationAction,
-        GitHubNotificationPage, GitHubPackage, GitHubPackagePage,
-        GitHubPackageType, GitHubPackageVersionMutationInput, GitHubPackageVersionMutationResult,
+        GitHubNotificationPage, GitHubPackage, GitHubPackagePage, GitHubPackageType,
+        GitHubPackageVersionMutationInput, GitHubPackageVersionMutationResult,
         GitHubPackageVersionPage, GitHubPackageVersionState, GitHubPackageVisibility,
         GitHubPendingPullRequestReview, GitHubProfileActivityPage, GitHubProfileConnectionKind,
         GitHubProjectDetail, GitHubProjectFilters, GitHubProjectItem, GitHubProjectItemAction,
@@ -1515,6 +1515,26 @@ pub async fn github_create_repository_issue_comment(
 }
 
 #[tauri::command]
+pub async fn github_mutate_repository_issue_comment(
+    owner: String,
+    repository: String,
+    issue_number: u64,
+    mutation: GitHubCommentMutation,
+    state: State<'_, AppState>,
+) -> Result<Option<GitHubIssueTimelineItem>, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .mutate_issue_comment(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(issue_number, "issue")?,
+            &validate_comment_mutation(mutation)?,
+        )
+        .await
+}
+
+#[tauri::command]
 pub async fn github_update_repository_issue_state(
     owner: String,
     repository: String,
@@ -2007,6 +2027,26 @@ pub async fn github_create_repository_pull_request_comment(
 }
 
 #[tauri::command]
+pub async fn github_mutate_repository_pull_request_comment(
+    owner: String,
+    repository: String,
+    pull_request_number: u64,
+    mutation: GitHubCommentMutation,
+    state: State<'_, AppState>,
+) -> Result<Option<GitHubIssueTimelineItem>, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .mutate_pull_request_comment(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(pull_request_number, "pull request")?,
+            &validate_comment_mutation(mutation)?,
+        )
+        .await
+}
+
+#[tauri::command]
 pub async fn github_create_repository_pull_request_review(
     owner: String,
     repository: String,
@@ -2254,6 +2294,26 @@ pub async fn github_reply_to_pull_request_review_thread(
     state
         .github
         .reply_to_pull_request_review_thread(&thread_id, &body)
+        .await
+}
+
+#[tauri::command]
+pub async fn github_mutate_repository_pull_request_review_comment(
+    owner: String,
+    repository: String,
+    pull_request_number: u64,
+    mutation: GitHubCommentMutation,
+    state: State<'_, AppState>,
+) -> Result<Option<GitHubPullRequestReviewThreadComment>, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .mutate_pull_request_review_comment(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(pull_request_number, "pull request")?,
+            &validate_comment_mutation(mutation)?,
+        )
         .await
 }
 
@@ -3761,6 +3821,46 @@ fn validate_issue_comment(body: &str) -> Result<&str, AppError> {
     Ok(body)
 }
 
+fn validate_comment_mutation(
+    mutation: GitHubCommentMutation,
+) -> Result<GitHubCommentMutation, AppError> {
+    match mutation {
+        GitHubCommentMutation::Update {
+            comment_id,
+            expected_updated_at,
+            body,
+        } => {
+            validate_issue_comment(&body)?;
+            Ok(GitHubCommentMutation::Update {
+                comment_id: validate_graphql_node_id(comment_id, "comment")?,
+                expected_updated_at: validate_comment_updated_at(expected_updated_at)?,
+                body,
+            })
+        }
+        GitHubCommentMutation::Delete {
+            comment_id,
+            expected_updated_at,
+        } => Ok(GitHubCommentMutation::Delete {
+            comment_id: validate_graphql_node_id(comment_id, "comment")?,
+            expected_updated_at: validate_comment_updated_at(expected_updated_at)?,
+        }),
+    }
+}
+
+fn validate_comment_updated_at(updated_at: String) -> Result<String, AppError> {
+    let updated_at = updated_at.trim().to_string();
+    if updated_at.is_empty()
+        || updated_at.len() > 128
+        || updated_at.chars().any(char::is_control)
+        || !updated_at.contains('T')
+    {
+        return Err(AppError::Validation(
+            "GitHub comment revision is invalid".to_string(),
+        ));
+    }
+    Ok(updated_at)
+}
+
 fn validate_commit_id(commit_id: String) -> Result<String, AppError> {
     let commit_id = commit_id.trim().to_string();
     if !(7..=128).contains(&commit_id.len())
@@ -4223,6 +4323,36 @@ mod tests {
         let body = "  ```rust\nfn harbor() {}\n```  ";
         assert_eq!(validate_issue_comment(body).expect("comment"), body);
         assert!(validate_issue_comment(" \n\t ").is_err());
+    }
+
+    #[test]
+    fn comment_mutations_validate_node_revision_and_body() {
+        let mutation = validate_comment_mutation(GitHubCommentMutation::Update {
+            comment_id: "  IC_kwDOexample  ".to_string(),
+            expected_updated_at: " 2026-08-29T08:01:00Z ".to_string(),
+            body: "  Markdown body  ".to_string(),
+        })
+        .expect("comment update");
+        assert_eq!(mutation.comment_id(), "IC_kwDOexample");
+        assert!(matches!(
+            mutation,
+            GitHubCommentMutation::Update {
+                expected_updated_at,
+                body,
+                ..
+            } if expected_updated_at == "2026-08-29T08:01:00Z" && body == "  Markdown body  "
+        ));
+        assert!(validate_comment_mutation(GitHubCommentMutation::Update {
+            comment_id: "IC_kwDOexample".to_string(),
+            expected_updated_at: "2026-08-29T08:01:00Z".to_string(),
+            body: " \n ".to_string(),
+        })
+        .is_err());
+        assert!(validate_comment_mutation(GitHubCommentMutation::Delete {
+            comment_id: "bad node".to_string(),
+            expected_updated_at: "not-a-revision".to_string(),
+        })
+        .is_err());
     }
 
     #[test]

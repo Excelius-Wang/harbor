@@ -402,6 +402,20 @@ groups. Discussion upvotes remain a separate GitHub capability instead of being 
 thumbs-up reactions.
 The completed Reactions slice is open and mergeable in
 [PR #4](https://github.com/Excelius-Wang/harbor/pull/4) from `feat/github-reactions`.
+
+Issue and pull request conversation comments plus submitted pull request review comments now support
+native editing and confirmed permanent deletion. The focused `GitHubCommentClient` preloads the
+selected repository, exact comment node, parent Issue or pull request, viewer capabilities, and
+displayed revision before writing through GitHub's current GraphQL mutations. Issue comments and
+pull request conversation comments remain explicitly discriminated even though GitHub models both
+as `IssueComment`; submitted review comments require `PullRequestReviewComment` and `SUBMITTED`
+state. Returned comments update every matching TanStack Query cache before focused invalidation,
+while deletion refetches the authoritative parent instead of guessing counts or tombstones. Shared
+shadcn edit and destructive-confirmation dialogs preserve Markdown drafts across conflict and
+permission failures. Review comment database IDs accept GitHub's current GraphQL `BigInt` string
+shape instead of relying on the removed integer field.
+The completed comment-lifecycle slice is open in
+[PR #5](https://github.com/Excelius-Wang/harbor/pull/5) from `feat/github-comment-lifecycle`.
 The workspace shell is responsive, starts at 1600x1000, and remains usable down to 900x620.
 Repository Wiki now has a native personal-developer workflow behind a focused Git-backed service.
 Harbor discovers the Wiki's real default branch, keeps a bounded bare cache per immutable repository
@@ -480,6 +494,17 @@ external DeepWiki test ignored by design; `cargo fmt --check`, `cargo check`, th
 and `git diff --check` pass. A deterministic Playwright fixture verified all three Insights tabs,
 Traffic period switching, and exact IPC arguments at 1600x1000 and 900x620. Both sizes have no
 page-level horizontal overflow, and the browser reports zero errors and warnings.
+
+Comment-lifecycle verification covers current official GraphQL node and mutation contracts, exact
+Issue versus pull request parent discrimination, repository scope, viewer capabilities, submitted
+review state, displayed-revision conflicts, nullable mutation payloads, client-mutation identity,
+and GraphQL `BigInt` review comment IDs. `pnpm check` passes with 130 frontend tests; 235 Rust tests
+pass with one external DeepWiki test ignored by design; `cargo fmt --check`, `cargo check`, the
+production build, and `git diff --check` pass. The deterministic desktop fixture verified edit and
+delete flows for Issue comments, pull request conversation comments, and submitted review comments,
+including exact Tauri arguments, authoritative refetch after deletion, retained Markdown after a
+conflict, and capability-gated actions. At 1600x1000 and 900x620, dialogs remain inside the viewport,
+document width equals viewport width, and the browser console reports zero errors and warnings.
 
 Success: `pnpm check` passes; a 70-repository Playwright fixture with a 240-character unbroken token
 keeps `scrollWidth === clientWidth` at both 1600x1000 and 900x620, with 12px between descriptions and

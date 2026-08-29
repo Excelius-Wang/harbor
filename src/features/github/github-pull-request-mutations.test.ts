@@ -111,6 +111,9 @@ const comment: GitHubIssueTimelineItem = {
   event: "commented",
   actor: "octocat",
   body: "Ready for another look.",
+  viewerCanUpdate: true,
+  viewerCanDelete: true,
+  isMinimized: false,
 };
 
 const review: GitHubPullRequestReview = {
@@ -155,6 +158,10 @@ const threadComment: GitHubPullRequestReviewThreadComment = {
   createdAt: "2026-08-27T08:00:00Z",
   updatedAt: "2026-08-27T08:00:00Z",
   pending: false,
+  viewerCanUpdate: true,
+  viewerCanDelete: true,
+  isMinimized: false,
+  outdated: false,
 };
 
 const reviewThread: GitHubPullRequestReviewThread = {
