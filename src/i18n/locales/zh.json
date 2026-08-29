@@ -808,6 +808,7 @@
           "inviteTitle": "添加协作者",
           "inviteDescription": "GitHub 会向对方发送一封仓库邀请。",
           "username": "GitHub 用户名",
+          "usernamePlaceholder": "输入 GitHub 用户名",
           "writeOnlyDescription": "个人仓库只有一种协作者权限，对方可以读写仓库。通过邮箱邀请仍需前往 GitHub 网页。",
           "sendInvitation": "发送邀请",
           "invited": "仓库邀请已发送",

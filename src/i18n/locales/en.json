@@ -812,6 +812,7 @@
           "inviteTitle": "Add a collaborator",
           "inviteDescription": "GitHub will send this person an invitation to the repository.",
           "username": "GitHub username",
+          "usernamePlaceholder": "Enter a GitHub username",
           "writeOnlyDescription": "Personal repositories support one collaborator role with read and write access. Email invitations still need GitHub Web.",
           "sendInvitation": "Send invitation",
           "invited": "Repository invitation sent",

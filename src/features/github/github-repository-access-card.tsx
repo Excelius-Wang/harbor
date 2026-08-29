@@ -292,7 +292,7 @@ export function GitHubRepositoryAccessCard({ target }: { target: GitHubRepositor
               value={username}
               autoComplete="off"
               maxLength={39}
-              placeholder="octocat"
+              placeholder={t("workspace.repositories.settings.access.usernamePlaceholder")}
               disabled={inviteMutation.isPending}
               onChange={(event) => setUsername(event.currentTarget.value)}
             />
