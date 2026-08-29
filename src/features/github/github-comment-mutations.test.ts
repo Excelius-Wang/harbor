@@ -10,6 +10,7 @@ import type {
   GitHubPullRequestReviewThreadPage,
 } from "./github-data";
 import {
+  canSubmitCommentUpdate,
   mutateRepositoryIssueComment,
   mutateRepositoryPullRequestComment,
   mutateRepositoryPullRequestReviewComment,
@@ -57,6 +58,12 @@ const updatedComment = {
 
 describe("GitHub comment mutations", () => {
   beforeEach(() => vi.mocked(invoke).mockReset());
+
+  it("allows clearing an existing comment while rejecting no-op and pending updates", () => {
+    expect(canSubmitCommentUpdate("", "Current body", false)).toBe(true);
+    expect(canSubmitCommentUpdate("Current body", "Current body", false)).toBe(false);
+    expect(canSubmitCommentUpdate("Updated body", "Current body", true)).toBe(false);
+  });
 
   it("sends the exact target and stale revision to each focused command", async () => {
     vi.mocked(invoke).mockResolvedValue(updatedComment);
