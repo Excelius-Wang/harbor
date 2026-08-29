@@ -390,6 +390,16 @@ while legacy credentials probe GitHub and treat a hidden private-package 404 as 
 Repository Insights is complete on open pull request #1, and Personal Packages is complete on open
 pull request #2; both remain unmerged pending user review.
 The workspace shell is responsive, starts at 1600x1000, and remains usable down to 900x620.
+Repository Wiki now has a native personal-developer workflow behind a focused Git-backed service.
+Harbor discovers the Wiki's real default branch, keeps a bounded bare cache per immutable repository
+ID, reads Markdown and source-only pages, renders Sidebar and Footer content, follows unambiguous
+relative Wiki links in app, and supports guarded create, edit, delete, history, comparison, and revert
+commits without force-pushing. Every write carries the displayed head and blob revisions, verifies the
+authoritative remote result, and preserves a stale draft as a stable conflict. Offline cached reads are
+explicitly read-only; private relative assets never receive OAuth credentials from the WebView. A
+disabled or uninitialized Wiki keeps a narrow GitHub Web fallback because Smart HTTP cannot reliably
+bootstrap the first page. Local Playwright and TypeScript build artifacts are now ignored.
+The verified Wiki slice is published as GitHub pull request #3 from `feat/repository-wiki`.
 
 ## Next action
 
@@ -418,6 +428,16 @@ navigation, and the 1600x1000 and 900x620 layouts. Document width equals viewpor
 browser console reports zero errors and warnings. A live read probe through `tauri:dev` remains
 pending because an existing Harbor process prevented the debug window from becoming available; no
 credential was read or exported while attempting it.
+
+Repository Wiki verification covers canonical credential scoping, nonstandard remote default branches,
+origin recovery, token-free cache configuration, bounded page mutations, stale-head conflicts,
+authoritative create/edit/delete pushes, history, comparison, and linear revert commits. `pnpm check`
+passes with 131 frontend tests; 237 Rust tests pass with one external DeepWiki test ignored by design;
+`cargo fmt --check`, the production build, and `git diff --check` pass. RustSec reports the same nine
+pre-existing advisories as `origin/main`; the new `git2`/vendored `libgit2` dependency chain adds none.
+A deterministic desktop fixture verified browsing, native relative links, credential-safe private
+assets, new-page preview, and revision history at 1600x1000 and 900x620. Both sizes keep document width
+equal to viewport width, and the browser console reports no product errors or warnings.
 
 Repository Code mutation verification covers exact Tauri contracts, atomic rename payloads, stale
 file and branch guards, Git-compatible branch validation, empty-repository initialization, stable

@@ -27,6 +27,14 @@ pub enum AppError {
     GitHubCodeConflict(String),
     #[error("GitHub could not update the package: {0}")]
     GitHubPackageConflict(String),
+    #[error("GitHub Wiki changed: {0}")]
+    GitHubWikiConflict(String),
+    #[error("GitHub Wiki cache miss: {0}")]
+    GitHubWikiCacheMiss(String),
+    #[error("GitHub Wiki content is too large: {0}")]
+    GitHubWikiTooLarge(String),
+    #[error("GitHub Wiki path is unsupported: {0}")]
+    GitHubWikiUnsupportedPath(String),
     #[error("GitHub workflow artifact has expired")]
     GitHubArtifactExpired,
     #[error("GitHub authentication error: {0}")]
@@ -66,6 +74,10 @@ impl Serialize for AppError {
             Self::GitHubPullRequestMergeQueueConflict(_) => "githubPullRequestMergeQueueConflict",
             Self::GitHubCodeConflict(_) => "githubCodeConflict",
             Self::GitHubPackageConflict(_) => "githubPackageConflict",
+            Self::GitHubWikiConflict(_) => "githubWikiConflict",
+            Self::GitHubWikiCacheMiss(_) => "githubWikiCacheMiss",
+            Self::GitHubWikiTooLarge(_) => "githubWikiTooLarge",
+            Self::GitHubWikiUnsupportedPath(_) => "githubWikiUnsupportedPath",
             Self::GitHubArtifactExpired => "githubArtifactExpired",
             Self::GitHubAuthentication(_) => "githubAuthentication",
             Self::GitHubNotConnected => "githubNotConnected",

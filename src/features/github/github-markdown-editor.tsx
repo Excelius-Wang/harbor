@@ -16,8 +16,12 @@ export function GitHubMarkdownEditor({
   repository,
   reference,
   relativeBaseUrl,
+  relativeImageBaseUrl,
+  relativeLinkFallbackUrl,
+  disableRelativeImages = false,
   placeholder,
   disabled,
+  previewEnabled = true,
   invalid = false,
   minHeightClassName = "min-h-56",
   onChange,
@@ -28,8 +32,12 @@ export function GitHubMarkdownEditor({
   repository: GitHubRepositoryContentContext;
   reference: string;
   relativeBaseUrl?: string;
+  relativeImageBaseUrl?: string;
+  relativeLinkFallbackUrl?: string;
+  disableRelativeImages?: boolean;
   placeholder: string;
   disabled: boolean;
+  previewEnabled?: boolean;
   invalid?: boolean;
   minHeightClassName?: string;
   onChange: (value: string) => void;
@@ -49,7 +57,11 @@ export function GitHubMarkdownEditor({
         <TabsTrigger value="write" className="px-2 text-xs" disabled={disabled}>
           {t("workspace.repositories.write")}
         </TabsTrigger>
-        <TabsTrigger value="preview" className="px-2 text-xs" disabled={disabled}>
+        <TabsTrigger
+          value="preview"
+          className="px-2 text-xs"
+          disabled={disabled || !previewEnabled}
+        >
           {t("workspace.repositories.preview")}
         </TabsTrigger>
       </TabsList>
@@ -85,6 +97,9 @@ export function GitHubMarkdownEditor({
                 reference={reference}
                 repository={repository}
                 relativeBaseUrl={relativeBaseUrl}
+                relativeImageBaseUrl={relativeImageBaseUrl}
+                relativeLinkFallbackUrl={relativeLinkFallbackUrl}
+                disableRelativeImages={disableRelativeImages}
                 onOpenExternal={(url) => void openExternalUrl(url)}
               />
             </Suspense>

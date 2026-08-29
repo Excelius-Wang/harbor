@@ -5,6 +5,7 @@ import {
   Archive,
   BarChart3,
   BookMarked,
+  BookOpen,
   CircleDot,
   Code2,
   ExternalLink,
@@ -75,6 +76,10 @@ const GitHubReleaseView = lazy(() =>
   import("./github-release-view").then((module) => ({ default: module.GitHubReleaseView }))
 );
 
+const GitHubWikiView = lazy(() =>
+  import("./github-wiki-view").then((module) => ({ default: module.GitHubWikiView }))
+);
+
 const GitHubSecurityView = lazy(() =>
   import("./github-security-view").then((module) => ({ default: module.GitHubSecurityView }))
 );
@@ -91,6 +96,7 @@ const GitHubRepositorySettingsView = lazy(() =>
 
 type RepositoryTab =
   | "code"
+  | "wiki"
   | "releases"
   | "issues"
   | "pullRequests"
@@ -577,6 +583,9 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
                     <TabsTrigger value="code" className="px-1.5 text-xs">
                       <Code2 /> {t("workspace.repositories.tabs.code")}
                     </TabsTrigger>
+                    <TabsTrigger value="wiki" className="px-1.5 text-xs">
+                      <BookOpen /> {t("workspace.repositories.tabs.wiki")}
+                    </TabsTrigger>
                     <TabsTrigger value="releases" className="px-1.5 text-xs">
                       <Rocket /> {t("workspace.repositories.tabs.releases")}
                     </TabsTrigger>
@@ -608,6 +617,11 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
                 <TabsContent value="code" className="flex min-h-0 min-w-0 flex-col overflow-hidden">
                   <Suspense fallback={<RepositoryTabSkeleton />}>
                     <GitHubCodeView key={selectedRepository.id} repository={selectedRepository} />
+                  </Suspense>
+                </TabsContent>
+                <TabsContent value="wiki" className="flex min-h-0 min-w-0 flex-col overflow-hidden">
+                  <Suspense fallback={<RepositoryTabSkeleton />}>
+                    <GitHubWikiView repository={selectedRepository} />
                   </Suspense>
                 </TabsContent>
                 <TabsContent

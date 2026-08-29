@@ -15,6 +15,10 @@ type GitHubReadmeProps = {
   reference: string;
   repository: GitHubRepositoryContentContext;
   relativeBaseUrl?: string;
+  relativeImageBaseUrl?: string;
+  relativeLinkFallbackUrl?: string;
+  disableRelativeImages?: boolean;
+  onOpenRelativeLink?: (destination: string) => boolean;
   onOpenExternal: (url: string) => void;
 };
 
@@ -88,6 +92,7 @@ export function resolveReadmeDestination({
   reference,
   repository,
   relativeBaseUrl,
+  relativeImageBaseUrl,
 }: {
   destination: string;
   kind: "link" | "image";
@@ -95,6 +100,7 @@ export function resolveReadmeDestination({
   reference: string;
   repository: GitHubRepositoryContentContext;
   relativeBaseUrl?: string;
+  relativeImageBaseUrl?: string;
 }) {
   if (!destination || destination.startsWith("#") || isAbsoluteUrl(destination)) {
     return destination;
@@ -103,7 +109,9 @@ export function resolveReadmeDestination({
   if (destination.startsWith("/")) return `https://github.com${destination}`;
 
   const resolvedPath = resolveRelativePath(destination, path);
-  if (relativeBaseUrl) return `${relativeBaseUrl.replace(/\/+$/, "")}/${resolvedPath}`;
+  const configuredBaseUrl =
+    kind === "image" ? (relativeImageBaseUrl ?? relativeBaseUrl) : relativeBaseUrl;
+  if (configuredBaseUrl) return `${configuredBaseUrl.replace(/\/+$/, "")}/${resolvedPath}`;
   const route = kind === "image" ? "raw" : "blob";
   return `${repository.url}/${route}/${encodeURIComponent(reference)}/${resolvedPath}`;
 }
@@ -115,6 +123,10 @@ export function GitHubReadme({
   reference,
   repository,
   relativeBaseUrl,
+  relativeImageBaseUrl,
+  relativeLinkFallbackUrl,
+  disableRelativeImages = false,
+  onOpenRelativeLink,
   onOpenExternal,
 }: GitHubReadmeProps) {
   const openExternal = (event: MouseEvent<HTMLAnchorElement>, destination: string) => {
@@ -138,14 +150,23 @@ export function GitHubReadme({
           : {}),
         a: ({ href, title, children }) => {
           if (!href) return <span>{children}</span>;
-          const destination = resolveReadmeDestination({
-            destination: href,
-            kind: "link",
-            path,
-            reference,
-            repository,
-            relativeBaseUrl,
-          });
+          const relative =
+            !href.startsWith("#") &&
+            !href.startsWith("/") &&
+            !href.startsWith("//") &&
+            !isAbsoluteUrl(href);
+          const destination =
+            relativeLinkFallbackUrl && relative
+              ? relativeLinkFallbackUrl
+              : resolveReadmeDestination({
+                  destination: href,
+                  kind: "link",
+                  path,
+                  reference,
+                  repository,
+                  relativeBaseUrl,
+                  relativeImageBaseUrl,
+                });
           if (destination.startsWith("#")) {
             return (
               <a href={destination} title={title}>
@@ -159,7 +180,13 @@ export function GitHubReadme({
               title={title}
               target="_blank"
               rel="noreferrer"
-              onClick={(event) => openExternal(event, destination)}
+              onClick={(event) => {
+                if (relative && onOpenRelativeLink?.(href)) {
+                  event.preventDefault();
+                  return;
+                }
+                openExternal(event, destination);
+              }}
             >
               {children}
             </a>
@@ -167,6 +194,14 @@ export function GitHubReadme({
         },
         img: ({ alt = "", src, title, width, height }) => {
           if (typeof src !== "string" || !src) return alt ? <span>{alt}</span> : null;
+          if (
+            disableRelativeImages &&
+            !src.startsWith("/") &&
+            !src.startsWith("//") &&
+            !isAbsoluteUrl(src)
+          ) {
+            return alt ? <span>{alt}</span> : null;
+          }
           const imageWidth = normalizeImageDimension(width);
           const imageHeight = normalizeImageDimension(height);
           const destination = resolveReadmeDestination({
@@ -176,6 +211,7 @@ export function GitHubReadme({
             reference,
             repository,
             relativeBaseUrl,
+            relativeImageBaseUrl,
           });
           return (
             <img

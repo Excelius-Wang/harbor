@@ -22,6 +22,96 @@ export type GitHubRepositoryPage = {
   hasMore: boolean;
 };
 
+export type GitHubWikiPageKind = "home" | "page" | "sidebar" | "footer";
+
+export type GitHubWikiPageSummary = {
+  path: string;
+  title: string;
+  kind: GitHubWikiPageKind;
+  markdown: boolean;
+  blobSha: string;
+  byteSize: number;
+};
+
+export type GitHubWikiOverview = {
+  repositoryId: number;
+  enabled: boolean;
+  initialized: boolean;
+  canEdit: boolean;
+  archived: boolean;
+  defaultBranch?: string;
+  headSha?: string;
+  pages: GitHubWikiPageSummary[];
+  sidebar?: GitHubWikiPageSummary;
+  footer?: GitHubWikiPageSummary;
+  unsupportedFileCount: number;
+  truncated: boolean;
+  stale: boolean;
+  fetchedAt?: number;
+  webUrl: string;
+};
+
+export type GitHubWikiPage = GitHubWikiPageSummary & {
+  content: string;
+  headSha: string;
+};
+
+export type GitHubWikiPageMutationInput = {
+  originalPath?: string;
+  title: string;
+  content: string;
+  expectedHead: string;
+  expectedBlobSha?: string;
+  message?: string;
+};
+
+export type GitHubWikiMutationResult = {
+  overview: GitHubWikiOverview;
+  page?: GitHubWikiPage;
+};
+
+export type GitHubWikiRevisionSummary = {
+  sha: string;
+  shortSha: string;
+  message: string;
+  authorName?: string;
+  authoredAt: number;
+};
+
+export type GitHubWikiHistoryPage = {
+  revisions: GitHubWikiRevisionSummary[];
+  page: number;
+  hasMore: boolean;
+  truncated: boolean;
+};
+
+export type GitHubWikiRevision = {
+  revision: GitHubWikiRevisionSummary;
+  path: string;
+  blobSha?: string;
+  content?: string;
+  deleted: boolean;
+  markdown: boolean;
+};
+
+export type GitHubWikiComparison = {
+  path: string;
+  baseSha: string;
+  headSha: string;
+  patch: string;
+  additions: number;
+  deletions: number;
+  truncated: boolean;
+};
+
+export type GitHubWikiRevertInput = {
+  path: string;
+  expectedHead: string;
+  expectedBlobSha: string;
+  sourceCommitSha: string;
+  message?: string;
+};
+
 export type GitHubDiscoverySearchKind =
   | "repositories"
   | "code"
