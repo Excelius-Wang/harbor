@@ -1768,6 +1768,18 @@ export type GitHubPullRequestFilePage = {
   hasMore: boolean;
 };
 
+export type GitHubPullRequestFileViewedState = "dismissed" | "unviewed" | "viewed";
+
+export type GitHubPullRequestFileViewState = {
+  path: string;
+  state: GitHubPullRequestFileViewedState;
+};
+
+export type GitHubPullRequestFileViewStateSnapshot = {
+  pullRequestId: string;
+  files: GitHubPullRequestFileViewState[];
+};
+
 export type GitHubPullRequestReviewThreadComment = {
   id: string;
   databaseId?: number;

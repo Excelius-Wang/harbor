@@ -16,31 +16,46 @@ Insights, personal Packages, Wiki, Reactions, comment lifecycle, commit details,
 controls, personal collaborators, received invitations, Issue taxonomy, and Pages. The signed-in
 production Packages page reached its empty state after the exact API returned `200`.
 
-The recovered Actions-administration slice now lives in
-`/private/tmp/harbor-actions-administration-20260830` on
-`feat/github-actions-administration`. Commit `3246afe` ports the verified checkpoint onto
-`b26847b` without changing the original worktree. The original worktree remains on local branch
-`checkpoint/github-actions-administration-20260830` at `7e2084f` with only its Cairn item unstaged.
-The migrated implementation supports workflow enable/disable and eligible workflow-run deletion
-through focused Actions Interfaces, validated Tauri commands, TanStack Query reconciliation,
-shadcn controls, and English/Chinese copy. Review added an observed `workflow_id` deletion guard,
-maps GitHub 404/409 deletion responses to refreshable conflicts, keeps selected workflow state in
-sync after a stale mutation, navigates away before clearing a deleted run's caches, and uses the
-documented shadcn menu grouping. The deletion regression test asserts list, detail, Jobs, artifacts,
-and Job-log cache behavior.
+[PR #13](https://github.com/Excelius-Wang/harbor/pull/13) was squash-merged to `main` as
+`7a8045bf9f7c970c324d7a18888708ae67faa145`, and its remote feature branch was deleted. The merged
+Actions-administration slice adds native workflow enable/disable and eligible run deletion with
+authoritative state and identity guards, complete run-cache reconciliation, list/detail controls,
+English/Chinese copy, and local HTTP transport tests. Standards and Spec reviews have no unresolved
+findings. The squash tree exactly matches the reviewed head. On merged `main`, `pnpm check` passes
+34 files and 180 tests, Rust library tests pass 324 tests with two intentional ignores, Clippy passes
+with the 15 existing warnings, and `cargo check`, rustfmt, and `git diff --check` pass.
 
-Standards and Spec reviews found no hard standards violations and no scope creep. Their confirmed
-findings are fixed: eligible runs now expose deletion in the run-list destructive menu and detail
-header; every Job log is nested under the run cache root; the backend rejects no-op workflow state
-transitions; workflow states use a shared frontend union and presentation policy; and local HTTP
-tests verify workflow `GET → PUT → GET`, run `GET → DELETE → 204`, and delete-time `409` behavior.
-The shared deletion controller also removes duplicated confirmation logic, and static rendering
-tests cover eligible and ineligible run-list placement.
+The original worktree remains on local recovery branch
+`checkpoint/github-actions-administration-20260830` at `7e2084f` with only its older Cairn item
+unstaged; no source work remains there. The next clean worktree is
+`/private/tmp/harbor-pr-file-view-state-20260830` on
+`feat/github-pull-request-file-view-state`, based on merged `main`. The current gap audit leaves PR
+review controls as the highest-ranked missing personal workflow. This slice is limited to native
+mark/unmark viewed state for pull-request files; review dismissal, base edits, and maintainer
+editability remain separate slices.
 
-`pnpm check` passes 34 frontend files and 180 tests. Rust library tests pass 324 tests with two
-intentional ignores. Clippy passes with the 15 existing warnings; `cargo check`, rustfmt, and
-`git diff --check` also pass. Draft [PR #13](https://github.com/Excelius-Wang/harbor/pull/13) is open
-from the pushed `feat/github-actions-administration` branch into `main`.
+The current slice now has a primary-source research note verified against GitHub's official
+GraphQL/REST documentation and the live GitHub.com schema on 2026-08-30. The implementation keeps
+REST diff pages intact, reads all viewer-specific file states through a focused cursor-paginated
+GraphQL client, validates duplicate paths/cursors and mutation response identity, and exposes
+separate validated mark/unmark Tauri commands. TanStack Query keeps the complete view-state snapshot
+separate from REST pages and joins by exact path; the shadcn file-header checkbox preserves
+`viewed`, `unviewed`, and `dismissed` states, limits pending state to the selected file, and keeps
+diffs usable through loading or mutation errors. English and Chinese copy and focused render/cache/
+transport tests are included.
+
+Standards and Spec reviews found one loading-state bug, one hard i18n-hook violation, duplicated
+retry-alert markup, and missing failure regression coverage. All are fixed: unmatched paths are
+checked only after authoritative state data and non-placeholder REST data exist; the new component
+uses Harbor's multi-window translation hook; one shared retry alert serves all four file/review
+errors; and tests cover loading, error rendering, failed-cache preservation, checked, dismissed,
+and pending states. Re-review has no unresolved Spec or Standards findings; the generic retry alert
+now lives in its own pull-request-files module instead of the file-view-state module.
+
+`pnpm check` passes 35 frontend files and 188 tests. Rust library tests pass 329 tests with two
+intentional ignores. Focused Rust tests include two-page local GraphQL transport. `cargo check`,
+rustfmt, and `git diff --check` pass. Clippy completes with exactly the 15 existing warnings and no
+warning in this slice.
 
 Harbor uses a classic OAuth App for scope-based personal workflows, rejects GitHub App client IDs
 and `ghu_` tokens, and honors GitHub's normalization of `read:packages` into `write:packages`.
@@ -50,7 +65,8 @@ refresh tokens, or Keychain contents.
 
 ## Next action
 
-Commit and push the verified review fixes, mark PR #13 Ready, then squash-merge it.
+Commit and push the PR #14 review fixes, confirm the Draft PR is mergeable, then make it Ready and
+squash-merge it.
 
 ## Verification
 
@@ -60,6 +76,6 @@ Run `pnpm check`, `cargo test --manifest-path src-tauri/Cargo.toml --lib`,
 diff against `origin/main`, then deliver it through a Draft PR, Ready state, squash merge, `main`
 verification, and remote branch deletion.
 
-Success: all frontend and Rust checks pass; Standards and Spec reviews have no unresolved findings;
-the focused PR is squash-merged; remote `main` contains the verified Actions administration slice;
-the remote feature branch is absent.
+Success: the focused PR is squash-merged with no unresolved Standards or Spec findings; remote
+`main` contains the verified pull-request file viewed-state slice; the remote feature branch is
+absent; the remaining personal GitHub Web gaps are recorded for the next independent slice.
