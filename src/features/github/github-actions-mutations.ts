@@ -30,6 +30,7 @@ export type GitHubWorkflowStateMutationTarget = {
 };
 
 export type GitHubWorkflowRunDeletionTarget = GitHubWorkflowRunMutationTarget & {
+  expectedWorkflowId: number;
   expectedUpdatedAt: string;
 };
 

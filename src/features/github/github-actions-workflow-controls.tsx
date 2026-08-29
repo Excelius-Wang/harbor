@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CircleAlert, PauseCircle, PlayCircle } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -17,6 +16,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { useAppTranslation } from "@/hooks/use-app-translation";
 import { parseIpcError } from "@/lib/ipc-error";
 import {
   reconcileWorkflowState,
@@ -35,7 +35,7 @@ export function GitHubActionsWorkflowControls({
   workflow: GitHubWorkflow;
   onUpdated: (workflow: GitHubWorkflow) => void;
 }) {
-  const { t } = useTranslation();
+  const { t } = useAppTranslation();
   const queryClient = useQueryClient();
   const [disableOpen, setDisableOpen] = useState(false);
   const action = workflowStateAction(workflow.state);
@@ -64,20 +64,25 @@ export function GitHubActionsWorkflowControls({
         updated
       );
     },
-    onError: (reason, enabled) => {
+    onError: async (reason, enabled) => {
       const error = parseIpcError(reason);
-      if (error.code === "validation") {
-        void queryClient.invalidateQueries({
-          queryKey: githubQueryKeys.workflows(target),
-        });
-      }
       if (enabled) {
         toast.error(t("workspace.repositories.workflowStateChangeFailed"), {
           description:
             error.code === "githubPermission"
               ? t("workspace.repositories.workflowRunWritePermissionDenied")
-              : error.message,
+              : error.code === "validation"
+                ? t("workspace.repositories.workflowStateChanged")
+                : error.message,
         });
+      }
+      if (error.code === "validation") {
+        const queryKey = githubQueryKeys.workflows(target);
+        await queryClient.invalidateQueries({ queryKey });
+        const refreshed = queryClient
+          .getQueryData<GitHubWorkflow[]>(queryKey)
+          ?.find((candidate) => candidate.id === workflow.id);
+        if (refreshed) onUpdated(refreshed);
       }
     },
   });
@@ -86,7 +91,9 @@ export function GitHubActionsWorkflowControls({
   const disableErrorMessage = disableError
     ? disableError.code === "githubPermission"
       ? t("workspace.repositories.workflowRunWritePermissionDenied")
-      : disableError.message
+      : disableError.code === "validation"
+        ? t("workspace.repositories.workflowStateChanged")
+        : disableError.message
     : null;
 
   if (action === "enable") {

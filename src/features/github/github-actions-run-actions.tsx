@@ -96,6 +96,7 @@ export function GitHubWorkflowRunActions({
     mutationFn: () =>
       deleteWorkflowRun({
         ...target,
+        expectedWorkflowId: run.workflowId,
         expectedUpdatedAt: run.updatedAt,
       }),
     onSuccess: async (deleted) => {
@@ -105,12 +106,16 @@ export function GitHubWorkflowRunActions({
           number: run.runNumber,
         })
       );
+      onDeleted();
       await reconcileWorkflowRunDeletion(
         queryClient,
-        { ...target, expectedUpdatedAt: run.updatedAt },
+        {
+          ...target,
+          expectedWorkflowId: run.workflowId,
+          expectedUpdatedAt: run.updatedAt,
+        },
         deleted
       );
-      onDeleted();
     },
     onError: (reason) => {
       const error = parseIpcError(reason);
@@ -131,7 +136,9 @@ export function GitHubWorkflowRunActions({
   const deletionErrorMessage = deletionError
     ? deletionError.code === "githubPermission"
       ? t("workspace.repositories.workflowRunWritePermissionDenied")
-      : deletionError.message
+      : deletionError.code === "validation"
+        ? t("workspace.repositories.workflowRunDeleteConflict")
+        : deletionError.message
     : null;
 
   function changeCancelOpen(nextOpen: boolean) {
@@ -289,16 +296,18 @@ export function GitHubWorkflowRunActions({
                 {t("workspace.repositories.rerunFailedWorkflowJobs")}
               </DropdownMenuItem>
             ) : null}
-            {workflowRunCanDelete(run) ? (
-              <>
-                <DropdownMenuSeparator />
+          </DropdownMenuGroup>
+          {workflowRunCanDelete(run) ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
                 <DropdownMenuItem variant="destructive" onSelect={() => changeDeleteOpen(true)}>
                   <Trash2 />
                   {t("workspace.repositories.deleteWorkflowRun")}
                 </DropdownMenuItem>
-              </>
-            ) : null}
-          </DropdownMenuGroup>
+              </DropdownMenuGroup>
+            </>
+          ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
       {deleteConfirmation}

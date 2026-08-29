@@ -2932,6 +2932,7 @@ pub async fn github_delete_repository_workflow_run(
     owner: String,
     repository: String,
     run_id: u64,
+    expected_workflow_id: u64,
     expected_updated_at: String,
     state: State<'_, AppState>,
 ) -> Result<GitHubWorkflowRunDeletion, AppError> {
@@ -2942,6 +2943,7 @@ pub async fn github_delete_repository_workflow_run(
             repository.owner(),
             repository.name(),
             validate_item_number(run_id, "workflow run")?,
+            validate_item_number(expected_workflow_id, "workflow")?,
             &validate_workflow_run_updated_at(expected_updated_at)?,
         )
         .await

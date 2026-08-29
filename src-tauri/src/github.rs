@@ -3126,7 +3126,7 @@ mod tests {
             .await
             .expect("workflow disable");
         let deletion = service
-            .delete_workflow_run("octocat", "hello-world", 42, "2026-08-26T08:05:00Z")
+            .delete_workflow_run("octocat", "hello-world", 42, 7, "2026-08-26T08:05:00Z")
             .await
             .expect("workflow run deletion");
 

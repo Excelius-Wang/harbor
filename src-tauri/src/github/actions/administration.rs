@@ -35,6 +35,7 @@ pub(crate) trait GitHubActionsAdministrationClient: Send + Sync {
         owner: &str,
         repository: &str,
         run_id: u64,
+        expected_workflow_id: u64,
         expected_updated_at: &str,
     ) -> Result<GitHubWorkflowRunDeletion, AppError>;
 }
@@ -71,18 +72,20 @@ impl GitHubActionsAdministrationClient for OctocrabGitHubClient {
         owner: &str,
         repository: &str,
         run_id: u64,
+        expected_workflow_id: u64,
         expected_updated_at: &str,
     ) -> Result<GitHubWorkflowRunDeletion, AppError> {
         let client = authenticated_client(token)?;
         let run: RawWorkflowRun = client
             .get(workflow_run_route(owner, repository, run_id), None::<&()>)
             .await
-            .map_err(github_error)?;
+            .map_err(workflow_run_deletion_error)?;
         ensure_workflow_run_can_be_deleted(
             &run,
             owner,
             repository,
             run_id,
+            expected_workflow_id,
             expected_updated_at,
             Utc::now(),
         )?;
@@ -94,7 +97,7 @@ impl GitHubActionsAdministrationClient for OctocrabGitHubClient {
         let status = response.status();
         octocrab::map_github_error(response)
             .await
-            .map_err(github_error)?;
+            .map_err(workflow_run_deletion_error)?;
         if status != StatusCode::NO_CONTENT {
             return Err(AppError::GitHub(format!(
                 "GitHub returned unexpected workflow run deletion status {status}"
@@ -132,11 +135,19 @@ impl GitHubService {
         owner: &str,
         repository: &str,
         run_id: u64,
+        expected_workflow_id: u64,
         expected_updated_at: &str,
     ) -> Result<GitHubWorkflowRunDeletion, AppError> {
         let token = self.load_access_token().await?;
         self.client
-            .delete_workflow_run(&token, owner, repository, run_id, expected_updated_at)
+            .delete_workflow_run(
+                &token,
+                owner,
+                repository,
+                run_id,
+                expected_workflow_id,
+                expected_updated_at,
+            )
             .await
     }
 }
@@ -255,12 +266,19 @@ fn ensure_workflow_run_can_be_deleted(
     owner: &str,
     repository: &str,
     run_id: u64,
+    expected_workflow_id: u64,
     expected_updated_at: &str,
     now: DateTime<Utc>,
 ) -> Result<(), AppError> {
     if run.id != run_id {
         return Err(AppError::GitHub(
             "GitHub returned a different workflow run than requested".to_string(),
+        ));
+    }
+    if run.workflow_id != expected_workflow_id {
+        return Err(AppError::Validation(
+            "the workflow run belongs to a different workflow; refresh Actions before deleting it"
+                .to_string(),
         ));
     }
     let expected_full_name = format!("{owner}/{repository}");
@@ -294,6 +312,29 @@ fn ensure_workflow_run_can_be_deleted(
         "workflow runs can be deleted after they complete or become more than two weeks old"
             .to_string(),
     ))
+}
+
+fn workflow_run_deletion_error(error: octocrab::Error) -> AppError {
+    let status = match &error {
+        octocrab::Error::GitHub { source, .. } => Some(source.status_code.as_u16()),
+        _ => None,
+    };
+    status
+        .and_then(workflow_run_deletion_status_error)
+        .unwrap_or_else(|| github_error(error))
+}
+
+fn workflow_run_deletion_status_error(status: u16) -> Option<AppError> {
+    match status {
+        404 => Some(AppError::Validation(
+            "the workflow run no longer exists; refresh Actions before continuing".to_string(),
+        )),
+        409 => Some(AppError::Validation(
+            "GitHub rejected the workflow run deletion because its state changed; refresh Actions before trying again"
+                .to_string(),
+        )),
+        _ => None,
+    }
 }
 
 #[cfg(test)]
@@ -330,10 +371,12 @@ impl GitHubActionsAdministrationClient for super::super::tests::FakeGitHubClient
         owner: &str,
         repository: &str,
         run_id: u64,
+        expected_workflow_id: u64,
         expected_updated_at: &str,
     ) -> Result<GitHubWorkflowRunDeletion, AppError> {
         assert_eq!(token, "github-user-access-token");
         assert_eq!((owner, repository, run_id), ("octocat", "hello-world", 42));
+        assert_eq!(expected_workflow_id, 7);
         assert_eq!(expected_updated_at, "2026-08-26T08:05:00Z");
         Ok(GitHubWorkflowRunDeletion { run_id })
     }
@@ -439,6 +482,7 @@ mod tests {
             "octocat",
             "hello-world",
             42,
+            7,
             "2026-08-29T08:05:00Z",
             now
         )
@@ -448,6 +492,7 @@ mod tests {
             "octocat",
             "hello-world",
             42,
+            7,
             "2026-08-29T08:05:00Z",
             now
         )
@@ -458,6 +503,7 @@ mod tests {
                 "octocat",
                 "hello-world",
                 42,
+                7,
                 "2026-08-29T08:05:00Z",
                 now
             ),
@@ -476,6 +522,7 @@ mod tests {
                 "octocat",
                 "hello-world",
                 42,
+                7,
                 "stale",
                 now
             ),
@@ -486,9 +533,31 @@ mod tests {
             "octocat",
             "hello-world",
             41,
+            7,
             "2026-08-29T08:05:00Z",
             now
         )
         .is_err());
+        assert!(ensure_workflow_run_can_be_deleted(
+            &completed,
+            "octocat",
+            "hello-world",
+            42,
+            8,
+            "2026-08-29T08:05:00Z",
+            now
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn workflow_run_deletion_conflicts_require_an_authoritative_refresh() {
+        for status in [404, 409] {
+            assert!(matches!(
+                workflow_run_deletion_status_error(status),
+                Some(AppError::Validation(message)) if message.contains("refresh Actions")
+            ));
+        }
+        assert!(workflow_run_deletion_status_error(500).is_none());
     }
 }

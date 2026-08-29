@@ -22,6 +22,7 @@ import {
   workflowStateAction,
 } from "./github-actions-mutations";
 import type {
+  GitHubWorkflowArtifactPage,
   GitHubWorkflowDispatchConfig,
   GitHubWorkflowJob,
   GitHubWorkflowJobPage,
@@ -159,6 +160,7 @@ describe("GitHub Actions mutations", () => {
     });
     await deleteWorkflowRun({
       ...target,
+      expectedWorkflowId: run.workflowId,
       expectedUpdatedAt: run.updatedAt,
     });
 
@@ -171,6 +173,7 @@ describe("GitHub Actions mutations", () => {
     });
     expect(invoke).toHaveBeenNthCalledWith(2, "github_delete_repository_workflow_run", {
       ...target,
+      expectedWorkflowId: 7,
       expectedUpdatedAt: "2026-08-26T08:05:00Z",
     });
   });
@@ -353,9 +356,26 @@ describe("GitHub Actions mutations", () => {
       hasPrevious: false,
       hasMore: false,
     };
+    const artifacts: GitHubWorkflowArtifactPage = {
+      artifacts: [
+        {
+          id: 126,
+          name: "frontend-results",
+          sizeInBytes: 4_096,
+          expired: false,
+          createdAt: "2026-08-26T08:01:00Z",
+          expiresAt: "2026-11-24T08:01:00Z",
+        },
+      ],
+      totalCount: 1,
+      page: 1,
+      hasPrevious: false,
+      hasMore: false,
+    };
     queryClient.setQueryData(listKey, runPage);
     queryClient.setQueryData(githubQueryKeys.workflowRun(target), run);
     queryClient.setQueryData(githubQueryKeys.workflowJobs({ ...target, page: 1 }), jobs);
+    queryClient.setQueryData(githubQueryKeys.workflowArtifacts({ ...target, page: 1 }), artifacts);
     queryClient.setQueryData(
       githubQueryKeys.workflowJobLog({
         owner: target.owner,
@@ -367,7 +387,11 @@ describe("GitHub Actions mutations", () => {
 
     await reconcileWorkflowRunDeletion(
       queryClient,
-      { ...target, expectedUpdatedAt: run.updatedAt },
+      {
+        ...target,
+        expectedWorkflowId: run.workflowId,
+        expectedUpdatedAt: run.updatedAt,
+      },
       { runId: run.id }
     );
 
@@ -376,6 +400,12 @@ describe("GitHub Actions mutations", () => {
       totalCount: 1,
     });
     expect(queryClient.getQueryData(githubQueryKeys.workflowRun(target))).toBeUndefined();
+    expect(
+      queryClient.getQueryData(githubQueryKeys.workflowJobs({ ...target, page: 1 }))
+    ).toBeUndefined();
+    expect(
+      queryClient.getQueryData(githubQueryKeys.workflowArtifacts({ ...target, page: 1 }))
+    ).toBeUndefined();
     expect(
       queryClient.getQueryData(
         githubQueryKeys.workflowJobLog({
