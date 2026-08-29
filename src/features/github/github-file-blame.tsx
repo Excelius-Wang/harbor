@@ -60,7 +60,7 @@ export function GitHubFileBlame({
   const error = !result.data && result.error ? parseIpcError(result.error) : null;
 
   return (
-    <section className="overflow-hidden rounded-lg border bg-white/[0.018]">
+    <section className="bg-muted/10 overflow-hidden rounded-lg border">
       <header className="flex min-h-12 items-center gap-2 border-b px-2.5 py-2">
         <Button
           type="button"

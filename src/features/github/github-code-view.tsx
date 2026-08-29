@@ -108,12 +108,9 @@ function CodeSkeleton() {
         <Skeleton className="h-8 w-36" />
         <Skeleton className="h-8 flex-1" />
       </div>
-      <div className="overflow-hidden rounded-lg border border-white/[0.07]">
+      <div className="overflow-hidden rounded-lg border">
         {Array.from({ length: 7 }, (_, index) => (
-          <div
-            key={index}
-            className="flex h-10 items-center gap-3 border-b border-white/[0.055] px-3 last:border-b-0"
-          >
+          <div key={index} className="flex h-10 items-center gap-3 border-b px-3 last:border-b-0">
             <Skeleton className="size-4" />
             <Skeleton className="h-3 w-2/5" />
           </div>
@@ -144,7 +141,7 @@ function FileRow({
       type="button"
       variant="ghost"
       onClick={onOpen}
-      className="group hover:bg-primary/[0.045] h-10 w-full justify-start gap-2.5 rounded-none border-b border-white/[0.055] px-3 text-left last:border-b-0"
+      className="group hover:bg-primary/[0.045] h-10 w-full justify-start gap-2.5 rounded-none border-b px-3 text-left last:border-b-0"
     >
       <Icon className={isDirectory ? "text-primary" : "text-muted-foreground"} />
       <span className="min-w-0 flex-1 truncate text-xs font-medium">{entry.name}</span>
@@ -428,7 +425,7 @@ export function GitHubCodeView({
             </Button>
           ) : null}
           <Select value={reference} onValueChange={selectBranch}>
-            <SelectTrigger size="sm" className="min-w-40 bg-white/[0.025] text-xs">
+            <SelectTrigger size="sm" className="bg-muted/20 min-w-40 text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="harbor-popover">
@@ -510,7 +507,7 @@ export function GitHubCodeView({
             </DropdownMenu>
           ) : null}
 
-          <div className="flex h-8 min-w-0 flex-1 items-center rounded-md border border-white/[0.07] bg-white/[0.018] px-2.5">
+          <div className="bg-muted/10 flex h-8 min-w-0 flex-1 items-center rounded-md border px-2.5">
             <Breadcrumb>
               <BreadcrumbList className="flex-nowrap gap-1 text-[11px] sm:gap-1">
                 <BreadcrumbItem>
@@ -623,7 +620,7 @@ export function GitHubCodeView({
         </div>
 
         {activeError ? (
-          <Empty className="min-h-56 border border-white/[0.07] bg-white/[0.018]">
+          <Empty className="bg-muted/10 min-h-56 border">
             <EmptyHeader>
               <EmptyMedia variant="icon">
                 <Box />
@@ -714,9 +711,9 @@ export function GitHubCodeView({
           ) : null
         ) : (
           <>
-            <section className="overflow-hidden rounded-lg border border-white/[0.075] bg-white/[0.018] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
+            <section className="bg-muted/10 overflow-hidden rounded-lg border shadow-sm">
               {latestCommit && path === "" ? (
-                <div className="group bg-primary/[0.035] flex h-11 w-full items-center gap-1 border-b border-white/[0.07] px-2">
+                <div className="group bg-primary/[0.035] flex h-11 w-full items-center gap-1 border-b px-2">
                   <button
                     type="button"
                     onClick={() => openCommit(latestCommit.sha, "browser")}
@@ -763,8 +760,8 @@ export function GitHubCodeView({
             </section>
 
             {path === "" && overview?.commits.length ? (
-              <section className="overflow-hidden rounded-lg border border-white/[0.075] bg-white/[0.014]">
-                <div className="flex h-10 items-center justify-between border-b border-white/[0.065] px-3">
+              <section className="bg-muted/10 overflow-hidden rounded-lg border">
+                <div className="flex h-10 items-center justify-between border-b px-3">
                   <div className="flex items-center gap-2 text-xs font-semibold">
                     <GitCommitHorizontal className="text-primary" />
                     {t("workspace.repositories.recentCommits")}
@@ -775,11 +772,11 @@ export function GitHubCodeView({
                     </span>
                   ) : null}
                 </div>
-                <div className="divide-y divide-white/[0.055]">
+                <div className="divide-border divide-y">
                   {overview.commits.map((commit) => (
                     <div
                       key={commit.sha}
-                      className="group flex min-h-10 w-full items-center gap-1 px-2 py-1 hover:bg-white/[0.025]"
+                      className="hover:bg-muted/20 group flex min-h-10 w-full items-center gap-1 px-2 py-1"
                     >
                       <button
                         type="button"
@@ -808,8 +805,8 @@ export function GitHubCodeView({
             ) : null}
 
             {path === "" && overview?.readme ? (
-              <section className="overflow-hidden rounded-lg border border-white/[0.075] bg-white/[0.018]">
-                <div className="flex h-11 items-center justify-between border-b border-white/[0.065] px-4">
+              <section className="bg-muted/10 overflow-hidden rounded-lg border">
+                <div className="flex h-11 items-center justify-between border-b px-4">
                   <div className="flex items-center gap-2 text-xs font-semibold">
                     <BookOpenText className="text-primary" />
                     {overview.readme.name}

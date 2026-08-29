@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Diff, Hunk, parseDiff, type FileData, type ViewType } from "react-diff-view";
 import "react-diff-view/style/index.css";
-import { useTranslation } from "react-i18next";
+import { useAppTranslation } from "@/hooks/use-app-translation";
 
 export type GitHubPatchFile = {
   path: string;
@@ -36,7 +36,7 @@ export function GitHubReadOnlyFileDiff({
   file: GitHubPatchFile;
   viewType: ViewType;
 }) {
-  const { t } = useTranslation();
+  const { t } = useAppTranslation();
   const diff = useMemo(() => parseGitHubFilePatch(file), [file]);
 
   if (!diff?.hunks.length) {
