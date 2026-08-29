@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, BellOff, CircleAlert, LockKeyhole, LockOpen, RefreshCw } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -27,6 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { useAppTranslation } from "@/hooks/use-app-translation";
 import { parseIpcError } from "@/lib/ipc-error";
 import {
   syncConversationControls,
@@ -65,7 +65,7 @@ export function GitHubConversationControls({
   conversationKind: GitHubConversationTarget["conversationKind"];
   conversationNumber: number;
 }) {
-  const { t } = useTranslation();
+  const { t } = useAppTranslation();
   const queryClient = useQueryClient();
   const [lockDialogOpen, setLockDialogOpen] = useState(false);
   const [lockReason, setLockReason] = useState<GitHubConversationLockReason | "none">("none");
