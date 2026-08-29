@@ -60,6 +60,7 @@ import {
   repositoryTagsQueryOptions,
   pullRequestCommitsQueryOptions,
   pullRequestFilesQueryOptions,
+  pullRequestFileViewStatesQueryOptions,
   pullRequestReviewThreadsQueryOptions,
   pullRequestInboxQueryOptions,
   repositoryCheckSuiteRunsQueryOptions,
@@ -1238,6 +1239,27 @@ describe("GitHub repository queries", () => {
     expect(new Set([detail.queryKey, commits.queryKey, files.queryKey, checks.queryKey]).size).toBe(
       4
     );
+  });
+
+  it("loads viewer-specific pull request file states through a focused command", async () => {
+    const client = createTestQueryClient();
+    vi.mocked(invoke).mockResolvedValueOnce({
+      pullRequestId: "PR_kwDOexample",
+      files: [{ path: "src/app.ts", state: "viewed" }],
+    });
+    const options = pullRequestFileViewStatesQueryOptions({
+      owner: "octocat",
+      repository: "hello-world",
+      pullRequestNumber: 12,
+    });
+
+    await client.fetchQuery(options);
+
+    expect(invoke).toHaveBeenCalledWith("github_get_repository_pull_request_file_view_states", {
+      owner: "octocat",
+      repository: "hello-world",
+      pullRequestNumber: 12,
+    });
   });
 
   it("checks pull request branch update eligibility in a focused cache", async () => {

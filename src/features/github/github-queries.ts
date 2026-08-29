@@ -62,6 +62,7 @@ import type {
   GitHubPullRequestComparison,
   GitHubPullRequestDetailPage,
   GitHubPullRequestFilePage,
+  GitHubPullRequestFileViewStateSnapshot,
   GitHubPullRequestInboxScope,
   GitHubPullRequestMergeQueueStatus,
   GitHubPullRequestPage,
@@ -831,6 +832,16 @@ export const githubQueryKeys = {
       pullRequestNumber,
       "files",
       page,
+    ] as const,
+  pullRequestFileViewStates: ({ owner, repository, pullRequestNumber }: GitHubPullRequestTarget) =>
+    [
+      "github",
+      "repository",
+      owner,
+      repository,
+      "pull-request",
+      pullRequestNumber,
+      "file-view-states",
     ] as const,
   pullRequestReviewThreads: ({
     owner,
@@ -1833,6 +1844,22 @@ export function pullRequestFilesQueryOptions(target: GitHubPullRequestPageTarget
         pullRequestNumber: target.pullRequestNumber,
         page: target.page,
       }),
+    staleTime: GITHUB_QUERY_STALE_TIME,
+  });
+}
+
+export function pullRequestFileViewStatesQueryOptions(target: GitHubPullRequestTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.pullRequestFileViewStates(target),
+    queryFn: () =>
+      invoke<GitHubPullRequestFileViewStateSnapshot>(
+        "github_get_repository_pull_request_file_view_states",
+        {
+          owner: target.owner,
+          repository: target.repository,
+          pullRequestNumber: target.pullRequestNumber,
+        }
+      ),
     staleTime: GITHUB_QUERY_STALE_TIME,
   });
 }

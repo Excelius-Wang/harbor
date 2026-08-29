@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CircleAlert,
   ChevronDown,
@@ -43,6 +43,7 @@ import type {
   GitHubPendingPullRequestReview,
   GitHubPendingPullRequestReviewComment,
   GitHubPullRequestFile,
+  GitHubPullRequestFileViewedState,
   GitHubPullRequestReviewComment,
   GitHubPullRequestReviewCommentSide,
   GitHubReactionSubjectRef,
@@ -52,6 +53,7 @@ import type {
 import { GitHubPagination } from "./github-issue-shared";
 import { parseGitHubFilePatch } from "./github-file-diff";
 import { GitHubPullRequestInlineComment } from "./github-pull-request-inline-comment";
+import { GitHubPullRequestFileViewCheckbox } from "./github-pull-request-file-view-state";
 import {
   pullRequestReviewCommentKey,
   pullRequestReviewCommentLocation,
@@ -65,12 +67,16 @@ import { GitHubPullRequestReviewThreadView } from "./github-pull-request-review-
 import { GitHubReactionsProvider } from "./github-reactions-provider";
 import {
   deletePendingRepositoryPullRequestReviewComment,
+  markRepositoryPullRequestFileViewed,
   markPullRequestReviewThreadsStale,
   savePendingRepositoryPullRequestReviewComment,
+  syncPullRequestFileViewedState,
   syncPendingPullRequestReview,
+  unmarkRepositoryPullRequestFileViewed,
 } from "./github-pull-request-mutations";
 import {
   pendingPullRequestReviewQueryOptions,
+  pullRequestFileViewStatesQueryOptions,
   pullRequestFilesQueryOptions,
   pullRequestReviewThreadsQueryOptions,
 } from "./github-queries";
@@ -84,6 +90,40 @@ type ReviewSelectionDrag = {
   selection: PullRequestReviewDiffSelection;
   openOnRelease: boolean;
 };
+
+function PullRequestFileViewControl({
+  target,
+  pullRequestId,
+  path,
+  state,
+  onError,
+}: {
+  target: { owner: string; repository: string; pullRequestNumber: number };
+  pullRequestId: string;
+  path: string;
+  state: GitHubPullRequestFileViewedState;
+  onError: (error: unknown | null) => void;
+}) {
+  const queryClient = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: (viewed: boolean) =>
+      viewed
+        ? markRepositoryPullRequestFileViewed(pullRequestId, path)
+        : unmarkRepositoryPullRequestFileViewed(pullRequestId, path),
+    onMutate: () => onError(null),
+    onSuccess: (updated) =>
+      syncPullRequestFileViewedState(queryClient, target, updated.path, updated.state),
+    onError,
+  });
+
+  return (
+    <GitHubPullRequestFileViewCheckbox
+      state={state}
+      pending={mutation.isPending}
+      onChange={(viewed) => mutation.mutate(viewed)}
+    />
+  );
+}
 
 function PullRequestFileDiff({
   file,
@@ -459,11 +499,15 @@ export function GitHubPullRequestFiles({
   const queryClient = useQueryClient();
   const [viewType, setViewType] = useState<ViewType>("unified");
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [fileViewMutationError, setFileViewMutationError] = useState<unknown | null>(null);
   const target = {
     owner: repository.owner,
     repository: repository.name,
     pullRequestNumber: pullRequest.number,
   };
+  useEffect(() => {
+    setFileViewMutationError(null);
+  }, [repository.owner, repository.name, pullRequest.number]);
   const result = useQuery({
     ...pullRequestFilesQueryOptions({
       owner: repository.owner,
@@ -473,6 +517,10 @@ export function GitHubPullRequestFiles({
     }),
     enabled,
     placeholderData: (previous) => previous,
+  });
+  const fileViewStatesResult = useQuery({
+    ...pullRequestFileViewStatesQueryOptions(target),
+    enabled,
   });
   const reviewThreadsResult = useInfiniteQuery({
     ...pullRequestReviewThreadsQueryOptions(target),
@@ -484,6 +532,18 @@ export function GitHubPullRequestFiles({
   });
   const data = result.data;
   const error = !data && result.error ? parseIpcError(result.error) : null;
+  const fileViewStatesError = fileViewStatesResult.error
+    ? parseIpcError(fileViewStatesResult.error)
+    : null;
+  const parsedFileViewMutationError = fileViewMutationError
+    ? parseIpcError(fileViewMutationError)
+    : null;
+  const fileViewStateByPath = new Map(
+    fileViewStatesResult.data?.files.map((file) => [file.path, file.state]) ?? []
+  );
+  const hasUnmatchedFileViewStates = Boolean(
+    data?.files.some((file) => !fileViewStateByPath.has(file.path))
+  );
   const pendingReview = pendingReviewResult.data ?? null;
   const comments = pendingReview?.comments ?? [];
   const pendingCommentIds = new Set(comments.map((comment) => comment.id));
@@ -610,6 +670,48 @@ export function GitHubPullRequestFiles({
                 </AlertDescription>
               </Alert>
             ) : null}
+            {fileViewStatesError || hasUnmatchedFileViewStates ? (
+              <Alert variant="destructive">
+                <CircleAlert />
+                <AlertTitle>{t("workspace.repositories.fileViewStatesLoadFailed")}</AlertTitle>
+                <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
+                  <span>
+                    {fileViewStatesError?.message ??
+                      t("workspace.repositories.fileViewStatesOutdated")}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    onClick={() => void fileViewStatesResult.refetch()}
+                  >
+                    <RefreshCw data-icon="inline-start" />
+                    {t("workspace.repositories.retry")}
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            ) : null}
+            {parsedFileViewMutationError ? (
+              <Alert variant="destructive">
+                <CircleAlert />
+                <AlertTitle>{t("workspace.repositories.fileViewStateUpdateFailed")}</AlertTitle>
+                <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
+                  <span>{parsedFileViewMutationError.message}</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    onClick={() => {
+                      setFileViewMutationError(null);
+                      void fileViewStatesResult.refetch();
+                    }}
+                  >
+                    <RefreshCw data-icon="inline-start" />
+                    {t("workspace.repositories.refresh")}
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            ) : null}
             {pendingReview && !pendingReviewError ? (
               <Alert>
                 <ShieldCheck />
@@ -671,6 +773,15 @@ export function GitHubPullRequestFiles({
                         <span className="truncate font-mono text-[11px]">{file.path}</span>
                       </Button>
                     </CollapsibleTrigger>
+                    {fileViewStatesResult.data && fileViewStateByPath.has(file.path) ? (
+                      <PullRequestFileViewControl
+                        target={target}
+                        pullRequestId={fileViewStatesResult.data.pullRequestId}
+                        path={file.path}
+                        state={fileViewStateByPath.get(file.path)!}
+                        onError={setFileViewMutationError}
+                      />
+                    ) : null}
                     <Badge variant="outline" className="shrink-0 rounded-md text-[9px]">
                       {t(`workspace.repositories.fileStatuses.${file.status}`, {
                         defaultValue: file.status,

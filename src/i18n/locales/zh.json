@@ -1828,6 +1828,13 @@
         "skipped": "已跳过"
       },
       "pullRequestFilesLoadFailed": "Harbor 暂时无法读取文件变更",
+      "fileViewStatesLoadFailed": "文件查看状态加载失败",
+      "fileViewStatesOutdated": "加载查看状态时文件列表发生了变化，请刷新后再继续。",
+      "fileViewStateUpdateFailed": "文件查看状态更新失败",
+      "fileViewed": "已查看",
+      "markFileViewed": "标记为已查看",
+      "markFileUnviewed": "标记为未查看",
+      "fileChangedSinceViewed": "查看后有新改动",
       "noPullRequestFiles": "没有找到变更文件",
       "pullRequestFilePagination": "变更文件分页",
       "unifiedDiff": "单栏 Diff",

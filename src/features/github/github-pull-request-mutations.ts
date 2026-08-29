@@ -8,6 +8,9 @@ import type {
   GitHubPullRequestAutoMergeStatus,
   GitHubPullRequestBranchUpdate,
   GitHubPullRequestDetailPage,
+  GitHubPullRequestFileViewState,
+  GitHubPullRequestFileViewStateSnapshot,
+  GitHubPullRequestFileViewedState,
   GitHubPullRequestMergeMethod,
   GitHubPullRequestMergeQueueStatus,
   GitHubPullRequestPage,
@@ -309,6 +312,20 @@ export function unresolvePullRequestReviewThread(threadId: string) {
   });
 }
 
+export function markRepositoryPullRequestFileViewed(pullRequestId: string, path: string) {
+  return invoke<GitHubPullRequestFileViewState>("github_mark_repository_pull_request_file_viewed", {
+    pullRequestId,
+    path,
+  });
+}
+
+export function unmarkRepositoryPullRequestFileViewed(pullRequestId: string, path: string) {
+  return invoke<GitHubPullRequestFileViewState>(
+    "github_unmark_repository_pull_request_file_viewed",
+    { pullRequestId, path }
+  );
+}
+
 function matchesPullRequest(
   pullRequest: GitHubPullRequestSummary,
   target: GitHubPullRequestMutationTarget
@@ -520,6 +537,24 @@ export function syncPendingPullRequestReview(
   review: GitHubPendingPullRequestReview | null
 ) {
   queryClient.setQueryData(githubQueryKeys.pendingPullRequestReview(target), review);
+}
+
+export function syncPullRequestFileViewedState(
+  queryClient: QueryClient,
+  target: GitHubPullRequestMutationTarget,
+  path: string,
+  state: GitHubPullRequestFileViewedState
+) {
+  queryClient.setQueryData<GitHubPullRequestFileViewStateSnapshot>(
+    githubQueryKeys.pullRequestFileViewStates(target),
+    (snapshot) =>
+      snapshot
+        ? {
+            ...snapshot,
+            files: snapshot.files.map((file) => (file.path === path ? { ...file, state } : file)),
+          }
+        : snapshot
+  );
 }
 
 function updatePullRequestReviewThreads(

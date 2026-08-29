@@ -1835,6 +1835,13 @@
         "skipped": "Skipped"
       },
       "pullRequestFilesLoadFailed": "Harbor could not load changed files",
+      "fileViewStatesLoadFailed": "Harbor could not load file viewed states",
+      "fileViewStatesOutdated": "The file list changed while Harbor was loading viewed states. Refresh before continuing.",
+      "fileViewStateUpdateFailed": "Harbor could not update the file viewed state",
+      "fileViewed": "Viewed",
+      "markFileViewed": "Mark file as viewed",
+      "markFileUnviewed": "Mark file as unviewed",
+      "fileChangedSinceViewed": "Changed since viewed",
       "noPullRequestFiles": "No changed files found",
       "pullRequestFilePagination": "Changed file pages",
       "unifiedDiff": "Unified diff",
