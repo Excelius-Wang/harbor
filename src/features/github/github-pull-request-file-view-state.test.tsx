@@ -2,8 +2,8 @@ import { QueryClient } from "@tanstack/react-query";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import type { GitHubPullRequestFileViewStateSnapshot } from "./github-data";
+import { GitHubPullRequestFilesErrorAlert } from "./github-pull-request-files-error";
 import {
-  GitHubPullRequestFilesErrorAlert,
   GitHubPullRequestFileViewCheckbox,
   getPullRequestFileViewPresentation,
   hasUnmatchedPullRequestFileViewStates,

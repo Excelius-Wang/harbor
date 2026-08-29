@@ -52,8 +52,8 @@ import type {
 import { GitHubPagination } from "./github-issue-shared";
 import { parseGitHubFilePatch } from "./github-file-diff";
 import { GitHubPullRequestInlineComment } from "./github-pull-request-inline-comment";
+import { GitHubPullRequestFilesErrorAlert } from "./github-pull-request-files-error";
 import {
-  GitHubPullRequestFilesErrorAlert,
   GitHubPullRequestFileViewCheckbox,
   hasUnmatchedPullRequestFileViewStates,
 } from "./github-pull-request-file-view-state";

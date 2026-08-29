@@ -49,7 +49,8 @@ retry-alert markup, and missing failure regression coverage. All are fixed: unma
 checked only after authoritative state data and non-placeholder REST data exist; the new component
 uses Harbor's multi-window translation hook; one shared retry alert serves all four file/review
 errors; and tests cover loading, error rendering, failed-cache preservation, checked, dismissed,
-and pending states.
+and pending states. Re-review has no unresolved Spec or Standards findings; the generic retry alert
+now lives in its own pull-request-files module instead of the file-view-state module.
 
 `pnpm check` passes 35 frontend files and 188 tests. Rust library tests pass 329 tests with two
 intentional ignores. Focused Rust tests include two-page local GraphQL transport. `cargo check`,
