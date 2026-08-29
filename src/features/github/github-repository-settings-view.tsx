@@ -1,6 +1,15 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Archive, GitMerge, Save, Settings2, Trash2, Undo2 } from "lucide-react";
+import {
+  Archive,
+  ChevronRight,
+  GitMerge,
+  Globe2,
+  Save,
+  Settings2,
+  Trash2,
+  Undo2,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -15,7 +24,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -56,6 +72,12 @@ import {
   syncUpdatedPersonalRepository,
   updatePersonalRepositorySettings,
 } from "./github-repository-settings";
+
+const GitHubRepositoryPagesView = lazy(() =>
+  import("./github-repository-pages-view").then((module) => ({
+    default: module.GitHubRepositoryPagesView,
+  }))
+);
 
 function editableSettings(settings: GitHubRepositorySettings): GitHubRepositorySettingsUpdate {
   return {
@@ -123,7 +145,13 @@ function SettingToggle({
   );
 }
 
-export function GitHubRepositorySettingsView({ repository }: { repository: GitHubRepository }) {
+export function GitHubRepositorySettingsView({
+  repository,
+  onOpenActions,
+}: {
+  repository: GitHubRepository;
+  onOpenActions: () => void;
+}) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const target = { owner: repository.owner, repository: repository.name };
@@ -134,6 +162,7 @@ export function GitHubRepositorySettingsView({ repository }: { repository: GitHu
   const [archiveConfirmation, setArchiveConfirmation] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [managingPages, setManagingPages] = useState(false);
   const codeResult = useQuery({
     ...repositoryCodeQueryOptions({
       owner: repository.owner,
@@ -150,6 +179,7 @@ export function GitHubRepositorySettingsView({ repository }: { repository: GitHu
   useEffect(() => {
     setDeleteOpen(false);
     setDeleteConfirmation("");
+    setManagingPages(false);
   }, [repository.id]);
 
   const branches = [
@@ -244,6 +274,19 @@ export function GitHubRepositorySettingsView({ repository }: { repository: GitHu
       confirmArchiveChange: true,
     });
   };
+
+  if (managingPages) {
+    return (
+      <Suspense fallback={<SettingsSkeleton />}>
+        <GitHubRepositoryPagesView
+          repository={settings.repository}
+          branches={branches}
+          onBack={() => setManagingPages(false)}
+          onOpenActions={onOpenActions}
+        />
+      </Suspense>
+    );
+  }
 
   return (
     <ScrollArea className="min-h-0 flex-1" constrainContentWidth>
@@ -440,6 +483,28 @@ export function GitHubRepositorySettingsView({ repository }: { repository: GitHu
             {t("workspace.repositories.settings.save")}
           </Button>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Globe2 /> {t("workspace.repositories.settings.pages.title")}
+            </CardTitle>
+            <CardDescription>
+              {t("workspace.repositories.settings.pages.description")}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground text-xs">
+              {t("workspace.repositories.settings.pages.summary")}
+            </p>
+          </CardContent>
+          <CardFooter className="justify-end">
+            <Button variant="outline" onClick={() => setManagingPages(true)}>
+              {t("workspace.repositories.settings.pages.manage")}
+              <ChevronRight data-icon="inline-end" />
+            </Button>
+          </CardFooter>
+        </Card>
 
         <Card className="border-destructive/35">
           <CardHeader>

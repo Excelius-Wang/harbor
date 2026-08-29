@@ -32,6 +32,7 @@ pub(crate) mod reaction;
 pub(crate) mod release;
 pub(crate) mod repository_access;
 pub(crate) mod repository_invitations;
+pub(crate) mod repository_pages;
 pub(crate) mod repository_relationships;
 pub(crate) mod repository_settings;
 pub(crate) mod security;
@@ -127,6 +128,7 @@ pub use repository_access::{
 pub use repository_invitations::{
     GitHubReceivedRepositoryInvitationAction, GitHubReceivedRepositoryInvitationPage,
 };
+pub use repository_pages::{GitHubPagesHealth, GitHubPagesMutation, GitHubPagesWorkspace};
 pub use repository_relationships::{
     GitHubForkInput, GitHubForkResult, GitHubRepositoryRelationship, GitHubRepositoryWatchLevel,
     GitHubStarredRepositoryPage, GitHubStarredRepositorySort,
@@ -636,6 +638,7 @@ pub(crate) trait GitHubClient:
     + release::GitHubReleaseClient
     + repository_access::GitHubRepositoryAccessClient
     + repository_invitations::GitHubRepositoryInvitationClient
+    + repository_pages::GitHubRepositoryPagesClient
     + repository_relationships::GitHubRepositoryRelationshipsClient
     + repository_settings::GitHubRepositorySettingsClient
     + security::GitHubSecurityClient
@@ -3731,6 +3734,48 @@ mod tests {
         assert_eq!(overview.community.health_percentage, 75);
         assert_eq!(contributors.contributors[0].total, 12);
         assert_eq!(traffic.views.count, 42);
+    }
+
+    #[tokio::test]
+    async fn repository_pages_uses_the_saved_connection() {
+        let credentials = Arc::new(MemoryCredentialStore::default());
+        credentials
+            .save_github_credentials(&oauth_credentials())
+            .expect("seed credentials");
+        let service = GitHubService::new(
+            Arc::new(FakeGitHubClient),
+            credentials,
+            Some(oauth_session("github-user-access-token")),
+        );
+
+        let workspace = service
+            .repository_pages("octocat", "hello-world", 2)
+            .await
+            .expect("Pages workspace");
+        let health = service
+            .repository_pages_health("octocat", "hello-world")
+            .await
+            .expect("Pages health");
+        let updated = service
+            .mutate_repository_pages(
+                "octocat",
+                "hello-world",
+                repository_pages::GitHubPagesMutation::Configure {
+                    configuration: repository_pages::GitHubPagesConfiguration {
+                        build_type: repository_pages::GitHubPagesBuildType::Legacy,
+                        branch: Some(" main ".to_string()),
+                        source_path: Some(repository_pages::GitHubPagesSourcePath::Docs),
+                        custom_domain: Some(" Docs.Example.COM. ".to_string()),
+                        https_enforced: true,
+                    },
+                },
+            )
+            .await
+            .expect("updated Pages workspace");
+
+        assert_eq!(workspace.page, 2);
+        assert!(health.domain.expect("domain health").valid);
+        assert_eq!(updated.page, 1);
     }
 
     #[tokio::test]

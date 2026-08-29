@@ -459,6 +459,17 @@ roots, and shadcn components for label create, rename, color and description edi
 milestone create, edit, due-date clearing, close, reopen, progress, and deletion. Returned records
 reconcile option caches immediately before related Issue, pull request, inbox, and Project queries are
 invalidated. Organization administration remains outside this repository-scoped developer workflow.
+Personal repository Settings now includes a native GitHub Pages workspace behind the focused
+three-method `GitHubRepositoryPagesClient` Interface. Harbor enables and disables Pages, switches
+between branch and GitHub Actions publishing, validates branch sources, updates custom domains and
+HTTPS enforcement, polls DNS health and active builds, paginates legacy deployment history, and
+requests branch rebuilds. The Adapter reuses the authoritative personal-owner and archived-repository
+guard, sends `null` when clearing a CNAME, verifies GitHub's returned configuration, and keeps Actions
+deployments in the existing Actions workflow instead of inventing Pages build records. The lazy
+shadcn UI and focused TanStack Query roots cover loading, empty, permission, build failure, DNS pending,
+archived, narrow-layout, and destructive-confirmation states. PR #11 is open, mergeable, and clean:
+https://github.com/Excelius-Wang/harbor/pull/11 (`2515932`). Playwright CLI session state is now
+ignored by Git through `.playwright-cli/`.
 The workspace shell is responsive, starts at 1600x1000, and remains usable down to 900x620.
 Repository Wiki now has a native personal-developer workflow behind a focused Git-backed service.
 Harbor discovers the Wiki's real default branch, keeps a bounded bare cache per immutable repository
@@ -605,6 +616,15 @@ input after a permission failure, and deletion plus milestone create, edit, due-
 reopen, and deletion at 1600x1000 and 900x620. Light and dark themes render cleanly, wide tables
 scroll only inside their content surface, the document width equals the viewport width, and the
 browser console reports zero errors and warnings. PR: https://github.com/Excelius-Wang/harbor/pull/10
+GitHub Pages verification covers exact Tauri read, health, and typed mutation contracts; personal
+ownership and archived-write guards; branch and domain normalization; CNAME clearing; authoritative
+response verification; focused cache reconciliation; workflow and legacy presentation; and exact-name
+disablement. `pnpm check` passes with 129 frontend tests. The Rust library has 233 passing tests with
+one external DeepWiki test ignored by design; `cargo fmt --check`, `cargo check`, the production build,
+and `git diff --check` pass. A deterministic desktop fixture verified branch and Actions configuration,
+build pagination and rebuild, DNS-ready and pending states, failure recovery, disablement, and first
+enablement at 1600x1000 and 900x620 in light and dark themes. The Pages content has no horizontal
+overflow at either size, and clean sessions report no browser errors or warnings.
 
 Success: `pnpm check` passes; a 70-repository Playwright fixture with a 240-character unbroken token
 keeps `scrollWidth === clientWidth` at both 1600x1000 and 900x620, with 12px between descriptions and

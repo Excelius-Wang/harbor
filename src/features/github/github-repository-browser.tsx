@@ -680,7 +680,10 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
                     className="flex min-h-0 min-w-0 flex-col overflow-hidden"
                   >
                     <Suspense fallback={<RepositoryTabSkeleton />}>
-                      <GitHubRepositorySettingsView repository={selectedRepository} />
+                      <GitHubRepositorySettingsView
+                        repository={selectedRepository}
+                        onOpenActions={() => setTab("actions")}
+                      />
                     </Suspense>
                   </TabsContent>
                 ) : null}
