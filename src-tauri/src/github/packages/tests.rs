@@ -280,6 +280,8 @@ fn package_request_enums_reject_unknown_and_organization_only_values() {
 #[test]
 fn known_oauth_scopes_gate_package_reads_and_writes() {
     assert!(ensure_package_scopes(&[], &["read:packages"]).is_ok());
+    let normalized_write_scopes = vec!["write:packages".to_string()];
+    assert!(ensure_package_scopes(&normalized_write_scopes, &["read:packages"]).is_ok());
     assert!(ensure_package_scopes(
         &["read:packages".to_string(), "delete:packages".to_string()],
         &["read:packages", "delete:packages"],

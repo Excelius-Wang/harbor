@@ -33,12 +33,15 @@ App client IDs before sign-in and rejects new or stored `ghu_` credentials befor
 scope-based login is documented as a classic OAuth App flow. Harbor's original code is now
 `AGPL-3.0-only`; `NOTICE` preserves the original repository attribution, the template MIT notice is
 retained separately, and About exposes the license and canonical source. Temporary diagnostic
-logging was removed.
+logging was removed. The replacement OAuth App now issues a `gho_` token. GitHub normalized
+`read:packages` into `write:packages`; Harbor now recognizes that implication. A credential-safe live
+request to `/user/packages?package_type=container` returns `200` with an empty package list. The
+ignored Cargo probe still cannot read the app-owned macOS Keychain item from the test binary, so it
+is not the release gate.
 
 ## Next action
 
-Blocked — create and configure a classic GitHub OAuth App for Harbor; after its local credentials
-replace the GitHub App values, reconnect and rerun the live in-app Packages probe.
+Confirm the running Harbor Packages page reaches its empty state through the production command.
 
 ## Verification
 

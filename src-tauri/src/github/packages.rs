@@ -630,9 +630,11 @@ fn package_version_metadata_from_raw(
 
 fn ensure_package_scopes(granted: &[String], required: &[&str]) -> Result<(), AppError> {
     if granted.is_empty()
-        || required
-            .iter()
-            .all(|required| granted.iter().any(|scope| scope == required))
+        || required.iter().all(|required| {
+            granted
+                .iter()
+                .any(|scope| package_scope_grants(scope, required))
+        })
     {
         return Ok(());
     }
@@ -640,6 +642,10 @@ fn ensure_package_scopes(granted: &[String], required: &[&str]) -> Result<(), Ap
         "reconnect GitHub and grant {} to manage personal Packages",
         required.join(" and ")
     )))
+}
+
+fn package_scope_grants(granted: &str, required: &str) -> bool {
+    granted == required || (granted == "write:packages" && required == "read:packages")
 }
 
 pub(crate) fn normalize_package_name(value: &str) -> Result<String, AppError> {
