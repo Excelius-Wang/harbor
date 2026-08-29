@@ -27,6 +27,7 @@ pub(crate) mod release;
 pub(crate) mod repository_relationships;
 pub(crate) mod repository_settings;
 pub(crate) mod security;
+pub(crate) mod wiki;
 pub use actions::{
     GitHubWorkflow, GitHubWorkflowArtifactPage, GitHubWorkflowDispatchConfig,
     GitHubWorkflowDispatchOptions, GitHubWorkflowJobLog, GitHubWorkflowJobPage, GitHubWorkflowRun,
@@ -102,6 +103,10 @@ pub use security::{
     GitHubSecurityAlertFilters, GitHubSecurityAlertKind, GitHubSecurityAlertMutation,
     GitHubSecurityAlertPage, GitHubSecurityAlertSeverityFilter, GitHubSecurityAlertSort,
     GitHubSecurityAlertStateFilter,
+};
+pub use wiki::{
+    GitHubWikiComparison, GitHubWikiHistoryPage, GitHubWikiMutationResult, GitHubWikiOverview,
+    GitHubWikiPage, GitHubWikiPageMutationInput, GitHubWikiRevertInput, GitHubWikiRevision,
 };
 
 const PULL_REQUEST_SEARCH_PAGE_SIZE: u64 = 30;
@@ -582,6 +587,7 @@ pub(crate) trait GitHubClient:
     + repository_relationships::GitHubRepositoryRelationshipsClient
     + repository_settings::GitHubRepositorySettingsClient
     + security::GitHubSecurityClient
+    + wiki::GitHubWikiClient
     + Send
     + Sync
 {

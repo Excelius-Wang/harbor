@@ -84,6 +84,11 @@ import type {
   GitHubWorkflowRunPage,
   GitHubWorkflowRunFilterOptions,
   GitHubWorkflowRunFilters,
+  GitHubWikiOverview,
+  GitHubWikiComparison,
+  GitHubWikiHistoryPage,
+  GitHubWikiPage,
+  GitHubWikiRevision,
   GitHubUserPage,
   GitHubUserProfile,
 } from "./github-data";
@@ -101,6 +106,29 @@ type GitHubContentsTarget = GitHubCodeTarget & {
 };
 
 type GitHubRepositoryTarget = Pick<GitHubCodeTarget, "owner" | "repository">;
+
+export type GitHubWikiPageTarget = GitHubRepositoryTarget & {
+  repositoryId: number;
+  headSha: string;
+  path: string;
+};
+
+export type GitHubWikiHistoryTarget = GitHubWikiPageTarget & {
+  page: number;
+};
+
+export type GitHubWikiRevisionTarget = GitHubRepositoryTarget & {
+  repositoryId: number;
+  commitSha: string;
+  path: string;
+};
+
+export type GitHubWikiComparisonTarget = GitHubRepositoryTarget & {
+  repositoryId: number;
+  path: string;
+  baseSha: string;
+  headSha: string;
+};
 
 export type GitHubDiscussionsTarget = GitHubRepositoryTarget & {
   categoryId: string | null;
@@ -320,6 +348,22 @@ export const githubQueryKeys = {
   repositoryCreationOptions: ["github", "repository-creation-options"] as const,
   repositorySettings: ({ owner, repository }: GitHubRepositoryTarget) =>
     ["github", "repository", owner, repository, "settings"] as const,
+  repositoryWiki: ({ owner, repository }: GitHubRepositoryTarget) =>
+    ["github", "repository", owner, repository, "wiki"] as const,
+  repositoryWikiPage: ({ owner, repository, headSha, path }: GitHubWikiPageTarget) =>
+    ["github", "repository", owner, repository, "wiki", "page", headSha, path] as const,
+  repositoryWikiHistory: ({ owner, repository, headSha, path, page }: GitHubWikiHistoryTarget) =>
+    ["github", "repository", owner, repository, "wiki", "history", headSha, path, page] as const,
+  repositoryWikiRevision: ({ owner, repository, commitSha, path }: GitHubWikiRevisionTarget) =>
+    ["github", "repository", owner, repository, "wiki", "revision", commitSha, path] as const,
+  repositoryWikiComparison: ({
+    owner,
+    repository,
+    baseSha,
+    headSha,
+    path,
+  }: GitHubWikiComparisonTarget) =>
+    ["github", "repository", owner, repository, "wiki", "compare", baseSha, headSha, path] as const,
   profile: ({ username }: GitHubProfileTarget) =>
     ["github", "profile", username ?? "viewer"] as const,
   profilesRoot: ["github", "profile"] as const,
@@ -832,6 +876,46 @@ export function personalRepositorySettingsQueryOptions(target: GitHubRepositoryT
     queryFn: () =>
       invoke<GitHubRepositorySettings>("github_get_personal_repository_settings", target),
     staleTime: GITHUB_QUERY_STALE_TIME,
+  });
+}
+
+export function repositoryWikiQueryOptions(target: GitHubRepositoryTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.repositoryWiki(target),
+    queryFn: () => invoke<GitHubWikiOverview>("github_get_repository_wiki", target),
+    staleTime: GITHUB_QUERY_STALE_TIME,
+  });
+}
+
+export function repositoryWikiPageQueryOptions(target: GitHubWikiPageTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.repositoryWikiPage(target),
+    queryFn: () => invoke<GitHubWikiPage>("github_get_repository_wiki_page", target),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+}
+
+export function repositoryWikiHistoryQueryOptions(target: GitHubWikiHistoryTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.repositoryWikiHistory(target),
+    queryFn: () => invoke<GitHubWikiHistoryPage>("github_list_repository_wiki_history", target),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+}
+
+export function repositoryWikiRevisionQueryOptions(target: GitHubWikiRevisionTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.repositoryWikiRevision(target),
+    queryFn: () => invoke<GitHubWikiRevision>("github_get_repository_wiki_revision", target),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+}
+
+export function repositoryWikiComparisonQueryOptions(target: GitHubWikiComparisonTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.repositoryWikiComparison(target),
+    queryFn: () => invoke<GitHubWikiComparison>("github_compare_repository_wiki_revisions", target),
+    staleTime: Number.POSITIVE_INFINITY,
   });
 }
 

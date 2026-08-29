@@ -362,18 +362,37 @@ repository guards, conflict mapping, Git transport, response verification, and t
 reuses the existing overview, Markdown editor, Shiki preview, shadcn dialogs, toasts, and query roots;
 workflow-file scope requirements and protected/default-branch failures remain explicit.
 The workspace shell is responsive, starts at 1600x1000, and remains usable down to 900x620.
+Repository Wiki now has a native personal-developer workflow behind a focused Git-backed service.
+Harbor discovers the Wiki's real default branch, keeps a bounded bare cache per immutable repository
+ID, reads Markdown and source-only pages, renders Sidebar and Footer content, follows unambiguous
+relative Wiki links in app, and supports guarded create, edit, delete, history, comparison, and revert
+commits without force-pushing. Every write carries the displayed head and blob revisions, verifies the
+authoritative remote result, and preserves a stale draft as a stable conflict. Offline cached reads are
+explicitly read-only; private relative assets never receive OAuth credentials from the WebView. A
+disabled or uninitialized Wiki keeps a narrow GitHub Web fallback because Smart HTTP cannot reliably
+bootstrap the first page. Local Playwright and TypeScript build artifacts are now ignored.
 
 ## Next action
 
-Complete the remaining deterministic desktop checks for repository file rename, file deletion, and
-the 900x620 layout, then audit the next missing personal-developer GitHub Web workflow. Keep
-organization administration, Enterprise controls, and advanced organization security out of scope.
+Open the verified repository Wiki pull request, then audit the next missing personal-developer GitHub
+Web workflow. Keep organization administration, Enterprise controls, and advanced organization
+security out of scope.
 
 ## Verification
 
 Each GitHub parity slice must use real API data, cover loading/empty/error/permission states, preserve
 repository context and navigation, and complete its primary path without forcing a browser fallback.
 Run `pnpm check`, the Rust check suite when Rust changes, and a focused desktop interaction check.
+
+Repository Wiki verification covers canonical credential scoping, nonstandard remote default branches,
+origin recovery, token-free cache configuration, bounded page mutations, stale-head conflicts,
+authoritative create/edit/delete pushes, history, comparison, and linear revert commits. `pnpm check`
+passes with 131 frontend tests; 237 Rust tests pass with one external DeepWiki test ignored by design;
+`cargo fmt --check`, the production build, and `git diff --check` pass. RustSec reports the same nine
+pre-existing advisories as `origin/main`; the new `git2`/vendored `libgit2` dependency chain adds none.
+A deterministic desktop fixture verified browsing, native relative links, credential-safe private
+assets, new-page preview, and revision history at 1600x1000 and 900x620. Both sizes keep document width
+equal to viewport width, and the browser console reports no product errors or warnings.
 
 Repository Code mutation verification covers exact Tauri contracts, atomic rename payloads, stale
 file and branch guards, Git-compatible branch validation, empty-repository initialization, stable

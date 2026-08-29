@@ -56,4 +56,26 @@ describe("GitHubReadme", () => {
     expect(html).not.toContain("<script");
     expect(html).not.toContain("window.compromised");
   });
+
+  it("does not leak private Wiki credentials through relative image URLs", () => {
+    const html = renderToStaticMarkup(
+      <GitHubReadme
+        content={
+          "![Private diagram](assets/private.png) ![Public badge](https://example.com/badge.png)"
+        }
+        path="Home.md"
+        reference={"a".repeat(40)}
+        repository={repository}
+        relativeBaseUrl="https://github.com/harbor-fixture/repository/wiki"
+        relativeImageBaseUrl="https://raw.githubusercontent.com/wiki/harbor-fixture/repository"
+        disableRelativeImages
+        onOpenExternal={vi.fn()}
+      />
+    );
+
+    expect(html).toContain("Private diagram");
+    expect(html).not.toContain("assets/private.png");
+    expect(html).not.toContain("raw.githubusercontent.com/wiki");
+    expect(html).toContain('src="https://example.com/badge.png"');
+  });
 });

@@ -48,7 +48,9 @@ use crate::{
         GitHubSecurityAlertKind, GitHubSecurityAlertMutation, GitHubSecurityAlertPage,
         GitHubSecurityAlertSeverityFilter, GitHubSecurityAlertSort, GitHubSecurityAlertStateFilter,
         GitHubStarredRepositoryPage, GitHubStarredRepositorySort, GitHubTagPage, GitHubUserPage,
-        GitHubUserProfile, GitHubUserProfileUpdate, GitHubWorkflow, GitHubWorkflowArtifactPage,
+        GitHubUserProfile, GitHubUserProfileUpdate, GitHubWikiComparison, GitHubWikiHistoryPage,
+        GitHubWikiMutationResult, GitHubWikiOverview, GitHubWikiPage, GitHubWikiPageMutationInput,
+        GitHubWikiRevertInput, GitHubWikiRevision, GitHubWorkflow, GitHubWorkflowArtifactPage,
         GitHubWorkflowDispatchConfig, GitHubWorkflowDispatchOptions, GitHubWorkflowJobLog,
         GitHubWorkflowJobPage, GitHubWorkflowRun, GitHubWorkflowRunAction,
         GitHubWorkflowRunFilterOptions, GitHubWorkflowRunFilters, GitHubWorkflowRunPage,
@@ -2716,6 +2718,195 @@ pub async fn github_delete_repository_branch(
             &crate::github::code::write::normalize_git_sha(&expected_sha)?,
         )
         .await
+}
+
+#[tauri::command]
+pub async fn github_get_repository_wiki(
+    owner: String,
+    repository: String,
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<GitHubWikiOverview, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .repository_wiki_overview(
+            wiki_cache_root(&app)?,
+            repository.owner(),
+            repository.name(),
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_get_repository_wiki_page(
+    owner: String,
+    repository: String,
+    repository_id: u64,
+    head_sha: String,
+    path: String,
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<GitHubWikiPage, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .repository_wiki_page(
+            wiki_cache_root(&app)?,
+            repository_id,
+            repository.owner(),
+            repository.name(),
+            &head_sha,
+            &path,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_list_repository_wiki_history(
+    owner: String,
+    repository: String,
+    repository_id: u64,
+    head_sha: String,
+    path: String,
+    page: u32,
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<GitHubWikiHistoryPage, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .repository_wiki_history(
+            wiki_cache_root(&app)?,
+            repository_id,
+            repository.owner(),
+            repository.name(),
+            &head_sha,
+            &path,
+            page,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_get_repository_wiki_revision(
+    owner: String,
+    repository: String,
+    repository_id: u64,
+    commit_sha: String,
+    path: String,
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<GitHubWikiRevision, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .repository_wiki_revision(
+            wiki_cache_root(&app)?,
+            repository_id,
+            repository.owner(),
+            repository.name(),
+            &commit_sha,
+            &path,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_compare_repository_wiki_revisions(
+    owner: String,
+    repository: String,
+    repository_id: u64,
+    path: String,
+    base_sha: String,
+    head_sha: String,
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<GitHubWikiComparison, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .compare_repository_wiki_revisions(
+            wiki_cache_root(&app)?,
+            repository_id,
+            repository.owner(),
+            repository.name(),
+            &path,
+            &base_sha,
+            &head_sha,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_mutate_repository_wiki_page(
+    owner: String,
+    repository: String,
+    input: GitHubWikiPageMutationInput,
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<GitHubWikiMutationResult, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .mutate_repository_wiki_page(
+            wiki_cache_root(&app)?,
+            repository.owner(),
+            repository.name(),
+            input,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_delete_repository_wiki_page(
+    owner: String,
+    repository: String,
+    path: String,
+    expected_head: String,
+    expected_blob_sha: String,
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<GitHubWikiMutationResult, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .delete_repository_wiki_page(
+            wiki_cache_root(&app)?,
+            repository.owner(),
+            repository.name(),
+            &path,
+            &expected_head,
+            &expected_blob_sha,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_revert_repository_wiki_page(
+    owner: String,
+    repository: String,
+    input: GitHubWikiRevertInput,
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<GitHubWikiMutationResult, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .revert_repository_wiki_page(
+            wiki_cache_root(&app)?,
+            repository.owner(),
+            repository.name(),
+            input,
+        )
+        .await
+}
+
+fn wiki_cache_root(app: &AppHandle) -> Result<PathBuf, AppError> {
+    app.path()
+        .app_cache_dir()
+        .map(|path| path.join("github-wikis"))
+        .map_err(|error| AppError::FileSystem(error.to_string()))
 }
 
 async fn choose_open_file(app: &AppHandle) -> Result<Option<PathBuf>, AppError> {
