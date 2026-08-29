@@ -658,6 +658,7 @@ fn issue_timeline_item_from_graphql(node: IssueCommentNode) -> GitHubIssueTimeli
         rename_from: None,
         rename_to: None,
         commit_id: None,
+        review_id: None,
         review_state: None,
     }
 }

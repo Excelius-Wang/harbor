@@ -16,6 +16,7 @@ pub(crate) mod creation;
 pub(crate) mod file_view_state;
 pub(crate) mod lifecycle;
 pub(crate) mod merge_queue;
+pub(crate) mod review_dismissal;
 pub(crate) mod reviewer;
 pub(crate) mod update_branch;
 
@@ -596,6 +597,7 @@ impl GitHubPullRequestMutationClient for super::tests::FakeGitHubClient {
             rename_from: None,
             rename_to: None,
             commit_id: None,
+            review_id: None,
             review_state: None,
         })
     }
@@ -635,6 +637,7 @@ impl GitHubPullRequestMutationClient for super::tests::FakeGitHubClient {
         };
         Ok(GitHubPullRequestReview {
             id: 86,
+            node_id: "PRR_86".to_string(),
             author: "octocat".to_string(),
             author_avatar_url: Some("https://github.com/octocat.png".to_string()),
             author_association: Some("owner".to_string()),

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, CircleAlert, Pencil, RotateCcw, UserRound, UsersRound } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -38,9 +38,11 @@ import {
   syncUpdatedPullRequest,
   type GitHubPullRequestMutationTarget,
 } from "./github-pull-request-mutations";
+import { GitHubPullRequestReviewDismissalAction } from "./github-pull-request-review-dismissal";
 import { GitHubPullRequestConvertToDraft } from "./github-pull-request-lifecycle";
 import { ReviewStateIcon, summarizeReviews } from "./github-pull-request-shared";
 import {
+  pullRequestReviewsQueryOptions,
   repositoryIssueAssigneesQueryOptions,
   repositoryPullRequestReviewTeamsQueryOptions,
 } from "./github-queries";
@@ -348,14 +350,39 @@ export function GitHubPullRequestReviewers({
   repository,
   pullRequest,
   reviews,
+  reviewsHaveMore,
 }: {
   repository: GitHubPullRequestRepository;
   pullRequest: GitHubPullRequest;
   reviews: GitHubPullRequestReview[];
+  reviewsHaveMore: boolean;
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  const reviewSummary = useMemo(() => summarizeReviews(reviews), [reviews]);
+  const target: GitHubPullRequestMutationTarget = {
+    owner: repository.owner,
+    repository: repository.name,
+    pullRequestNumber: pullRequest.number,
+  };
+  const reviewsQuery = useInfiniteQuery({
+    ...pullRequestReviewsQueryOptions(target),
+    initialData: {
+      pages: [
+        {
+          reviews,
+          page: 1,
+          hasPrevious: false,
+          hasMore: reviewsHaveMore,
+        },
+      ],
+      pageParams: [1],
+    },
+  });
+  const loadedReviews = useMemo(
+    () => reviewsQuery.data.pages.flatMap((page) => page.reviews),
+    [reviewsQuery.data.pages]
+  );
+  const reviewSummary = useMemo(() => summarizeReviews(loadedReviews), [loadedReviews]);
   const requestedUsers = new Set(
     pullRequest.requestedReviewers.map((reviewer) => reviewer.toLocaleLowerCase())
   );
@@ -390,10 +417,10 @@ export function GitHubPullRequestReviewers({
         </div>
         <div className="flex flex-col gap-2">
           {changesRequested.map((review) => (
-            <ReviewerState key={review.id} review={review} />
+            <ReviewerState key={review.id} review={review} target={target} />
           ))}
           {approved.map((review) => (
-            <ReviewerState key={review.id} review={review} />
+            <ReviewerState key={review.id} review={review} target={target} />
           ))}
           {pullRequest.requestedReviewers.map((reviewer) => (
             <div key={reviewer} className="flex min-w-0 items-center gap-2 text-xs">
@@ -424,6 +451,29 @@ export function GitHubPullRequestReviewers({
               {t("workspace.repositories.none")}
             </span>
           ) : null}
+          {reviewsQuery.error ? (
+            <Alert variant="destructive">
+              <CircleAlert />
+              <AlertTitle>{t("workspace.repositories.reviewsLoadFailed")}</AlertTitle>
+              <AlertDescription>{parseIpcError(reviewsQuery.error).message}</AlertDescription>
+            </Alert>
+          ) : null}
+          {reviewsQuery.hasNextPage ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              disabled={reviewsQuery.isFetchingNextPage}
+              onClick={() => void reviewsQuery.fetchNextPage()}
+            >
+              {reviewsQuery.isFetchingNextPage ? <Spinner data-icon="inline-start" /> : null}
+              {t(
+                reviewsQuery.isFetchingNextPage
+                  ? "workspace.repositories.loadingMoreReviews"
+                  : "workspace.repositories.loadMoreReviews"
+              )}
+            </Button>
+          ) : null}
         </div>
         {pullRequest.state === "open" && !pullRequest.merged && !pullRequest.draft ? (
           <GitHubPullRequestConvertToDraft repository={repository} pullRequest={pullRequest} />
@@ -433,7 +483,7 @@ export function GitHubPullRequestReviewers({
         <GitHubPullRequestReviewerDialog
           repository={repository}
           pullRequest={pullRequest}
-          reviews={reviews}
+          reviews={loadedReviews}
           onOpenChange={setOpen}
         />
       ) : null}
@@ -441,7 +491,13 @@ export function GitHubPullRequestReviewers({
   );
 }
 
-function ReviewerState({ review }: { review: GitHubPullRequestReview }) {
+function ReviewerState({
+  review,
+  target,
+}: {
+  review: GitHubPullRequestReview;
+  target: GitHubPullRequestMutationTarget;
+}) {
   const { t } = useTranslation();
   return (
     <div className="flex min-w-0 items-center gap-2 text-xs">
@@ -450,6 +506,7 @@ function ReviewerState({ review }: { review: GitHubPullRequestReview }) {
       <span className="text-muted-foreground ml-auto text-[9px]">
         {t(`workspace.repositories.reviewStates.${review.state}`)}
       </span>
+      <GitHubPullRequestReviewDismissalAction target={target} review={review} />
     </div>
   );
 }

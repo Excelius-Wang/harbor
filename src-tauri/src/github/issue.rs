@@ -202,6 +202,7 @@ pub struct GitHubIssueTimelineItem {
     pub rename_from: Option<String>,
     pub rename_to: Option<String>,
     pub commit_id: Option<String>,
+    pub review_id: Option<u64>,
     pub review_state: Option<GitHubPullRequestReviewState>,
 }
 
@@ -1037,6 +1038,7 @@ pub(super) fn timeline_item_from_issue_comment(
         rename_from: None,
         rename_to: None,
         commit_id: None,
+        review_id: None,
         review_state: None,
     }
 }
@@ -1091,6 +1093,9 @@ pub(super) fn timeline_item_from_octocrab(
         .unwrap_or_default();
 
     let review_state = event.state.map(pull_request_review_state_from_octocrab);
+    let review_id = (event_name == "reviewed")
+        .then(|| event.id.map(|id| id.into_inner()))
+        .flatten();
     let created_at = event.created_at.or(event.submitted_at);
     let reaction_subject = event.node_id.clone().and_then(|id| {
         let kind = match event_name.as_str() {
@@ -1135,6 +1140,7 @@ pub(super) fn timeline_item_from_octocrab(
         rename_from,
         rename_to,
         commit_id: event.commit_id,
+        review_id,
         review_state,
     }
 }

@@ -164,6 +164,8 @@ pub fn run() {
             commands::github_create_repository_pull_request_comment,
             commands::github_mutate_repository_pull_request_comment,
             commands::github_create_repository_pull_request_review,
+            commands::github_list_repository_pull_request_reviews,
+            commands::github_dismiss_repository_pull_request_review,
             commands::github_get_pending_repository_pull_request_review,
             commands::github_save_pending_repository_pull_request_review,
             commands::github_save_pending_repository_pull_request_review_comment,

@@ -902,6 +902,7 @@ impl GitHubPendingReviewClient for super::tests::FakeGitHubClient {
         assert_eq!(action, GitHubPullRequestReviewAction::Comment);
         Ok(GitHubPullRequestReview {
             id: review_id,
+            node_id: format!("PRR_{review_id}"),
             author: "octocat".to_string(),
             author_avatar_url: Some("https://github.com/octocat.png".to_string()),
             author_association: Some("owner".to_string()),

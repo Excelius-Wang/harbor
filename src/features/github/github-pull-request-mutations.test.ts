@@ -1,4 +1,4 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, type InfiniteData } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
@@ -8,6 +8,7 @@ import type {
   GitHubPullRequestDetailPage,
   GitHubPullRequestPage,
   GitHubPullRequestReview,
+  GitHubPullRequestReviewPage,
   GitHubPullRequestReviewThread,
   GitHubPullRequestReviewThreadComment,
   GitHubPullRequestSummary,
@@ -18,12 +19,14 @@ import {
   createRepositoryPullRequestReview,
   deletePendingRepositoryPullRequestReview,
   deletePendingRepositoryPullRequestReviewComment,
+  dismissRepositoryPullRequestReview,
   dequeueRepositoryPullRequest,
   disableRepositoryPullRequestAutoMerge,
   enableRepositoryPullRequestAutoMerge,
   enqueueRepositoryPullRequest,
   mergeRepositoryPullRequest,
   invalidatePullRequestAfterBranchUpdate,
+  invalidatePullRequestAfterReviewDismissal,
   removeRepositoryPullRequestReviewers,
   replyToPullRequestReviewThread,
   requestRepositoryPullRequestReviewers,
@@ -35,6 +38,7 @@ import {
   syncCreatedPullRequestReview,
   syncPendingPullRequestReview,
   syncPullRequestLockedState,
+  syncDismissedPullRequestReview,
   syncPullRequestReviewThreadReply,
   syncPullRequestReviewThreadState,
   syncUpdatedPullRequest,
@@ -119,6 +123,7 @@ const comment: GitHubIssueTimelineItem = {
 
 const review: GitHubPullRequestReview = {
   id: 86,
+  nodeId: "PRR_86",
   author: "hubot",
   authorAvatarUrl: "https://github.com/hubot.png",
   authorAssociation: "collaborator",
@@ -259,6 +264,91 @@ describe("GitHub pull request mutations", () => {
       body: "Pull request body",
       draft: true,
     });
+  });
+
+  it("dismisses a submitted review with repository-scoped identity and reason", async () => {
+    vi.mocked(invoke).mockResolvedValueOnce({ ...review, state: "dismissed" });
+
+    await dismissRepositoryPullRequestReview(target, review.id, "Outdated approval");
+
+    expect(invoke).toHaveBeenCalledWith("github_dismiss_repository_pull_request_review", {
+      ...target,
+      reviewId: 86,
+      message: "Outdated approval",
+    });
+  });
+
+  it("replaces the exact review across detail and paged review caches", () => {
+    const queryClient = createQueryClient();
+    const detailKey = githubQueryKeys.pullRequestDetail({ ...target, timelinePage: 1 });
+    const reviewsKey = githubQueryKeys.pullRequestReviews(target);
+    queryClient.setQueryData(detailKey, {
+      ...detailPage(),
+      reviews: [review],
+      timeline: [
+        {
+          id: review.nodeId,
+          reviewId: review.id,
+          kind: "event",
+          event: "reviewed",
+          actor: review.author,
+          createdAt: "2026-08-26T12:00:00Z",
+          viewerCanUpdate: false,
+          viewerCanDelete: false,
+          isMinimized: false,
+          reviewState: review.state,
+        },
+      ],
+    });
+    queryClient.setQueryData<InfiniteData<GitHubPullRequestReviewPage, number>>(reviewsKey, {
+      pages: [{ reviews: [review], page: 1, hasPrevious: false, hasMore: false }],
+      pageParams: [1],
+    });
+    const dismissed = { ...review, state: "dismissed" as const };
+
+    syncDismissedPullRequestReview(queryClient, target, dismissed);
+
+    expect(queryClient.getQueryData<GitHubPullRequestDetailPage>(detailKey)?.reviews[0].state).toBe(
+      "dismissed"
+    );
+    expect(
+      queryClient.getQueryData<GitHubPullRequestDetailPage>(detailKey)?.timeline[0].reviewState
+    ).toBe("dismissed");
+    expect(
+      queryClient.getQueryData<InfiniteData<GitHubPullRequestReviewPage, number>>(reviewsKey)
+        ?.pages[0].reviews[0].state
+    ).toBe("dismissed");
+  });
+
+  it("invalidates the full pull request, repository list, and inbox after dismissal", async () => {
+    const queryClient = createQueryClient();
+    const detailKey = githubQueryKeys.pullRequestDetail({ ...target, timelinePage: 1 });
+    const reviewsKey = githubQueryKeys.pullRequestReviews(target);
+    const repositoryKey = githubQueryKeys.pullRequests({
+      owner: target.owner,
+      repository: target.repository,
+      state: "open",
+      query: "",
+      label: "",
+      sort: "updated",
+      page: 1,
+    });
+    const inboxKey = githubQueryKeys.pullRequestInbox({
+      scope: "authored",
+      state: "open",
+      query: "",
+      sort: "updated",
+      page: 1,
+    });
+    for (const key of [detailKey, reviewsKey, repositoryKey, inboxKey]) {
+      queryClient.setQueryData(key, { cached: true });
+    }
+
+    await invalidatePullRequestAfterReviewDismissal(queryClient, target);
+
+    for (const key of [detailKey, reviewsKey, repositoryKey, inboxKey]) {
+      expect(queryClient.getQueryState(key)?.isInvalidated).toBe(true);
+    }
   });
 
   it("primes the first conversation page for a newly created pull request", () => {
@@ -889,6 +979,18 @@ describe("GitHub pull request mutations", () => {
       timelineHasPrevious: true,
       timelineHasMore: true,
     });
+    const reviewsKey = githubQueryKeys.pullRequestReviews(target);
+    queryClient.setQueryData<InfiniteData<GitHubPullRequestReviewPage, number>>(reviewsKey, {
+      pages: [
+        {
+          reviews: [],
+          page: 1,
+          hasPrevious: false,
+          hasMore: false,
+        },
+      ],
+      pageParams: [1],
+    });
 
     syncCreatedPullRequestReview(queryClient, target, review);
 
@@ -906,6 +1008,55 @@ describe("GitHub pull request mutations", () => {
     ]);
     expect(earlier?.reviews).toEqual([review]);
     expect(earlier?.timeline).toEqual([]);
+    expect(
+      queryClient
+        .getQueryData<InfiniteData<GitHubPullRequestReviewPage, number>>(reviewsKey)
+        ?.pages.flatMap((page) => page.reviews)
+    ).toEqual([review]);
+  });
+
+  it("starts a new cached review page when a full terminal page receives a review", () => {
+    const queryClient = createQueryClient();
+    const reviewsKey = githubQueryKeys.pullRequestReviews(target);
+    const firstPageReviews = Array.from({ length: 100 }, (_, index) => ({
+      ...review,
+      id: index + 1,
+      nodeId: `PRR_${index + 1}`,
+    }));
+    queryClient.setQueryData<InfiniteData<GitHubPullRequestReviewPage, number>>(reviewsKey, {
+      pages: [
+        {
+          reviews: firstPageReviews,
+          page: 1,
+          hasPrevious: false,
+          hasMore: false,
+        },
+      ],
+      pageParams: [1],
+    });
+    const latest = { ...review, id: 101, nodeId: "PRR_101" };
+
+    syncCreatedPullRequestReview(queryClient, target, latest);
+
+    expect(
+      queryClient.getQueryData<InfiniteData<GitHubPullRequestReviewPage, number>>(reviewsKey)
+    ).toEqual({
+      pages: [
+        {
+          reviews: firstPageReviews,
+          page: 1,
+          hasPrevious: false,
+          hasMore: false,
+        },
+        {
+          reviews: [latest],
+          page: 2,
+          hasPrevious: true,
+          hasMore: false,
+        },
+      ],
+      pageParams: [1, 2],
+    });
   });
 
   it("updates the matching review thread after a reply and resolution change", () => {

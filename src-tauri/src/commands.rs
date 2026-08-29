@@ -43,7 +43,7 @@ use crate::{
         GitHubPullRequestFileViewStateSnapshot, GitHubPullRequestFilters,
         GitHubPullRequestInboxFilters, GitHubPullRequestInboxScope, GitHubPullRequestMergeMethod,
         GitHubPullRequestMergeQueueStatus, GitHubPullRequestPage, GitHubPullRequestReview,
-        GitHubPullRequestReviewAction, GitHubPullRequestReviewComment,
+        GitHubPullRequestReviewAction, GitHubPullRequestReviewComment, GitHubPullRequestReviewPage,
         GitHubPullRequestReviewTeamPage, GitHubPullRequestReviewThreadComment,
         GitHubPullRequestReviewThreadPage, GitHubPullRequestReviewThreadResolution,
         GitHubPullRequestReviewThreadState, GitHubPullRequestSort, GitHubPullRequestState,
@@ -2335,6 +2335,48 @@ pub async fn github_create_repository_pull_request_review(
 }
 
 #[tauri::command]
+pub async fn github_list_repository_pull_request_reviews(
+    owner: String,
+    repository: String,
+    pull_request_number: u64,
+    page: u32,
+    state: State<'_, AppState>,
+) -> Result<GitHubPullRequestReviewPage, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .pull_request_reviews(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(pull_request_number, "pull request")?,
+            validate_page(page)?,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_dismiss_repository_pull_request_review(
+    owner: String,
+    repository: String,
+    pull_request_number: u64,
+    review_id: u64,
+    message: String,
+    state: State<'_, AppState>,
+) -> Result<GitHubPullRequestReview, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .dismiss_pull_request_review(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(pull_request_number, "pull request")?,
+            validate_item_number(review_id, "pull request review")?,
+            &validate_pull_request_review_dismissal_message(message)?,
+        )
+        .await
+}
+
+#[tauri::command]
 pub async fn github_get_pending_repository_pull_request_review(
     owner: String,
     repository: String,
@@ -4339,6 +4381,17 @@ fn validate_pull_request_review_body(
     Ok(body)
 }
 
+fn validate_pull_request_review_dismissal_message(message: String) -> Result<String, AppError> {
+    let message = validate_issue_body(message)?.trim().to_string();
+    if message.is_empty() {
+        Err(AppError::Validation(
+            "pull request review dismissal message is required".to_string(),
+        ))
+    } else {
+        Ok(message)
+    }
+}
+
 fn validate_pull_request_review_comments(
     comments: Vec<GitHubPullRequestReviewComment>,
 ) -> Result<Vec<GitHubPullRequestReviewComment>, AppError> {
@@ -4931,6 +4984,17 @@ mod tests {
             )
             .expect("change request"),
             "Please add a regression test."
+        );
+        assert_eq!(
+            validate_pull_request_review_dismissal_message(
+                "  The approval applies to an earlier design.  ".to_string()
+            )
+            .expect("dismissal message"),
+            "The approval applies to an earlier design."
+        );
+        assert!(validate_pull_request_review_dismissal_message(" \n ".to_string()).is_err());
+        assert!(
+            validate_pull_request_review_dismissal_message("invalid\0message".to_string()).is_err()
         );
 
         let comments =

@@ -62,6 +62,7 @@ import {
   pullRequestFilesQueryOptions,
   pullRequestFileViewStatesQueryOptions,
   pullRequestReviewThreadsQueryOptions,
+  pullRequestReviewsQueryOptions,
   pullRequestInboxQueryOptions,
   repositoryCheckSuiteRunsQueryOptions,
   repositoryCheckSuiteQueryOptions,
@@ -1260,6 +1261,52 @@ describe("GitHub repository queries", () => {
       repository: "hello-world",
       pullRequestNumber: 12,
     });
+  });
+
+  it("pages submitted pull request reviews through a focused command", async () => {
+    const client = createTestQueryClient();
+    vi.mocked(invoke)
+      .mockResolvedValueOnce({
+        reviews: [{ id: 86, nodeId: "PRR_86", author: "hubot", state: "approved" }],
+        page: 1,
+        hasPrevious: false,
+        hasMore: true,
+      })
+      .mockResolvedValueOnce({
+        reviews: [{ id: 87, nodeId: "PRR_87", author: "octocat", state: "changesRequested" }],
+        page: 2,
+        hasPrevious: true,
+        hasMore: false,
+      });
+    const options = pullRequestReviewsQueryOptions({
+      owner: "octocat",
+      repository: "hello-world",
+      pullRequestNumber: 12,
+    });
+
+    await client.fetchInfiniteQuery(options);
+    const observer = new InfiniteQueryObserver(client, options);
+    const unsubscribe = observer.subscribe(() => undefined);
+    await observer.fetchNextPage();
+    unsubscribe();
+
+    expect(invoke).toHaveBeenNthCalledWith(1, "github_list_repository_pull_request_reviews", {
+      owner: "octocat",
+      repository: "hello-world",
+      pullRequestNumber: 12,
+      page: 1,
+    });
+    expect(invoke).toHaveBeenNthCalledWith(2, "github_list_repository_pull_request_reviews", {
+      owner: "octocat",
+      repository: "hello-world",
+      pullRequestNumber: 12,
+      page: 2,
+    });
+    expect(
+      observer
+        .getCurrentResult()
+        .data?.pages.flatMap((page) => page.reviews.map((review) => review.id))
+    ).toEqual([86, 87]);
   });
 
   it("checks pull request branch update eligibility in a focused cache", async () => {

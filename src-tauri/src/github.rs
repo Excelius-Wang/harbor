@@ -116,6 +116,7 @@ pub use pull_request::file_view_state::{
 #[cfg(test)]
 use pull_request::merge_queue::GitHubPullRequestMergeQueueState;
 pub use pull_request::merge_queue::GitHubPullRequestMergeQueueStatus;
+pub use pull_request::review_dismissal::GitHubPullRequestReviewPage;
 pub use pull_request::reviewer::{GitHubPullRequestReviewTeam, GitHubPullRequestReviewTeamPage};
 pub use pull_request::update_branch::{
     GitHubPullRequestBranchUpdate, GitHubPullRequestBranchUpdateStatus,
@@ -441,6 +442,7 @@ pub struct GitHubPendingPullRequestReview {
 #[serde(rename_all = "camelCase")]
 pub struct GitHubPullRequestReview {
     pub id: u64,
+    pub node_id: String,
     pub author: String,
     pub author_avatar_url: Option<String>,
     pub author_association: Option<String>,
@@ -639,6 +641,7 @@ pub(crate) trait GitHubClient:
     + pull_request::file_view_state::GitHubPullRequestFileViewStateClient
     + pull_request::lifecycle::GitHubPullRequestLifecycleClient
     + pull_request::merge_queue::GitHubPullRequestMergeQueueClient
+    + pull_request::review_dismissal::GitHubPullRequestReviewDismissalClient
     + pull_request::reviewer::GitHubPullRequestReviewerClient
     + pull_request::update_branch::GitHubPullRequestBranchClient
     + reaction::GitHubReactionClient
@@ -2006,6 +2009,7 @@ fn pull_request_review_from_octocrab(
     let state = pull_request_review_state_from_octocrab(review.state?);
     Some(GitHubPullRequestReview {
         id: review.id.into_inner(),
+        node_id: review.node_id,
         author: author.login,
         author_avatar_url: Some(author.avatar_url.to_string()),
         author_association: review
@@ -4122,6 +4126,7 @@ mod tests {
         let item = timeline_item_from_octocrab(event, 0);
 
         assert_eq!(item.event, "reviewed");
+        assert_eq!(item.review_id, Some(43));
         assert_eq!(
             item.review_state,
             Some(GitHubPullRequestReviewState::Approved)
