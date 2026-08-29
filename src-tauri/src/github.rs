@@ -20,6 +20,7 @@ pub(crate) mod download;
 pub(crate) mod gist;
 pub(crate) mod insights;
 pub(crate) mod issue;
+pub(crate) mod issue_taxonomy;
 pub(crate) mod item_metadata;
 pub(crate) mod notification;
 pub(crate) mod packages;
@@ -77,9 +78,12 @@ use issue::GitHubIssueTimelineKind;
 pub use issue::{
     GitHubIssue, GitHubIssueAssigneePage, GitHubIssueAssignment, GitHubIssueDetailPage,
     GitHubIssueFilters, GitHubIssueInboxFilters, GitHubIssueInboxPage, GitHubIssueInboxScope,
-    GitHubIssueLabel, GitHubIssueLabelPage, GitHubIssueMilestonePage, GitHubIssuePage,
-    GitHubIssueSort, GitHubIssueState, GitHubIssueTimelineItem,
+    GitHubIssueLabel, GitHubIssueLabelPage, GitHubIssueMilestone, GitHubIssueMilestonePage,
+    GitHubIssuePage, GitHubIssueSort, GitHubIssueState, GitHubIssueTimelineItem,
 };
+#[cfg(test)]
+use issue_taxonomy::GitHubIssueMilestoneState;
+pub use issue_taxonomy::{GitHubIssueLabelMutation, GitHubIssueMilestoneMutation};
 pub use notification::{GitHubNotificationAction, GitHubNotificationPage};
 #[cfg(test)]
 use packages::GitHubPackageVersionAction;
@@ -615,6 +619,7 @@ pub(crate) trait GitHubClient:
     + gist::GitHubGistClient
     + insights::GitHubInsightsClient
     + issue::GitHubIssueClient
+    + issue_taxonomy::GitHubIssueTaxonomyClient
     + notification::GitHubNotificationClient
     + packages::GitHubPackagesClient
     + pending_review::GitHubPendingReviewClient
@@ -3157,6 +3162,34 @@ mod tests {
             .update_issue_state("octocat", "hello-world", 7, GitHubIssueState::Closed)
             .await
             .expect("closed issue");
+        let label = service
+            .mutate_issue_label(
+                "octocat",
+                "hello-world",
+                GitHubIssueLabelMutation::Create {
+                    name: " needs-triage ".to_string(),
+                    color: "#A1B2C3".to_string(),
+                    description: " Sort new reports ".to_string(),
+                },
+            )
+            .await
+            .expect("created label")
+            .expect("returned label");
+        let milestone = service
+            .mutate_issue_milestone(
+                "octocat",
+                "hello-world",
+                GitHubIssueMilestoneMutation::Update {
+                    number: 3,
+                    title: " Harbor 1.0 ".to_string(),
+                    description: " Ship the desktop workflow. ".to_string(),
+                    due_on: Some("2026-09-30".to_string()),
+                    state: GitHubIssueMilestoneState::Closed,
+                },
+            )
+            .await
+            .expect("updated milestone")
+            .expect("returned milestone");
 
         assert_eq!(created.number, 9);
         assert_eq!(created.title, "Keep Issue work in Harbor");
@@ -3175,6 +3208,11 @@ mod tests {
         );
         assert_eq!(issue.state, GitHubIssueState::Closed);
         assert_eq!(issue.state_reason.as_deref(), Some("completed"));
+        assert_eq!(label.name, "needs-triage");
+        assert_eq!(label.color, "a1b2c3");
+        assert_eq!(milestone.title, "Harbor 1.0");
+        assert_eq!(milestone.state, "closed");
+        assert_eq!(milestone.due_on.as_deref(), Some("2026-09-30T00:00:00Z"));
     }
 
     #[tokio::test]

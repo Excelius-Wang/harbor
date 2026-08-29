@@ -451,6 +451,14 @@ UI preserves repository, inviter, permission, privacy, pagination, loading, empt
 decline, mutation failure, and responsive states. Accepted invitations invalidate the authenticated
 repository cache; both actions reconcile the invitation and notification caches by immutable IDs.
 The verified slice is open as PR #9 from `feat/github-repository-invitations`.
+Repository Issue taxonomy management is now native in PR #10. The focused two-method
+`GitHubIssueTaxonomyClient` Interface owns label and milestone writes, saved-credential delegation,
+input normalization, route encoding, exact deletion confirmation, response verification, and focused
+tests. The repository Issues workspace reuses its existing label and milestone queries, TanStack Query
+roots, and shadcn components for label create, rename, color and description edits, and deletion plus
+milestone create, edit, due-date clearing, close, reopen, progress, and deletion. Returned records
+reconcile option caches immediately before related Issue, pull request, inbox, and Project queries are
+invalidated. Organization administration remains outside this repository-scoped developer workflow.
 The workspace shell is responsive, starts at 1600x1000, and remains usable down to 900x620.
 Repository Wiki now has a native personal-developer workflow behind a focused Git-backed service.
 Harbor discovers the Wiki's real default branch, keeps a bounded bare cache per immutable repository
@@ -587,6 +595,16 @@ and history entry points, paged files, parent navigation, source-file return, un
 binary fallback, and the exact Commit-notification SHA. Both sizes have no page-level overflow, and
 fresh sessions report zero console errors and warnings. GitHub's live `cli/cli` endpoint confirms the
 2026-03-10 response and Link-pagination contract.
+Repository Issue taxonomy verification covers exact camelCase Tauri contracts, normalized label
+colors and due dates, create-versus-clear due-date serialization, route encoding, authoritative
+response checks, deletion confirmation, and focused cache reconciliation. `pnpm check` passes with
+128 frontend tests; 229 Rust tests pass with one external DeepWiki test ignored by design; `cargo
+fmt --check`, `cargo check`, `cargo clippy --all-targets`, and `git diff --check` pass with the same 11
+existing Clippy warnings. A deterministic desktop fixture verified label create, rename, retained
+input after a permission failure, and deletion plus milestone create, edit, due-date clearing, close,
+reopen, and deletion at 1600x1000 and 900x620. Light and dark themes render cleanly, wide tables
+scroll only inside their content surface, the document width equals the viewport width, and the
+browser console reports zero errors and warnings. PR: https://github.com/Excelius-Wang/harbor/pull/10
 
 Success: `pnpm check` passes; a 70-repository Playwright fixture with a 240-character unbroken token
 keeps `scrollWidth === clientWidth` at both 1600x1000 and 900x620, with 12px between descriptions and
