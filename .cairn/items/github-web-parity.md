@@ -31,7 +31,8 @@ and known Job-log cache behavior.
 
 `pnpm check` passes 33 frontend files and 178 tests. Rust library tests pass 321 tests with two
 intentional ignores. Clippy passes with the 15 existing warnings; `cargo check`, rustfmt, and
-`git diff --check` also pass.
+`git diff --check` also pass. Draft [PR #13](https://github.com/Excelius-Wang/harbor/pull/13) is open
+from the pushed `feat/github-actions-administration` branch into `main`.
 
 Harbor uses a classic OAuth App for scope-based personal workflows, rejects GitHub App client IDs
 and `ghu_` tokens, and honors GitHub's normalization of `read:packages` into `write:packages`.
@@ -41,7 +42,7 @@ refresh tokens, or Keychain contents.
 
 ## Next action
 
-Commit the verified review fixes, push `feat/github-actions-administration`, and open its Draft PR.
+Run Standards and Spec reviews on PR #13, then fix every confirmed finding.
 
 ## Verification
 
