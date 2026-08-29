@@ -218,6 +218,32 @@
       "markAllTitle": "Mark every notification as read?",
       "markAllDescription": "Every notification GitHub currently reports as unread will leave Harbor's inbox. The GitHub API does not provide a mark-unread action.",
       "cancel": "Cancel",
+      "invitations": {
+        "open": "Repository invitations",
+        "eyebrow": "Account access",
+        "title": "Repository invitations",
+        "description": "Review open repository invitations for your GitHub account. Accepted repositories will appear in My repositories after GitHub finishes granting access.",
+        "private": "Private",
+        "invitedBy": "Invited by {{login}}",
+        "accept": "Accept",
+        "decline": "Decline",
+        "acceptSuccess": "Accepted the invitation to {{repository}}",
+        "declineSuccess": "Declined the invitation to {{repository}}",
+        "updateFailed": "The invitation could not be updated",
+        "loadFailed": "Harbor could not load repository invitations",
+        "empty": "No open invitations",
+        "emptyDescription": "New repository invitations for this account will appear here.",
+        "loadMore": "Load more invitations",
+        "declineTitle": "Decline this repository invitation?",
+        "declineDescription": "The invitation to {{repository}} will be removed. The repository owner must send another invitation if you need access later.",
+        "permissions": {
+          "read": "Read",
+          "triage": "Triage",
+          "write": "Write",
+          "maintain": "Maintain",
+          "admin": "Admin"
+        }
+      },
       "kinds": {
         "issue": "Issue",
         "pullRequest": "Pull request",
@@ -230,7 +256,7 @@
         "codeScanningAlert": "Code scanning alert",
         "secretScanningAlert": "Secret scanning alert",
         "securityAlert": "Security alert",
-        "repository": "Repository",
+        "repositoryInvitation": "Repository invitation",
         "other": "GitHub"
       },
       "reasons": {

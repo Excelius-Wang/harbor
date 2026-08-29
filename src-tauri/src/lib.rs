@@ -72,6 +72,8 @@ pub fn run() {
             commands::github_list_notifications,
             commands::github_update_notification,
             commands::github_mark_all_notifications_read,
+            commands::github_list_received_repository_invitations,
+            commands::github_update_received_repository_invitation,
             commands::github_list_personal_projects,
             commands::github_get_personal_project,
             commands::github_create_personal_project,

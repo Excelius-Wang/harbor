@@ -39,6 +39,7 @@ use crate::{
         GitHubPullRequestReviewTeamPage, GitHubPullRequestReviewThreadComment,
         GitHubPullRequestReviewThreadPage, GitHubPullRequestReviewThreadResolution,
         GitHubPullRequestReviewThreadState, GitHubPullRequestSort, GitHubPullRequestState,
+        GitHubReceivedRepositoryInvitationAction, GitHubReceivedRepositoryInvitationPage,
         GitHubRelease, GitHubReleaseArchiveFormat, GitHubReleaseAsset, GitHubReleaseMutationInput,
         GitHubReleasePage, GitHubRepositoryCommitPage, GitHubRepositoryCreateInput,
         GitHubRepositoryCreationOptions, GitHubRepositoryFileCommit, GitHubRepositoryFileMutation,
@@ -532,6 +533,32 @@ pub async fn github_mark_all_notifications_read(
     state: State<'_, AppState>,
 ) -> Result<(), AppError> {
     state.github.mark_all_notifications_read().await
+}
+
+#[tauri::command]
+pub async fn github_list_received_repository_invitations(
+    page: u32,
+    state: State<'_, AppState>,
+) -> Result<GitHubReceivedRepositoryInvitationPage, AppError> {
+    state
+        .github
+        .received_repository_invitations(validate_page(page)?)
+        .await
+}
+
+#[tauri::command]
+pub async fn github_update_received_repository_invitation(
+    invitation_id: u64,
+    action: GitHubReceivedRepositoryInvitationAction,
+    state: State<'_, AppState>,
+) -> Result<(), AppError> {
+    state
+        .github
+        .update_received_repository_invitation(
+            validate_item_number(invitation_id, "repository invitation")?,
+            action,
+        )
+        .await
 }
 
 #[tauri::command]

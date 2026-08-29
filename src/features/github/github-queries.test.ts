@@ -34,6 +34,7 @@ import {
   userContributionsQueryOptions,
   userProfileQueryOptions,
   notificationsQueryOptions,
+  receivedRepositoryInvitationsQueryOptions,
   pendingPullRequestReviewQueryOptions,
   pullRequestAutoMergeStatusQueryOptions,
   pullRequestBranchUpdateStatusQueryOptions,
@@ -112,6 +113,28 @@ describe("GitHub repository queries", () => {
     expect(invoke).toHaveBeenNthCalledWith(1, "github_list_repositories", { page: 1 });
     expect(invoke).toHaveBeenNthCalledWith(2, "github_list_repositories", { page: 2 });
     expect(observer.getCurrentResult().data?.pages.map((page) => page.page)).toEqual([1, 2]);
+  });
+
+  it("loads received repository invitations through one paginated account cache", async () => {
+    const client = createTestQueryClient();
+    vi.mocked(invoke)
+      .mockResolvedValueOnce({ invitations: [{ id: 73 }], page: 1, hasMore: true })
+      .mockResolvedValueOnce({ invitations: [{ id: 74 }], page: 2, hasMore: false });
+    const options = receivedRepositoryInvitationsQueryOptions();
+
+    await client.fetchInfiniteQuery(options);
+    const observer = new InfiniteQueryObserver(client, options);
+    const unsubscribe = observer.subscribe(() => undefined);
+    await observer.fetchNextPage();
+    unsubscribe();
+
+    expect(options.queryKey).toEqual(["github", "repository-invitations"]);
+    expect(invoke).toHaveBeenNthCalledWith(1, "github_list_received_repository_invitations", {
+      page: 1,
+    });
+    expect(invoke).toHaveBeenNthCalledWith(2, "github_list_received_repository_invitations", {
+      page: 2,
+    });
   });
 
   it("loads the signed-in user's starred workspace and repository relationship state", async () => {

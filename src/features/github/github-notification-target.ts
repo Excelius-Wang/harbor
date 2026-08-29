@@ -14,6 +14,8 @@ export function notificationCanOpenInApp(notification: GitHubNotification) {
     case "codeScanningAlert":
     case "secretScanningAlert":
       return notification.subject.number !== undefined;
+    case "repositoryInvitation":
+      return true;
     case "issue":
     case "pullRequest":
     case "discussion":

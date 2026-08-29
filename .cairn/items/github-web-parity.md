@@ -361,19 +361,36 @@ SHA confirmation. The focused `GitHubCodeMutationClient` owns normalization, per
 repository guards, conflict mapping, Git transport, response verification, and tests. The Code UI
 reuses the existing overview, Markdown editor, Shiki preview, shadcn dialogs, toasts, and query roots;
 workflow-file scope requirements and protected/default-branch failures remain explicit.
+Received repository invitations now stay inside the personal account workspace. The focused
+two-method `GitHubRepositoryInvitationClient` Interface lists every open invitation for the signed-in
+user and accepts or declines it through GitHub's official account-scoped routes. The Notifications
+header keeps a permanent invitation entry even when the inbox is empty, while exact
+`RepositoryInvitation` subjects open the same native view and mark the notification read. The lazy
+UI preserves repository, inviter, permission, privacy, pagination, loading, empty, retry, confirmed
+decline, mutation failure, and responsive states. Accepted invitations invalidate the authenticated
+repository cache; both actions reconcile the invitation and notification caches by immutable IDs.
 The workspace shell is responsive, starts at 1600x1000, and remains usable down to 900x620.
 
 ## Next action
 
-Complete the remaining deterministic desktop checks for repository file rename, file deletion, and
-the 900x620 layout, then audit the next missing personal-developer GitHub Web workflow. Keep
-organization administration, Enterprise controls, and advanced organization security out of scope.
+Audit the next missing personal-developer GitHub Web workflow. Keep organization administration,
+Enterprise controls, and advanced organization security out of scope.
 
 ## Verification
 
 Each GitHub parity slice must use real API data, cover loading/empty/error/permission states, preserve
 repository context and navigation, and complete its primary path without forcing a browser fallback.
 Run `pnpm check`, the Rust check suite when Rust changes, and a focused desktop interaction check.
+
+Received repository invitation verification covers the official account-scoped list, accept, and
+decline contracts; exact Tauri argument names; repository, inviter, permission, and pagination
+mapping; saved-credential delegation; notification routing; and focused TanStack Query
+reconciliation. `pnpm check` passes with 129 frontend tests. `cargo fmt --check`, 227 Rust tests,
+and `cargo check` pass with one external DeepWiki test ignored by design; Clippy retains the same 11
+pre-existing warnings. A deterministic desktop fixture verified the permanent inbox entry,
+notification-to-native routing, authoritative accept and decline payloads, confirmation, empty and
+permission-error states, no console errors, and no page-level horizontal overflow at 1600x1000 and
+900x620.
 
 Repository Code mutation verification covers exact Tauri contracts, atomic rename payloads, stale
 file and branch guards, Git-compatible branch validation, empty-repository initialization, stable

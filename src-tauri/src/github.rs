@@ -24,6 +24,7 @@ pub(crate) mod profile;
 pub(crate) mod projects;
 pub(crate) mod pull_request;
 pub(crate) mod release;
+pub(crate) mod repository_invitations;
 pub(crate) mod repository_relationships;
 pub(crate) mod repository_settings;
 pub(crate) mod security;
@@ -88,6 +89,9 @@ pub use pull_request::update_branch::{
 pub use release::{
     GitHubRelease, GitHubReleaseArchiveFormat, GitHubReleaseAsset, GitHubReleaseMutationInput,
     GitHubReleasePage,
+};
+pub use repository_invitations::{
+    GitHubReceivedRepositoryInvitationAction, GitHubReceivedRepositoryInvitationPage,
 };
 pub use repository_relationships::{
     GitHubForkInput, GitHubForkResult, GitHubRepositoryRelationship, GitHubRepositoryWatchLevel,
@@ -579,6 +583,7 @@ pub(crate) trait GitHubClient:
     + pull_request::reviewer::GitHubPullRequestReviewerClient
     + pull_request::update_branch::GitHubPullRequestBranchClient
     + release::GitHubReleaseClient
+    + repository_invitations::GitHubRepositoryInvitationClient
     + repository_relationships::GitHubRepositoryRelationshipsClient
     + repository_settings::GitHubRepositorySettingsClient
     + security::GitHubSecurityClient
@@ -2595,6 +2600,10 @@ mod tests {
 
         let repositories = service.repositories(1).await.expect("repositories");
         let notifications = service.notifications(true, 2).await.expect("notifications");
+        let repository_invitations = service
+            .received_repository_invitations(1)
+            .await
+            .expect("repository invitations");
         let issue_filters = GitHubIssueFilters {
             state: GitHubIssueState::Open,
             assignment: GitHubIssueAssignment::All,
@@ -2747,6 +2756,7 @@ mod tests {
             "octocat/hello-world"
         );
         assert_eq!(notifications.page, 2);
+        assert_eq!(repository_invitations.page, 1);
         assert_eq!(issues.issues[0].number, 7);
         assert_eq!(issue_inbox.issues[0].issue.number, 7);
         assert!(discussion_categories.enabled);
@@ -2791,6 +2801,13 @@ mod tests {
             .mark_all_notifications_read()
             .await
             .expect("mark all notifications read");
+        service
+            .update_received_repository_invitation(
+                73,
+                GitHubReceivedRepositoryInvitationAction::Accept,
+            )
+            .await
+            .expect("accept repository invitation");
     }
 
     #[tokio::test]
