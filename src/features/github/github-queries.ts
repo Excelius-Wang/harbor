@@ -59,7 +59,9 @@ import type {
   GitHubRelease,
   GitHubReleasePage,
   GitHubRepositoryPage,
+  GitHubRepositoryCollaboratorPage,
   GitHubRepositoryCreationOptions,
+  GitHubRepositoryInvitationPage,
   GitHubRepositoryRelationship,
   GitHubRepositorySettings,
   GitHubRepositoryCommitPage,
@@ -100,7 +102,7 @@ type GitHubContentsTarget = GitHubCodeTarget & {
   path: string;
 };
 
-type GitHubRepositoryTarget = Pick<GitHubCodeTarget, "owner" | "repository">;
+export type GitHubRepositoryTarget = Pick<GitHubCodeTarget, "owner" | "repository">;
 
 export type GitHubDiscussionsTarget = GitHubRepositoryTarget & {
   categoryId: string | null;
@@ -320,6 +322,12 @@ export const githubQueryKeys = {
   repositoryCreationOptions: ["github", "repository-creation-options"] as const,
   repositorySettings: ({ owner, repository }: GitHubRepositoryTarget) =>
     ["github", "repository", owner, repository, "settings"] as const,
+  repositoryAccess: ({ owner, repository }: GitHubRepositoryTarget) =>
+    ["github", "repository", owner, repository, "access"] as const,
+  repositoryCollaborators: ({ owner, repository }: GitHubRepositoryTarget) =>
+    ["github", "repository", owner, repository, "access", "collaborators"] as const,
+  repositoryInvitations: ({ owner, repository }: GitHubRepositoryTarget) =>
+    ["github", "repository", owner, repository, "access", "invitations"] as const,
   profile: ({ username }: GitHubProfileTarget) =>
     ["github", "profile", username ?? "viewer"] as const,
   profilesRoot: ["github", "profile"] as const,
@@ -831,6 +839,34 @@ export function personalRepositorySettingsQueryOptions(target: GitHubRepositoryT
     queryKey: githubQueryKeys.repositorySettings(target),
     queryFn: () =>
       invoke<GitHubRepositorySettings>("github_get_personal_repository_settings", target),
+    staleTime: GITHUB_QUERY_STALE_TIME,
+  });
+}
+
+export function personalRepositoryCollaboratorsQueryOptions(target: GitHubRepositoryTarget) {
+  return infiniteQueryOptions({
+    queryKey: githubQueryKeys.repositoryCollaborators(target),
+    queryFn: ({ pageParam }) =>
+      invoke<GitHubRepositoryCollaboratorPage>("github_list_personal_repository_collaborators", {
+        ...target,
+        page: pageParam,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.page + 1 : undefined),
+    staleTime: GITHUB_QUERY_STALE_TIME,
+  });
+}
+
+export function personalRepositoryInvitationsQueryOptions(target: GitHubRepositoryTarget) {
+  return infiniteQueryOptions({
+    queryKey: githubQueryKeys.repositoryInvitations(target),
+    queryFn: ({ pageParam }) =>
+      invoke<GitHubRepositoryInvitationPage>("github_list_personal_repository_invitations", {
+        ...target,
+        page: pageParam,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.page + 1 : undefined),
     staleTime: GITHUB_QUERY_STALE_TIME,
   });
 }

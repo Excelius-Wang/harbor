@@ -315,9 +315,12 @@ deletion, archive or unarchive, and permanent deletion. The focused five-method
 `GitHubRepositorySettingsClient` Interface owns the transport, authoritative owner and branch guards,
 response verification, and tests. Visibility and archive changes require explicit consequence flags;
 deletion requires the exact full repository name and the OAuth connection now requests GitHub's
-`delete_repo` scope. Organization creation, transfer, collaborators, billing, organization rulesets,
-and organization-level security administration remain deliberately outside the personal-product
-boundary.
+`delete_repo` scope. Personal repository owners can now list collaborators and pending invitations,
+invite an exact GitHub username, cancel a pending invitation, and remove a collaborator. Personal
+repositories expose only the owner and one read/write collaborator role, so Harbor does not invent
+organization-only permission choices. Organization creation, transfer, organization collaborator
+administration, billing, organization rulesets, and organization-level security administration
+remain deliberately outside the personal-product boundary.
 Personal Gists now have a complete native account workspace. The focused eleven-method
 `GitHubGistClient` Interface owns personal, Starred, and recent-public pages; detail and safe file
 content; creation and multi-file editing; Star, Fork, and exact-ID deletion; revision pages and
@@ -365,15 +368,26 @@ The workspace shell is responsive, starts at 1600x1000, and remains usable down 
 
 ## Next action
 
-Complete the remaining deterministic desktop checks for repository file rename, file deletion, and
-the 900x620 layout, then audit the next missing personal-developer GitHub Web workflow. Keep
-organization administration, Enterprise controls, and advanced organization security out of scope.
+Add the signed-in account's received repository invitations with accept and decline actions, then
+route repository-invitation notifications into that native workflow. Keep organization membership
+and Team invitations out of scope.
 
 ## Verification
 
 Each GitHub parity slice must use real API data, cover loading/empty/error/permission states, preserve
 repository context and navigation, and complete its primary path without forcing a browser fallback.
 Run `pnpm check`, the Rust check suite when Rust changes, and a focused desktop interaction check.
+
+Personal repository access verification covers exact owner-scoped collaborator and invitation REST
+routes, personal-owner guards, GitHub username normalization, write-only personal invitation roles,
+saved-credential delegation, paginated query separation, exact Tauri mutation arguments, and cache
+reconciliation. `pnpm check` passes with 128 frontend tests; 228 Rust tests pass with one external
+DeepWiki test ignored by design; Rust format, `cargo check`, `cargo clippy --all-targets`, the
+production build, and `git diff --check` pass. Clippy reports the same 11 existing warnings and no new
+warning. A deterministic desktop fixture verified pending invitations, retained permission errors,
+successful username invitation, cancellation, collaborator removal, and consequence confirmations at
+1600x1000 and 900x620. Both sizes have no page-level horizontal overflow, and the browser reports zero
+errors and zero warnings.
 
 Repository Code mutation verification covers exact Tauri contracts, atomic rename payloads, stale
 file and branch guards, Git-compatible branch validation, empty-repository initialization, stable
@@ -1059,9 +1073,16 @@ page-level overflow, and the browser reports zero errors and zero warnings.
   organization destination, verify template and default-branch choices against authoritative GitHub
   data, and verify every returned setting after writes. Require explicit consequence flags for
   visibility and archive transitions, the exact full repository name for deletion, and the
-  `delete_repo` OAuth scope for new connections. Do not surface organization transfer,
-  collaborators, billing, organization rulesets, or organization security administration in the
-  personal product.
+  `delete_repo` OAuth scope for new connections. Keep personal-repository collaborators in the
+  product, but do not surface organization transfer, organization collaborator administration,
+  billing, organization rulesets, or organization security administration.
+- Keep owner-side personal repository access behind the focused five-method
+  `GitHubRepositoryAccessClient`. Reuse Octocrab's paginated collaborator listing and existing
+  authenticated transport, adding only its missing official invite, invitation-list, cancellation,
+  and removal routes. Verify the signed-in user owns the personal repository before every operation,
+  accept only GitHub's personal read/write collaborator role, and recheck collaborator state after a
+  removal. Email invitations remain an explicit GitHub Web fallback because the REST collaborator
+  route accepts a username, not an email address.
 - Keep personal Gists behind `GitHubGistClient`. Reuse Octocrab's native Gist operations and add
   only its missing official Starred-list and comment routes. Validate Gist IDs, full revision SHAs,
   reserved file names, unique file sets, comment scope, and personal ownership before writes; verify
