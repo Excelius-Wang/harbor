@@ -29,6 +29,8 @@ impl GitHubIssueClient for super::super::tests::FakeGitHubClient {
                 labels: vec![GitHubIssueLabel {
                     name: "good first issue".to_string(),
                     color: "7057ff".to_string(),
+                    description: None,
+                    is_default: false,
                 }],
                 milestone: None,
                 milestone_number: None,
@@ -100,6 +102,8 @@ impl GitHubIssueClient for super::super::tests::FakeGitHubClient {
             labels: vec![GitHubIssueLabel {
                 name: "good first issue".to_string(),
                 color: "7057ff".to_string(),
+                description: None,
+                is_default: false,
             }],
         })
     }
@@ -233,6 +237,8 @@ impl GitHubIssueClient for super::super::tests::FakeGitHubClient {
             .map(|name| GitHubIssueLabel {
                 name: name.clone(),
                 color: "7057ff".to_string(),
+                description: None,
+                is_default: false,
             })
             .collect();
         issue.assignees = assignees.to_vec();

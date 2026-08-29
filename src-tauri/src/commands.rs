@@ -22,11 +22,12 @@ use crate::{
         GitHubGistPage, GitHubGistRevisionDetail, GitHubGistRevisionPage, GitHubGistSource,
         GitHubGistUpdateInput, GitHubIssue, GitHubIssueAssigneePage, GitHubIssueAssignment,
         GitHubIssueDetailPage, GitHubIssueFilters, GitHubIssueInboxFilters, GitHubIssueInboxPage,
-        GitHubIssueInboxScope, GitHubIssueLabelPage, GitHubIssueMilestonePage, GitHubIssuePage,
-        GitHubIssueSort, GitHubIssueState, GitHubIssueTimelineItem, GitHubLoginAvailability,
-        GitHubNotificationAction, GitHubNotificationPage, GitHubPendingPullRequestReview,
-        GitHubProfileActivityPage, GitHubProfileConnectionKind, GitHubProjectDetail,
-        GitHubProjectFilters, GitHubProjectItem, GitHubProjectItemAction,
+        GitHubIssueInboxScope, GitHubIssueLabel, GitHubIssueLabelMutation, GitHubIssueLabelPage,
+        GitHubIssueMilestone, GitHubIssueMilestoneMutation, GitHubIssueMilestonePage,
+        GitHubIssuePage, GitHubIssueSort, GitHubIssueState, GitHubIssueTimelineItem,
+        GitHubLoginAvailability, GitHubNotificationAction, GitHubNotificationPage,
+        GitHubPendingPullRequestReview, GitHubProfileActivityPage, GitHubProfileConnectionKind,
+        GitHubProjectDetail, GitHubProjectFilters, GitHubProjectItem, GitHubProjectItemAction,
         GitHubProjectItemAddition, GitHubProjectItemFilters, GitHubProjectItemUpdate,
         GitHubProjectPage, GitHubProjectSort, GitHubProjectStateFilter, GitHubProjectSummary,
         GitHubProjectUpdate, GitHubPullRequest, GitHubPullRequestAutoMergeStatus,
@@ -1285,6 +1286,34 @@ pub async fn github_list_repository_issue_milestones(
     state
         .github
         .issue_milestones(repository.owner(), repository.name())
+        .await
+}
+
+#[tauri::command]
+pub async fn github_mutate_repository_issue_label(
+    owner: String,
+    repository: String,
+    mutation: GitHubIssueLabelMutation,
+    state: State<'_, AppState>,
+) -> Result<Option<GitHubIssueLabel>, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .mutate_issue_label(repository.owner(), repository.name(), mutation)
+        .await
+}
+
+#[tauri::command]
+pub async fn github_mutate_repository_issue_milestone(
+    owner: String,
+    repository: String,
+    mutation: GitHubIssueMilestoneMutation,
+    state: State<'_, AppState>,
+) -> Result<Option<GitHubIssueMilestone>, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .mutate_issue_milestone(repository.owner(), repository.name(), mutation)
         .await
 }
 

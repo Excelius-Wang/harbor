@@ -502,6 +502,8 @@ impl GitHubPullRequestMutationClient for super::tests::FakeGitHubClient {
             .map(|name| super::GitHubIssueLabel {
                 name: name.clone(),
                 color: "d73a4a".to_string(),
+                description: None,
+                is_default: false,
             })
             .collect();
         pull_request.assignees = assignees.to_vec();

@@ -16,6 +16,8 @@ const ISSUE_TIMELINE_PAGE_SIZE: u8 = 100;
 pub struct GitHubIssueLabel {
     pub name: String,
     pub color: String,
+    pub description: Option<String>,
+    pub is_default: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -921,6 +923,8 @@ fn issue_from_octocrab(issue: octocrab::models::issues::Issue) -> GitHubIssue {
             .map(|label| GitHubIssueLabel {
                 name: label.name,
                 color: label.color,
+                description: None,
+                is_default: false,
             })
             .collect(),
         milestone: issue.milestone.map(|milestone| milestone.title),
@@ -997,10 +1001,12 @@ pub(super) fn issue_label_from_octocrab(label: octocrab::models::Label) -> GitHu
     GitHubIssueLabel {
         name: label.name,
         color: label.color,
+        description: label.description,
+        is_default: label.default,
     }
 }
 
-fn issue_milestone_from_octocrab(
+pub(super) fn issue_milestone_from_octocrab(
     milestone: octocrab::models::Milestone,
 ) -> Result<GitHubIssueMilestone, AppError> {
     let number = u64::try_from(milestone.number)
@@ -1064,6 +1070,8 @@ pub(super) fn timeline_item_from_octocrab(
         label: event.label.map(|label| GitHubIssueLabel {
             name: label.name,
             color: label.color,
+            description: None,
+            is_default: false,
         }),
         assignee: assignee.map(|assignee| assignee.login.clone()),
         milestone: event.milestone.map(|milestone| milestone.title),

@@ -112,6 +112,8 @@ pub fn run() {
             commands::github_list_repository_issue_labels,
             commands::github_list_repository_issue_assignees,
             commands::github_list_repository_issue_milestones,
+            commands::github_mutate_repository_issue_label,
+            commands::github_mutate_repository_issue_milestone,
             commands::github_get_repository_issue,
             commands::github_create_repository_issue,
             commands::github_update_repository_issue,

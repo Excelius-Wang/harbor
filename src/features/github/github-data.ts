@@ -861,7 +861,34 @@ export type GitHubReleaseMutationInput = {
 export type GitHubIssueLabel = {
   name: string;
   color: string;
+  description?: string;
+  isDefault?: boolean;
 };
+
+export type GitHubIssueLabelMutation =
+  | { action: "create"; name: string; color: string; description: string }
+  | {
+      action: "update";
+      originalName: string;
+      name: string;
+      color: string;
+      description: string;
+    }
+  | { action: "delete"; name: string; confirmation: string };
+
+export type GitHubIssueMilestoneState = "open" | "closed";
+
+export type GitHubIssueMilestoneMutation =
+  | { action: "create"; title: string; description: string; dueOn: string | null }
+  | {
+      action: "update";
+      number: number;
+      title: string;
+      description: string;
+      dueOn: string | null;
+      state: GitHubIssueMilestoneState;
+    }
+  | { action: "delete"; number: number; confirmation: string };
 
 export type GitHubItemMetadataValue = {
   labels: string[];
@@ -1473,7 +1500,7 @@ export type GitHubIssueMilestone = {
   number: number;
   title: string;
   description?: string;
-  state: string;
+  state: GitHubIssueMilestoneState;
   openIssues: number;
   closedIssues: number;
   dueOn?: string;
