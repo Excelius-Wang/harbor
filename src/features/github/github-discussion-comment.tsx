@@ -50,6 +50,7 @@ import {
 } from "./github-discussion-mutations";
 import { formatIssueDate } from "./github-issue-shared";
 import { GitHubMarkdownEditor } from "./github-markdown-editor";
+import { GitHubReactionBar } from "./github-reaction-bar";
 
 const GitHubReadme = lazy(() => import("./github-readme"));
 
@@ -388,6 +389,9 @@ export function GitHubDiscussionCommentCard({
       </Collapsible>
 
       <footer className="flex flex-wrap items-center gap-1 border-t px-3 py-2">
+        {!deleted ? (
+          <GitHubReactionBar subject={{ id: comment.id, kind: "discussionComment" }} />
+        ) : null}
         {!deleted ? (
           <Button
             type="button"

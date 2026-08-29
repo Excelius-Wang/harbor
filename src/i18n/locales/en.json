@@ -1086,6 +1086,25 @@
       },
       "releases": "Releases",
       "releasesDescription": "Published versions, release notes, and downloadable assets.",
+      "reactions": {
+        "add": "Add reaction",
+        "retry": "Retry loading reactions",
+        "loadFailed": "Harbor could not load reactions",
+        "updateFailed": "Harbor could not update this reaction",
+        "permissionDenied": "GitHub does not allow you to react here.",
+        "toggleLabel": "{{reaction}}, {{count}} reactions",
+        "toggleLabelSelected": "{{reaction}}, {{count}} reactions; you reacted",
+        "names": {
+          "thumbsUp": "Thumbs up",
+          "thumbsDown": "Thumbs down",
+          "laugh": "Laugh",
+          "hooray": "Hooray",
+          "confused": "Confused",
+          "heart": "Heart",
+          "rocket": "Rocket",
+          "eyes": "Eyes"
+        }
+      },
       "releasesLoadFailed": "Harbor could not load Releases",
       "releaseLoadFailed": "Harbor could not load this release",
       "releasePermissionDenied": "Harbor needs Contents read permission for this repository's Releases",

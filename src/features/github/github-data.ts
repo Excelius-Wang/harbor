@@ -112,6 +112,42 @@ export type GitHubWikiRevertInput = {
   message?: string;
 };
 
+export type GitHubReactionSubjectKind =
+  | "issue"
+  | "pullRequest"
+  | "issueComment"
+  | "pullRequestReview"
+  | "pullRequestReviewComment"
+  | "discussion"
+  | "discussionComment"
+  | "release";
+
+export type GitHubReactionSubjectRef = {
+  id: string;
+  kind: GitHubReactionSubjectKind;
+};
+
+export type GitHubReactionContent =
+  | "thumbsUp"
+  | "thumbsDown"
+  | "laugh"
+  | "hooray"
+  | "confused"
+  | "heart"
+  | "rocket"
+  | "eyes";
+
+export type GitHubReactionGroup = {
+  content: GitHubReactionContent;
+  count: number;
+  viewerHasReacted: boolean;
+};
+
+export type GitHubReactionSubject = GitHubReactionSubjectRef & {
+  viewerCanReact: boolean;
+  groups: GitHubReactionGroup[];
+};
+
 export type GitHubDiscoverySearchKind =
   | "repositories"
   | "code"
@@ -1072,6 +1108,7 @@ export type GitHubReleaseAsset = {
 
 export type GitHubRelease = {
   id: number;
+  reactionSubject: GitHubReactionSubjectRef;
   tagName: string;
   targetCommitish: string;
   name?: string;
@@ -1123,6 +1160,7 @@ export type GitHubIssueInboxScope = "authored" | "assigned" | "mentioned";
 
 export type GitHubIssue = {
   id: number;
+  reactionSubject: GitHubReactionSubjectRef;
   number: number;
   title: string;
   body?: string;
@@ -1170,6 +1208,7 @@ export type GitHubIssueInboxPage = {
 
 export type GitHubIssueTimelineItem = {
   id: string;
+  reactionSubject?: GitHubReactionSubjectRef;
   kind: "comment" | "event";
   event: string;
   actor?: string;
@@ -1339,6 +1378,7 @@ export type GitHubPullRequestPage = {
 
 export type GitHubPullRequest = {
   id: number;
+  reactionSubject?: GitHubReactionSubjectRef;
   number: number;
   title: string;
   body?: string;

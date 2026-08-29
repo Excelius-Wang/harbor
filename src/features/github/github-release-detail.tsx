@@ -51,6 +51,8 @@ import type {
 } from "./github-data";
 import { formatBytes } from "./github-format";
 import { formatIssueDate } from "./github-issue-shared";
+import { GitHubReactionBar } from "./github-reaction-bar";
+import { GitHubReactionsProvider } from "./github-reactions-provider";
 import { GitHubReleaseEditDialog } from "./github-release-edit-dialog";
 import {
   deleteRepositoryRelease,
@@ -301,243 +303,255 @@ export function GitHubReleaseDetail({
             </EmptyContent>
           </Empty>
         ) : (
-          <div className="mx-auto w-full max-w-[960px] px-4 py-5 sm:px-5">
-            <header className="flex flex-wrap items-start gap-4">
-              <div className="min-w-0 flex-1">
-                <div className="mb-2 flex flex-wrap items-center gap-2">
-                  <Badge variant="outline">
-                    <Tag /> {release.tagName}
-                  </Badge>
-                  {release.draft ? (
-                    <Badge variant="destructive">{t("workspace.repositories.releaseDraft")}</Badge>
-                  ) : release.prerelease ? (
-                    <Badge variant="secondary">
-                      {t("workspace.repositories.releasePrerelease")}
-                    </Badge>
-                  ) : null}
-                  {release.immutable ? (
+          <GitHubReactionsProvider repository={repository} subjects={[release.reactionSubject]}>
+            <div className="mx-auto w-full max-w-[960px] px-4 py-5 sm:px-5">
+              <header className="flex flex-wrap items-start gap-4">
+                <div className="min-w-0 flex-1">
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
                     <Badge variant="outline">
-                      <LockKeyhole /> {t("workspace.repositories.releaseImmutable")}
+                      <Tag /> {release.tagName}
                     </Badge>
-                  ) : null}
+                    {release.draft ? (
+                      <Badge variant="destructive">
+                        {t("workspace.repositories.releaseDraft")}
+                      </Badge>
+                    ) : release.prerelease ? (
+                      <Badge variant="secondary">
+                        {t("workspace.repositories.releasePrerelease")}
+                      </Badge>
+                    ) : null}
+                    {release.immutable ? (
+                      <Badge variant="outline">
+                        <LockKeyhole /> {t("workspace.repositories.releaseImmutable")}
+                      </Badge>
+                    ) : null}
+                  </div>
+                  <h2 className="text-foreground text-xl leading-7 font-semibold tracking-[-0.025em]">
+                    {release.name?.trim() || release.tagName}
+                  </h2>
+                  <p className="text-muted-foreground mt-2 text-[11px]">
+                    {t(
+                      release.draft
+                        ? "workspace.repositories.releaseCreatedBy"
+                        : "workspace.repositories.releasePublishedBy",
+                      {
+                        author: release.author
+                          ? `@${release.author}`
+                          : t("workspace.repositories.unknownActor"),
+                        date: formatIssueDate(
+                          release.publishedAt ?? release.createdAt,
+                          i18n.language
+                        ),
+                      }
+                    )}
+                  </p>
+                  <p className="text-muted-foreground mt-1 flex items-center gap-1 text-[10px]">
+                    <GitCommitHorizontal className="size-3" />
+                    {t("workspace.repositories.releaseTarget", {
+                      target: release.targetCommitish,
+                    })}
+                  </p>
                 </div>
-                <h2 className="text-foreground text-xl leading-7 font-semibold tracking-[-0.025em]">
-                  {release.name?.trim() || release.tagName}
-                </h2>
-                <p className="text-muted-foreground mt-2 text-[11px]">
-                  {t(
-                    release.draft
-                      ? "workspace.repositories.releaseCreatedBy"
-                      : "workspace.repositories.releasePublishedBy",
-                    {
-                      author: release.author
-                        ? `@${release.author}`
-                        : t("workspace.repositories.unknownActor"),
-                      date: formatIssueDate(
-                        release.publishedAt ?? release.createdAt,
-                        i18n.language
-                      ),
-                    }
-                  )}
-                </p>
-                <p className="text-muted-foreground mt-1 flex items-center gap-1 text-[10px]">
-                  <GitCommitHorizontal className="size-3" />
-                  {t("workspace.repositories.releaseTarget", {
-                    target: release.targetCommitish,
-                  })}
-                </p>
-              </div>
-              <div className="flex w-full shrink-0 flex-wrap items-center gap-2 min-[1200px]:w-auto min-[1200px]:justify-end">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => void openExternalUrl(release.url)}
-                >
-                  <ExternalLink data-icon="inline-end" />
-                  {t("workspace.openOnGitHub")}
-                </Button>
-                <Button type="button" variant="outline" size="sm" onClick={() => setEditing(true)}>
-                  <Pencil data-icon="inline-start" />
-                  {t("workspace.repositories.editRelease")}
-                </Button>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="sm"
-                  disabled={releaseDelete.isPending}
-                  onClick={() => setReleaseDeleteOpen(true)}
-                >
-                  {releaseDelete.isPending ? (
-                    <Spinner data-icon="inline-start" />
-                  ) : (
-                    <Trash2 data-icon="inline-start" />
-                  )}
-                  {t("workspace.repositories.deleteRelease")}
-                </Button>
-              </div>
-            </header>
-
-            <article className="bg-card/30 mt-5 overflow-hidden rounded-lg border">
-              <header className="bg-card/40 flex min-h-11 items-center gap-2 border-b px-3.5 py-2 text-xs font-medium">
-                <Tag />
-                {t("workspace.repositories.releaseNotes")}
-              </header>
-              {release.body?.trim() ? (
-                <div className="harbor-markdown min-h-24 px-4 py-4 text-[12px]">
-                  <Suspense fallback={<Skeleton className="h-20 w-full" />}>
-                    <GitHubReadme
-                      content={release.body}
-                      path=""
-                      reference={release.tagName}
-                      repository={repository}
-                      onOpenExternal={(url) => void openExternalUrl(url)}
-                    />
-                  </Suspense>
-                </div>
-              ) : (
-                <p className="text-muted-foreground px-4 py-6 text-center text-xs">
-                  {t("workspace.repositories.noReleaseNotes")}
-                </p>
-              )}
-            </article>
-
-            <section className="mt-4 overflow-hidden rounded-lg border">
-              <header className="flex min-h-11 items-center gap-2 border-b px-3 py-2.5">
-                <Archive className="text-primary size-4" />
-                <h3 className="text-xs font-semibold">
-                  {t("workspace.repositories.releaseAssets")}
-                </h3>
-                <Badge variant="outline">{release.assets.length}</Badge>
-                {!release.immutable ? (
+                <div className="flex w-full shrink-0 flex-wrap items-center gap-2 min-[1200px]:w-auto min-[1200px]:justify-end">
                   <Button
                     type="button"
                     variant="outline"
-                    size="xs"
-                    className="ml-auto"
-                    disabled={assetUpload.isPending || assetDelete.isPending}
-                    onClick={() => assetUpload.mutate()}
+                    size="sm"
+                    onClick={() => void openExternalUrl(release.url)}
                   >
-                    {assetUpload.isPending ? (
+                    <ExternalLink data-icon="inline-end" />
+                    {t("workspace.openOnGitHub")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEditing(true)}
+                  >
+                    <Pencil data-icon="inline-start" />
+                    {t("workspace.repositories.editRelease")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    disabled={releaseDelete.isPending}
+                    onClick={() => setReleaseDeleteOpen(true)}
+                  >
+                    {releaseDelete.isPending ? (
                       <Spinner data-icon="inline-start" />
                     ) : (
-                      <Plus data-icon="inline-start" />
+                      <Trash2 data-icon="inline-start" />
                     )}
-                    {t("workspace.repositories.uploadReleaseAsset")}
+                    {t("workspace.repositories.deleteRelease")}
                   </Button>
-                ) : null}
-              </header>
-              {release.assets.length ? (
-                <div className="flex flex-col">
-                  {release.assets.map((asset) => (
-                    <ReleaseAssetRow
-                      key={asset.id}
-                      asset={asset}
-                      locale={i18n.language}
-                      disabled={
-                        assetDownload.isPending ||
-                        archiveDownload.isPending ||
-                        assetUpload.isPending ||
-                        assetDelete.isPending ||
-                        releaseDelete.isPending
-                      }
-                      downloading={
-                        assetDownload.isPending && assetDownload.variables?.assetId === asset.id
-                      }
-                      deleting={assetDelete.isPending && assetDelete.variables?.id === asset.id}
-                      canDelete={!release.immutable}
-                      onDownload={() =>
-                        assetDownload.mutate({
-                          ...target,
-                          assetId: asset.id,
-                          assetName: asset.name,
-                        })
-                      }
-                      onDelete={() => setAssetToDelete(asset)}
-                    />
-                  ))}
                 </div>
-              ) : (
-                <p className="text-muted-foreground px-4 py-6 text-center text-xs">
-                  {t("workspace.repositories.noReleaseAssets")}
-                </p>
-              )}
-            </section>
+              </header>
 
-            {release.hasZipball || release.hasTarball ? (
+              <article className="bg-card/30 mt-5 overflow-hidden rounded-lg border">
+                <header className="bg-card/40 flex min-h-11 items-center gap-2 border-b px-3.5 py-2 text-xs font-medium">
+                  <Tag />
+                  {t("workspace.repositories.releaseNotes")}
+                </header>
+                {release.body?.trim() ? (
+                  <div className="harbor-markdown min-h-24 px-4 py-4 text-[12px]">
+                    <Suspense fallback={<Skeleton className="h-20 w-full" />}>
+                      <GitHubReadme
+                        content={release.body}
+                        path=""
+                        reference={release.tagName}
+                        repository={repository}
+                        onOpenExternal={(url) => void openExternalUrl(url)}
+                      />
+                    </Suspense>
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground px-4 py-6 text-center text-xs">
+                    {t("workspace.repositories.noReleaseNotes")}
+                  </p>
+                )}
+                <footer className="border-t px-4 py-2.5">
+                  <GitHubReactionBar subject={release.reactionSubject} />
+                </footer>
+              </article>
+
               <section className="mt-4 overflow-hidden rounded-lg border">
                 <header className="flex min-h-11 items-center gap-2 border-b px-3 py-2.5">
-                  <FileArchive className="text-primary size-4" />
+                  <Archive className="text-primary size-4" />
                   <h3 className="text-xs font-semibold">
-                    {t("workspace.repositories.releaseSourceCode")}
+                    {t("workspace.repositories.releaseAssets")}
                   </h3>
+                  <Badge variant="outline">{release.assets.length}</Badge>
+                  {!release.immutable ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="xs"
+                      className="ml-auto"
+                      disabled={assetUpload.isPending || assetDelete.isPending}
+                      onClick={() => assetUpload.mutate()}
+                    >
+                      {assetUpload.isPending ? (
+                        <Spinner data-icon="inline-start" />
+                      ) : (
+                        <Plus data-icon="inline-start" />
+                      )}
+                      {t("workspace.repositories.uploadReleaseAsset")}
+                    </Button>
+                  ) : null}
                 </header>
-                <div className="flex flex-wrap gap-2 p-3">
-                  {release.hasZipball ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={assetDownload.isPending || archiveDownload.isPending}
-                      onClick={() => downloadArchive("zip")}
-                    >
-                      {archiveDownload.isPending &&
-                      archiveDownload.variables?.archiveFormat === "zip" ? (
-                        <Spinner data-icon="inline-start" />
-                      ) : (
-                        <Download data-icon="inline-start" />
-                      )}
-                      {t("workspace.repositories.releaseSourceZip")}
-                    </Button>
-                  ) : null}
-                  {release.hasTarball ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={assetDownload.isPending || archiveDownload.isPending}
-                      onClick={() => downloadArchive("tarGz")}
-                    >
-                      {archiveDownload.isPending &&
-                      archiveDownload.variables?.archiveFormat === "tarGz" ? (
-                        <Spinner data-icon="inline-start" />
-                      ) : (
-                        <Download data-icon="inline-start" />
-                      )}
-                      {t("workspace.repositories.releaseSourceTarGz")}
-                    </Button>
-                  ) : null}
-                </div>
+                {release.assets.length ? (
+                  <div className="flex flex-col">
+                    {release.assets.map((asset) => (
+                      <ReleaseAssetRow
+                        key={asset.id}
+                        asset={asset}
+                        locale={i18n.language}
+                        disabled={
+                          assetDownload.isPending ||
+                          archiveDownload.isPending ||
+                          assetUpload.isPending ||
+                          assetDelete.isPending ||
+                          releaseDelete.isPending
+                        }
+                        downloading={
+                          assetDownload.isPending && assetDownload.variables?.assetId === asset.id
+                        }
+                        deleting={assetDelete.isPending && assetDelete.variables?.id === asset.id}
+                        canDelete={!release.immutable}
+                        onDownload={() =>
+                          assetDownload.mutate({
+                            ...target,
+                            assetId: asset.id,
+                            assetName: asset.name,
+                          })
+                        }
+                        onDelete={() => setAssetToDelete(asset)}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground px-4 py-6 text-center text-xs">
+                    {t("workspace.repositories.noReleaseAssets")}
+                  </p>
+                )}
               </section>
-            ) : null}
 
-            {downloadError ? (
-              <Alert variant="destructive" className="mt-4" aria-live="polite">
-                <CircleAlert />
-                <AlertTitle>{t("workspace.repositories.releaseDownloadFailed")}</AlertTitle>
-                <AlertDescription>
-                  {releaseErrorMessage(
-                    downloadError.code,
-                    downloadError.message,
-                    t("workspace.repositories.releasePermissionDenied")
-                  )}
-                </AlertDescription>
-              </Alert>
-            ) : null}
-            {writeError ? (
-              <Alert variant="destructive" className="mt-4" aria-live="polite">
-                <CircleAlert />
-                <AlertTitle>{t("workspace.repositories.releaseWriteFailed")}</AlertTitle>
-                <AlertDescription>
-                  {releaseErrorMessage(
-                    writeError.code,
-                    writeError.message,
-                    t("workspace.repositories.releaseWritePermissionDenied")
-                  )}
-                </AlertDescription>
-              </Alert>
-            ) : null}
-          </div>
+              {release.hasZipball || release.hasTarball ? (
+                <section className="mt-4 overflow-hidden rounded-lg border">
+                  <header className="flex min-h-11 items-center gap-2 border-b px-3 py-2.5">
+                    <FileArchive className="text-primary size-4" />
+                    <h3 className="text-xs font-semibold">
+                      {t("workspace.repositories.releaseSourceCode")}
+                    </h3>
+                  </header>
+                  <div className="flex flex-wrap gap-2 p-3">
+                    {release.hasZipball ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={assetDownload.isPending || archiveDownload.isPending}
+                        onClick={() => downloadArchive("zip")}
+                      >
+                        {archiveDownload.isPending &&
+                        archiveDownload.variables?.archiveFormat === "zip" ? (
+                          <Spinner data-icon="inline-start" />
+                        ) : (
+                          <Download data-icon="inline-start" />
+                        )}
+                        {t("workspace.repositories.releaseSourceZip")}
+                      </Button>
+                    ) : null}
+                    {release.hasTarball ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={assetDownload.isPending || archiveDownload.isPending}
+                        onClick={() => downloadArchive("tarGz")}
+                      >
+                        {archiveDownload.isPending &&
+                        archiveDownload.variables?.archiveFormat === "tarGz" ? (
+                          <Spinner data-icon="inline-start" />
+                        ) : (
+                          <Download data-icon="inline-start" />
+                        )}
+                        {t("workspace.repositories.releaseSourceTarGz")}
+                      </Button>
+                    ) : null}
+                  </div>
+                </section>
+              ) : null}
+
+              {downloadError ? (
+                <Alert variant="destructive" className="mt-4" aria-live="polite">
+                  <CircleAlert />
+                  <AlertTitle>{t("workspace.repositories.releaseDownloadFailed")}</AlertTitle>
+                  <AlertDescription>
+                    {releaseErrorMessage(
+                      downloadError.code,
+                      downloadError.message,
+                      t("workspace.repositories.releasePermissionDenied")
+                    )}
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+              {writeError ? (
+                <Alert variant="destructive" className="mt-4" aria-live="polite">
+                  <CircleAlert />
+                  <AlertTitle>{t("workspace.repositories.releaseWriteFailed")}</AlertTitle>
+                  <AlertDescription>
+                    {releaseErrorMessage(
+                      writeError.code,
+                      writeError.message,
+                      t("workspace.repositories.releaseWritePermissionDenied")
+                    )}
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+            </div>
+          </GitHubReactionsProvider>
         )}
       </ScrollArea>
       {release ? (

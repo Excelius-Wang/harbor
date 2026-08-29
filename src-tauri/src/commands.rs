@@ -42,7 +42,8 @@ use crate::{
         GitHubPullRequestReviewTeamPage, GitHubPullRequestReviewThreadComment,
         GitHubPullRequestReviewThreadPage, GitHubPullRequestReviewThreadResolution,
         GitHubPullRequestReviewThreadState, GitHubPullRequestSort, GitHubPullRequestState,
-        GitHubRelease, GitHubReleaseArchiveFormat, GitHubReleaseAsset, GitHubReleaseMutationInput,
+        GitHubReactionContent, GitHubReactionSubject, GitHubReactionSubjectRef, GitHubRelease,
+        GitHubReleaseArchiveFormat, GitHubReleaseAsset, GitHubReleaseMutationInput,
         GitHubReleasePage, GitHubRepositoryCommitPage, GitHubRepositoryCreateInput,
         GitHubRepositoryCreationOptions, GitHubRepositoryFileCommit, GitHubRepositoryFileMutation,
         GitHubRepositoryInsightsContributors, GitHubRepositoryInsightsOverview,
@@ -1092,6 +1093,44 @@ pub async fn github_delete_repository_discussion_comment(
             repository.name(),
             validate_item_number(discussion_number, "discussion")?,
             &validate_graphql_node_id(comment_id, "discussion comment")?,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_get_repository_reactions(
+    owner: String,
+    repository: String,
+    subjects: Vec<GitHubReactionSubjectRef>,
+    state: State<'_, AppState>,
+) -> Result<Vec<GitHubReactionSubject>, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    let subjects = crate::github::reaction::normalize_reaction_subjects(subjects)?;
+    state
+        .github
+        .reaction_subjects(repository.owner(), repository.name(), &subjects)
+        .await
+}
+
+#[tauri::command]
+pub async fn github_update_repository_reaction(
+    owner: String,
+    repository: String,
+    subject: GitHubReactionSubjectRef,
+    content: GitHubReactionContent,
+    reacted: bool,
+    state: State<'_, AppState>,
+) -> Result<GitHubReactionSubject, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    let subject = crate::github::reaction::normalize_reaction_subject(subject)?;
+    state
+        .github
+        .update_reaction(
+            repository.owner(),
+            repository.name(),
+            &subject,
+            content,
+            reacted,
         )
         .await
 }

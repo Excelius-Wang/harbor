@@ -16,6 +16,10 @@ impl GitHubIssueClient for super::super::tests::FakeGitHubClient {
         Ok(GitHubIssuePage {
             issues: vec![GitHubIssue {
                 id: 2,
+                reaction_subject: GitHubReactionSubjectRef {
+                    id: "I_2".to_string(),
+                    kind: GitHubReactionSubjectKind::Issue,
+                },
                 number: 7,
                 title: "Keep the example focused".to_string(),
                 body: Some("Issue body".to_string()),
@@ -256,6 +260,10 @@ impl GitHubIssueClient for super::super::tests::FakeGitHubClient {
         );
         Ok(GitHubIssueTimelineItem {
             id: "IC_84".to_string(),
+            reaction_subject: Some(GitHubReactionSubjectRef {
+                id: "IC_84".to_string(),
+                kind: GitHubReactionSubjectKind::IssueComment,
+            }),
             kind: GitHubIssueTimelineKind::Comment,
             event: "commented".to_string(),
             actor: Some("octocat".to_string()),

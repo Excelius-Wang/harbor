@@ -28,6 +28,7 @@ import type {
 } from "./github-data";
 import { formatIssueDate } from "./github-issue-shared";
 import { GitHubMarkdownEditor } from "./github-markdown-editor";
+import { GitHubReactionBar } from "./github-reaction-bar";
 import {
   markPullRequestReviewThreadsStale,
   replyToPullRequestReviewThread,
@@ -103,6 +104,11 @@ function ReviewThreadComment({
           />
         </Suspense>
       </div>
+      {!comment.pending ? (
+        <footer className="flex min-h-9 items-center border-t px-3 py-1">
+          <GitHubReactionBar subject={{ id: comment.id, kind: "pullRequestReviewComment" }} />
+        </footer>
+      ) : null}
     </article>
   );
 }

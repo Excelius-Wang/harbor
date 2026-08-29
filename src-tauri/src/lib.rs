@@ -102,6 +102,8 @@ pub fn run() {
             commands::github_add_repository_discussion_poll_vote,
             commands::github_delete_repository_discussion,
             commands::github_delete_repository_discussion_comment,
+            commands::github_get_repository_reactions,
+            commands::github_update_repository_reaction,
             commands::github_list_repository_releases,
             commands::github_get_repository_release,
             commands::github_download_repository_release_asset,

@@ -1080,6 +1080,25 @@
       },
       "releases": "版本发布",
       "releasesDescription": "查看已发布版本、更新说明和可下载文件。",
+      "reactions": {
+        "add": "添加表态",
+        "retry": "重新加载表态",
+        "loadFailed": "表态暂时没有加载成功",
+        "updateFailed": "表态没有更新成功",
+        "permissionDenied": "GitHub 不允许你在这里添加表态。",
+        "toggleLabel": "{{reaction}}，共 {{count}} 个表态",
+        "toggleLabelSelected": "{{reaction}}，共 {{count}} 个表态；你已表态",
+        "names": {
+          "thumbsUp": "赞",
+          "thumbsDown": "不赞同",
+          "laugh": "笑脸",
+          "hooray": "庆祝",
+          "confused": "疑惑",
+          "heart": "爱心",
+          "rocket": "火箭",
+          "eyes": "关注"
+        }
+      },
       "releasesLoadFailed": "Harbor 暂时无法读取版本发布记录",
       "releaseLoadFailed": "Harbor 暂时无法读取这个版本",
       "releasePermissionDenied": "Harbor 需要这个仓库的 Contents 读取权限，才能查看版本发布记录",
