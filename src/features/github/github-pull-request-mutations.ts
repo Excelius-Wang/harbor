@@ -326,6 +326,20 @@ export function unmarkRepositoryPullRequestFileViewed(pullRequestId: string, pat
   );
 }
 
+export async function updatePullRequestFileViewedState(
+  queryClient: QueryClient,
+  target: GitHubPullRequestMutationTarget,
+  pullRequestId: string,
+  path: string,
+  viewed: boolean
+) {
+  const updated = await (viewed
+    ? markRepositoryPullRequestFileViewed(pullRequestId, path)
+    : unmarkRepositoryPullRequestFileViewed(pullRequestId, path));
+  syncPullRequestFileViewedState(queryClient, target, updated.path, updated.state);
+  return updated;
+}
+
 function matchesPullRequest(
   pullRequest: GitHubPullRequestSummary,
   target: GitHubPullRequestMutationTarget

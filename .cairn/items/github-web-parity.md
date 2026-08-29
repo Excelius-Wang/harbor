@@ -44,7 +44,14 @@ separate from REST pages and joins by exact path; the shadcn file-header checkbo
 diffs usable through loading or mutation errors. English and Chinese copy and focused render/cache/
 transport tests are included.
 
-`pnpm check` passes 35 frontend files and 185 tests. Rust library tests pass 329 tests with two
+Standards and Spec reviews found one loading-state bug, one hard i18n-hook violation, duplicated
+retry-alert markup, and missing failure regression coverage. All are fixed: unmatched paths are
+checked only after authoritative state data and non-placeholder REST data exist; the new component
+uses Harbor's multi-window translation hook; one shared retry alert serves all four file/review
+errors; and tests cover loading, error rendering, failed-cache preservation, checked, dismissed,
+and pending states.
+
+`pnpm check` passes 35 frontend files and 188 tests. Rust library tests pass 329 tests with two
 intentional ignores. Focused Rust tests include two-page local GraphQL transport. `cargo check`,
 rustfmt, and `git diff --check` pass. Clippy completes with exactly the 15 existing warnings and no
 warning in this slice.
@@ -57,8 +64,8 @@ refresh tokens, or Keychain contents.
 
 ## Next action
 
-Commit and push the verified file viewed-state slice, open its Draft PR, then run Standards and Spec
-reviews before making it Ready and squash-merging it.
+Commit and push the PR #14 review fixes, confirm the Draft PR is mergeable, then make it Ready and
+squash-merge it.
 
 ## Verification
 

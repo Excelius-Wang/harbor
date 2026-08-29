@@ -3,20 +3,23 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import type { GitHubPullRequestFileViewStateSnapshot } from "./github-data";
 import {
+  GitHubPullRequestFilesErrorAlert,
   GitHubPullRequestFileViewCheckbox,
   getPullRequestFileViewPresentation,
+  hasUnmatchedPullRequestFileViewStates,
 } from "./github-pull-request-file-view-state";
 import {
   markRepositoryPullRequestFileViewed,
   syncPullRequestFileViewedState,
   unmarkRepositoryPullRequestFileViewed,
+  updatePullRequestFileViewedState,
 } from "./github-pull-request-mutations";
 import { githubQueryKeys } from "./github-queries";
 import { invoke } from "@tauri-apps/api/core";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
-vi.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+vi.mock("@/hooks/use-app-translation", () => ({
+  useAppTranslation: () => ({ t: (key: string) => key }),
 }));
 
 const target = {
@@ -51,6 +54,19 @@ describe("pull request file viewed state", () => {
     });
   });
 
+  it("does not report unmatched files until the state snapshot has loaded", () => {
+    const files = [{ path: "src/app.ts" }];
+
+    expect(hasUnmatchedPullRequestFileViewStates(files, undefined)).toBe(false);
+    expect(hasUnmatchedPullRequestFileViewStates(files, snapshot())).toBe(true);
+    expect(
+      hasUnmatchedPullRequestFileViewStates(files, {
+        pullRequestId: "PR_kwDOexample",
+        files: [{ path: "src/app.ts", state: "unviewed" }],
+      })
+    ).toBe(false);
+  });
+
   it("renders checked, dismissed, and pending states accessibly", () => {
     const viewed = renderToStaticMarkup(
       <GitHubPullRequestFileViewCheckbox state="viewed" pending={false} onChange={vi.fn()} />
@@ -66,6 +82,22 @@ describe("pull request file viewed state", () => {
     expect(dismissed).toContain('data-file-view-state="dismissed"');
     expect(dismissed).toContain("workspace.repositories.fileChangedSinceViewed");
     expect(pending).toContain("disabled");
+  });
+
+  it("renders a retryable file-state error", () => {
+    const html = renderToStaticMarkup(
+      <GitHubPullRequestFilesErrorAlert
+        title="File states failed"
+        message="Refresh the pull request"
+        actionLabel="Refresh"
+        onAction={vi.fn()}
+      />
+    );
+
+    expect(html).toContain("File states failed");
+    expect(html).toContain("Refresh the pull request");
+    expect(html).toContain("Refresh");
+    expect(html).toContain("button");
   });
 
   it("invokes focused mark and unmark commands", async () => {
@@ -100,5 +132,19 @@ describe("pull request file viewed state", () => {
         { path: "src/fresh.ts", state: "viewed" },
       ],
     });
+  });
+
+  it("keeps the cached state unchanged when a mutation fails", async () => {
+    const queryClient = new QueryClient();
+    const key = githubQueryKeys.pullRequestFileViewStates(target);
+    const before = snapshot();
+    queryClient.setQueryData(key, before);
+    vi.mocked(invoke).mockRejectedValueOnce({ code: "github", message: "stale path" });
+
+    await expect(
+      updatePullRequestFileViewedState(queryClient, target, "PR_kwDOexample", "src/fresh.ts", true)
+    ).rejects.toEqual({ code: "github", message: "stale path" });
+
+    expect(queryClient.getQueryData(key)).toEqual(before);
   });
 });

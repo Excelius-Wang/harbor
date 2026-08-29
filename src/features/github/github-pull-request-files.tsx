@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  CircleAlert,
   ChevronDown,
   ExternalLink,
   FileDiff,
@@ -53,7 +52,11 @@ import type {
 import { GitHubPagination } from "./github-issue-shared";
 import { parseGitHubFilePatch } from "./github-file-diff";
 import { GitHubPullRequestInlineComment } from "./github-pull-request-inline-comment";
-import { GitHubPullRequestFileViewCheckbox } from "./github-pull-request-file-view-state";
+import {
+  GitHubPullRequestFilesErrorAlert,
+  GitHubPullRequestFileViewCheckbox,
+  hasUnmatchedPullRequestFileViewStates,
+} from "./github-pull-request-file-view-state";
 import {
   pullRequestReviewCommentKey,
   pullRequestReviewCommentLocation,
@@ -67,12 +70,10 @@ import { GitHubPullRequestReviewThreadView } from "./github-pull-request-review-
 import { GitHubReactionsProvider } from "./github-reactions-provider";
 import {
   deletePendingRepositoryPullRequestReviewComment,
-  markRepositoryPullRequestFileViewed,
   markPullRequestReviewThreadsStale,
   savePendingRepositoryPullRequestReviewComment,
-  syncPullRequestFileViewedState,
   syncPendingPullRequestReview,
-  unmarkRepositoryPullRequestFileViewed,
+  updatePullRequestFileViewedState,
 } from "./github-pull-request-mutations";
 import {
   pendingPullRequestReviewQueryOptions,
@@ -107,12 +108,8 @@ function PullRequestFileViewControl({
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: (viewed: boolean) =>
-      viewed
-        ? markRepositoryPullRequestFileViewed(pullRequestId, path)
-        : unmarkRepositoryPullRequestFileViewed(pullRequestId, path),
+      updatePullRequestFileViewedState(queryClient, target, pullRequestId, path, viewed),
     onMutate: () => onError(null),
-    onSuccess: (updated) =>
-      syncPullRequestFileViewedState(queryClient, target, updated.path, updated.state),
     onError,
   });
 
@@ -541,9 +538,9 @@ export function GitHubPullRequestFiles({
   const fileViewStateByPath = new Map(
     fileViewStatesResult.data?.files.map((file) => [file.path, file.state]) ?? []
   );
-  const hasUnmatchedFileViewStates = Boolean(
-    data?.files.some((file) => !fileViewStateByPath.has(file.path))
-  );
+  const hasUnmatchedFileViewStates =
+    !result.isPlaceholderData &&
+    hasUnmatchedPullRequestFileViewStates(data?.files ?? [], fileViewStatesResult.data);
   const pendingReview = pendingReviewResult.data ?? null;
   const comments = pendingReview?.comments ?? [];
   const pendingCommentIds = new Set(comments.map((comment) => comment.id));
@@ -635,82 +632,41 @@ export function GitHubPullRequestFiles({
         <ScrollArea className="min-h-0 min-w-0 flex-1" constrainContentWidth>
           <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-3 px-4 py-5 sm:px-5">
             {reviewThreadsError ? (
-              <Alert variant="destructive">
-                <CircleAlert />
-                <AlertTitle>{t("workspace.repositories.reviewThreadsLoadFailed")}</AlertTitle>
-                <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
-                  <span>{reviewThreadsError.message}</span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="xs"
-                    onClick={() => void reviewThreadsResult.refetch()}
-                  >
-                    <RefreshCw data-icon="inline-start" />
-                    {t("workspace.repositories.retry")}
-                  </Button>
-                </AlertDescription>
-              </Alert>
+              <GitHubPullRequestFilesErrorAlert
+                title={t("workspace.repositories.reviewThreadsLoadFailed")}
+                message={reviewThreadsError.message}
+                actionLabel={t("workspace.repositories.retry")}
+                onAction={() => void reviewThreadsResult.refetch()}
+              />
             ) : null}
             {pendingReviewError ? (
-              <Alert variant="destructive">
-                <CircleAlert />
-                <AlertTitle>{t("workspace.repositories.pendingReviewLoadFailed")}</AlertTitle>
-                <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
-                  <span>{pendingReviewError.message}</span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="xs"
-                    onClick={() => void pendingReviewResult.refetch()}
-                  >
-                    <RefreshCw data-icon="inline-start" />
-                    {t("workspace.repositories.retry")}
-                  </Button>
-                </AlertDescription>
-              </Alert>
+              <GitHubPullRequestFilesErrorAlert
+                title={t("workspace.repositories.pendingReviewLoadFailed")}
+                message={pendingReviewError.message}
+                actionLabel={t("workspace.repositories.retry")}
+                onAction={() => void pendingReviewResult.refetch()}
+              />
             ) : null}
             {fileViewStatesError || hasUnmatchedFileViewStates ? (
-              <Alert variant="destructive">
-                <CircleAlert />
-                <AlertTitle>{t("workspace.repositories.fileViewStatesLoadFailed")}</AlertTitle>
-                <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
-                  <span>
-                    {fileViewStatesError?.message ??
-                      t("workspace.repositories.fileViewStatesOutdated")}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="xs"
-                    onClick={() => void fileViewStatesResult.refetch()}
-                  >
-                    <RefreshCw data-icon="inline-start" />
-                    {t("workspace.repositories.retry")}
-                  </Button>
-                </AlertDescription>
-              </Alert>
+              <GitHubPullRequestFilesErrorAlert
+                title={t("workspace.repositories.fileViewStatesLoadFailed")}
+                message={
+                  fileViewStatesError?.message ?? t("workspace.repositories.fileViewStatesOutdated")
+                }
+                actionLabel={t("workspace.repositories.retry")}
+                onAction={() => void fileViewStatesResult.refetch()}
+              />
             ) : null}
             {parsedFileViewMutationError ? (
-              <Alert variant="destructive">
-                <CircleAlert />
-                <AlertTitle>{t("workspace.repositories.fileViewStateUpdateFailed")}</AlertTitle>
-                <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
-                  <span>{parsedFileViewMutationError.message}</span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="xs"
-                    onClick={() => {
-                      setFileViewMutationError(null);
-                      void fileViewStatesResult.refetch();
-                    }}
-                  >
-                    <RefreshCw data-icon="inline-start" />
-                    {t("workspace.repositories.refresh")}
-                  </Button>
-                </AlertDescription>
-              </Alert>
+              <GitHubPullRequestFilesErrorAlert
+                title={t("workspace.repositories.fileViewStateUpdateFailed")}
+                message={parsedFileViewMutationError.message}
+                actionLabel={t("workspace.repositories.refresh")}
+                onAction={() => {
+                  setFileViewMutationError(null);
+                  void fileViewStatesResult.refetch();
+                }}
+              />
             ) : null}
             {pendingReview && !pendingReviewError ? (
               <Alert>

@@ -1,13 +1,55 @@
-import { useTranslation } from "react-i18next";
+import { CircleAlert, RefreshCw } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Spinner } from "@/components/ui/spinner";
-import type { GitHubPullRequestFileViewedState } from "./github-data";
+import { useAppTranslation } from "@/hooks/use-app-translation";
+import type {
+  GitHubPullRequestFile,
+  GitHubPullRequestFileViewedState,
+  GitHubPullRequestFileViewStateSnapshot,
+} from "./github-data";
 
 export function getPullRequestFileViewPresentation(state: GitHubPullRequestFileViewedState) {
   return {
     checked: state === "viewed",
     changedSinceViewed: state === "dismissed",
   };
+}
+
+export function hasUnmatchedPullRequestFileViewStates(
+  files: Array<Pick<GitHubPullRequestFile, "path">>,
+  snapshot: GitHubPullRequestFileViewStateSnapshot | undefined
+) {
+  if (!snapshot) return false;
+  const statePaths = new Set(snapshot.files.map((file) => file.path));
+  return files.some((file) => !statePaths.has(file.path));
+}
+
+export function GitHubPullRequestFilesErrorAlert({
+  title,
+  message,
+  actionLabel,
+  onAction,
+}: {
+  title: string;
+  message: string;
+  actionLabel: string;
+  onAction: () => void;
+}) {
+  return (
+    <Alert variant="destructive">
+      <CircleAlert />
+      <AlertTitle>{title}</AlertTitle>
+      <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
+        <span>{message}</span>
+        <Button type="button" variant="outline" size="xs" onClick={onAction}>
+          <RefreshCw data-icon="inline-start" />
+          {actionLabel}
+        </Button>
+      </AlertDescription>
+    </Alert>
+  );
 }
 
 export function GitHubPullRequestFileViewCheckbox({
@@ -21,7 +63,7 @@ export function GitHubPullRequestFileViewCheckbox({
   disabled?: boolean;
   onChange: (viewed: boolean) => void;
 }) {
-  const { t } = useTranslation();
+  const { t } = useAppTranslation();
   const presentation = getPullRequestFileViewPresentation(state);
   const unavailable = disabled || pending;
 
