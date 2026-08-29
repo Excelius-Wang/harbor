@@ -1676,6 +1676,17 @@ export type GitHubPullRequestDetailPage = {
   timelineHasMore: boolean;
 };
 
+export type GitHubPullRequestBaseBranchPage = {
+  pullRequestNumber: number;
+  currentBase: string;
+  currentBaseSha: string;
+  headSha: string;
+  branches: GitHubBranch[];
+  page: number;
+  hasPrevious: boolean;
+  hasMore: boolean;
+};
+
 export type GitHubCommit = {
   sha: string;
   shortSha: string;

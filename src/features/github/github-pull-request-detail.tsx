@@ -40,6 +40,7 @@ import type { GitHubPullRequest, GitHubPullRequestRepository } from "./github-da
 import { formatIssueDate } from "./github-issue-shared";
 import { GitHubIssueTimeline } from "./github-issue-timeline";
 import { GitHubPullRequestChecks } from "./github-pull-request-checks";
+import { GitHubPullRequestBaseEdit } from "./github-pull-request-base-edit";
 import { GitHubPullRequestCommits } from "./github-pull-request-commits";
 import { GitHubPullRequestFiles } from "./github-pull-request-files";
 import { GitHubPullRequestMergePanel } from "./github-pull-request-merge-panel";
@@ -275,6 +276,10 @@ export function GitHubPullRequestDetail({
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2 @max-[620px]/pull-detail:shrink-0">
+                <GitHubPullRequestBaseEdit
+                  repository={repository}
+                  pullRequest={detail.pullRequest}
+                />
                 <Button
                   variant="outline"
                   size="sm"

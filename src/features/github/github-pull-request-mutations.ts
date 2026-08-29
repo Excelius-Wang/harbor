@@ -71,6 +71,22 @@ export function updateRepositoryPullRequest(
   });
 }
 
+export function updateRepositoryPullRequestBase(
+  target: GitHubPullRequestMutationTarget,
+  value: {
+    expectedCurrentBase: string;
+    expectedCurrentBaseSha: string;
+    expectedHeadSha: string;
+    targetBase: string;
+    expectedTargetBaseSha: string;
+  }
+) {
+  return invoke<GitHubPullRequest>("github_update_repository_pull_request_base", {
+    ...target,
+    ...value,
+  });
+}
+
 export function updateRepositoryPullRequestState(
   target: GitHubPullRequestMutationTarget,
   pullRequestState: GitHubPullRequest["state"]
@@ -722,6 +738,18 @@ export async function invalidateRepositoryPullRequest(
 }
 
 export async function invalidatePullRequestAfterBranchUpdate(
+  queryClient: QueryClient,
+  target: GitHubPullRequestMutationTarget
+) {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: githubQueryKeys.pullRequestRoot(target) }),
+    queryClient.invalidateQueries({ queryKey: githubQueryKeys.checksRoot(target) }),
+    queryClient.invalidateQueries({ queryKey: githubQueryKeys.pullRequestsRoot(target) }),
+    queryClient.invalidateQueries({ queryKey: githubQueryKeys.pullRequestInboxRoot }),
+  ]);
+}
+
+export async function invalidatePullRequestAfterBaseEdit(
   queryClient: QueryClient,
   target: GitHubPullRequestMutationTarget
 ) {

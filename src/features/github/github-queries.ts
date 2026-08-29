@@ -57,6 +57,7 @@ import type {
   GitHubProjectSort,
   GitHubProjectStateFilter,
   GitHubPullRequestAutoMergeStatus,
+  GitHubPullRequestBaseBranchPage,
   GitHubPullRequestBranchUpdateStatus,
   GitHubPullRequestCommitPage,
   GitHubPullRequestComparison,
@@ -867,6 +868,16 @@ export const githubQueryKeys = {
       "pull-request",
       pullRequestNumber,
       "reviews",
+    ] as const,
+  pullRequestBaseBranches: ({ owner, repository, pullRequestNumber }: GitHubPullRequestTarget) =>
+    [
+      "github",
+      "repository",
+      owner,
+      repository,
+      "pull-request",
+      pullRequestNumber,
+      "base-branches",
     ] as const,
   pendingPullRequestReview: ({
     owner,
@@ -1900,6 +1911,20 @@ export function pullRequestReviewsQueryOptions(target: GitHubPullRequestTarget) 
         owner: target.owner,
         repository: target.repository,
         pullRequestNumber: target.pullRequestNumber,
+        page: pageParam,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.page + 1 : undefined),
+    staleTime: GITHUB_QUERY_STALE_TIME,
+  });
+}
+
+export function pullRequestBaseBranchesQueryOptions(target: GitHubPullRequestTarget) {
+  return infiniteQueryOptions({
+    queryKey: githubQueryKeys.pullRequestBaseBranches(target),
+    queryFn: ({ pageParam }) =>
+      invoke<GitHubPullRequestBaseBranchPage>("github_list_repository_pull_request_base_branches", {
+        ...target,
         page: pageParam,
       }),
     initialPageParam: 1,

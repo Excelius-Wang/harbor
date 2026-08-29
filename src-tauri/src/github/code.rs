@@ -1106,7 +1106,7 @@ fn repository_code_search_query(owner: &str, repository: &str, query: &str) -> S
     format!("{terms} repo:{owner}/{repository}")
 }
 
-fn branch_from_octocrab(branch: octocrab::models::repos::Branch) -> GitHubBranch {
+pub(super) fn branch_from_octocrab(branch: octocrab::models::repos::Branch) -> GitHubBranch {
     GitHubBranch {
         name: branch.name,
         sha: branch.commit.sha,

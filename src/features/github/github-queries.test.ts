@@ -48,6 +48,7 @@ import {
   personalPackageVersionsQueryOptions,
   receivedRepositoryInvitationsQueryOptions,
   pendingPullRequestReviewQueryOptions,
+  pullRequestBaseBranchesQueryOptions,
   pullRequestAutoMergeStatusQueryOptions,
   pullRequestBranchUpdateStatusQueryOptions,
   pullRequestComparisonQueryOptions,
@@ -1307,6 +1308,60 @@ describe("GitHub repository queries", () => {
         .getCurrentResult()
         .data?.pages.flatMap((page) => page.reviews.map((review) => review.id))
     ).toEqual([86, 87]);
+  });
+
+  it("pages pull request base branches with an authoritative PR snapshot", async () => {
+    const client = createTestQueryClient();
+    vi.mocked(invoke)
+      .mockResolvedValueOnce({
+        pullRequestNumber: 12,
+        currentBase: "main",
+        currentBaseSha: "base1234",
+        headSha: "abc1234",
+        branches: [{ name: "release", sha: "target123", protected: false }],
+        page: 1,
+        hasPrevious: false,
+        hasMore: true,
+      })
+      .mockResolvedValueOnce({
+        pullRequestNumber: 12,
+        currentBase: "main",
+        currentBaseSha: "base1234",
+        headSha: "abc1234",
+        branches: [{ name: "stable", sha: "stable123", protected: true }],
+        page: 2,
+        hasPrevious: true,
+        hasMore: false,
+      });
+    const options = pullRequestBaseBranchesQueryOptions({
+      owner: "octocat",
+      repository: "hello-world",
+      pullRequestNumber: 12,
+    });
+
+    await client.fetchInfiniteQuery(options);
+    const observer = new InfiniteQueryObserver(client, options);
+    const unsubscribe = observer.subscribe(() => undefined);
+    await observer.fetchNextPage();
+    unsubscribe();
+
+    expect(invoke).toHaveBeenNthCalledWith(1, "github_list_repository_pull_request_base_branches", {
+      owner: "octocat",
+      repository: "hello-world",
+      pullRequestNumber: 12,
+      page: 1,
+    });
+    expect(invoke).toHaveBeenNthCalledWith(2, "github_list_repository_pull_request_base_branches", {
+      owner: "octocat",
+      repository: "hello-world",
+      pullRequestNumber: 12,
+      page: 2,
+    });
+    expect(
+      observer
+        .getCurrentResult()
+        .data?.pages.flatMap((page) => page.branches.map((branch) => branch.name))
+    ).toEqual(["release", "stable"]);
   });
 
   it("checks pull request branch update eligibility in a focused cache", async () => {

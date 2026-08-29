@@ -146,6 +146,8 @@ pub fn run() {
             commands::github_compare_repository_pull_request_branches,
             commands::github_create_repository_pull_request,
             commands::github_update_repository_pull_request,
+            commands::github_list_repository_pull_request_base_branches,
+            commands::github_update_repository_pull_request_base,
             commands::github_update_repository_pull_request_state,
             commands::github_update_repository_pull_request_draft_state,
             commands::github_update_repository_pull_request_metadata,
