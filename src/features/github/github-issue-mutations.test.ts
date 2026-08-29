@@ -14,6 +14,7 @@ import {
   createRepositoryIssueComment,
   syncCreatedIssue,
   syncCreatedIssueComment,
+  syncIssueLockedState,
   syncUpdatedIssue,
   updateRepositoryIssue,
   updateRepositoryIssueMetadata,
@@ -196,6 +197,57 @@ describe("GitHub Issue mutations", () => {
     expect(queryClient.getQueryData<GitHubIssuePage>(listKey)?.issues[0].comments).toBe(2);
     expect(queryClient.getQueryData<GitHubIssueInboxPage>(inboxKey)?.issues[0].issue.comments).toBe(
       2
+    );
+  });
+
+  it("syncs the lock state across Issue detail, repository, and inbox caches", () => {
+    const queryClient = new QueryClient();
+    const detailKey = githubQueryKeys.issueDetail({ ...target, timelinePage: 1 });
+    const listKey = githubQueryKeys.issues({
+      owner: target.owner,
+      repository: target.repository,
+      state: "open",
+      assignment: "all",
+      query: "",
+      label: "",
+      sort: "updated",
+      page: 1,
+    });
+    const inboxKey = githubQueryKeys.issueInbox({
+      scope: "authored",
+      state: "open",
+      query: "",
+      sort: "updated",
+      page: 1,
+    });
+    queryClient.setQueryData<GitHubIssueDetailPage>(detailKey, {
+      issue,
+      timeline: [],
+      timelinePage: 1,
+      timelineHasPrevious: false,
+      timelineHasMore: false,
+    });
+    queryClient.setQueryData<GitHubIssuePage>(listKey, {
+      issues: [issue],
+      totalCount: 1,
+      page: 1,
+      hasPrevious: false,
+      hasMore: false,
+    });
+    queryClient.setQueryData<GitHubIssueInboxPage>(inboxKey, {
+      issues: [summary],
+      totalCount: 1,
+      page: 1,
+      hasPrevious: false,
+      hasMore: false,
+    });
+
+    syncIssueLockedState(queryClient, target, true);
+
+    expect(queryClient.getQueryData<GitHubIssueDetailPage>(detailKey)?.issue.locked).toBe(true);
+    expect(queryClient.getQueryData<GitHubIssuePage>(listKey)?.issues[0].locked).toBe(true);
+    expect(queryClient.getQueryData<GitHubIssueInboxPage>(inboxKey)?.issues[0].issue.locked).toBe(
+      true
     );
   });
 

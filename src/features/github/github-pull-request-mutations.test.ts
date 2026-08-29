@@ -34,6 +34,7 @@ import {
   syncCreatedPullRequestComment,
   syncCreatedPullRequestReview,
   syncPendingPullRequestReview,
+  syncPullRequestLockedState,
   syncPullRequestReviewThreadReply,
   syncPullRequestReviewThreadState,
   syncUpdatedPullRequest,
@@ -204,6 +205,27 @@ function listPage(value: GitHubPullRequestSummary = summary): GitHubPullRequestP
 describe("GitHub pull request mutations", () => {
   beforeEach(() => {
     vi.mocked(invoke).mockReset();
+  });
+
+  it("syncs the lock state across pull request detail pages", () => {
+    const queryClient = createQueryClient();
+    const firstKey = githubQueryKeys.pullRequestDetail({ ...target, timelinePage: 1 });
+    const secondKey = githubQueryKeys.pullRequestDetail({ ...target, timelinePage: 2 });
+    queryClient.setQueryData(firstKey, detailPage());
+    queryClient.setQueryData(secondKey, {
+      ...detailPage(),
+      timelinePage: 2,
+      timelineHasPrevious: true,
+    });
+
+    syncPullRequestLockedState(queryClient, target, true);
+
+    expect(
+      queryClient.getQueryData<GitHubPullRequestDetailPage>(firstKey)?.pullRequest.locked
+    ).toBe(true);
+    expect(
+      queryClient.getQueryData<GitHubPullRequestDetailPage>(secondKey)?.pullRequest.locked
+    ).toBe(true);
   });
 
   it("creates a pull request with exact branch, content, and draft arguments", async () => {

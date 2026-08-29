@@ -158,6 +158,33 @@ export function syncUpdatedIssue(
   updateIssueInboxPages(queryClient, target, (summary) => ({ ...summary, issue }), issue.state);
 }
 
+export function syncIssueLockedState(
+  queryClient: QueryClient,
+  target: GitHubIssueMutationTarget,
+  locked: boolean
+) {
+  queryClient.setQueriesData<GitHubIssueDetailPage>(
+    { queryKey: githubQueryKeys.issueRoot(target) },
+    (detail) => (detail ? { ...detail, issue: { ...detail.issue, locked } } : detail)
+  );
+  queryClient.setQueriesData<GitHubIssuePage>(
+    { queryKey: githubQueryKeys.issuesRoot(target) },
+    (page) =>
+      page
+        ? {
+            ...page,
+            issues: page.issues.map((issue) =>
+              issue.number === target.issueNumber ? { ...issue, locked } : issue
+            ),
+          }
+        : page
+  );
+  updateIssueInboxPages(queryClient, target, (summary) => ({
+    ...summary,
+    issue: { ...summary.issue, locked },
+  }));
+}
+
 export async function invalidateRepositoryIssue(
   queryClient: QueryClient,
   target: GitHubIssueMutationTarget

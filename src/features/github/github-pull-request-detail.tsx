@@ -8,7 +8,6 @@ import {
   FileDiff,
   GitCommitHorizontal,
   GitPullRequest,
-  LockKeyhole,
   MessageSquare,
   Pencil,
   RefreshCw,
@@ -36,6 +35,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { parseIpcError } from "@/lib/ipc-error";
 import { openExternalUrl } from "@/lib/window";
 import { GitHubCommentForm } from "./github-comment-form";
+import { GitHubConversationControls } from "./github-conversation-controls";
 import type { GitHubPullRequest, GitHubPullRequestRepository } from "./github-data";
 import { formatIssueDate } from "./github-issue-shared";
 import { GitHubIssueTimeline } from "./github-issue-timeline";
@@ -383,14 +383,12 @@ export function GitHubPullRequestDetail({
                           </span>
                         </p>
                       </div>
-                      {detail.pullRequest.locked ? (
-                        <>
-                          <Separator />
-                          <p className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
-                            <LockKeyhole /> {t("workspace.repositories.lockedConversation")}
-                          </p>
-                        </>
-                      ) : null}
+                      <Separator />
+                      <GitHubConversationControls
+                        repository={repository}
+                        conversationKind="pullRequest"
+                        conversationNumber={detail.pullRequest.number}
+                      />
                     </aside>
                   </div>
                 </div>
