@@ -372,14 +372,15 @@ while deletion refetches the authoritative parent instead of guessing counts or 
 shadcn edit and destructive-confirmation dialogs preserve Markdown drafts across conflict and
 permission failures. Review comment database IDs accept GitHub's current GraphQL `BigInt` string
 shape instead of relying on the removed integer field.
+The completed comment-lifecycle slice is open in
+[PR #5](https://github.com/Excelius-Wang/harbor/pull/5) from `feat/github-comment-lifecycle`.
 The workspace shell is responsive, starts at 1600x1000, and remains usable down to 900x620.
 
 ## Next action
 
-Push the completed comment-lifecycle slice and open its pull request, then audit the remaining
-personal-developer GitHub Web surface and implement the highest-value missing vertical workflow.
-Keep organization administration, Enterprise controls, and advanced organization security out of
-scope.
+Audit the remaining personal-developer GitHub Web surface and implement the highest-value missing
+vertical workflow. Keep organization administration, Enterprise controls, and advanced organization
+security out of scope.
 
 ## Verification
 
