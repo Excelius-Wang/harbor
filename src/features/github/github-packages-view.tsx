@@ -51,6 +51,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { parseIpcError } from "@/lib/ipc-error";
 import { cn } from "@/lib/utils";
 import { openExternalUrl } from "@/lib/window";
@@ -153,7 +154,7 @@ function PackageRow({
         "h-auto w-full justify-start gap-3 rounded-lg border px-3 py-3 text-left whitespace-normal",
         selected
           ? "border-primary/30 bg-primary/8 hover:bg-primary/10"
-          : "border-transparent hover:border-white/8"
+          : "hover:border-border border-transparent"
       )}
     >
       <span className="border-primary/20 bg-primary/[0.06] text-primary grid size-8 shrink-0 place-items-center rounded-md border">
@@ -237,15 +238,20 @@ function PackageVersionRow({
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-1.5 self-end sm:self-auto">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          aria-label={t("workspace.packages.openVersion")}
-          onClick={() => void openExternalUrl(version.url)}
-        >
-          <ExternalLink />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label={t("workspace.packages.openVersion")}
+              onClick={() => void openExternalUrl(version.url)}
+            >
+              <ExternalLink />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t("workspace.packages.openVersion")}</TooltipContent>
+        </Tooltip>
         <Button
           type="button"
           variant={deleted ? "outline" : "ghost"}
@@ -366,16 +372,21 @@ function GitHubPackageDetail({
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <header className="flex min-h-[74px] shrink-0 items-center justify-between gap-3 border-b px-4 py-3">
         <div className="flex min-w-0 items-center gap-2.5">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            className="workspace-wide:hidden"
-            aria-label={t("workspace.packages.back")}
-            onClick={onBack}
-          >
-            <ArrowLeft />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                className="workspace-wide:hidden"
+                aria-label={t("workspace.packages.back")}
+                onClick={onBack}
+              >
+                <ArrowLeft />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t("workspace.packages.back")}</TooltipContent>
+          </Tooltip>
           <div className="min-w-0">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               <h2 className="truncate text-base font-semibold tracking-[-0.02em]">

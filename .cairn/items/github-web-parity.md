@@ -376,14 +376,16 @@ whole-Package deletion retain explicit GitHub links. New OAuth logins request `r
 backward-compatible empty-scope migration. Known lower-scope connections fail before transport,
 while legacy credentials probe GitHub and treat a hidden private-package 404 as a reconnect state.
 Repository Insights is complete on open pull request #1, and Personal Packages is complete on open
-pull request #2; both remain unmerged pending user review.
+pull request #2; both remain unmerged pending pre-merge verification. The reusable ignored live probe
+uses Harbor's `SystemCredentialStore` and production GitHub client without printing credentials. Its
+latest run returned `GitHubNotConnected` because no saved Harbor OAuth connection exists in the
+current Keychain.
 The workspace shell is responsive, starts at 1600x1000, and remains usable down to 900x620.
 
 ## Next action
 
-Review and merge Personal Packages pull request #2, complete one live Harbor OAuth read probe when no
-other Harbor instance owns the desktop window, then audit the next missing personal-developer
-workflow.
+Complete the other approved pre-merge corrections, then return to the live Personal Packages probe
+when the user is available to approve and finish a new GitHub OAuth grant.
 
 ## Verification
 
@@ -404,9 +406,9 @@ desktop fixtures verified ecosystem and visibility filters, empty, permission, r
 active/deleted, exact-name deletion confirmation, public-version deletion guidance,
 deletion-to-recently-deleted reconciliation, restoration, explicit GitHub fallbacks, compact back
 navigation, and the 1600x1000 and 900x620 layouts. Document width equals viewport width, and the
-browser console reports zero errors and warnings. A live read probe through `tauri:dev` remains
-pending because an existing Harbor process prevented the debug window from becoming available; no
-credential was read or exported while attempting it.
+browser console reports zero errors and warnings. The focused live probe now runs through the same
+credential and service boundary as the desktop app, but its latest run returned
+`GitHubNotConnected`; no credential was read, printed, or exported.
 
 Repository Code mutation verification covers exact Tauri contracts, atomic rename payloads, stale
 file and branch guards, Git-compatible branch validation, empty-repository initialization, stable

@@ -6,6 +6,7 @@ use tokio::{
 };
 
 use super::*;
+use crate::github::SystemCredentialStore;
 
 struct MockResponse {
     status: &'static str,
@@ -129,6 +130,27 @@ fn fake_version(state: GitHubPackageVersionState) -> GitHubPackageVersion {
         created_at: "2026-08-20T08:00:00Z".to_string(),
         updated_at: "2026-08-29T08:00:00Z".to_string(),
     }
+}
+
+#[tokio::test]
+#[ignore = "requires saved Harbor GitHub OAuth credentials with read:packages"]
+async fn live_harbor_oauth_lists_personal_packages() {
+    let service = GitHubService::new(
+        Arc::new(OctocrabGitHubClient),
+        Arc::new(SystemCredentialStore::default()),
+        None,
+    );
+
+    let page = service
+        .personal_packages(GitHubPackageType::Container, None, 1)
+        .await
+        .expect("Harbor OAuth should list personal Packages");
+
+    assert_eq!(page.page, 1);
+    println!(
+        "live package probe succeeded: {} packages",
+        page.packages.len()
+    );
 }
 
 #[async_trait]
