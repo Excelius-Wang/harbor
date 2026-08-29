@@ -36,6 +36,12 @@ import type {
   GitHubIssueState,
   GitHubInsightsTrafficPeriod,
   GitHubNotificationPage,
+  GitHubPackage,
+  GitHubPackagePage,
+  GitHubPackageType,
+  GitHubPackageVersionPage,
+  GitHubPackageVersionState,
+  GitHubPackageVisibility,
   GitHubContributionSummary,
   GitHubProfileActivityPage,
   GitHubProfileConnectionKind,
@@ -184,6 +190,22 @@ export type GitHubStarredRepositoriesTarget = {
 
 export type GitHubGistsTarget = {
   source: GitHubGistSource;
+};
+
+export type GitHubPackagesTarget = {
+  packageType: GitHubPackageType;
+  visibility: GitHubPackageVisibility | null;
+  page: number;
+};
+
+export type GitHubPackageTarget = {
+  packageType: GitHubPackageType;
+  packageName: string;
+};
+
+export type GitHubPackageVersionsTarget = GitHubPackageTarget & {
+  state: GitHubPackageVersionState;
+  page: number;
 };
 
 export type GitHubGistTarget = {
@@ -349,6 +371,15 @@ export const githubQueryKeys = {
     ["github", "profile", username, "activity"] as const,
   gists: ({ source }: GitHubGistsTarget) => ["github", "gists", source] as const,
   gistsRoot: ["github", "gists"] as const,
+  packages: ({ packageType, visibility, page }: GitHubPackagesTarget) =>
+    ["github", "personal-packages", packageType, visibility ?? "all", page] as const,
+  packagesRoot: ["github", "personal-packages"] as const,
+  package: ({ packageType, packageName }: GitHubPackageTarget) =>
+    ["github", "personal-package", packageType, packageName] as const,
+  packageVersions: ({ packageType, packageName, state, page }: GitHubPackageVersionsTarget) =>
+    ["github", "personal-package", packageType, packageName, "versions", state, page] as const,
+  packageVersionsRoot: ({ packageType, packageName }: GitHubPackageTarget) =>
+    ["github", "personal-package", packageType, packageName, "versions"] as const,
   gist: ({ gistId }: GitHubGistTarget) => ["github", "gist", gistId] as const,
   gistRoot: (gistId: string) => ["github", "gist", gistId] as const,
   gistRevisions: ({ gistId }: GitHubGistTarget) => ["github", "gist", gistId, "revisions"] as const,
@@ -942,6 +973,41 @@ export function gistsQueryOptions(target: GitHubGistsTarget) {
       }),
     initialPageParam: 1,
     getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.page + 1 : undefined),
+    staleTime: GITHUB_QUERY_STALE_TIME,
+  });
+}
+
+export function personalPackagesQueryOptions(target: GitHubPackagesTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.packages(target),
+    queryFn: () =>
+      invoke<GitHubPackagePage>("github_list_personal_packages", {
+        packageType: target.packageType,
+        visibility: target.visibility,
+        page: target.page,
+      }),
+    staleTime: GITHUB_QUERY_STALE_TIME,
+  });
+}
+
+export function personalPackageQueryOptions(target: GitHubPackageTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.package(target),
+    queryFn: () => invoke<GitHubPackage>("github_get_personal_package", target),
+    staleTime: GITHUB_QUERY_STALE_TIME,
+  });
+}
+
+export function personalPackageVersionsQueryOptions(target: GitHubPackageVersionsTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.packageVersions(target),
+    queryFn: () =>
+      invoke<GitHubPackageVersionPage>("github_list_personal_package_versions", {
+        packageType: target.packageType,
+        packageName: target.packageName,
+        versionState: target.state,
+        page: target.page,
+      }),
     staleTime: GITHUB_QUERY_STALE_TIME,
   });
 }

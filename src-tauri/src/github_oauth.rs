@@ -287,6 +287,8 @@ pub struct GitHubOAuthCredentials {
     pub access_token: String,
     pub refresh_token: Option<String>,
     pub expires_at: Option<u64>,
+    #[serde(default)]
+    pub scopes: Vec<String>,
 }
 
 struct PendingLogin {
@@ -405,6 +407,9 @@ impl GitHubOAuthSession {
             .add_scope(Scope::new("delete_repo".to_string()))
             .add_scope(Scope::new("gist".to_string()))
             .add_scope(Scope::new("user".to_string()))
+            .add_scope(Scope::new("read:packages".to_string()))
+            .add_scope(Scope::new("write:packages".to_string()))
+            .add_scope(Scope::new("delete:packages".to_string()))
             .set_pkce_challenge(pkce_challenge)
             .url();
         let callback_state = csrf_token.secret().clone();
@@ -502,6 +507,9 @@ impl GitHubOAuthSession {
         if refreshed.refresh_token.is_none() {
             refreshed.refresh_token = credentials.refresh_token;
         }
+        if refreshed.scopes.is_empty() {
+            refreshed.scopes = credentials.scopes;
+        }
         Ok(refreshed)
     }
 }
@@ -535,6 +543,17 @@ fn credentials_from_token_response(
     response: &oauth2::basic::BasicTokenResponse,
 ) -> GitHubOAuthCredentials {
     let now = std::time::Duration::from_secs(unix_timestamp());
+    let mut scopes = response
+        .scopes()
+        .into_iter()
+        .flatten()
+        .flat_map(|scope| scope.split(','))
+        .map(str::trim)
+        .filter(|scope| !scope.is_empty())
+        .map(|scope| scope.to_ascii_lowercase())
+        .collect::<Vec<_>>();
+    scopes.sort();
+    scopes.dedup();
     GitHubOAuthCredentials {
         access_token: response.access_token().secret().clone(),
         refresh_token: response.refresh_token().map(|token| token.secret().clone()),
@@ -542,6 +561,7 @@ fn credentials_from_token_response(
             .expires_in()
             .and_then(|duration| now.checked_add(duration))
             .map(|expires_at| expires_at.as_secs()),
+        scopes,
     }
 }
 
@@ -556,7 +576,11 @@ fn unix_timestamp() -> u64 {
 mod tests {
     use std::collections::HashMap;
 
-    use oauth2::url::Url;
+    use oauth2::{
+        basic::{BasicTokenResponse, BasicTokenType},
+        url::Url,
+        AccessToken, EmptyExtraTokenFields,
+    };
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
     use super::*;
@@ -581,6 +605,7 @@ mod tests {
                 access_token: "github-user-access-token".to_string(),
                 refresh_token: Some("github-refresh-token".to_string()),
                 expires_at: Some(1_809_000_000),
+                scopes: vec!["read:packages".to_string()],
             })
         }
 
@@ -592,6 +617,7 @@ mod tests {
                 access_token: "refreshed-user-access-token".to_string(),
                 refresh_token: Some("rotated-refresh-token".to_string()),
                 expires_at: Some(1_900_000_000),
+                scopes: Vec::new(),
             })
         }
     }
@@ -618,7 +644,9 @@ mod tests {
         assert_eq!(query.get("response_type").map(String::as_str), Some("code"));
         assert_eq!(
             query.get("scope").map(String::as_str),
-            Some("repo workflow security_events project delete_repo gist user")
+            Some(
+                "repo workflow security_events project delete_repo gist user read:packages write:packages delete:packages"
+            )
         );
         assert_eq!(
             query.get("code_challenge_method").map(String::as_str),
@@ -628,6 +656,38 @@ mod tests {
             .get("code_challenge")
             .is_some_and(|value| value.len() >= 43));
         assert!(query.get("state").is_some_and(|value| value.len() >= 22));
+    }
+
+    #[test]
+    fn token_response_preserves_normalized_github_scopes() {
+        let mut response = BasicTokenResponse::new(
+            AccessToken::new("github-user-access-token".to_string()),
+            BasicTokenType::Bearer,
+            EmptyExtraTokenFields {},
+        );
+        response.set_scopes(Some(vec![
+            Scope::new("write:packages, read:packages".to_string()),
+            Scope::new("READ:PACKAGES".to_string()),
+        ]));
+
+        let credentials = credentials_from_token_response(&response);
+
+        assert_eq!(
+            credentials.scopes,
+            vec!["read:packages".to_string(), "write:packages".to_string()]
+        );
+    }
+
+    #[test]
+    fn stored_credentials_without_scope_metadata_remain_readable() {
+        let credentials: GitHubOAuthCredentials = serde_json::from_value(serde_json::json!({
+            "accessToken": "github-user-access-token",
+            "refreshToken": null,
+            "expiresAt": null
+        }))
+        .expect("legacy credentials");
+
+        assert!(credentials.scopes.is_empty());
     }
 
     #[tokio::test]
@@ -670,6 +730,7 @@ mod tests {
                 access_token: "github-user-access-token".to_string(),
                 refresh_token: Some("github-refresh-token".to_string()),
                 expires_at: Some(1_809_000_000),
+                scopes: vec!["read:packages".to_string()],
             }
         );
 
@@ -690,6 +751,7 @@ mod tests {
                 access_token: "expired-user-access-token".to_string(),
                 refresh_token: Some("github-refresh-token".to_string()),
                 expires_at: Some(1),
+                scopes: vec!["read:packages".to_string()],
             })
             .await
             .expect("refreshed credentials");
@@ -699,6 +761,7 @@ mod tests {
             refreshed.refresh_token.as_deref(),
             Some("rotated-refresh-token")
         );
+        assert_eq!(refreshed.scopes, vec!["read:packages"]);
     }
 
     #[tokio::test]
