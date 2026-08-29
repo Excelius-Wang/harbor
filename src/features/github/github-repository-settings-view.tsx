@@ -144,7 +144,13 @@ function SettingToggle({
   );
 }
 
-export function GitHubRepositorySettingsView({ repository }: { repository: GitHubRepository }) {
+export function GitHubRepositorySettingsView({
+  repository,
+  onOpenActions,
+}: {
+  repository: GitHubRepository;
+  onOpenActions: () => void;
+}) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const target = { owner: repository.owner, repository: repository.name };
@@ -275,6 +281,7 @@ export function GitHubRepositorySettingsView({ repository }: { repository: GitHu
           repository={settings.repository}
           branches={branches}
           onBack={() => setManagingPages(false)}
+          onOpenActions={onOpenActions}
         />
       </Suspense>
     );

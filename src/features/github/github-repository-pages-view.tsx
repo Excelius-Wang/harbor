@@ -715,10 +715,12 @@ export function GitHubRepositoryPagesView({
   repository,
   branches,
   onBack,
+  onOpenActions,
 }: {
   repository: GitHubRepository;
   branches: string[];
   onBack: () => void;
+  onOpenActions: () => void;
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -898,13 +900,9 @@ export function GitHubRepositoryPagesView({
             <AlertTitle>{t("workspace.repositories.settings.pages.actionsBuildTitle")}</AlertTitle>
             <AlertDescription>
               <p>{t("workspace.repositories.settings.pages.actionsBuildDescription")}</p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => void openExternalUrl(`${repository.url}/actions`)}
-              >
+              <Button variant="outline" size="sm" onClick={onOpenActions}>
                 {t("workspace.repositories.settings.pages.openActions")}
-                <ExternalLink data-icon="inline-end" />
+                <Workflow data-icon="inline-end" />
               </Button>
             </AlertDescription>
           </Alert>
