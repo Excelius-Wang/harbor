@@ -25,8 +25,8 @@
       {
         "label": "main",
         "title": "Harbor",
-        "width": 1600,
-        "height": 1000,
+        "width": 1200,
+        "height": 760,
         "minWidth": 900,
         "minHeight": 620,
         "decorations": false,

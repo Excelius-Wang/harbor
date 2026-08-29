@@ -18,7 +18,8 @@ Pages routes Actions publishing to Harbor's native Actions tab. Wiki Git/cache o
 Reaction writes serialize and restore all affected caches on failure. Comment updates preserve
 reaction subjects and allow an explicitly empty body through both frontend and Tauri validation.
 Commit detail maps 404, 409, and 422 to non-retryable states without leaking private repository
-existence.
+existence. The main window defaults to 1200×760 logical pixels so it fits the built-in Retina work
+area while retaining the verified 900×620 minimum.
 
 The primary worktree has separate, uncommitted Actions-administration work and must remain untouched.
 No generated output, credentials, or unrelated local artifacts are included. The only unverified
