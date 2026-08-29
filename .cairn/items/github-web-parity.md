@@ -361,12 +361,23 @@ SHA confirmation. The focused `GitHubCodeMutationClient` owns normalization, per
 repository guards, conflict mapping, Git transport, response verification, and tests. The Code UI
 reuses the existing overview, Markdown editor, Shiki preview, shadcn dialogs, toasts, and query roots;
 workflow-file scope requirements and protected/default-branch failures remain explicit.
+Personal repository Settings now includes a native GitHub Pages workspace behind the focused
+three-method `GitHubRepositoryPagesClient` Interface. Harbor enables and disables Pages, switches
+between branch and GitHub Actions publishing, validates branch sources, updates custom domains and
+HTTPS enforcement, polls DNS health and active builds, paginates legacy deployment history, and
+requests branch rebuilds. The Adapter reuses the authoritative personal-owner and archived-repository
+guard, sends `null` when clearing a CNAME, verifies GitHub's returned configuration, and keeps Actions
+deployments in the existing Actions workflow instead of inventing Pages build records. The lazy
+shadcn UI and focused TanStack Query roots cover loading, empty, permission, build failure, DNS pending,
+archived, narrow-layout, and destructive-confirmation states. PR #11 is open, mergeable, and clean:
+https://github.com/Excelius-Wang/harbor/pull/11 (`2515932`). Playwright CLI session state is now
+ignored by Git through `.playwright-cli/`.
 The workspace shell is responsive, starts at 1600x1000, and remains usable down to 900x620.
 
 ## Next action
 
-Complete the remaining deterministic desktop checks for repository file rename, file deletion, and
-the 900x620 layout, then audit the next missing personal-developer GitHub Web workflow. Keep
+Audit the next missing personal-developer GitHub Web workflow from `origin/main`, then start one fresh
+vertical slice that reuses the existing Interfaces, TanStack Query roots, and shadcn components. Keep
 organization administration, Enterprise controls, and advanced organization security out of scope.
 
 ## Verification
@@ -374,6 +385,16 @@ organization administration, Enterprise controls, and advanced organization secu
 Each GitHub parity slice must use real API data, cover loading/empty/error/permission states, preserve
 repository context and navigation, and complete its primary path without forcing a browser fallback.
 Run `pnpm check`, the Rust check suite when Rust changes, and a focused desktop interaction check.
+
+GitHub Pages verification covers exact Tauri read, health, and typed mutation contracts; personal
+ownership and archived-write guards; branch and domain normalization; CNAME clearing; authoritative
+response verification; focused cache reconciliation; workflow and legacy presentation; and exact-name
+disablement. `pnpm check` passes with 129 frontend tests. The Rust library has 233 passing tests with
+one external DeepWiki test ignored by design; `cargo fmt --check`, `cargo check`, the production build,
+and `git diff --check` pass. A deterministic desktop fixture verified branch and Actions configuration,
+build pagination and rebuild, DNS-ready and pending states, failure recovery, disablement, and first
+enablement at 1600x1000 and 900x620 in light and dark themes. The Pages content has no horizontal
+overflow at either size, and clean sessions report no browser errors or warnings.
 
 Repository Code mutation verification covers exact Tauri contracts, atomic rename payloads, stale
 file and branch guards, Git-compatible branch validation, empty-repository initialization, stable
