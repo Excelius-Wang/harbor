@@ -41,10 +41,15 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useAppTranslation } from "@/hooks/use-app-translation";
 import { parseIpcError } from "@/lib/ipc-error";
 import { openExternalUrl } from "@/lib/window";
 import type { GitHubChangedFile, GitHubCommitActor, GitHubRepositoryIdentity } from "./github-data";
-import { matchingCommitDetailPages } from "./github-commit-detail-pages";
+import {
+  isRetryableCommitDetailError,
+  matchingCommitDetailPages,
+} from "./github-commit-detail-pages";
 import { GitHubReadOnlyFileDiff } from "./github-file-diff";
 import { formatIssueDate } from "./github-issue-shared";
 import { repositoryCommitDetailQueryOptions } from "./github-queries";
@@ -58,7 +63,7 @@ function CommitActor({
   label: string;
   locale: string;
 }) {
-  const { t } = useTranslation();
+  const { t } = useAppTranslation();
   const name = actor?.name ?? actor?.login ?? t("workspace.repositories.unknownAuthor");
   return (
     <div className="flex min-w-0 items-center gap-2.5">
@@ -96,7 +101,7 @@ function CommitFile({
   viewType: ViewType;
   onOpenFile?: (file: GitHubChangedFile) => void;
 }) {
-  const { t } = useTranslation();
+  const { t } = useAppTranslation();
   return (
     <Collapsible defaultOpen={index < 2} className="overflow-hidden rounded-lg border">
       <div className="bg-card/45 flex min-w-0 items-center gap-2 border-b px-2 py-1.5">
@@ -119,18 +124,23 @@ function CommitFile({
         <span className="text-success text-[10px]">+{file.additions}</span>
         <span className="text-destructive text-[10px]">-{file.deletions}</span>
         {onOpenFile || file.blobUrl ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            aria-label={t("workspace.repositories.viewSource")}
-            onClick={() => {
-              if (onOpenFile) onOpenFile(file);
-              else if (file.blobUrl) void openExternalUrl(file.blobUrl);
-            }}
-          >
-            <ExternalLink />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                aria-label={t("workspace.repositories.viewSource")}
+                onClick={() => {
+                  if (onOpenFile) onOpenFile(file);
+                  else if (file.blobUrl) void openExternalUrl(file.blobUrl);
+                }}
+              >
+                <ExternalLink />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t("workspace.repositories.viewSource")}</TooltipContent>
+          </Tooltip>
         ) : null}
       </div>
       {file.previousPath ? (
@@ -208,10 +218,12 @@ export function GitHubCommitDetail({
             <ArrowLeft data-icon="inline-start" />
             {backLabel ?? t("workspace.repositories.backToCommits")}
           </Button>
-          <Button variant="outline" onClick={() => void result.refetch()}>
-            <RefreshCw data-icon="inline-start" />
-            {t("workspace.repositories.retry")}
-          </Button>
+          {initialError && isRetryableCommitDetailError(initialError) ? (
+            <Button variant="outline" onClick={() => void result.refetch()}>
+              <RefreshCw data-icon="inline-start" />
+              {t("workspace.repositories.retry")}
+            </Button>
+          ) : null}
         </EmptyContent>
       </Empty>
     );
@@ -242,15 +254,20 @@ export function GitHubCommitDetail({
           <span className="text-muted-foreground min-w-0 flex-1 truncate font-mono text-[10px]">
             {commit.sha}
           </span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            aria-label={t("workspace.repositories.copyCommitSha")}
-            onClick={() => void copySha()}
-          >
-            {copied ? <Check /> : <Copy />}
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                aria-label={t("workspace.repositories.copyCommitSha")}
+                onClick={() => void copySha()}
+              >
+                {copied ? <Check /> : <Copy />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t("workspace.repositories.copyCommitSha")}</TooltipContent>
+          </Tooltip>
           <Button
             type="button"
             variant="outline"
@@ -412,10 +429,12 @@ export function GitHubCommitDetail({
           <AlertTitle>{t("workspace.repositories.commitNextPageFailed")}</AlertTitle>
           <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
             <span>{laterError.message}</span>
-            <Button variant="outline" size="xs" onClick={() => void result.fetchNextPage()}>
-              <RefreshCw data-icon="inline-start" />
-              {t("workspace.repositories.retry")}
-            </Button>
+            {isRetryableCommitDetailError(laterError) ? (
+              <Button variant="outline" size="xs" onClick={() => void result.fetchNextPage()}>
+                <RefreshCw data-icon="inline-start" />
+                {t("workspace.repositories.retry")}
+              </Button>
+            ) : null}
           </AlertDescription>
         </Alert>
       ) : null}

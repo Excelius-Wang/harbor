@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { GitHubCommitDetailPage } from "./github-data";
-import { matchingCommitDetailPages } from "./github-commit-detail-pages";
+import {
+  isRetryableCommitDetailError,
+  matchingCommitDetailPages,
+} from "./github-commit-detail-pages";
 import { parseGitHubFilePatch } from "./github-file-diff";
 
 function commitPage(page: number, sha = "a".repeat(40)): GitHubCommitDetailPage {
@@ -25,6 +28,14 @@ function commitPage(page: number, sha = "a".repeat(40)): GitHubCommitDetailPage 
 }
 
 describe("GitHub commit detail", () => {
+  it("does not offer Retry for immutable commit conflicts or validation failures", () => {
+    expect(isRetryableCommitDetailError({ code: "githubCodeConflict", message: "HTTP 409" })).toBe(
+      false
+    );
+    expect(isRetryableCommitDetailError({ code: "validation", message: "HTTP 422" })).toBe(false);
+    expect(isRetryableCommitDetailError({ code: "github", message: "HTTP 502" })).toBe(true);
+  });
+
   it("combines only contiguous pages with matching immutable metadata", () => {
     expect(matchingCommitDetailPages([commitPage(1), commitPage(2)])).toHaveLength(2);
     expect(matchingCommitDetailPages([commitPage(1), commitPage(3)])).toHaveLength(1);

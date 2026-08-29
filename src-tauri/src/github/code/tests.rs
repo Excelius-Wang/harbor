@@ -542,6 +542,24 @@ fn commit_detail_maps_merge_identity_signature_rename_and_binary_files() {
 }
 
 #[test]
+fn commit_detail_conflict_and_validation_statuses_have_non_retryable_ipc_codes() {
+    let conflict =
+        commit_detail_status_error(409, "HTTP 409".to_string()).expect("409 should be classified");
+    let validation =
+        commit_detail_status_error(422, "HTTP 422".to_string()).expect("422 should be classified");
+
+    assert_eq!(
+        serde_json::to_value(conflict).expect("serialize conflict")["code"],
+        "githubCodeConflict"
+    );
+    assert_eq!(
+        serde_json::to_value(validation).expect("serialize validation")["code"],
+        "validation"
+    );
+    assert!(commit_detail_status_error(502, "HTTP 502".to_string()).is_none());
+}
+
+#[test]
 fn commit_detail_keeps_root_nulls_and_rejects_a_different_sha() {
     let mut raw = raw_commit_detail(Vec::new());
     raw.author = None;

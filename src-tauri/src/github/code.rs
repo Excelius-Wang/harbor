@@ -850,7 +850,7 @@ async fn request_repository_commit_detail(
     let response = client.execute(request).await.map_err(github_error)?;
     let response = octocrab::map_github_error(response)
         .await
-        .map_err(github_error)?;
+        .map_err(commit_detail_error)?;
     let has_more_from_link = response
         .headers()
         .get(http::header::LINK)
@@ -866,6 +866,24 @@ async fn request_repository_commit_detail(
         .map_err(|error| AppError::GitHub(format!("GitHub returned an invalid commit: {error}")))?;
 
     commit_detail_page_from_raw(raw, commit_sha, page, has_more_from_link)
+}
+
+fn commit_detail_error(error: octocrab::Error) -> AppError {
+    let status = match &error {
+        octocrab::Error::GitHub { source, .. } => source.status_code.as_u16(),
+        _ => return github_error(error),
+    };
+    commit_detail_status_error(status, error.to_string()).unwrap_or_else(|| github_error(error))
+}
+
+fn commit_detail_status_error(status: u16, message: String) -> Option<AppError> {
+    match status {
+        409 => Some(AppError::GitHubCodeConflict(message)),
+        422 => Some(AppError::Validation(format!(
+            "commit detail is unavailable: {message}"
+        ))),
+        _ => None,
+    }
 }
 
 fn commit_detail_route(owner: &str, repository: &str, commit_sha: &str, page: u32) -> String {

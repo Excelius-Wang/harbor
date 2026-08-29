@@ -1,4 +1,17 @@
 import type { GitHubCommitDetailPage } from "./github-data";
+import type { IpcError } from "@/lib/ipc-error";
+
+const NON_RETRYABLE_COMMIT_ERROR_CODES = new Set([
+  "githubAuthentication",
+  "githubCodeConflict",
+  "githubNotConnected",
+  "githubPermission",
+  "validation",
+]);
+
+export function isRetryableCommitDetailError(error: IpcError) {
+  return !NON_RETRYABLE_COMMIT_ERROR_CODES.has(error.code);
+}
 
 export function matchingCommitDetailPages(pages: GitHubCommitDetailPage[]) {
   const first = pages[0];
