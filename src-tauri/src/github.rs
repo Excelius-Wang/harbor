@@ -107,6 +107,7 @@ pub use security::{
 pub use wiki::{
     GitHubWikiComparison, GitHubWikiHistoryPage, GitHubWikiMutationResult, GitHubWikiOverview,
     GitHubWikiPage, GitHubWikiPageMutationInput, GitHubWikiRevertInput, GitHubWikiRevision,
+    GitHubWikiSearchResult,
 };
 
 const PULL_REQUEST_SEARCH_PAGE_SIZE: u64 = 30;
@@ -664,6 +665,7 @@ pub trait CredentialStore: Send + Sync {
 
 pub struct GitHubService {
     client: Arc<dyn GitHubClient>,
+    wiki_store: Arc<dyn wiki::WikiRepositoryStore>,
     credential_store: Arc<dyn CredentialStore>,
     oauth: Option<Arc<GitHubOAuthSession>>,
     session_credentials: RwLock<Option<GitHubOAuthCredentials>>,
@@ -678,6 +680,7 @@ impl GitHubService {
     ) -> Self {
         Self {
             client,
+            wiki_store: Arc::new(wiki::GitWikiRepositoryStore),
             credential_store,
             oauth,
             session_credentials: RwLock::new(None),

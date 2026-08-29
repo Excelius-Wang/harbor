@@ -182,6 +182,7 @@ pub fn run() {
             commands::github_delete_repository_branch,
             commands::github_get_repository_wiki,
             commands::github_get_repository_wiki_page,
+            commands::github_search_repository_wiki,
             commands::github_list_repository_wiki_history,
             commands::github_get_repository_wiki_revision,
             commands::github_compare_repository_wiki_revisions,

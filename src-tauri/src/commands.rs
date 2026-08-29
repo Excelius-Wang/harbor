@@ -50,9 +50,9 @@ use crate::{
         GitHubStarredRepositoryPage, GitHubStarredRepositorySort, GitHubTagPage, GitHubUserPage,
         GitHubUserProfile, GitHubUserProfileUpdate, GitHubWikiComparison, GitHubWikiHistoryPage,
         GitHubWikiMutationResult, GitHubWikiOverview, GitHubWikiPage, GitHubWikiPageMutationInput,
-        GitHubWikiRevertInput, GitHubWikiRevision, GitHubWorkflow, GitHubWorkflowArtifactPage,
-        GitHubWorkflowDispatchConfig, GitHubWorkflowDispatchOptions, GitHubWorkflowJobLog,
-        GitHubWorkflowJobPage, GitHubWorkflowRun, GitHubWorkflowRunAction,
+        GitHubWikiRevertInput, GitHubWikiRevision, GitHubWikiSearchResult, GitHubWorkflow,
+        GitHubWorkflowArtifactPage, GitHubWorkflowDispatchConfig, GitHubWorkflowDispatchOptions,
+        GitHubWorkflowJobLog, GitHubWorkflowJobPage, GitHubWorkflowRun, GitHubWorkflowRunAction,
         GitHubWorkflowRunFilterOptions, GitHubWorkflowRunFilters, GitHubWorkflowRunPage,
         GitHubWorkflowRunStatusFilter,
     },
@@ -2758,6 +2758,30 @@ pub async fn github_get_repository_wiki_page(
             repository.name(),
             &head_sha,
             &path,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_search_repository_wiki(
+    owner: String,
+    repository: String,
+    repository_id: u64,
+    head_sha: String,
+    query: String,
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<GitHubWikiSearchResult, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .search_repository_wiki(
+            wiki_cache_root(&app)?,
+            repository_id,
+            repository.owner(),
+            repository.name(),
+            &head_sha,
+            &query,
         )
         .await
 }

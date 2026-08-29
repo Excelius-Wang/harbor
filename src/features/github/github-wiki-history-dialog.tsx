@@ -28,6 +28,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { parseIpcError } from "@/lib/ipc-error";
 import { cn } from "@/lib/utils";
 import { openExternalUrl } from "@/lib/window";
@@ -214,33 +215,47 @@ export function GitHubWikiHistoryDialog({
                 </div>
               </ScrollArea>
               <div className="flex items-center justify-between gap-2 border-t p-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon-sm"
-                  aria-label={t("workspace.repositories.wiki.previousHistoryPage")}
-                  disabled={historyPage === 1}
-                  onClick={() => {
-                    setHistoryPage((current) => Math.max(1, current - 1));
-                    setSelectedSha(null);
-                  }}
-                >
-                  <ArrowLeft />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      aria-label={t("workspace.repositories.wiki.previousHistoryPage")}
+                      disabled={historyPage === 1}
+                      onClick={() => {
+                        setHistoryPage((current) => Math.max(1, current - 1));
+                        setSelectedSha(null);
+                      }}
+                    >
+                      <ArrowLeft />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t("workspace.repositories.wiki.previousHistoryPage")}
+                  </TooltipContent>
+                </Tooltip>
                 <span className="text-muted-foreground text-[11px]">{historyPage}</span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon-sm"
-                  aria-label={t("workspace.repositories.wiki.nextHistoryPage")}
-                  disabled={!historyResult.data?.hasMore}
-                  onClick={() => {
-                    setHistoryPage((current) => current + 1);
-                    setSelectedSha(null);
-                  }}
-                >
-                  <ArrowRight />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      aria-label={t("workspace.repositories.wiki.nextHistoryPage")}
+                      disabled={!historyResult.data?.hasMore}
+                      onClick={() => {
+                        setHistoryPage((current) => current + 1);
+                        setSelectedSha(null);
+                      }}
+                    >
+                      <ArrowRight />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t("workspace.repositories.wiki.nextHistoryPage")}
+                  </TooltipContent>
+                </Tooltip>
               </div>
             </aside>
 

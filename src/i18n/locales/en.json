@@ -879,6 +879,8 @@
         "pages": "Pages",
         "searchPages": "Search pages",
         "noMatchingPages": "No pages match this search.",
+        "searchFailed": "Harbor could not search this Wiki snapshot.",
+        "searchTruncated": "Showing the first 100 matching pages.",
         "newPage": "New page",
         "refresh": "Refresh Wiki",
         "loadFailed": "Harbor could not load this Wiki",

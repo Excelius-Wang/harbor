@@ -89,6 +89,7 @@ import type {
   GitHubWikiHistoryPage,
   GitHubWikiPage,
   GitHubWikiRevision,
+  GitHubWikiSearchResult,
   GitHubUserPage,
   GitHubUserProfile,
 } from "./github-data";
@@ -128,6 +129,12 @@ export type GitHubWikiComparisonTarget = GitHubRepositoryTarget & {
   path: string;
   baseSha: string;
   headSha: string;
+};
+
+export type GitHubWikiSearchTarget = GitHubRepositoryTarget & {
+  repositoryId: number;
+  headSha: string;
+  query: string;
 };
 
 export type GitHubDiscussionsTarget = GitHubRepositoryTarget & {
@@ -352,6 +359,8 @@ export const githubQueryKeys = {
     ["github", "repository", owner, repository, "wiki"] as const,
   repositoryWikiPage: ({ owner, repository, headSha, path }: GitHubWikiPageTarget) =>
     ["github", "repository", owner, repository, "wiki", "page", headSha, path] as const,
+  repositoryWikiSearch: ({ owner, repository, headSha, query }: GitHubWikiSearchTarget) =>
+    ["github", "repository", owner, repository, "wiki", "search", headSha, query] as const,
   repositoryWikiHistory: ({ owner, repository, headSha, path, page }: GitHubWikiHistoryTarget) =>
     ["github", "repository", owner, repository, "wiki", "history", headSha, path, page] as const,
   repositoryWikiRevision: ({ owner, repository, commitSha, path }: GitHubWikiRevisionTarget) =>
@@ -891,6 +900,14 @@ export function repositoryWikiPageQueryOptions(target: GitHubWikiPageTarget) {
   return queryOptions({
     queryKey: githubQueryKeys.repositoryWikiPage(target),
     queryFn: () => invoke<GitHubWikiPage>("github_get_repository_wiki_page", target),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+}
+
+export function repositoryWikiSearchQueryOptions(target: GitHubWikiSearchTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.repositoryWikiSearch(target),
+    queryFn: () => invoke<GitHubWikiSearchResult>("github_search_repository_wiki", target),
     staleTime: Number.POSITIVE_INFINITY,
   });
 }

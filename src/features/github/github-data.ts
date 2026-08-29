@@ -56,6 +56,11 @@ export type GitHubWikiPage = GitHubWikiPageSummary & {
   headSha: string;
 };
 
+export type GitHubWikiSearchResult = {
+  pages: GitHubWikiPageSummary[];
+  truncated: boolean;
+};
+
 export type GitHubWikiPageMutationInput = {
   originalPath?: string;
   title: string;
