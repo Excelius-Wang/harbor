@@ -11,6 +11,7 @@ import type {
   GitHubIssue,
   GitHubIssueTimelineItem,
   GitHubPullRequest,
+  GitHubPullRequestReview,
   GitHubPullRequestReviewState,
   GitHubReactionSubjectRef,
   GitHubRepositoryContentContext,
@@ -21,9 +22,28 @@ import {
 } from "./github-conversation-comment-actions";
 import { GitHubReactionBar } from "./github-reaction-bar";
 import { GitHubReactionsProvider } from "./github-reactions-provider";
+import { GitHubPullRequestReviewDismissalAction } from "./github-pull-request-review-dismissal";
 import { formatIssueDate, GitHubIssuePagination } from "./github-issue-shared";
 
 const GitHubReadme = lazy(() => import("./github-readme"));
+
+export function pullRequestReviewFromTimelineItem(
+  item: GitHubIssueTimelineItem
+): GitHubPullRequestReview | null {
+  if (item.event !== "reviewed" || !item.reviewId || !item.actor || !item.reviewState) return null;
+  return {
+    id: item.reviewId,
+    nodeId: item.id,
+    author: item.actor,
+    ...(item.actorAvatarUrl ? { authorAvatarUrl: item.actorAvatarUrl } : {}),
+    ...(item.authorAssociation ? { authorAssociation: item.authorAssociation } : {}),
+    state: item.reviewState,
+    ...(item.body ? { body: item.body } : {}),
+    url: item.url ?? "",
+    ...(item.commitId ? { commitId: item.commitId } : {}),
+    ...(item.createdAt ? { submittedAt: item.createdAt } : {}),
+  };
+}
 
 function TimelineEvent({ item, locale }: { item: GitHubIssueTimelineItem; locale: string }) {
   const { t } = useTranslation();
@@ -161,6 +181,42 @@ function ConversationCard({
   );
 }
 
+function PullRequestReviewConversationCard({
+  item,
+  repository,
+  locale,
+  target,
+}: {
+  item: GitHubIssueTimelineItem;
+  repository: GitHubRepositoryContentContext;
+  locale: string;
+  target: GitHubConversationCommentTarget;
+}) {
+  const { t } = useTranslation();
+  const review = pullRequestReviewFromTimelineItem(item);
+  if (!item.actor) return null;
+
+  return (
+    <ConversationCard
+      actor={item.actor}
+      avatarUrl={item.actorAvatarUrl}
+      association={item.authorAssociation}
+      body={item.body}
+      createdAt={item.createdAt}
+      repository={repository}
+      locale={locale}
+      emptyBody={t("workspace.repositories.reviewWithoutBody")}
+      reviewState={item.reviewState ?? "commented"}
+      reactionSubject={item.reactionSubject}
+      headerActions={
+        review && target.kind === "pullRequest" ? (
+          <GitHubPullRequestReviewDismissalAction target={target} review={review} />
+        ) : null
+      }
+    />
+  );
+}
+
 export function GitHubIssueTimeline({
   issue,
   timeline,
@@ -235,17 +291,11 @@ export function GitHubIssueTimeline({
             </div>
           ) : item.event === "reviewed" && item.actor && item.createdAt ? (
             <div key={item.id} className="relative z-10 pl-10">
-              <ConversationCard
-                actor={item.actor}
-                avatarUrl={item.actorAvatarUrl}
-                association={item.authorAssociation}
-                body={item.body}
-                createdAt={item.createdAt}
+              <PullRequestReviewConversationCard
+                item={item}
                 repository={repository}
                 locale={locale}
-                emptyBody={t("workspace.repositories.reviewWithoutBody")}
-                reviewState={item.reviewState ?? "commented"}
-                reactionSubject={item.reactionSubject}
+                target={commentTarget}
               />
             </div>
           ) : (

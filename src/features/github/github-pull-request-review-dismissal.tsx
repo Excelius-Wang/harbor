@@ -1,4 +1,7 @@
+import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CircleAlert, MoreHorizontal, ShieldX } from "lucide-react";
+import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,8 +21,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAppTranslation } from "@/hooks/use-app-translation";
+import { parseIpcError } from "@/lib/ipc-error";
 import type { GitHubPullRequestReview, GitHubPullRequestReviewState } from "./github-data";
+import {
+  dismissRepositoryPullRequestReview,
+  invalidatePullRequestAfterReviewDismissal,
+  syncDismissedPullRequestReview,
+  type GitHubPullRequestMutationTarget,
+} from "./github-pull-request-mutations";
 
 export function canDismissPullRequestReview(state: GitHubPullRequestReviewState) {
   return state === "approved" || state === "changesRequested";
@@ -37,16 +48,21 @@ export function GitHubPullRequestReviewDismissalMenu({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          aria-label={t("workspace.repositories.reviewMenu")}
-        >
-          <MoreHorizontal />
-        </Button>
-      </DropdownMenuTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              aria-label={t("workspace.repositories.reviewMenu")}
+            >
+              <MoreHorizontal />
+            </Button>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent>{t("workspace.repositories.reviewMenu")}</TooltipContent>
+      </Tooltip>
       <DropdownMenuContent align="end">
         <DropdownMenuGroup>
           <DropdownMenuItem variant="destructive" onSelect={onSelect}>
@@ -56,6 +72,76 @@ export function GitHubPullRequestReviewDismissalMenu({
         </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+export function GitHubPullRequestReviewDismissalAction({
+  target,
+  review,
+}: {
+  target: GitHubPullRequestMutationTarget;
+  review: GitHubPullRequestReview;
+}) {
+  const { t } = useAppTranslation();
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [message, setMessage] = useState("");
+  const clearDismissal = () => {
+    setOpen(false);
+    setMessage("");
+  };
+  const mutation = useMutation({
+    mutationFn: (reason: string) => dismissRepositoryPullRequestReview(target, review.id, reason),
+    onSuccess: (updated) => {
+      syncDismissedPullRequestReview(queryClient, target, updated);
+      clearDismissal();
+      toast.success(t("workspace.repositories.reviewDismissed"));
+      void invalidatePullRequestAfterReviewDismissal(queryClient, target);
+    },
+    onError: () => {
+      void invalidatePullRequestAfterReviewDismissal(queryClient, target);
+    },
+  });
+  const parsedError = mutation.error ? parseIpcError(mutation.error) : null;
+  const error = parsedError
+    ? parsedError.code === "githubPermission"
+      ? t("workspace.repositories.pullRequestWritePermissionDenied")
+      : parsedError.code === "githubPullRequestReviewDismissalConflict"
+        ? t("workspace.repositories.dismissReviewConflict")
+        : parsedError.message
+    : null;
+
+  return (
+    <>
+      <GitHubPullRequestReviewDismissalMenu
+        review={review}
+        onSelect={() => {
+          mutation.reset();
+          setOpen(true);
+          setMessage("");
+        }}
+      />
+      <GitHubPullRequestReviewDismissalDialog
+        open={open}
+        review={review}
+        message={message}
+        pending={mutation.isPending}
+        error={error}
+        onMessageChange={(next) => {
+          mutation.reset();
+          setMessage(next);
+        }}
+        onConfirm={() => {
+          const reason = message.trim();
+          if (reason) mutation.mutate(reason);
+        }}
+        onOpenChange={(next) => {
+          if (next) return;
+          mutation.reset();
+          clearDismissal();
+        }}
+      />
+    </>
   );
 }
 

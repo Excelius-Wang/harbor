@@ -291,6 +291,7 @@ impl GitHubIssueClient for super::super::tests::FakeGitHubClient {
             rename_from: None,
             rename_to: None,
             commit_id: None,
+            review_id: None,
             review_state: None,
         })
     }

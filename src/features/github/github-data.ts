@@ -1420,6 +1420,7 @@ export type GitHubIssueTimelineItem = {
   renameFrom?: string;
   renameTo?: string;
   commitId?: string;
+  reviewId?: number;
   reviewState?: GitHubPullRequestReviewState;
 };
 

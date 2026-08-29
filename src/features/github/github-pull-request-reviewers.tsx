@@ -32,19 +32,13 @@ import type {
   GitHubPullRequestReviewTeam,
 } from "./github-data";
 import {
-  dismissRepositoryPullRequestReview,
-  invalidatePullRequestAfterReviewDismissal,
   invalidateRepositoryPullRequest,
   removeRepositoryPullRequestReviewers,
   requestRepositoryPullRequestReviewers,
-  syncDismissedPullRequestReview,
   syncUpdatedPullRequest,
   type GitHubPullRequestMutationTarget,
 } from "./github-pull-request-mutations";
-import {
-  GitHubPullRequestReviewDismissalDialog,
-  GitHubPullRequestReviewDismissalMenu,
-} from "./github-pull-request-review-dismissal";
+import { GitHubPullRequestReviewDismissalAction } from "./github-pull-request-review-dismissal";
 import { GitHubPullRequestConvertToDraft } from "./github-pull-request-lifecycle";
 import { ReviewStateIcon, summarizeReviews } from "./github-pull-request-shared";
 import {
@@ -364,10 +358,7 @@ export function GitHubPullRequestReviewers({
   reviewsHaveMore: boolean;
 }) {
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [dismissalReview, setDismissalReview] = useState<GitHubPullRequestReview | null>(null);
-  const [dismissalMessage, setDismissalMessage] = useState("");
   const target: GitHubPullRequestMutationTarget = {
     owner: repository.owner,
     repository: repository.name,
@@ -392,28 +383,6 @@ export function GitHubPullRequestReviewers({
     [reviewsQuery.data.pages]
   );
   const reviewSummary = useMemo(() => summarizeReviews(loadedReviews), [loadedReviews]);
-  const dismissal = useMutation({
-    mutationFn: ({ review, message }: { review: GitHubPullRequestReview; message: string }) =>
-      dismissRepositoryPullRequestReview(target, review.id, message),
-    onSuccess: (updated) => {
-      syncDismissedPullRequestReview(queryClient, target, updated);
-      setDismissalReview(null);
-      setDismissalMessage("");
-      toast.success(t("workspace.repositories.reviewDismissed"));
-      void invalidatePullRequestAfterReviewDismissal(queryClient, target);
-    },
-    onError: () => {
-      void invalidatePullRequestAfterReviewDismissal(queryClient, target);
-    },
-  });
-  const dismissalError = dismissal.error ? parseIpcError(dismissal.error) : null;
-  const dismissalErrorMessage = dismissalError
-    ? dismissalError.code === "githubPermission"
-      ? t("workspace.repositories.pullRequestWritePermissionDenied")
-      : dismissalError.code === "githubPullRequestReviewDismissalConflict"
-        ? t("workspace.repositories.dismissReviewConflict")
-        : dismissalError.message
-    : null;
   const requestedUsers = new Set(
     pullRequest.requestedReviewers.map((reviewer) => reviewer.toLocaleLowerCase())
   );
@@ -448,26 +417,10 @@ export function GitHubPullRequestReviewers({
         </div>
         <div className="flex flex-col gap-2">
           {changesRequested.map((review) => (
-            <ReviewerState
-              key={review.id}
-              review={review}
-              onDismiss={() => {
-                dismissal.reset();
-                setDismissalReview(review);
-                setDismissalMessage("");
-              }}
-            />
+            <ReviewerState key={review.id} review={review} target={target} />
           ))}
           {approved.map((review) => (
-            <ReviewerState
-              key={review.id}
-              review={review}
-              onDismiss={() => {
-                dismissal.reset();
-                setDismissalReview(review);
-                setDismissalMessage("");
-              }}
-            />
+            <ReviewerState key={review.id} review={review} target={target} />
           ))}
           {pullRequest.requestedReviewers.map((reviewer) => (
             <div key={reviewer} className="flex min-w-0 items-center gap-2 text-xs">
@@ -534,37 +487,16 @@ export function GitHubPullRequestReviewers({
           onOpenChange={setOpen}
         />
       ) : null}
-      <GitHubPullRequestReviewDismissalDialog
-        open={Boolean(dismissalReview)}
-        review={dismissalReview}
-        message={dismissalMessage}
-        pending={dismissal.isPending}
-        error={dismissalErrorMessage}
-        onMessageChange={(message) => {
-          dismissal.reset();
-          setDismissalMessage(message);
-        }}
-        onConfirm={() => {
-          if (!dismissalReview || !dismissalMessage.trim()) return;
-          dismissal.mutate({ review: dismissalReview, message: dismissalMessage.trim() });
-        }}
-        onOpenChange={(next) => {
-          if (next) return;
-          dismissal.reset();
-          setDismissalReview(null);
-          setDismissalMessage("");
-        }}
-      />
     </>
   );
 }
 
 function ReviewerState({
   review,
-  onDismiss,
+  target,
 }: {
   review: GitHubPullRequestReview;
-  onDismiss: () => void;
+  target: GitHubPullRequestMutationTarget;
 }) {
   const { t } = useTranslation();
   return (
@@ -574,7 +506,7 @@ function ReviewerState({
       <span className="text-muted-foreground ml-auto text-[9px]">
         {t(`workspace.repositories.reviewStates.${review.state}`)}
       </span>
-      <GitHubPullRequestReviewDismissalMenu review={review} onSelect={onDismiss} />
+      <GitHubPullRequestReviewDismissalAction target={target} review={review} />
     </div>
   );
 }

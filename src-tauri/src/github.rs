@@ -4126,6 +4126,7 @@ mod tests {
         let item = timeline_item_from_octocrab(event, 0);
 
         assert_eq!(item.event, "reviewed");
+        assert_eq!(item.review_id, Some(43));
         assert_eq!(
             item.review_state,
             Some(GitHubPullRequestReviewState::Approved)

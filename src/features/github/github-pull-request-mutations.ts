@@ -548,6 +548,7 @@ export function syncCreatedPullRequestReview(
                   url: review.url,
                   createdAt: review.submittedAt,
                   commitId: review.commitId,
+                  reviewId: review.id,
                   reviewState: review.state,
                   viewerCanUpdate: false,
                   viewerCanDelete: false,
@@ -603,6 +604,11 @@ export function syncDismissedPullRequestReview(
         ? {
             ...detail,
             reviews: detail.reviews.map((item) => (item.id === review.id ? review : item)),
+            timeline: detail.timeline.map((item) =>
+              item.reviewId === review.id || item.id === review.nodeId
+                ? { ...item, reviewId: review.id, reviewState: review.state }
+                : item
+            ),
           }
         : detail
   );

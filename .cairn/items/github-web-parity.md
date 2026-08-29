@@ -46,10 +46,17 @@ dialog and input while refreshing authoritative state. Submitted reviews also re
 paged cache, including the exact 100-item boundary. English, Chinese, ARIA, transport, identity,
 eligibility, validation, error-category, query, and cache regressions are covered.
 
-Pre-PR verification passes `pnpm check` with 36 frontend files and 197 tests, and Rust library tests
-with 336 passing and two intentional ignores. `cargo check`, rustfmt, and `git diff --check` pass.
-Strict Clippy reports exactly the 15 pre-existing warnings and no warning in this slice. Standards
-and Spec review are still required before merge.
+Initial Standards review found a missing tooltip on the icon-only menu and duplicated dialog-state
+setup; initial Spec review found no action on historical timeline reviews, generic errors for
+malformed successful REST responses, and partial pagination/postflight tests. All findings are fixed:
+one reusable dismissal action owns the menu/dialog/mutation, eligible timeline cards retain numeric
+review IDs, malformed `200` payloads remain refreshable conflicts, and focused tests traverse two
+Review pages plus null and mismatched postflight responses. Independent re-review is pending.
+
+Post-fix verification passes `pnpm check` with 36 frontend files and 199 tests, and Rust library tests
+with 337 passing and two intentional ignores. `cargo check`, rustfmt, and `git diff --check` pass.
+Strict Clippy previously reported exactly the 15 pre-existing warnings and no warning in this slice;
+rerun it on the reviewed head before merge.
 
 The original worktree remains on local recovery branch
 `checkpoint/github-actions-administration-20260830` at `7e2084f` with only its older Cairn item
@@ -67,8 +74,8 @@ refresh tokens, or Keychain contents.
 
 ## Next action
 
-Commit and push the verified review-dismissal slice, open its Draft PR, run independent Standards and
-Spec reviews, fix every finding, then mark Ready and squash-merge when clean.
+Commit and push the PR #15 review fixes, obtain clean Standards and Spec re-reviews, then mark Ready
+and squash-merge when clean.
 
 ## Verification
 

@@ -282,7 +282,24 @@ describe("GitHub pull request mutations", () => {
     const queryClient = createQueryClient();
     const detailKey = githubQueryKeys.pullRequestDetail({ ...target, timelinePage: 1 });
     const reviewsKey = githubQueryKeys.pullRequestReviews(target);
-    queryClient.setQueryData(detailKey, { ...detailPage(), reviews: [review] });
+    queryClient.setQueryData(detailKey, {
+      ...detailPage(),
+      reviews: [review],
+      timeline: [
+        {
+          id: review.nodeId,
+          reviewId: review.id,
+          kind: "event",
+          event: "reviewed",
+          actor: review.author,
+          createdAt: "2026-08-26T12:00:00Z",
+          viewerCanUpdate: false,
+          viewerCanDelete: false,
+          isMinimized: false,
+          reviewState: review.state,
+        },
+      ],
+    });
     queryClient.setQueryData<InfiniteData<GitHubPullRequestReviewPage, number>>(reviewsKey, {
       pages: [{ reviews: [review], page: 1, hasPrevious: false, hasMore: false }],
       pageParams: [1],
@@ -294,6 +311,9 @@ describe("GitHub pull request mutations", () => {
     expect(queryClient.getQueryData<GitHubPullRequestDetailPage>(detailKey)?.reviews[0].state).toBe(
       "dismissed"
     );
+    expect(
+      queryClient.getQueryData<GitHubPullRequestDetailPage>(detailKey)?.timeline[0].reviewState
+    ).toBe("dismissed");
     expect(
       queryClient.getQueryData<InfiniteData<GitHubPullRequestReviewPage, number>>(reviewsKey)
         ?.pages[0].reviews[0].state

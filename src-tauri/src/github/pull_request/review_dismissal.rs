@@ -271,6 +271,14 @@ fn review_dismissal_error(error: octocrab::Error) -> AppError {
             return mapped;
         }
     }
+    if matches!(
+        error,
+        octocrab::Error::Serde { .. } | octocrab::Error::Json { .. }
+    ) {
+        return AppError::GitHubPullRequestReviewDismissalConflict(format!(
+            "GitHub returned a malformed pull request review: {error}"
+        ));
+    }
     github_error(error)
 }
 
@@ -611,5 +619,72 @@ mod tests {
             };
             assert!(mapped, "{status} mapped to {error:?}");
         }
+    }
+
+    #[tokio::test]
+    async fn null_and_mismatched_success_responses_are_refreshable_conflicts() {
+        let (client, _requests, server) = mock_github(vec![
+            MockResponse {
+                status: "200 OK",
+                headers: "",
+                body: review_json("APPROVED"),
+            },
+            MockResponse {
+                status: "200 OK",
+                headers: "",
+                body: "null".to_string(),
+            },
+        ])
+        .await;
+        let null_error = dismiss_pull_request_review_with_client(
+            &client,
+            "octocat",
+            "hello-world",
+            12,
+            86,
+            "Outdated approval",
+        )
+        .await
+        .expect_err("null mutation response");
+        server.await.expect("mock server");
+        assert!(matches!(
+            null_error,
+            AppError::GitHubPullRequestReviewDismissalConflict(_)
+        ));
+
+        let mismatched_postflight = review_json("DISMISSED").replace("PRR_86", "PRR_other");
+        let (client, _requests, server) = mock_github(vec![
+            MockResponse {
+                status: "200 OK",
+                headers: "",
+                body: review_json("APPROVED"),
+            },
+            MockResponse {
+                status: "200 OK",
+                headers: "",
+                body: review_json("DISMISSED"),
+            },
+            MockResponse {
+                status: "200 OK",
+                headers: "",
+                body: mismatched_postflight,
+            },
+        ])
+        .await;
+        let postflight_error = dismiss_pull_request_review_with_client(
+            &client,
+            "octocat",
+            "hello-world",
+            12,
+            86,
+            "Outdated approval",
+        )
+        .await
+        .expect_err("mismatched postflight response");
+        server.await.expect("mock server");
+        assert!(matches!(
+            postflight_error,
+            AppError::GitHubPullRequestReviewDismissalConflict(_)
+        ));
     }
 }
