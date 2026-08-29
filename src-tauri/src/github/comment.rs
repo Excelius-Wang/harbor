@@ -11,7 +11,8 @@ use crate::error::AppError;
 
 use super::{
     authenticated_client, github_error, issue::GitHubIssueTimelineKind, GitHubIssueTimelineItem,
-    GitHubPullRequestReviewThreadComment, GitHubService, OctocrabGitHubClient,
+    GitHubPullRequestReviewThreadComment, GitHubReactionSubjectKind, GitHubReactionSubjectRef,
+    GitHubService, OctocrabGitHubClient,
 };
 
 const COMMENT_NODES_QUERY: &str = r#"
@@ -633,6 +634,10 @@ fn ensure_mutation_identity(actual: Option<&str>, expected: &str) -> Result<(), 
 fn issue_timeline_item_from_graphql(node: IssueCommentNode) -> GitHubIssueTimelineItem {
     let (actor, actor_avatar_url) = actor_from_graphql(node.author);
     GitHubIssueTimelineItem {
+        reaction_subject: Some(GitHubReactionSubjectRef {
+            id: node.id.clone(),
+            kind: GitHubReactionSubjectKind::IssueComment,
+        }),
         id: node.id,
         kind: GitHubIssueTimelineKind::Comment,
         event: "commented".to_string(),

@@ -22,6 +22,10 @@ impl GitHubCommentClient for super::super::tests::FakeGitHubClient {
                 body,
             } => Ok(Some(GitHubIssueTimelineItem {
                 id: comment_id.clone(),
+                reaction_subject: Some(GitHubReactionSubjectRef {
+                    id: comment_id.clone(),
+                    kind: GitHubReactionSubjectKind::IssueComment,
+                }),
                 kind: GitHubIssueTimelineKind::Comment,
                 event: "commented".to_string(),
                 actor: Some("octocat".to_string()),

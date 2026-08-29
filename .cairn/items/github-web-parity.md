@@ -470,6 +470,10 @@ shadcn UI and focused TanStack Query roots cover loading, empty, permission, bui
 archived, narrow-layout, and destructive-confirmation states. PR #11 is open, mergeable, and clean:
 https://github.com/Excelius-Wang/harbor/pull/11 (`2515932`). Playwright CLI session state is now
 ignored by Git through `.playwright-cli/`.
+The clean integration branch `integration/prs-1-11-20260829` now contains the latest heads of pull
+requests #1 through #11 plus the three cross-slice reaction/comment fixture corrections exposed only
+when those branches are combined. Its frontend suite has 32 passing files and 173 tests; the Rust
+library has 310 passing tests and two intentional ignores. Clippy passes with 15 existing warnings.
 The workspace shell is responsive, starts at 1600x1000, and remains usable down to 900x620.
 Repository Wiki now has a native personal-developer workflow behind a focused Git-backed service.
 Harbor discovers the Wiki's real default branch, keeps a bounded bare cache per immutable repository
@@ -488,8 +492,9 @@ The verified Wiki slice is published as GitHub pull request #3 from `feat/reposi
 
 ## Next action
 
-Complete the cumulative integration and verification of pull requests #1 through #11, then merge
-them through the protected `main` branch without disturbing the parked Actions administration work.
+Review the cumulative integration diff, complete the credential-gated Personal Packages OAuth probe,
+then merge it through the protected `main` branch without disturbing the parked Actions
+administration work.
 
 ## Verification
 

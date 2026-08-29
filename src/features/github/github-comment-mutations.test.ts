@@ -120,6 +120,7 @@ describe("GitHub comment mutations", () => {
         labels: [],
         locked: false,
         comments: 1,
+        reactionSubject: { id: "I_7", kind: "issue" },
         createdAt: "2026-08-29T08:00:00Z",
         updatedAt: "2026-08-29T08:00:00Z",
       },
