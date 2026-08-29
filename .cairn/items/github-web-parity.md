@@ -369,6 +369,7 @@ header keeps a permanent invitation entry even when the inbox is empty, while ex
 UI preserves repository, inviter, permission, privacy, pagination, loading, empty, retry, confirmed
 decline, mutation failure, and responsive states. Accepted invitations invalidate the authenticated
 repository cache; both actions reconcile the invitation and notification caches by immutable IDs.
+The verified slice is open as PR #9 from `feat/github-repository-invitations`.
 The workspace shell is responsive, starts at 1600x1000, and remains usable down to 900x620.
 
 ## Next action
