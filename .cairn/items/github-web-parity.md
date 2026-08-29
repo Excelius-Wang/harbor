@@ -376,9 +376,9 @@ The workspace shell is responsive, starts at 1600x1000, and remains usable down 
 
 ## Next action
 
-Audit the next missing personal-developer GitHub Web workflow from `origin/main`, then start one fresh
-vertical slice that reuses the existing Interfaces, TanStack Query roots, and shadcn components. Keep
-organization administration, Enterprise controls, and advanced organization security out of scope.
+Audit `origin/main` and the open PR set to select the next missing personal-developer GitHub Web
+vertical slice. Keep organization administration, Enterprise controls, and advanced organization
+security out of scope.
 
 ## Verification
 
@@ -400,9 +400,7 @@ Repository Code mutation verification covers exact Tauri contracts, atomic renam
 file and branch guards, Git-compatible branch validation, empty-repository initialization, stable
 conflict errors, saved-credential delegation, and focused query reconciliation. `pnpm check` passes
 with 125 frontend tests; 224 Rust tests pass with one external DeepWiki test ignored by design;
-`cargo fmt --check`, `cargo check`, the production build, and `git diff --check` pass. The desktop
-fixture verified exact-SHA branch creation, branch switching, first-file creation, and rendered source
-content. Rename, deletion, and the final 900x620 interaction pass remain the next recovery action.
+`cargo fmt --check`, `cargo check`, the production build, and `git diff --check` pass.
 
 Success: `pnpm check` passes; a 70-repository Playwright fixture with a 240-character unbroken token
 keeps `scrollWidth === clientWidth` at both 1600x1000 and 900x620, with 12px between descriptions and
