@@ -361,13 +361,25 @@ SHA confirmation. The focused `GitHubCodeMutationClient` owns normalization, per
 repository guards, conflict mapping, Git transport, response verification, and tests. The Code UI
 reuses the existing overview, Markdown editor, Shiki preview, shadcn dialogs, toasts, and query roots;
 workflow-file scope requirements and protected/default-branch failures remain explicit.
+Issue and pull request conversation comments plus submitted pull request review comments now support
+native editing and confirmed permanent deletion. The focused `GitHubCommentClient` preloads the
+selected repository, exact comment node, parent Issue or pull request, viewer capabilities, and
+displayed revision before writing through GitHub's current GraphQL mutations. Issue comments and
+pull request conversation comments remain explicitly discriminated even though GitHub models both
+as `IssueComment`; submitted review comments require `PullRequestReviewComment` and `SUBMITTED`
+state. Returned comments update every matching TanStack Query cache before focused invalidation,
+while deletion refetches the authoritative parent instead of guessing counts or tombstones. Shared
+shadcn edit and destructive-confirmation dialogs preserve Markdown drafts across conflict and
+permission failures. Review comment database IDs accept GitHub's current GraphQL `BigInt` string
+shape instead of relying on the removed integer field.
 The workspace shell is responsive, starts at 1600x1000, and remains usable down to 900x620.
 
 ## Next action
 
-Complete the remaining deterministic desktop checks for repository file rename, file deletion, and
-the 900x620 layout, then audit the next missing personal-developer GitHub Web workflow. Keep
-organization administration, Enterprise controls, and advanced organization security out of scope.
+Push the completed comment-lifecycle slice and open its pull request, then audit the remaining
+personal-developer GitHub Web surface and implement the highest-value missing vertical workflow.
+Keep organization administration, Enterprise controls, and advanced organization security out of
+scope.
 
 ## Verification
 
@@ -375,13 +387,26 @@ Each GitHub parity slice must use real API data, cover loading/empty/error/permi
 repository context and navigation, and complete its primary path without forcing a browser fallback.
 Run `pnpm check`, the Rust check suite when Rust changes, and a focused desktop interaction check.
 
+Comment-lifecycle verification covers current official GraphQL node and mutation contracts, exact
+Issue versus pull request parent discrimination, repository scope, viewer capabilities, submitted
+review state, displayed-revision conflicts, nullable mutation payloads, client-mutation identity,
+and GraphQL `BigInt` review comment IDs. `pnpm check` passes with 130 frontend tests; 235 Rust tests
+pass with one external DeepWiki test ignored by design; `cargo fmt --check`, `cargo check`, the
+production build, and `git diff --check` pass. The deterministic desktop fixture verified edit and
+delete flows for Issue comments, pull request conversation comments, and submitted review comments,
+including exact Tauri arguments, authoritative refetch after deletion, retained Markdown after a
+conflict, and capability-gated actions. At 1600x1000 and 900x620, dialogs remain inside the viewport,
+document width equals viewport width, and the browser console reports zero errors and warnings.
+
 Repository Code mutation verification covers exact Tauri contracts, atomic rename payloads, stale
 file and branch guards, Git-compatible branch validation, empty-repository initialization, stable
 conflict errors, saved-credential delegation, and focused query reconciliation. `pnpm check` passes
 with 125 frontend tests; 224 Rust tests pass with one external DeepWiki test ignored by design;
 `cargo fmt --check`, `cargo check`, the production build, and `git diff --check` pass. The desktop
 fixture verified exact-SHA branch creation, branch switching, first-file creation, and rendered source
-content. Rename, deletion, and the final 900x620 interaction pass remain the next recovery action.
+content. The final desktop pass also verified exact rename and delete Tauri payloads, return to the
+parent directory after each write, authoritative refetching, and a clean 900x620 layout with no root
+overflow or browser console warnings.
 
 Success: `pnpm check` passes; a 70-repository Playwright fixture with a 240-character unbroken token
 keeps `scrollWidth === clientWidth` at both 1600x1000 and 900x620, with 12px between descriptions and

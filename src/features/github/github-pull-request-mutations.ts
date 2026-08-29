@@ -492,6 +492,10 @@ export function syncCreatedPullRequestReview(
                   createdAt: review.submittedAt,
                   commitId: review.commitId,
                   reviewState: review.state,
+                  viewerCanUpdate: false,
+                  viewerCanDelete: false,
+                  isMinimized: false,
+                  outdated: false,
                 },
               ],
       };

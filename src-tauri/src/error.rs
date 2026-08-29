@@ -25,6 +25,8 @@ pub enum AppError {
     GitHubPullRequestMergeQueueConflict(String),
     #[error("GitHub could not commit the repository change: {0}")]
     GitHubCodeConflict(String),
+    #[error("GitHub comment changed: {0}")]
+    GitHubCommentConflict(String),
     #[error("GitHub workflow artifact has expired")]
     GitHubArtifactExpired,
     #[error("GitHub authentication error: {0}")]
@@ -63,6 +65,7 @@ impl Serialize for AppError {
             Self::GitHubPullRequestAutoMergeConflict(_) => "githubPullRequestAutoMergeConflict",
             Self::GitHubPullRequestMergeQueueConflict(_) => "githubPullRequestMergeQueueConflict",
             Self::GitHubCodeConflict(_) => "githubCodeConflict",
+            Self::GitHubCommentConflict(_) => "githubCommentConflict",
             Self::GitHubArtifactExpired => "githubArtifactExpired",
             Self::GitHubAuthentication(_) => "githubAuthentication",
             Self::GitHubNotConnected => "githubNotConnected",
@@ -234,6 +237,22 @@ mod tests {
             serde_json::json!({
                 "code": "githubCodeConflict",
                 "message": "GitHub could not commit the repository change: the file changed before the commit was created"
+            })
+        );
+    }
+
+    #[test]
+    fn github_comment_conflict_has_a_stable_ipc_code() {
+        let payload = serde_json::to_value(AppError::GitHubCommentConflict(
+            "the comment changed after it was loaded".to_string(),
+        ))
+        .expect("serialize error");
+
+        assert_eq!(
+            payload,
+            serde_json::json!({
+                "code": "githubCommentConflict",
+                "message": "GitHub comment changed: the comment changed after it was loaded"
             })
         );
     }

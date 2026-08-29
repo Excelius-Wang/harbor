@@ -932,6 +932,10 @@ export type GitHubIssueTimelineItem = {
   url?: string;
   createdAt?: string;
   updatedAt?: string;
+  viewerCanUpdate: boolean;
+  viewerCanDelete: boolean;
+  isMinimized: boolean;
+  minimizedReason?: string;
   label?: GitHubIssueLabel;
   assignee?: string;
   milestone?: string;
@@ -1236,7 +1240,25 @@ export type GitHubPullRequestReviewThreadComment = {
   createdAt: string;
   updatedAt: string;
   pending: boolean;
+  viewerCanUpdate: boolean;
+  viewerCanDelete: boolean;
+  isMinimized: boolean;
+  minimizedReason?: string;
+  outdated: boolean;
 };
+
+export type GitHubCommentMutation =
+  | {
+      action: "update";
+      commentId: string;
+      expectedUpdatedAt: string;
+      body: string;
+    }
+  | {
+      action: "delete";
+      commentId: string;
+      expectedUpdatedAt: string;
+    };
 
 export type GitHubPullRequestReviewThread = {
   id: string;

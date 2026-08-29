@@ -266,6 +266,12 @@ export function GitHubIssueDetail({
                   hasPrevious={detail.timelineHasPrevious}
                   hasMore={detail.timelineHasMore}
                   onPageChange={setTimelinePage}
+                  commentTarget={{
+                    kind: "issue",
+                    owner: repository.owner,
+                    repository: repository.name,
+                    issueNumber: detail.issue.number,
+                  }}
                 />
                 <GitHubIssueComposer
                   issue={detail.issue}

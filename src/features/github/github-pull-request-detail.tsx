@@ -346,6 +346,12 @@ export function GitHubPullRequestDetail({
                         hasPrevious={detail.timelineHasPrevious}
                         hasMore={detail.timelineHasMore}
                         onPageChange={setTimelinePage}
+                        commentTarget={{
+                          kind: "pullRequest",
+                          owner: repository.owner,
+                          repository: repository.name,
+                          pullRequestNumber: detail.pullRequest.number,
+                        }}
                         emptyBody={t("workspace.repositories.noPullRequestBody")}
                       />
                       <GitHubPullRequestMergePanel

@@ -2,7 +2,9 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    authenticated_client, github_error, item_metadata, pull_request_review_state_from_octocrab,
+    authenticated_client,
+    comment::{enrich_issue_timeline_comments, GitHubConversationCommentKind},
+    github_error, item_metadata, pull_request_review_state_from_octocrab,
     repository_coordinates_from_search_value, serialized_enum_name, GitHubPullRequestReviewState,
     GitHubService, OctocrabGitHubClient, SearchParameters,
 };
@@ -185,6 +187,10 @@ pub struct GitHubIssueTimelineItem {
     pub url: Option<String>,
     pub created_at: Option<String>,
     pub updated_at: Option<String>,
+    pub viewer_can_update: bool,
+    pub viewer_can_delete: bool,
+    pub is_minimized: bool,
+    pub minimized_reason: Option<String>,
     pub label: Option<GitHubIssueLabel>,
     pub assignee: Option<String>,
     pub milestone: Option<String>,
@@ -607,18 +613,30 @@ impl GitHubIssueClient for OctocrabGitHubClient {
         let issue = issue.map_err(github_error)?;
         ensure_octocrab_issue(&issue)?;
         let timeline = timeline.map_err(github_error)?;
+        let timeline_has_more = timeline.next.is_some();
+
+        let timeline = timeline
+            .items
+            .into_iter()
+            .enumerate()
+            .map(|(index, event)| timeline_item_from_octocrab(event, index))
+            .collect();
+        let timeline = enrich_issue_timeline_comments(
+            &client,
+            owner,
+            repository,
+            issue_number,
+            GitHubConversationCommentKind::Issue,
+            timeline,
+        )
+        .await?;
 
         Ok(GitHubIssueDetailPage {
             issue: issue_from_octocrab(issue),
-            timeline: timeline
-                .items
-                .into_iter()
-                .enumerate()
-                .map(|(index, event)| timeline_item_from_octocrab(event, index))
-                .collect(),
+            timeline,
             timeline_page,
             timeline_has_previous: timeline_page > 1,
-            timeline_has_more: timeline.next.is_some(),
+            timeline_has_more,
         })
     }
 
@@ -713,7 +731,18 @@ impl GitHubIssueClient for OctocrabGitHubClient {
             .await
             .map_err(github_error)?;
 
-        Ok(timeline_item_from_issue_comment(comment))
+        let timeline = enrich_issue_timeline_comments(
+            &client,
+            owner,
+            repository,
+            issue_number,
+            GitHubConversationCommentKind::Issue,
+            vec![timeline_item_from_issue_comment(comment)],
+        )
+        .await?;
+        timeline.into_iter().next().ok_or_else(|| {
+            AppError::GitHub("GitHub did not return the created issue comment".to_string())
+        })
     }
 
     async fn update_issue_state(
@@ -983,6 +1012,10 @@ pub(super) fn timeline_item_from_issue_comment(
         url: Some(comment.html_url.to_string()),
         created_at: Some(comment.created_at.to_rfc3339()),
         updated_at: comment.updated_at.map(|updated_at| updated_at.to_rfc3339()),
+        viewer_can_update: false,
+        viewer_can_delete: false,
+        is_minimized: false,
+        minimized_reason: None,
         label: None,
         assignee: None,
         milestone: None,
@@ -1061,6 +1094,10 @@ pub(super) fn timeline_item_from_octocrab(
         url: event.html_url,
         created_at: created_at.map(|created_at| created_at.to_rfc3339()),
         updated_at: event.updated_at.map(|updated_at| updated_at.to_rfc3339()),
+        viewer_can_update: false,
+        viewer_can_delete: false,
+        is_minimized: false,
+        minimized_reason: None,
         label: event.label.map(|label| GitHubIssueLabel {
             name: label.name,
             color: label.color,
