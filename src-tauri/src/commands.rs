@@ -39,8 +39,9 @@ use crate::{
         GitHubProjectUpdate, GitHubPullRequest, GitHubPullRequestAutoMergeStatus,
         GitHubPullRequestBranchUpdate, GitHubPullRequestBranchUpdateStatus,
         GitHubPullRequestCommitPage, GitHubPullRequestComparison, GitHubPullRequestDetailPage,
-        GitHubPullRequestFilePage, GitHubPullRequestFilters, GitHubPullRequestInboxFilters,
-        GitHubPullRequestInboxScope, GitHubPullRequestMergeMethod,
+        GitHubPullRequestFilePage, GitHubPullRequestFileViewState,
+        GitHubPullRequestFileViewStateSnapshot, GitHubPullRequestFilters,
+        GitHubPullRequestInboxFilters, GitHubPullRequestInboxScope, GitHubPullRequestMergeMethod,
         GitHubPullRequestMergeQueueStatus, GitHubPullRequestPage, GitHubPullRequestReview,
         GitHubPullRequestReviewAction, GitHubPullRequestReviewComment,
         GitHubPullRequestReviewTeamPage, GitHubPullRequestReviewThreadComment,
@@ -2515,6 +2516,54 @@ pub async fn github_list_pull_request_files(
             repository.name(),
             validate_item_number(pull_request_number, "pull request")?,
             validate_page(page)?,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_get_repository_pull_request_file_view_states(
+    owner: String,
+    repository: String,
+    pull_request_number: u64,
+    state: State<'_, AppState>,
+) -> Result<GitHubPullRequestFileViewStateSnapshot, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .pull_request_file_view_states(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(pull_request_number, "pull request")?,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_mark_repository_pull_request_file_viewed(
+    pull_request_id: String,
+    path: String,
+    state: State<'_, AppState>,
+) -> Result<GitHubPullRequestFileViewState, AppError> {
+    state
+        .github
+        .mark_pull_request_file_viewed(
+            &validate_graphql_node_id(pull_request_id, "pull request")?,
+            &validate_repository_file_path(path)?,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_unmark_repository_pull_request_file_viewed(
+    pull_request_id: String,
+    path: String,
+    state: State<'_, AppState>,
+) -> Result<GitHubPullRequestFileViewState, AppError> {
+    state
+        .github
+        .unmark_pull_request_file_viewed(
+            &validate_graphql_node_id(pull_request_id, "pull request")?,
+            &validate_repository_file_path(path)?,
         )
         .await
 }
