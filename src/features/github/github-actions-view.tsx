@@ -28,6 +28,7 @@ import { GitHubWorkflowDispatchDialog } from "./github-actions-dispatch-dialog";
 import { GitHubActionsRunFilters } from "./github-actions-filters";
 import { GitHubWorkflowStatusBadge, workflowDuration } from "./github-actions-shared";
 import { GitHubActionsWorkflowNavigation } from "./github-actions-workflow-navigation";
+import { GitHubActionsWorkflowControls } from "./github-actions-workflow-controls";
 import type {
   GitHubRepository,
   GitHubWorkflow,
@@ -229,6 +230,13 @@ export function GitHubActionsView({ repository }: { repository: GitHubRepository
                 })
               : null}
           </span>
+          {workflow ? (
+            <GitHubActionsWorkflowControls
+              repository={repository}
+              workflow={workflow}
+              onUpdated={(updated) => setWorkflow(updated)}
+            />
+          ) : null}
           <GitHubWorkflowDispatchDialog
             repository={repository}
             initialWorkflowId={workflow?.state === "active" ? workflow.id : null}

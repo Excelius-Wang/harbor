@@ -250,6 +250,7 @@ export function GitHubActionsDetail({
                 repository={repository}
                 run={run}
                 onAccepted={() => setSelectedJobId(null)}
+                onDeleted={onBack}
               />
               <Button
                 type="button"

@@ -4,10 +4,12 @@ use serde::{Deserialize, Serialize};
 
 use super::{authenticated_client, github_error, AppError, GitHubService, OctocrabGitHubClient};
 
+mod administration;
 mod artifacts;
 mod dispatch;
 mod filters;
 mod workflows;
+pub use administration::GitHubWorkflowRunDeletion;
 pub(crate) use artifacts::workflow_artifact_archive_name;
 pub use artifacts::GitHubWorkflowArtifactPage;
 pub use dispatch::{GitHubWorkflowDispatchConfig, GitHubWorkflowDispatchOptions};
@@ -132,7 +134,8 @@ pub struct GitHubWorkflowJobLog {
 
 #[async_trait]
 pub(crate) trait GitHubActionsClient:
-    artifacts::GitHubWorkflowArtifactClient
+    administration::GitHubActionsAdministrationClient
+    + artifacts::GitHubWorkflowArtifactClient
     + dispatch::GitHubWorkflowDispatchClient
     + filters::GitHubWorkflowRunFilterClient
     + workflows::GitHubWorkflowInventoryClient
@@ -608,6 +611,11 @@ struct RawWorkflowHeadCommit {
 }
 
 #[derive(Deserialize)]
+struct RawWorkflowRepository {
+    full_name: String,
+}
+
+#[derive(Deserialize)]
 struct RawWorkflowRun {
     id: u64,
     workflow_id: u64,
@@ -623,6 +631,7 @@ struct RawWorkflowRun {
     head_sha: String,
     head_commit: Option<RawWorkflowHeadCommit>,
     actor: Option<RawWorkflowUser>,
+    repository: Option<RawWorkflowRepository>,
     created_at: String,
     updated_at: String,
     run_started_at: Option<String>,
@@ -896,6 +905,9 @@ mod tests {
             head_sha: "abcdef123456".to_string(),
             head_commit: None,
             actor: None,
+            repository: Some(RawWorkflowRepository {
+                full_name: "octocat/hello-world".to_string(),
+            }),
             created_at: "2026-08-26T08:00:00Z".to_string(),
             updated_at: "2026-08-26T08:05:00Z".to_string(),
             run_started_at: Some("2026-08-26T08:00:05Z".to_string()),
