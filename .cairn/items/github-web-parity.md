@@ -371,12 +371,13 @@ authoritative remote result, and preserves a stale draft as a stable conflict. O
 explicitly read-only; private relative assets never receive OAuth credentials from the WebView. A
 disabled or uninitialized Wiki keeps a narrow GitHub Web fallback because Smart HTTP cannot reliably
 bootstrap the first page. Local Playwright and TypeScript build artifacts are now ignored.
+The verified Wiki slice is published as GitHub pull request #3 from `feat/repository-wiki`.
 
 ## Next action
 
-Open the verified repository Wiki pull request, then audit the next missing personal-developer GitHub
-Web workflow. Keep organization administration, Enterprise controls, and advanced organization
-security out of scope.
+Audit the next missing personal-developer GitHub Web workflow after the Wiki pull request is reviewed.
+Keep organization administration, Enterprise controls, and advanced organization security out of
+scope.
 
 ## Verification
 
