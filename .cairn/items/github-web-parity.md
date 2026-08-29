@@ -451,7 +451,11 @@ commits without force-pushing. Every write carries the displayed head and blob r
 authoritative remote result, and preserves a stale draft as a stable conflict. Offline cached reads are
 explicitly read-only; private relative assets never receive OAuth credentials from the WebView. A
 disabled or uninitialized Wiki keeps a narrow GitHub Web fallback because Smart HTTP cannot reliably
-bootstrap the first page. Local Playwright and TypeScript build artifacts are now ignored.
+bootstrap the first page. Authentication failures remain authentication failures instead of being
+misreported as an uninitialized Wiki. The injected `WikiRepositoryStore` Interface now owns Git
+transport, bounded cache access, locking, pruning, reads, and writes outside `GitHubService`;
+repository-local search reads both page metadata and UTF-8 bodies at one immutable Wiki head. Local
+Playwright and TypeScript build artifacts are ignored.
 The verified Wiki slice is published as GitHub pull request #3 from `feat/repository-wiki`.
 
 ## Next action
@@ -484,10 +488,11 @@ credential and service boundary as the desktop app, but its latest run returned
 
 Repository Wiki verification covers canonical credential scoping, nonstandard remote default branches,
 origin recovery, token-free cache configuration, bounded page mutations, stale-head conflicts,
-authoritative create/edit/delete pushes, history, comparison, and linear revert commits. `pnpm check`
-passes with 131 frontend tests; 237 Rust tests pass with one external DeepWiki test ignored by design;
-`cargo fmt --check`, the production build, and `git diff --check` pass. RustSec reports the same nine
-pre-existing advisories as `origin/main`; the new `git2`/vendored `libgit2` dependency chain adds none.
+authoritative create/edit/delete pushes, history, comparison, linear revert commits, body search, and
+authentication error classification. `pnpm check` passes with 132 frontend tests; 238 Rust tests pass
+with one external DeepWiki test ignored by design; `cargo fmt --check`, the production build, and
+`git diff --check` pass. RustSec previously reported the same nine pre-existing advisories as
+`origin/main`; this environment does not currently have the `cargo audit` subcommand installed.
 A deterministic desktop fixture verified browsing, native relative links, credential-safe private
 assets, new-page preview, and revision history at 1600x1000 and 900x620. Both sizes keep document width
 equal to viewport width, and the browser console reports no product errors or warnings.

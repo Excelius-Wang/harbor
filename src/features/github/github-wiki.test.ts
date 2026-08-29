@@ -9,6 +9,7 @@ import {
   repositoryWikiPageQueryOptions,
   repositoryWikiQueryOptions,
   repositoryWikiRevisionQueryOptions,
+  repositoryWikiSearchQueryOptions,
 } from "./github-queries";
 import {
   deleteRepositoryWikiPage,
@@ -112,6 +113,32 @@ describe("GitHub Wiki transport contracts", () => {
     ]);
     expect(invoke).toHaveBeenNthCalledWith(1, "github_get_repository_wiki", target);
     expect(invoke).toHaveBeenNthCalledWith(2, "github_get_repository_wiki_page", pageTarget);
+  });
+
+  it("searches Wiki titles and bodies through an immutable repository snapshot", async () => {
+    vi.mocked(invoke).mockResolvedValueOnce({ pages: overview.pages, truncated: false });
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const searchTarget = {
+      ...target,
+      repositoryId: 42,
+      headSha,
+      query: "welcome",
+    };
+    const options = repositoryWikiSearchQueryOptions(searchTarget);
+
+    await queryClient.fetchQuery(options);
+
+    expect(options.queryKey).toEqual([
+      "github",
+      "repository",
+      "octocat",
+      "harbor",
+      "wiki",
+      "search",
+      headSha,
+      "welcome",
+    ]);
+    expect(invoke).toHaveBeenCalledWith("github_search_repository_wiki", searchTarget);
   });
 
   it("sends exact head and blob guards for writes", async () => {

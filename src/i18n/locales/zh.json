@@ -1046,6 +1046,8 @@
         "pages": "页面",
         "searchPages": "搜索页面",
         "noMatchingPages": "没有找到匹配的页面。",
+        "searchFailed": "暂时无法搜索这个 Wiki 快照。",
+        "searchTruncated": "正在显示前 100 个匹配页面。",
         "newPage": "新建页面",
         "refresh": "刷新 Wiki",
         "loadFailed": "暂时无法读取这个 Wiki",

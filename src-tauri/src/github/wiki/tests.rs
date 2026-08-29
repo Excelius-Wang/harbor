@@ -168,6 +168,33 @@ fn transport_discovers_a_nonstandard_default_branch() {
     );
 }
 
+#[tokio::test]
+async fn repository_store_searches_wiki_page_bodies_at_the_selected_head() {
+    let root = TempDir::new().expect("temp root");
+    let (_remote, remote_url) = seed_remote(&root);
+    let cache_root = root.path().join("caches");
+    let cache_path = wiki_cache_path(&cache_root, 1);
+    let synced = sync_wiki_repository(&cache_path, &remote_url, "").expect("Wiki sync");
+    let head_sha = remote_head(&synced.repo, &synced.default_branch)
+        .expect("head")
+        .to_string();
+    synced
+        .repo
+        .remote_set_url("origin", &wiki_remote_url("octocat", "hello-world"))
+        .expect("canonical origin");
+    drop(synced);
+
+    let target = WikiRepositorySnapshot::new(cache_root, 1, "octocat", "hello-world", &head_sha);
+    let result = GitWikiRepositoryStore
+        .search(target, "welcome")
+        .await
+        .expect("body search");
+
+    assert_eq!(result.pages.len(), 1);
+    assert_eq!(result.pages[0].path, "Home.md");
+    assert!(!result.truncated);
+}
+
 #[test]
 fn authentication_failures_are_not_misreported_as_uninitialized() {
     let root = TempDir::new().expect("temp root");
@@ -176,16 +203,10 @@ fn authentication_failures_are_not_misreported_as_uninitialized() {
     let missing = git2::Error::from_str("remote: Repository not found");
     assert!(!is_uninitialized_wiki_error(&authentication));
     assert!(is_uninitialized_wiki_error(&missing));
-    assert!(is_uninitialized_after_metadata(
-        &authentication,
-        &cache_path
-    ));
+    assert!(!is_uninitialized_after_metadata(&authentication));
     fs::create_dir_all(&cache_path).expect("cache directory");
     fs::write(cache_path.join(CACHE_BRANCH_MARKER), "master").expect("branch marker");
-    assert!(!is_uninitialized_after_metadata(
-        &authentication,
-        &cache_path
-    ));
+    assert!(!is_uninitialized_after_metadata(&authentication));
 }
 
 #[test]

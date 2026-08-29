@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   BookOpen,
@@ -14,7 +14,6 @@ import {
   Trash2,
   TriangleAlert,
 } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -50,6 +49,8 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useAppTranslation } from "@/hooks/use-app-translation";
 import { parseIpcError } from "@/lib/ipc-error";
 import { cn } from "@/lib/utils";
 import { openExternalUrl } from "@/lib/window";
@@ -62,7 +63,11 @@ import type {
 import { GitHubMarkdownEditor } from "./github-markdown-editor";
 import GitHubReadme from "./github-readme";
 import { GitHubWikiHistoryDialog } from "./github-wiki-history-dialog";
-import { repositoryWikiPageQueryOptions, repositoryWikiQueryOptions } from "./github-queries";
+import {
+  repositoryWikiPageQueryOptions,
+  repositoryWikiQueryOptions,
+  repositoryWikiSearchQueryOptions,
+} from "./github-queries";
 import {
   deleteRepositoryWikiPage,
   mutateRepositoryWikiPage,
@@ -111,7 +116,7 @@ function GitHubWikiEditorDialog({
   page?: GitHubWikiPage;
   onSaved: (page: GitHubWikiPage) => void;
 }) {
-  const { t } = useTranslation();
+  const { t } = useAppTranslation();
   const queryClient = useQueryClient();
   const target = { owner: repository.owner, repository: repository.name };
   const [title, setTitle] = useState("");
@@ -286,13 +291,14 @@ function GitHubWikiEditorDialog({
 }
 
 export function GitHubWikiView({ repository }: { repository: GitHubRepository }) {
-  const { t } = useTranslation();
+  const { t } = useAppTranslation();
   const queryClient = useQueryClient();
   const target = { owner: repository.owner, repository: repository.name };
   const overviewResult = useQuery(repositoryWikiQueryOptions(target));
   const overview = overviewResult.data;
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const deferredQuery = useDeferredValue(query.trim().toLocaleLowerCase());
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -359,13 +365,16 @@ export function GitHubWikiView({ repository }: { repository: GitHubRepository })
     }),
     enabled: Boolean(overview?.initialized && overview.headSha && overview.footer?.markdown),
   });
-  const filteredPages = useMemo(() => {
-    const normalized = query.trim().toLocaleLowerCase();
-    if (!normalized) return navigationPages;
-    return navigationPages.filter((item) =>
-      `${item.title} ${item.path}`.toLocaleLowerCase().includes(normalized)
-    );
-  }, [navigationPages, query]);
+  const searchResult = useQuery({
+    ...repositoryWikiSearchQueryOptions({
+      ...target,
+      repositoryId: overview?.repositoryId ?? 0,
+      headSha: overview?.headSha ?? "unavailable",
+      query: deferredQuery || "unsearched",
+    }),
+    enabled: Boolean(overview?.initialized && overview.headSha && deferredQuery),
+  });
+  const filteredPages = deferredQuery ? (searchResult.data?.pages ?? []) : navigationPages;
 
   const deleteMutation = useMutation({
     mutationFn: () =>
@@ -527,7 +536,22 @@ export function GitHubWikiView({ repository }: { repository: GitHubRepository })
         ) : null}
         <ScrollArea className="min-h-0 flex-1" constrainContentWidth>
           <div className="flex flex-col gap-1 p-2">
-            {filteredPages.length ? (
+            {deferredQuery && searchResult.isPending ? (
+              <div className="flex flex-col gap-2 p-2">
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
+              </div>
+            ) : deferredQuery && searchResult.isError ? (
+              <div className="text-muted-foreground flex flex-col items-center gap-2 p-5 text-center text-xs">
+                <TriangleAlert />
+                <span>{t("workspace.repositories.wiki.searchFailed")}</span>
+                <Button variant="outline" size="sm" onClick={() => void searchResult.refetch()}>
+                  <RefreshCw data-icon="inline-start" />
+                  {t("common.retry")}
+                </Button>
+              </div>
+            ) : filteredPages.length ? (
               filteredPages.map((item) => {
                 const Icon = wikiPageIcon(item.kind);
                 return (
@@ -552,6 +576,11 @@ export function GitHubWikiView({ repository }: { repository: GitHubRepository })
                 <span>{t("workspace.repositories.wiki.noMatchingPages")}</span>
               </div>
             )}
+            {deferredQuery && searchResult.data?.truncated ? (
+              <p className="text-muted-foreground px-2 pb-2 text-[10px]">
+                {t("workspace.repositories.wiki.searchTruncated")}
+              </p>
+            ) : null}
           </div>
         </ScrollArea>
         <div className="flex gap-2 border-t p-2">
@@ -568,16 +597,21 @@ export function GitHubWikiView({ repository }: { repository: GitHubRepository })
             <FilePlus2 data-icon="inline-start" />
             {t("workspace.repositories.wiki.newPage")}
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon-sm"
-            aria-label={t("workspace.repositories.wiki.refresh")}
-            disabled={overviewResult.isFetching}
-            onClick={() => void overviewResult.refetch()}
-          >
-            {overviewResult.isFetching ? <Spinner /> : <RefreshCw />}
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                aria-label={t("workspace.repositories.wiki.refresh")}
+                disabled={overviewResult.isFetching}
+                onClick={() => void overviewResult.refetch()}
+              >
+                {overviewResult.isFetching ? <Spinner /> : <RefreshCw />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t("workspace.repositories.wiki.refresh")}</TooltipContent>
+          </Tooltip>
         </div>
       </aside>
 
@@ -616,26 +650,36 @@ export function GitHubWikiView({ repository }: { repository: GitHubRepository })
               <FilePenLine data-icon="inline-start" />
               {t("common.edit")}
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon-sm"
-              aria-label={t("common.delete")}
-              disabled={!page || !overview.canEdit || overview.archived || overview.stale}
-              onClick={() => setDeleteOpen(true)}
-            >
-              <Trash2 />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon-sm"
-              aria-label={t("workspace.openOnGitHub")}
-              disabled={!selectedSummary}
-              onClick={() => selectedSummary && void openExternalUrl(overview.webUrl)}
-            >
-              <ExternalLink />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon-sm"
+                  aria-label={t("common.delete")}
+                  disabled={!page || !overview.canEdit || overview.archived || overview.stale}
+                  onClick={() => setDeleteOpen(true)}
+                >
+                  <Trash2 />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t("common.delete")}</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon-sm"
+                  aria-label={t("workspace.openOnGitHub")}
+                  disabled={!selectedSummary}
+                  onClick={() => selectedSummary && void openExternalUrl(overview.webUrl)}
+                >
+                  <ExternalLink />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t("workspace.openOnGitHub")}</TooltipContent>
+            </Tooltip>
           </div>
         </header>
 

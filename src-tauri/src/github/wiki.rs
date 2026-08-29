@@ -28,6 +28,8 @@ const MAX_WIKI_CACHES: usize = 16;
 const WIKI_HISTORY_PAGE_SIZE: usize = 30;
 const MAX_WIKI_HISTORY_SCAN: usize = 2_000;
 const MAX_WIKI_PATCH_BYTES: usize = 512 * 1024;
+const MAX_WIKI_SEARCH_QUERY_CHARS: usize = 256;
+const MAX_WIKI_SEARCH_RESULTS: usize = 100;
 const MAX_WIKI_REPOSITORY_CACHE_BYTES: u64 = 64 * 1024 * 1024;
 const MAX_WIKI_TOTAL_CACHE_BYTES: u64 = 256 * 1024 * 1024;
 const CACHE_ACCESS_MARKER: &str = "harbor-cache-access";
@@ -95,6 +97,13 @@ pub struct GitHubWikiPage {
     pub byte_size: u64,
     pub content: String,
     pub head_sha: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitHubWikiSearchResult {
+    pub pages: Vec<GitHubWikiPageSummary>,
+    pub truncated: bool,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
@@ -187,18 +196,101 @@ pub(crate) trait GitHubWikiClient: Send + Sync {
     ) -> Result<GitHubWikiAccess, AppError>;
 }
 
-impl GitHubService {
-    pub async fn repository_wiki_overview(
+#[async_trait]
+pub(crate) trait WikiRepositoryStore: Send + Sync {
+    async fn overview(
         &self,
         cache_root: PathBuf,
+        access: GitHubWikiAccess,
+        token: String,
+    ) -> Result<GitHubWikiOverview, AppError>;
+    async fn page(
+        &self,
+        target: WikiRepositorySnapshot,
+        path: &str,
+    ) -> Result<GitHubWikiPage, AppError>;
+    async fn search(
+        &self,
+        target: WikiRepositorySnapshot,
+        query: &str,
+    ) -> Result<GitHubWikiSearchResult, AppError>;
+    async fn history(
+        &self,
+        target: WikiRepositorySnapshot,
+        path: &str,
+        page: u32,
+    ) -> Result<GitHubWikiHistoryPage, AppError>;
+    async fn revision(
+        &self,
+        target: WikiRepositorySnapshot,
+        path: &str,
+    ) -> Result<GitHubWikiRevision, AppError>;
+    async fn compare(
+        &self,
+        target: WikiRepositorySnapshot,
+        path: &str,
+        base_sha: &str,
+    ) -> Result<GitHubWikiComparison, AppError>;
+    async fn mutate(
+        &self,
+        context: WikiWriteContext,
+        input: GitHubWikiPageMutationInput,
+    ) -> Result<GitHubWikiMutationResult, AppError>;
+    async fn delete(
+        &self,
+        context: WikiWriteContext,
+        path: &str,
+        expected_head: &str,
+        expected_blob_sha: &str,
+    ) -> Result<GitHubWikiMutationResult, AppError>;
+    async fn revert(
+        &self,
+        context: WikiWriteContext,
+        input: GitHubWikiRevertInput,
+    ) -> Result<GitHubWikiMutationResult, AppError>;
+}
+
+pub(crate) struct GitWikiRepositoryStore;
+
+pub(crate) struct WikiRepositorySnapshot {
+    cache_root: PathBuf,
+    repository_id: u64,
+    remote_url: String,
+    revision: String,
+}
+
+impl WikiRepositorySnapshot {
+    fn new(
+        cache_root: PathBuf,
+        repository_id: u64,
         owner: &str,
         repository: &str,
+        revision: &str,
+    ) -> Self {
+        Self {
+            cache_root,
+            repository_id,
+            remote_url: wiki_remote_url(owner, repository),
+            revision: revision.to_string(),
+        }
+    }
+}
+
+pub(crate) struct WikiWriteContext {
+    cache_root: PathBuf,
+    access: GitHubWikiAccess,
+    token: String,
+    identity: GitHubIdentity,
+}
+
+#[async_trait]
+impl WikiRepositoryStore for GitWikiRepositoryStore {
+    async fn overview(
+        &self,
+        cache_root: PathBuf,
+        access: GitHubWikiAccess,
+        token: String,
     ) -> Result<GitHubWikiOverview, AppError> {
-        let token = self.load_access_token().await?;
-        let access = self
-            .client
-            .repository_wiki_access(&token, owner, repository)
-            .await?;
         if !access.enabled {
             return Ok(disabled_overview(access));
         }
@@ -221,11 +313,11 @@ impl GitHubService {
                     false,
                     Some(unix_timestamp_now()),
                 ),
-                Err(error) if is_uninitialized_after_metadata(&error, &cache_path) => {
+                Err(error) if is_uninitialized_after_metadata(&error) => {
                     Ok(uninitialized_overview(access))
                 }
                 Err(error) if is_offline_git_error(&error) => {
-                    offline_overview(&cache_path, access).or_else(|_| Err(git_error(error)))
+                    offline_overview(&cache_path, access).map_err(|_| git_error(error))
                 }
                 Err(error) => Err(git_error(error)),
             }
@@ -234,44 +326,56 @@ impl GitHubService {
         .map_err(|error| AppError::GitHub(format!("Wiki sync task failed: {error}")))?
     }
 
-    pub async fn repository_wiki_page(
+    async fn page(
         &self,
-        cache_root: PathBuf,
-        repository_id: u64,
-        owner: &str,
-        repository: &str,
-        head_sha: &str,
+        target: WikiRepositorySnapshot,
         path: &str,
     ) -> Result<GitHubWikiPage, AppError> {
         let operation_permit = wiki_operation_permit().await?;
-        let remote_url = wiki_remote_url(owner, repository);
-        let head_sha = head_sha.to_string();
         let path = path.to_string();
         tokio::task::spawn_blocking(move || {
             let _operation_permit = operation_permit;
-            let cache_path = wiki_cache_path(&cache_root, repository_id);
+            let cache_path = wiki_cache_path(&target.cache_root, target.repository_id);
             let repository_lock = repository_lock(&cache_path)?;
             let _guard = repository_lock
                 .lock()
                 .map_err(|_| AppError::GitHub("Wiki cache lock is unavailable".to_string()))?;
-            let repo = open_wiki_cache(&cache_path, &remote_url)?;
-            read_page_at_head(&repo, &head_sha, &path)
+            let repo = open_wiki_cache(&cache_path, &target.remote_url)?;
+            read_page_at_head(&repo, &target.revision, &path)
         })
         .await
         .map_err(|error| AppError::GitHub(format!("Wiki read task failed: {error}")))?
     }
 
-    pub async fn repository_wiki_history(
+    async fn search(
         &self,
-        cache_root: PathBuf,
-        repository_id: u64,
-        owner: &str,
-        repository: &str,
-        head_sha: &str,
+        target: WikiRepositorySnapshot,
+        query: &str,
+    ) -> Result<GitHubWikiSearchResult, AppError> {
+        validate_head_sha(&target.revision)?;
+        let query = normalize_search_query(query)?;
+        let operation_permit = wiki_operation_permit().await?;
+        tokio::task::spawn_blocking(move || {
+            let _operation_permit = operation_permit;
+            let cache_path = wiki_cache_path(&target.cache_root, target.repository_id);
+            let repository_lock = repository_lock(&cache_path)?;
+            let _guard = repository_lock
+                .lock()
+                .map_err(|_| AppError::GitHub("Wiki cache lock is unavailable".to_string()))?;
+            let repo = open_wiki_cache(&cache_path, &target.remote_url)?;
+            search_pages_at_head(&repo, &target.revision, &query)
+        })
+        .await
+        .map_err(|error| AppError::GitHub(format!("Wiki search task failed: {error}")))?
+    }
+
+    async fn history(
+        &self,
+        target: WikiRepositorySnapshot,
         path: &str,
         page: u32,
     ) -> Result<GitHubWikiHistoryPage, AppError> {
-        validate_head_sha(head_sha)?;
+        validate_head_sha(&target.revision)?;
         validate_page_path(path)?;
         if page == 0 || page > 100 {
             return Err(AppError::Validation(
@@ -279,112 +383,89 @@ impl GitHubService {
             ));
         }
         let operation_permit = wiki_operation_permit().await?;
-        let remote_url = wiki_remote_url(owner, repository);
-        let head_sha = head_sha.to_string();
         let path = path.to_string();
         tokio::task::spawn_blocking(move || {
             let _operation_permit = operation_permit;
-            let cache_path = wiki_cache_path(&cache_root, repository_id);
+            let cache_path = wiki_cache_path(&target.cache_root, target.repository_id);
             let repository_lock = repository_lock(&cache_path)?;
             let _guard = repository_lock
                 .lock()
                 .map_err(|_| AppError::GitHub("Wiki cache lock is unavailable".to_string()))?;
-            let repo = open_wiki_cache(&cache_path, &remote_url)?;
-            history_at_head(&repo, &head_sha, &path, page)
+            let repo = open_wiki_cache(&cache_path, &target.remote_url)?;
+            history_at_head(&repo, &target.revision, &path, page)
         })
         .await
         .map_err(|error| AppError::GitHub(format!("Wiki history task failed: {error}")))?
     }
 
-    pub async fn repository_wiki_revision(
+    async fn revision(
         &self,
-        cache_root: PathBuf,
-        repository_id: u64,
-        owner: &str,
-        repository: &str,
-        commit_sha: &str,
+        target: WikiRepositorySnapshot,
         path: &str,
     ) -> Result<GitHubWikiRevision, AppError> {
-        validate_head_sha(commit_sha)?;
+        validate_head_sha(&target.revision)?;
         validate_page_path(path)?;
         let operation_permit = wiki_operation_permit().await?;
-        let remote_url = wiki_remote_url(owner, repository);
-        let commit_sha = commit_sha.to_string();
         let path = path.to_string();
         tokio::task::spawn_blocking(move || {
             let _operation_permit = operation_permit;
-            let cache_path = wiki_cache_path(&cache_root, repository_id);
+            let cache_path = wiki_cache_path(&target.cache_root, target.repository_id);
             let repository_lock = repository_lock(&cache_path)?;
             let _guard = repository_lock
                 .lock()
                 .map_err(|_| AppError::GitHub("Wiki cache lock is unavailable".to_string()))?;
-            let repo = open_wiki_cache(&cache_path, &remote_url)?;
-            revision_at_commit(&repo, &commit_sha, &path)
+            let repo = open_wiki_cache(&cache_path, &target.remote_url)?;
+            revision_at_commit(&repo, &target.revision, &path)
         })
         .await
         .map_err(|error| AppError::GitHub(format!("Wiki revision task failed: {error}")))?
     }
 
-    pub async fn compare_repository_wiki_revisions(
+    async fn compare(
         &self,
-        cache_root: PathBuf,
-        repository_id: u64,
-        owner: &str,
-        repository: &str,
+        target: WikiRepositorySnapshot,
         path: &str,
         base_sha: &str,
-        head_sha: &str,
     ) -> Result<GitHubWikiComparison, AppError> {
         validate_page_path(path)?;
         validate_head_sha(base_sha)?;
-        validate_head_sha(head_sha)?;
+        validate_head_sha(&target.revision)?;
         let operation_permit = wiki_operation_permit().await?;
-        let remote_url = wiki_remote_url(owner, repository);
         let path = path.to_string();
         let base_sha = base_sha.to_string();
-        let head_sha = head_sha.to_string();
         tokio::task::spawn_blocking(move || {
             let _operation_permit = operation_permit;
-            let cache_path = wiki_cache_path(&cache_root, repository_id);
+            let cache_path = wiki_cache_path(&target.cache_root, target.repository_id);
             let repository_lock = repository_lock(&cache_path)?;
             let _guard = repository_lock
                 .lock()
                 .map_err(|_| AppError::GitHub("Wiki cache lock is unavailable".to_string()))?;
-            let repo = open_wiki_cache(&cache_path, &remote_url)?;
-            compare_revisions(&repo, &path, &base_sha, &head_sha)
+            let repo = open_wiki_cache(&cache_path, &target.remote_url)?;
+            compare_revisions(&repo, &path, &base_sha, &target.revision)
         })
         .await
         .map_err(|error| AppError::GitHub(format!("Wiki comparison task failed: {error}")))?
     }
 
-    pub async fn mutate_repository_wiki_page(
+    async fn mutate(
         &self,
-        cache_root: PathBuf,
-        owner: &str,
-        repository: &str,
+        context: WikiWriteContext,
         input: GitHubWikiPageMutationInput,
     ) -> Result<GitHubWikiMutationResult, AppError> {
         validate_mutation_input(&input)?;
-        let token = self.load_access_token().await?;
-        let access = self
-            .client
-            .repository_wiki_access(&token, owner, repository)
-            .await?;
-        ensure_wiki_write_access(access.clone())?;
-        let identity = self.viewer_identity(&token).await?;
         let operation_permit = wiki_operation_permit().await?;
 
         tokio::task::spawn_blocking(move || {
             let _operation_permit = operation_permit;
-            let cache_path = wiki_cache_path(&cache_root, access.repository_id);
+            let cache_path = wiki_cache_path(&context.cache_root, context.access.repository_id);
             let repository_lock = repository_lock(&cache_path)?;
             let _guard = repository_lock
                 .lock()
                 .map_err(|_| AppError::GitHub("Wiki cache lock is unavailable".to_string()))?;
-            let remote_url = wiki_remote_url(&access.owner, &access.repository);
-            let synced =
-                sync_wiki_repository(&cache_path, &remote_url, &token).map_err(|error| {
-                    if is_uninitialized_after_metadata(&error, &cache_path) {
+            let remote_url = wiki_remote_url(&context.access.owner, &context.access.repository);
+            let synced = sync_wiki_repository(&cache_path, &remote_url, &context.token).map_err(
+                |error| {
+                    if is_uninitialized_after_metadata(&error) {
                         AppError::GitHubPermission(
                             "Create the first Wiki page on GitHub before editing it in Harbor"
                                 .to_string(),
@@ -392,13 +473,23 @@ impl GitHubService {
                     } else {
                         git_error(error)
                     }
-                })?;
-            let (new_path, commit_sha) =
-                commit_page_mutation(&synced.repo, &synced.default_branch, &input, &identity)?;
-            push_wiki_head(&synced.repo, &remote_url, &synced.default_branch, &token)?;
+                },
+            )?;
+            let (new_path, commit_sha) = commit_page_mutation(
+                &synced.repo,
+                &synced.default_branch,
+                &input,
+                &context.identity,
+            )?;
+            push_wiki_head(
+                &synced.repo,
+                &remote_url,
+                &synced.default_branch,
+                &context.token,
+            )?;
             drop(synced.repo);
-            let authoritative =
-                sync_wiki_repository(&cache_path, &remote_url, &token).map_err(git_error)?;
+            let authoritative = sync_wiki_repository(&cache_path, &remote_url, &context.token)
+                .map_err(git_error)?;
             if remote_head(&authoritative.repo, &authoritative.default_branch).map_err(git_error)?
                 != commit_sha
             {
@@ -409,7 +500,7 @@ impl GitHubService {
             let overview = overview_from_repository(
                 &authoritative.repo,
                 &authoritative.default_branch,
-                access,
+                context.access,
                 false,
                 Some(unix_timestamp_now()),
             )?;
@@ -426,11 +517,9 @@ impl GitHubService {
         .map_err(|error| AppError::GitHub(format!("Wiki write task failed: {error}")))?
     }
 
-    pub async fn delete_repository_wiki_page(
+    async fn delete(
         &self,
-        cache_root: PathBuf,
-        owner: &str,
-        repository: &str,
+        context: WikiWriteContext,
         path: &str,
         expected_head: &str,
         expected_blob_sha: &str,
@@ -438,13 +527,6 @@ impl GitHubService {
         validate_page_path(path)?;
         validate_head_sha(expected_head)?;
         validate_head_sha(expected_blob_sha)?;
-        let token = self.load_access_token().await?;
-        let access = self
-            .client
-            .repository_wiki_access(&token, owner, repository)
-            .await?;
-        ensure_wiki_write_access(access.clone())?;
-        let identity = self.viewer_identity(&token).await?;
         let operation_permit = wiki_operation_permit().await?;
         let path = path.to_string();
         let expected_head = expected_head.to_string();
@@ -452,26 +534,31 @@ impl GitHubService {
 
         tokio::task::spawn_blocking(move || {
             let _operation_permit = operation_permit;
-            let cache_path = wiki_cache_path(&cache_root, access.repository_id);
+            let cache_path = wiki_cache_path(&context.cache_root, context.access.repository_id);
             let repository_lock = repository_lock(&cache_path)?;
             let _guard = repository_lock
                 .lock()
                 .map_err(|_| AppError::GitHub("Wiki cache lock is unavailable".to_string()))?;
-            let remote_url = wiki_remote_url(&access.owner, &access.repository);
-            let synced =
-                sync_wiki_repository(&cache_path, &remote_url, &token).map_err(git_error)?;
+            let remote_url = wiki_remote_url(&context.access.owner, &context.access.repository);
+            let synced = sync_wiki_repository(&cache_path, &remote_url, &context.token)
+                .map_err(git_error)?;
             let commit_sha = commit_page_deletion(
                 &synced.repo,
                 &synced.default_branch,
                 &path,
                 &expected_head,
                 &expected_blob_sha,
-                &identity,
+                &context.identity,
             )?;
-            push_wiki_head(&synced.repo, &remote_url, &synced.default_branch, &token)?;
+            push_wiki_head(
+                &synced.repo,
+                &remote_url,
+                &synced.default_branch,
+                &context.token,
+            )?;
             drop(synced.repo);
-            let authoritative =
-                sync_wiki_repository(&cache_path, &remote_url, &token).map_err(git_error)?;
+            let authoritative = sync_wiki_repository(&cache_path, &remote_url, &context.token)
+                .map_err(git_error)?;
             if remote_head(&authoritative.repo, &authoritative.default_branch).map_err(git_error)?
                 != commit_sha
             {
@@ -483,7 +570,7 @@ impl GitHubService {
                 overview: overview_from_repository(
                     &authoritative.repo,
                     &authoritative.default_branch,
-                    access,
+                    context.access,
                     false,
                     Some(unix_timestamp_now()),
                 )?,
@@ -494,11 +581,9 @@ impl GitHubService {
         .map_err(|error| AppError::GitHub(format!("Wiki delete task failed: {error}")))?
     }
 
-    pub async fn revert_repository_wiki_page(
+    async fn revert(
         &self,
-        cache_root: PathBuf,
-        owner: &str,
-        repository: &str,
+        context: WikiWriteContext,
         input: GitHubWikiRevertInput,
     ) -> Result<GitHubWikiMutationResult, AppError> {
         validate_page_path(&input.path)?;
@@ -508,31 +593,33 @@ impl GitHubService {
         if let Some(message) = input.message.as_deref() {
             mutation_message(Some(message), "Revert Wiki page")?;
         }
-        let token = self.load_access_token().await?;
-        let access = self
-            .client
-            .repository_wiki_access(&token, owner, repository)
-            .await?;
-        ensure_wiki_write_access(access.clone())?;
-        let identity = self.viewer_identity(&token).await?;
         let operation_permit = wiki_operation_permit().await?;
 
         tokio::task::spawn_blocking(move || {
             let _operation_permit = operation_permit;
-            let cache_path = wiki_cache_path(&cache_root, access.repository_id);
+            let cache_path = wiki_cache_path(&context.cache_root, context.access.repository_id);
             let repository_lock = repository_lock(&cache_path)?;
             let _guard = repository_lock
                 .lock()
                 .map_err(|_| AppError::GitHub("Wiki cache lock is unavailable".to_string()))?;
-            let remote_url = wiki_remote_url(&access.owner, &access.repository);
-            let synced =
-                sync_wiki_repository(&cache_path, &remote_url, &token).map_err(git_error)?;
-            let commit_sha =
-                commit_page_revert(&synced.repo, &synced.default_branch, &input, &identity)?;
-            push_wiki_head(&synced.repo, &remote_url, &synced.default_branch, &token)?;
+            let remote_url = wiki_remote_url(&context.access.owner, &context.access.repository);
+            let synced = sync_wiki_repository(&cache_path, &remote_url, &context.token)
+                .map_err(git_error)?;
+            let commit_sha = commit_page_revert(
+                &synced.repo,
+                &synced.default_branch,
+                &input,
+                &context.identity,
+            )?;
+            push_wiki_head(
+                &synced.repo,
+                &remote_url,
+                &synced.default_branch,
+                &context.token,
+            )?;
             drop(synced.repo);
-            let authoritative =
-                sync_wiki_repository(&cache_path, &remote_url, &token).map_err(git_error)?;
+            let authoritative = sync_wiki_repository(&cache_path, &remote_url, &context.token)
+                .map_err(git_error)?;
             if remote_head(&authoritative.repo, &authoritative.default_branch).map_err(git_error)?
                 != commit_sha
             {
@@ -543,7 +630,7 @@ impl GitHubService {
             let overview = overview_from_repository(
                 &authoritative.repo,
                 &authoritative.default_branch,
-                access,
+                context.access,
                 false,
                 Some(unix_timestamp_now()),
             )?;
@@ -558,6 +645,167 @@ impl GitHubService {
         })
         .await
         .map_err(|error| AppError::GitHub(format!("Wiki revert task failed: {error}")))?
+    }
+}
+
+impl GitHubService {
+    pub async fn repository_wiki_overview(
+        &self,
+        cache_root: PathBuf,
+        owner: &str,
+        repository: &str,
+    ) -> Result<GitHubWikiOverview, AppError> {
+        let token = self.load_access_token().await?;
+        let access = self
+            .client
+            .repository_wiki_access(&token, owner, repository)
+            .await?;
+        self.wiki_store.overview(cache_root, access, token).await
+    }
+
+    pub async fn repository_wiki_page(
+        &self,
+        cache_root: PathBuf,
+        repository_id: u64,
+        owner: &str,
+        repository: &str,
+        head_sha: &str,
+        path: &str,
+    ) -> Result<GitHubWikiPage, AppError> {
+        let target =
+            WikiRepositorySnapshot::new(cache_root, repository_id, owner, repository, head_sha);
+        self.wiki_store.page(target, path).await
+    }
+
+    pub async fn search_repository_wiki(
+        &self,
+        cache_root: PathBuf,
+        repository_id: u64,
+        owner: &str,
+        repository: &str,
+        head_sha: &str,
+        query: &str,
+    ) -> Result<GitHubWikiSearchResult, AppError> {
+        let target =
+            WikiRepositorySnapshot::new(cache_root, repository_id, owner, repository, head_sha);
+        self.wiki_store.search(target, query).await
+    }
+
+    pub async fn repository_wiki_history(
+        &self,
+        cache_root: PathBuf,
+        repository_id: u64,
+        owner: &str,
+        repository: &str,
+        head_sha: &str,
+        path: &str,
+        page: u32,
+    ) -> Result<GitHubWikiHistoryPage, AppError> {
+        let target =
+            WikiRepositorySnapshot::new(cache_root, repository_id, owner, repository, head_sha);
+        self.wiki_store.history(target, path, page).await
+    }
+
+    pub async fn repository_wiki_revision(
+        &self,
+        cache_root: PathBuf,
+        repository_id: u64,
+        owner: &str,
+        repository: &str,
+        commit_sha: &str,
+        path: &str,
+    ) -> Result<GitHubWikiRevision, AppError> {
+        let target =
+            WikiRepositorySnapshot::new(cache_root, repository_id, owner, repository, commit_sha);
+        self.wiki_store.revision(target, path).await
+    }
+
+    pub async fn compare_repository_wiki_revisions(
+        &self,
+        cache_root: PathBuf,
+        repository_id: u64,
+        owner: &str,
+        repository: &str,
+        path: &str,
+        base_sha: &str,
+        head_sha: &str,
+    ) -> Result<GitHubWikiComparison, AppError> {
+        let target =
+            WikiRepositorySnapshot::new(cache_root, repository_id, owner, repository, head_sha);
+        self.wiki_store.compare(target, path, base_sha).await
+    }
+
+    pub async fn mutate_repository_wiki_page(
+        &self,
+        cache_root: PathBuf,
+        owner: &str,
+        repository: &str,
+        input: GitHubWikiPageMutationInput,
+    ) -> Result<GitHubWikiMutationResult, AppError> {
+        let token = self.load_access_token().await?;
+        let access = self
+            .client
+            .repository_wiki_access(&token, owner, repository)
+            .await?;
+        ensure_wiki_write_access(access.clone())?;
+        let identity = self.viewer_identity(&token).await?;
+        let context = WikiWriteContext {
+            cache_root,
+            access,
+            token,
+            identity,
+        };
+        self.wiki_store.mutate(context, input).await
+    }
+
+    pub async fn delete_repository_wiki_page(
+        &self,
+        cache_root: PathBuf,
+        owner: &str,
+        repository: &str,
+        path: &str,
+        expected_head: &str,
+        expected_blob_sha: &str,
+    ) -> Result<GitHubWikiMutationResult, AppError> {
+        let token = self.load_access_token().await?;
+        let access = self
+            .client
+            .repository_wiki_access(&token, owner, repository)
+            .await?;
+        ensure_wiki_write_access(access.clone())?;
+        let identity = self.viewer_identity(&token).await?;
+        let context = WikiWriteContext {
+            cache_root,
+            access,
+            token,
+            identity,
+        };
+        self.wiki_store
+            .delete(context, path, expected_head, expected_blob_sha)
+            .await
+    }
+
+    pub async fn revert_repository_wiki_page(
+        &self,
+        cache_root: PathBuf,
+        owner: &str,
+        repository: &str,
+        input: GitHubWikiRevertInput,
+    ) -> Result<GitHubWikiMutationResult, AppError> {
+        let token = self.load_access_token().await?;
+        let access = self
+            .client
+            .repository_wiki_access(&token, owner, repository)
+            .await?;
+        ensure_wiki_write_access(access.clone())?;
+        let identity = self.viewer_identity(&token).await?;
+        let context = WikiWriteContext {
+            cache_root,
+            access,
+            token,
+            identity,
+        };
+        self.wiki_store.revert(context, input).await
     }
 
     async fn viewer_identity(&self, token: &str) -> Result<GitHubIdentity, AppError> {
@@ -1006,6 +1254,73 @@ fn read_page_at_head(
     })
 }
 
+fn normalize_search_query(query: &str) -> Result<String, AppError> {
+    let query = query.trim();
+    if query.is_empty() {
+        return Err(AppError::Validation(
+            "Wiki search query cannot be blank".to_string(),
+        ));
+    }
+    if query.chars().count() > MAX_WIKI_SEARCH_QUERY_CHARS {
+        return Err(AppError::Validation(
+            "Wiki search query is too long".to_string(),
+        ));
+    }
+    Ok(query.to_lowercase())
+}
+
+fn search_pages_at_head(
+    repo: &Repository,
+    head_sha: &str,
+    query: &str,
+) -> Result<GitHubWikiSearchResult, AppError> {
+    let commit = repo
+        .find_commit(Oid::from_str(head_sha).map_err(git_error)?)
+        .map_err(git_error)?;
+    let tree = commit.tree().map_err(git_error)?;
+    let mut index = Index::new().map_err(git_error)?;
+    index.read_tree(&tree).map_err(git_error)?;
+    let mut pages = Vec::new();
+    let mut traversed = 0_usize;
+    let mut truncated = false;
+    for entry in index.iter() {
+        traversed += 1;
+        if traversed > MAX_WIKI_FILES {
+            truncated = true;
+            break;
+        }
+        let Ok(path) = std::str::from_utf8(&entry.path) else {
+            continue;
+        };
+        let Ok(blob) = repo.find_blob(entry.id) else {
+            continue;
+        };
+        let Some(summary) = page_summary(path, entry.id.to_string(), blob.size() as u64) else {
+            continue;
+        };
+        let metadata_matches = summary.title.to_lowercase().contains(query)
+            || summary.path.to_lowercase().contains(query);
+        let body_matches = blob.size() <= MAX_WIKI_PAGE_BYTES
+            && std::str::from_utf8(blob.content())
+                .is_ok_and(|content| content.to_lowercase().contains(query));
+        if !metadata_matches && !body_matches {
+            continue;
+        }
+        if pages.len() == MAX_WIKI_SEARCH_RESULTS {
+            truncated = true;
+            break;
+        }
+        pages.push(summary);
+    }
+    pages.sort_by(|left, right| {
+        page_kind_order(left.kind)
+            .cmp(&page_kind_order(right.kind))
+            .then_with(|| left.title.to_lowercase().cmp(&right.title.to_lowercase()))
+            .then_with(|| left.path.cmp(&right.path))
+    });
+    Ok(GitHubWikiSearchResult { pages, truncated })
+}
+
 fn open_wiki_cache(cache_path: &Path, expected_remote_url: &str) -> Result<Repository, AppError> {
     let repo = Repository::open_bare(cache_path).map_err(|_| {
         AppError::GitHubWikiCacheMiss(
@@ -1041,17 +1356,15 @@ fn history_at_head(
     let skip = (page as usize - 1) * WIKI_HISTORY_PAGE_SIZE;
     let mut revisions = Vec::new();
     let mut matching = 0_usize;
-    let mut scanned = 0_usize;
     let mut truncated = false;
     let mut walk = repo.revwalk().map_err(git_error)?;
     walk.set_sorting(Sort::TIME).map_err(git_error)?;
     walk.push(head).map_err(git_error)?;
-    for oid in walk {
+    for (scanned, oid) in walk.enumerate() {
         if scanned >= MAX_WIKI_HISTORY_SCAN {
             truncated = true;
             break;
         }
-        scanned += 1;
         let commit = repo
             .find_commit(oid.map_err(git_error)?)
             .map_err(git_error)?;
@@ -1684,10 +1997,8 @@ fn is_uninitialized_wiki_error(error: &git2::Error) -> bool {
         || message.contains("request failed with status code: 404")
 }
 
-fn is_uninitialized_after_metadata(error: &git2::Error, cache_path: &Path) -> bool {
+fn is_uninitialized_after_metadata(error: &git2::Error) -> bool {
     is_uninitialized_wiki_error(error)
-        || (error.message().to_ascii_lowercase().contains("401")
-            && !cache_path.join(CACHE_BRANCH_MARKER).is_file())
 }
 
 fn is_offline_git_error(error: &git2::Error) -> bool {
