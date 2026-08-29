@@ -26,8 +26,11 @@ import { cn } from "@/lib/utils";
 import { GitHubActionsDetail } from "./github-actions-detail";
 import { GitHubWorkflowDispatchDialog } from "./github-actions-dispatch-dialog";
 import { GitHubActionsRunFilters } from "./github-actions-filters";
+import { workflowRunCanDelete } from "./github-actions-mutations";
+import { GitHubWorkflowRunDeleteMenu } from "./github-actions-run-delete";
 import { GitHubWorkflowStatusBadge, workflowDuration } from "./github-actions-shared";
 import { GitHubActionsWorkflowNavigation } from "./github-actions-workflow-navigation";
+import { GitHubActionsWorkflowControls } from "./github-actions-workflow-controls";
 import type {
   GitHubRepository,
   GitHubWorkflow,
@@ -61,12 +64,14 @@ function WorkflowRunSkeletons() {
   );
 }
 
-function WorkflowRunRow({
+export function WorkflowRunRow({
+  repository,
   run,
   locale,
   onSelect,
   onPrefetch,
 }: {
+  repository: GitHubRepository;
   run: GitHubWorkflowRun;
   locale: string;
   onSelect: () => void;
@@ -76,46 +81,53 @@ function WorkflowRunRow({
   const duration = workflowDuration(run.startedAt ?? run.createdAt, run.updatedAt);
 
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      onClick={onSelect}
-      onPointerEnter={onPrefetch}
-      onFocus={onPrefetch}
-      className="hover:bg-accent/40 h-auto w-full items-start gap-3 rounded-none border-b px-4 py-3.5 text-left whitespace-normal"
-    >
-      <GitHubWorkflowStatusBadge status={run.status} conclusion={run.conclusion} />
-      <span className="min-w-0 flex-1">
-        <span className="flex min-w-0 flex-wrap items-center gap-2">
-          <span className="text-foreground/95 min-w-0 text-[13px] leading-5 font-medium">
-            {run.title}
-          </span>
-          <Badge variant="outline" className="h-5 rounded-md font-normal">
-            {run.event}
-          </Badge>
-        </span>
-        <span className="text-muted-foreground mt-1 block truncate text-[10px] font-normal">
-          {run.workflowName} #{run.runNumber}
-          {run.runAttempt > 1
-            ? ` · ${t("workspace.repositories.workflowAttempt", { count: run.runAttempt })}`
-            : ""}
-        </span>
-        <span className="text-muted-foreground mt-1.5 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-normal">
-          {run.headBranch ? (
-            <span className="flex min-w-0 items-center gap-1">
-              <GitBranch /> <span className="max-w-48 truncate">{run.headBranch}</span>
+    <div className="flex min-w-0 items-start border-b">
+      <Button
+        type="button"
+        variant="ghost"
+        onClick={onSelect}
+        onPointerEnter={onPrefetch}
+        onFocus={onPrefetch}
+        className="hover:bg-accent/40 h-auto min-w-0 flex-1 items-start gap-3 rounded-none px-4 py-3.5 text-left whitespace-normal"
+      >
+        <GitHubWorkflowStatusBadge status={run.status} conclusion={run.conclusion} />
+        <span className="min-w-0 flex-1">
+          <span className="flex min-w-0 flex-wrap items-center gap-2">
+            <span className="text-foreground/95 min-w-0 text-[13px] leading-5 font-medium">
+              {run.title}
             </span>
-          ) : null}
-          <span className="flex items-center gap-1 font-mono">
-            <GitCommitHorizontal /> {run.headSha.slice(0, 7)}
+            <Badge variant="outline" className="h-5 rounded-md font-normal">
+              {run.event}
+            </Badge>
           </span>
-          {run.actor ? <span>@{run.actor}</span> : null}
-          {duration ? <span>{duration}</span> : null}
-          <span>{formatIssueDate(run.createdAt, locale)}</span>
+          <span className="text-muted-foreground mt-1 block truncate text-[10px] font-normal">
+            {run.workflowName} #{run.runNumber}
+            {run.runAttempt > 1
+              ? ` · ${t("workspace.repositories.workflowAttempt", { count: run.runAttempt })}`
+              : ""}
+          </span>
+          <span className="text-muted-foreground mt-1.5 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-normal">
+            {run.headBranch ? (
+              <span className="flex min-w-0 items-center gap-1">
+                <GitBranch /> <span className="max-w-48 truncate">{run.headBranch}</span>
+              </span>
+            ) : null}
+            <span className="flex items-center gap-1 font-mono">
+              <GitCommitHorizontal /> {run.headSha.slice(0, 7)}
+            </span>
+            {run.actor ? <span>@{run.actor}</span> : null}
+            {duration ? <span>{duration}</span> : null}
+            <span>{formatIssueDate(run.createdAt, locale)}</span>
+          </span>
         </span>
-      </span>
-      <ChevronRight className="text-muted-foreground mt-1 shrink-0" />
-    </Button>
+        <ChevronRight className="text-muted-foreground mt-1 shrink-0" />
+      </Button>
+      {workflowRunCanDelete(run) ? (
+        <div className="shrink-0 px-2 py-3.5">
+          <GitHubWorkflowRunDeleteMenu repository={repository} run={run} />
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -229,6 +241,13 @@ export function GitHubActionsView({ repository }: { repository: GitHubRepository
                 })
               : null}
           </span>
+          {workflow ? (
+            <GitHubActionsWorkflowControls
+              repository={repository}
+              workflow={workflow}
+              onUpdated={(updated) => setWorkflow(updated)}
+            />
+          ) : null}
           <GitHubWorkflowDispatchDialog
             repository={repository}
             initialWorkflowId={workflow?.state === "active" ? workflow.id : null}
@@ -280,6 +299,7 @@ export function GitHubActionsView({ repository }: { repository: GitHubRepository
                   return (
                     <WorkflowRunRow
                       key={run.id}
+                      repository={repository}
                       run={run}
                       locale={i18n.language}
                       onSelect={() => setSelectedRun(run)}

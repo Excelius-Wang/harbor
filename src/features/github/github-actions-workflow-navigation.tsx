@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { parseIpcError } from "@/lib/ipc-error";
+import { workflowStateLabel } from "./github-actions-mutations";
 import type { GitHubRepository, GitHubWorkflow } from "./github-data";
 import { repositoryWorkflowsQueryOptions } from "./github-queries";
 
@@ -32,15 +33,16 @@ const ALL_WORKFLOWS_VALUE = "all";
 
 function WorkflowLabel({ workflow }: { workflow: GitHubWorkflow }) {
   const { t } = useTranslation();
+  const stateLabel = workflowStateLabel(workflow.state);
 
   return (
     <span className="flex min-w-0 flex-1 items-center gap-2 text-left">
       <span className="min-w-0 flex-1 truncate">{workflow.name}</span>
-      {workflow.state === "active" ? null : (
+      {stateLabel ? (
         <Badge variant="outline" className="shrink-0">
-          {t("workspace.repositories.workflowDisabled")}
+          {t(stateLabel)}
         </Badge>
-      )}
+      ) : null}
     </span>
   );
 }

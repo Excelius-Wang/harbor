@@ -65,8 +65,8 @@ use crate::{
         GitHubWikiSearchResult, GitHubWorkflow, GitHubWorkflowArtifactPage,
         GitHubWorkflowDispatchConfig, GitHubWorkflowDispatchOptions, GitHubWorkflowJobLog,
         GitHubWorkflowJobPage, GitHubWorkflowRun, GitHubWorkflowRunAction,
-        GitHubWorkflowRunFilterOptions, GitHubWorkflowRunFilters, GitHubWorkflowRunPage,
-        GitHubWorkflowRunStatusFilter,
+        GitHubWorkflowRunDeletion, GitHubWorkflowRunFilterOptions, GitHubWorkflowRunFilters,
+        GitHubWorkflowRunPage, GitHubWorkflowRunStatusFilter,
     },
     github_oauth::{GitHubLoginAttempt, GitHubLoopbackListener, GITHUB_AUTH_EVENT},
     repository_context::{RepositoryContextAnswer, RepositoryRef},
@@ -2745,6 +2745,28 @@ pub async fn github_list_repository_workflows(
 }
 
 #[tauri::command]
+pub async fn github_set_repository_workflow_enabled(
+    owner: String,
+    repository: String,
+    workflow_id: u64,
+    expected_state: String,
+    enabled: bool,
+    state: State<'_, AppState>,
+) -> Result<GitHubWorkflow, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .set_workflow_enabled(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(workflow_id, "workflow")?,
+            &validate_workflow_state(expected_state)?,
+            enabled,
+        )
+        .await
+}
+
+#[tauri::command]
 pub async fn github_get_workflow_dispatch_options(
     owner: String,
     repository: String,
@@ -2901,6 +2923,28 @@ pub async fn github_request_workflow_run_action(
             repository.name(),
             validate_item_number(run_id, "workflow run")?,
             action,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_delete_repository_workflow_run(
+    owner: String,
+    repository: String,
+    run_id: u64,
+    expected_workflow_id: u64,
+    expected_updated_at: String,
+    state: State<'_, AppState>,
+) -> Result<GitHubWorkflowRunDeletion, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .delete_workflow_run(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(run_id, "workflow run")?,
+            validate_item_number(expected_workflow_id, "workflow")?,
+            &validate_workflow_run_updated_at(expected_updated_at)?,
         )
         .await
 }
@@ -3499,6 +3543,31 @@ fn validate_optional_workflow_filter(
         return Err(AppError::Validation(format!("{label} is invalid")));
     }
     Ok(value)
+}
+
+fn validate_workflow_state(value: String) -> Result<String, AppError> {
+    let value = value.trim().to_string();
+    if matches!(
+        value.as_str(),
+        "active" | "deleted" | "disabled_fork" | "disabled_inactivity" | "disabled_manually"
+    ) {
+        Ok(value)
+    } else {
+        Err(AppError::Validation(
+            "workflow state is invalid".to_string(),
+        ))
+    }
+}
+
+fn validate_workflow_run_updated_at(value: String) -> Result<String, AppError> {
+    let value = value.trim().to_string();
+    if value.is_empty() || value.len() > 64 || value.chars().any(char::is_control) {
+        Err(AppError::Validation(
+            "workflow run revision is invalid".to_string(),
+        ))
+    } else {
+        Ok(value)
+    }
 }
 
 fn validate_repository_path(path: String) -> Result<String, AppError> {
@@ -4445,6 +4514,21 @@ mod tests {
         assert!(
             validate_optional_workflow_filter("x".repeat(101), "workflow actor", 100,).is_err()
         );
+    }
+
+    #[test]
+    fn workflow_administration_inputs_are_bounded() {
+        assert_eq!(
+            validate_workflow_state(" disabled_inactivity ".to_string()).expect("workflow state"),
+            "disabled_inactivity"
+        );
+        assert!(validate_workflow_state("unknown".to_string()).is_err());
+        assert_eq!(
+            validate_workflow_run_updated_at(" 2026-08-29T08:05:00Z ".to_string())
+                .expect("run revision"),
+            "2026-08-29T08:05:00Z"
+        );
+        assert!(validate_workflow_run_updated_at("\n".to_string()).is_err());
     }
 
     #[test]

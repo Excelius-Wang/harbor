@@ -145,7 +145,7 @@ impl GitHubWorkflowRunFilterClient for super::super::tests::FakeGitHubClient {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::github::actions::{RawWorkflowHeadCommit, RawWorkflowUser};
+    use crate::github::actions::{RawWorkflowHeadCommit, RawWorkflowRepository, RawWorkflowUser};
 
     fn run(branch: &str, event: &str, actor: &str) -> RawWorkflowRun {
         RawWorkflowRun {
@@ -166,6 +166,9 @@ mod tests {
             actor: Some(RawWorkflowUser {
                 login: actor.to_string(),
                 avatar_url: format!("https://github.com/{actor}.png"),
+            }),
+            repository: Some(RawWorkflowRepository {
+                full_name: "octocat/hello-world".to_string(),
             }),
             created_at: "2026-08-27T08:00:00Z".to_string(),
             updated_at: "2026-08-27T08:05:00Z".to_string(),

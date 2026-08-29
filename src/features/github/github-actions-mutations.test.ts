@@ -3,22 +3,32 @@ import { invoke } from "@tauri-apps/api/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createWorkflowDispatchDraft,
+  deleteWorkflowRun,
   downloadWorkflowArtifact,
   dispatchWorkflow,
   invalidateWorkflowDispatch,
   invalidateWorkflowRunAction,
   prepareWorkflowDispatchInputs,
+  reconcileWorkflowRunDeletion,
+  reconcileWorkflowState,
   requestWorkflowJobRerun,
   requestWorkflowRunAction,
+  setWorkflowEnabled,
   workflowJobCanRerun,
   workflowRunCanCancel,
+  workflowRunCanDelete,
   workflowRunCanRerun,
   workflowRunHasFailedJobs,
+  workflowStateAction,
+  workflowStateLabel,
 } from "./github-actions-mutations";
 import type {
+  GitHubWorkflowArtifactPage,
   GitHubWorkflowDispatchConfig,
   GitHubWorkflowJob,
+  GitHubWorkflowJobPage,
   GitHubWorkflowRun,
+  GitHubWorkflowRunPage,
 } from "./github-data";
 import { githubQueryKeys } from "./github-queries";
 
@@ -137,6 +147,38 @@ describe("GitHub Actions mutations", () => {
     });
   });
 
+  it("sends exact workflow state and run deletion guards through Tauri", async () => {
+    vi.mocked(invoke)
+      .mockResolvedValueOnce({ ...dispatchConfig.workflow, state: "disabled_manually" })
+      .mockResolvedValueOnce({ runId: 42 });
+
+    await setWorkflowEnabled({
+      owner: target.owner,
+      repository: target.repository,
+      workflowId: 7,
+      expectedState: "active",
+      enabled: false,
+    });
+    await deleteWorkflowRun({
+      ...target,
+      expectedWorkflowId: run.workflowId,
+      expectedUpdatedAt: run.updatedAt,
+    });
+
+    expect(invoke).toHaveBeenNthCalledWith(1, "github_set_repository_workflow_enabled", {
+      owner: "octocat",
+      repository: "hello-world",
+      workflowId: 7,
+      expectedState: "active",
+      enabled: false,
+    });
+    expect(invoke).toHaveBeenNthCalledWith(2, "github_delete_repository_workflow_run", {
+      ...target,
+      expectedWorkflowId: 7,
+      expectedUpdatedAt: "2026-08-26T08:05:00Z",
+    });
+  });
+
   it("reruns a specific workflow Job through its focused Tauri command", async () => {
     await requestWorkflowJobRerun({ ...target, jobId: job.id });
 
@@ -242,6 +284,142 @@ describe("GitHub Actions mutations", () => {
     });
   });
 
+  it("reconciles workflow inventory and dispatch caches after a state change", async () => {
+    const queryClient = new QueryClient();
+    const repositoryTarget = { owner: target.owner, repository: target.repository };
+    const updated = { ...dispatchConfig.workflow, state: "disabled_manually" as const };
+    queryClient.setQueryData(githubQueryKeys.workflows(repositoryTarget), [
+      dispatchConfig.workflow,
+    ]);
+    queryClient.setQueryData(githubQueryKeys.workflowDispatchOptions(repositoryTarget), {
+      workflows: [dispatchConfig.workflow],
+      references: [],
+    });
+    queryClient.setQueryData(
+      githubQueryKeys.workflowDispatchConfig({
+        ...repositoryTarget,
+        workflowId: 7,
+        reference: "main",
+      }),
+      dispatchConfig
+    );
+
+    await reconcileWorkflowState(
+      queryClient,
+      {
+        ...repositoryTarget,
+        workflowId: 7,
+        expectedState: "active",
+        enabled: false,
+      },
+      updated
+    );
+
+    expect(queryClient.getQueryData(githubQueryKeys.workflows(repositoryTarget))).toEqual([
+      updated,
+    ]);
+    expect(
+      queryClient.getQueryData(githubQueryKeys.workflowDispatchOptions(repositoryTarget))
+    ).toMatchObject({ workflows: [updated] });
+    expect(
+      queryClient.getQueryData(
+        githubQueryKeys.workflowDispatchConfig({
+          ...repositoryTarget,
+          workflowId: 7,
+          reference: "main",
+        })
+      )
+    ).toMatchObject({ workflow: updated, dispatchable: false });
+  });
+
+  it("removes a deleted run and all known detail caches before refetching lists", async () => {
+    const queryClient = new QueryClient();
+    const runPage: GitHubWorkflowRunPage = {
+      runs: [run, { ...run, id: 43 }],
+      totalCount: 2,
+      page: 1,
+      hasPrevious: false,
+      hasMore: false,
+    };
+    const listKey = githubQueryKeys.workflowRuns({
+      ...target,
+      workflowId: null,
+      status: "all",
+      branch: "",
+      event: "",
+      actor: "",
+      page: 1,
+    });
+    const jobs: GitHubWorkflowJobPage = {
+      jobs: [job],
+      totalCount: 1,
+      page: 1,
+      hasPrevious: false,
+      hasMore: false,
+    };
+    const artifacts: GitHubWorkflowArtifactPage = {
+      artifacts: [
+        {
+          id: 126,
+          name: "frontend-results",
+          sizeInBytes: 4_096,
+          expired: false,
+          createdAt: "2026-08-26T08:01:00Z",
+          expiresAt: "2026-11-24T08:01:00Z",
+        },
+      ],
+      totalCount: 1,
+      page: 1,
+      hasPrevious: false,
+      hasMore: false,
+    };
+    queryClient.setQueryData(listKey, runPage);
+    queryClient.setQueryData(githubQueryKeys.workflowRun(target), run);
+    queryClient.setQueryData(githubQueryKeys.workflowJobs({ ...target, page: 1 }), jobs);
+    queryClient.setQueryData(githubQueryKeys.workflowArtifacts({ ...target, page: 1 }), artifacts);
+    queryClient.setQueryData(
+      githubQueryKeys.workflowJobLog({
+        owner: target.owner,
+        repository: target.repository,
+        runId: target.runId,
+        jobId: job.id,
+      }),
+      { jobId: job.id, content: "Finished", truncated: false }
+    );
+
+    await reconcileWorkflowRunDeletion(
+      queryClient,
+      {
+        ...target,
+        expectedWorkflowId: run.workflowId,
+        expectedUpdatedAt: run.updatedAt,
+      },
+      { runId: run.id }
+    );
+
+    expect(queryClient.getQueryData<GitHubWorkflowRunPage>(listKey)).toMatchObject({
+      runs: [{ id: 43 }],
+      totalCount: 1,
+    });
+    expect(queryClient.getQueryData(githubQueryKeys.workflowRun(target))).toBeUndefined();
+    expect(
+      queryClient.getQueryData(githubQueryKeys.workflowJobs({ ...target, page: 1 }))
+    ).toBeUndefined();
+    expect(
+      queryClient.getQueryData(githubQueryKeys.workflowArtifacts({ ...target, page: 1 }))
+    ).toBeUndefined();
+    expect(
+      queryClient.getQueryData(
+        githubQueryKeys.workflowJobLog({
+          owner: target.owner,
+          repository: target.repository,
+          runId: target.runId,
+          jobId: job.id,
+        })
+      )
+    ).toBeUndefined();
+  });
+
   it("gates cancel and rerun controls from the authoritative run state", () => {
     expect(workflowRunCanCancel({ ...run, status: "queued" })).toBe(true);
     expect(workflowRunCanCancel(run)).toBe(false);
@@ -250,6 +428,35 @@ describe("GitHub Actions mutations", () => {
     expect(workflowRunHasFailedJobs(run)).toBe(true);
     expect(workflowRunHasFailedJobs({ ...run, conclusion: "timed_out" })).toBe(true);
     expect(workflowRunHasFailedJobs({ ...run, conclusion: "success" })).toBe(false);
+  });
+
+  it("matches GitHub Web run deletion and workflow state actions", () => {
+    const now = Date.parse("2026-08-29T12:00:00Z");
+    expect(workflowRunCanDelete(run, now)).toBe(true);
+    expect(
+      workflowRunCanDelete(
+        { ...run, status: "in_progress", createdAt: "2026-08-14T11:59:59Z" },
+        now
+      )
+    ).toBe(true);
+    expect(
+      workflowRunCanDelete(
+        { ...run, status: "in_progress", createdAt: "2026-08-29T11:00:00Z" },
+        now
+      )
+    ).toBe(false);
+    expect(workflowStateAction("active")).toBe("disable");
+    expect(workflowStateAction("disabled_manually")).toBe("enable");
+    expect(workflowStateAction("disabled_inactivity")).toBe("enable");
+    expect(workflowStateAction("disabled_fork")).toBeNull();
+    expect(workflowStateAction("deleted")).toBeNull();
+    expect(workflowStateLabel("active")).toBeNull();
+    expect(workflowStateLabel("disabled_manually")).toBe("workspace.repositories.workflowDisabled");
+    expect(workflowStateLabel("disabled_inactivity")).toBe(
+      "workspace.repositories.workflowDisabledInactivity"
+    );
+    expect(workflowStateLabel("disabled_fork")).toBe("workspace.repositories.workflowDisabledFork");
+    expect(workflowStateLabel("deleted")).toBe("workspace.repositories.workflowDeleted");
   });
 
   it("only exposes a Job rerun after GitHub marks the Job completed", () => {

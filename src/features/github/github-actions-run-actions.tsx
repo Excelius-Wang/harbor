@@ -21,6 +21,7 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
@@ -29,9 +30,16 @@ import {
   invalidateWorkflowRunAction,
   requestWorkflowRunAction,
   workflowRunCanCancel,
+  workflowRunCanDelete,
   workflowRunCanRerun,
   workflowRunHasFailedJobs,
 } from "./github-actions-mutations";
+import {
+  GitHubWorkflowRunDeleteButton,
+  GitHubWorkflowRunDeleteConfirmation,
+  GitHubWorkflowRunDeleteMenuItem,
+  useGitHubWorkflowRunDeletion,
+} from "./github-actions-run-delete";
 import type { GitHubRepository, GitHubWorkflowRun, GitHubWorkflowRunAction } from "./github-data";
 
 function successMessage(action: GitHubWorkflowRunAction) {
@@ -49,10 +57,12 @@ export function GitHubWorkflowRunActions({
   repository,
   run,
   onAccepted,
+  onDeleted,
 }: {
   repository: GitHubRepository;
   run: GitHubWorkflowRun;
   onAccepted: () => void;
+  onDeleted: () => void;
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -62,6 +72,7 @@ export function GitHubWorkflowRunActions({
     repository: repository.name,
     runId: run.id,
   };
+  const deletion = useGitHubWorkflowRunDeletion({ repository, run, onDeleted });
   const mutation = useMutation({
     mutationFn: (action: GitHubWorkflowRunAction) => requestWorkflowRunAction(target, action),
     onSuccess: async (_, action) => {
@@ -102,91 +113,106 @@ export function GitHubWorkflowRunActions({
 
   if (workflowRunCanCancel(run)) {
     return (
-      <AlertDialog open={cancelOpen} onOpenChange={changeCancelOpen}>
-        <AlertDialogTrigger asChild>
-          <Button type="button" variant="destructive" size="sm" disabled={mutation.isPending}>
-            {pendingAction === "cancel" ? (
-              <Spinner data-icon="inline-start" />
-            ) : (
-              <CircleStop data-icon="inline-start" />
-            )}
-            {pendingAction === "cancel"
-              ? t("workspace.repositories.cancellingWorkflowRun")
-              : t("workspace.repositories.cancelWorkflowRun")}
-          </Button>
-        </AlertDialogTrigger>
-        <AlertDialogContent aria-busy={mutation.isPending}>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {t("workspace.repositories.cancelWorkflowRunTitle", {
-                number: run.runNumber,
-              })}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("workspace.repositories.cancelWorkflowRunDescription")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {cancelErrorMessage ? (
-            <Alert variant="destructive">
-              <CircleAlert />
-              <AlertTitle>{t("workspace.repositories.workflowRunActionFailed")}</AlertTitle>
-              <AlertDescription>{cancelErrorMessage}</AlertDescription>
-            </Alert>
-          ) : null}
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={mutation.isPending}>
-              {t("workspace.repositories.cancel")}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              disabled={mutation.isPending}
-              onClick={(event) => {
-                event.preventDefault();
-                mutation.mutate("cancel");
-              }}
-            >
-              {pendingAction === "cancel" ? <Spinner data-icon="inline-start" /> : null}
+      <>
+        <AlertDialog open={cancelOpen} onOpenChange={changeCancelOpen}>
+          <AlertDialogTrigger asChild>
+            <Button type="button" variant="destructive" size="sm" disabled={mutation.isPending}>
+              {pendingAction === "cancel" ? (
+                <Spinner data-icon="inline-start" />
+              ) : (
+                <CircleStop data-icon="inline-start" />
+              )}
               {pendingAction === "cancel"
                 ? t("workspace.repositories.cancellingWorkflowRun")
                 : t("workspace.repositories.cancelWorkflowRun")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent aria-busy={mutation.isPending}>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {t("workspace.repositories.cancelWorkflowRunTitle", {
+                  number: run.runNumber,
+                })}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {t("workspace.repositories.cancelWorkflowRunDescription")}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            {cancelErrorMessage ? (
+              <Alert variant="destructive">
+                <CircleAlert />
+                <AlertTitle>{t("workspace.repositories.workflowRunActionFailed")}</AlertTitle>
+                <AlertDescription>{cancelErrorMessage}</AlertDescription>
+              </Alert>
+            ) : null}
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={mutation.isPending}>
+                {t("workspace.repositories.cancel")}
+              </AlertDialogCancel>
+              <AlertDialogAction
+                variant="destructive"
+                disabled={mutation.isPending}
+                onClick={(event) => {
+                  event.preventDefault();
+                  mutation.mutate("cancel");
+                }}
+              >
+                {pendingAction === "cancel" ? <Spinner data-icon="inline-start" /> : null}
+                {pendingAction === "cancel"
+                  ? t("workspace.repositories.cancellingWorkflowRun")
+                  : t("workspace.repositories.cancelWorkflowRun")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        {workflowRunCanDelete(run) ? <GitHubWorkflowRunDeleteButton controller={deletion} /> : null}
+        <GitHubWorkflowRunDeleteConfirmation run={run} controller={deletion} />
+      </>
     );
   }
 
   if (!workflowRunCanRerun(run)) return null;
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button type="button" variant="outline" size="sm" disabled={mutation.isPending}>
-          {pendingAction ? (
-            <Spinner data-icon="inline-start" />
-          ) : (
-            <RotateCcw data-icon="inline-start" />
-          )}
-          {pendingAction
-            ? t("workspace.repositories.requestingWorkflowRerun")
-            : t("workspace.repositories.rerunWorkflowJobs")}
-          {!pendingAction ? <ChevronDown data-icon="inline-end" /> : null}
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuGroup>
-          <DropdownMenuItem onSelect={() => mutation.mutate("rerunAll")}>
-            <RotateCcw />
-            {t("workspace.repositories.rerunAllWorkflowJobs")}
-          </DropdownMenuItem>
-          {workflowRunHasFailedJobs(run) ? (
-            <DropdownMenuItem onSelect={() => mutation.mutate("rerunFailed")}>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button type="button" variant="outline" size="sm" disabled={mutation.isPending}>
+            {pendingAction ? (
+              <Spinner data-icon="inline-start" />
+            ) : (
+              <RotateCcw data-icon="inline-start" />
+            )}
+            {pendingAction
+              ? t("workspace.repositories.requestingWorkflowRerun")
+              : t("workspace.repositories.rerunWorkflowJobs")}
+            {!pendingAction ? <ChevronDown data-icon="inline-end" /> : null}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuGroup>
+            <DropdownMenuItem onSelect={() => mutation.mutate("rerunAll")}>
               <RotateCcw />
-              {t("workspace.repositories.rerunFailedWorkflowJobs")}
+              {t("workspace.repositories.rerunAllWorkflowJobs")}
             </DropdownMenuItem>
+            {workflowRunHasFailedJobs(run) ? (
+              <DropdownMenuItem onSelect={() => mutation.mutate("rerunFailed")}>
+                <RotateCcw />
+                {t("workspace.repositories.rerunFailedWorkflowJobs")}
+              </DropdownMenuItem>
+            ) : null}
+          </DropdownMenuGroup>
+          {workflowRunCanDelete(run) ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                <GitHubWorkflowRunDeleteMenuItem controller={deletion} />
+              </DropdownMenuGroup>
+            </>
           ) : null}
-        </DropdownMenuGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <GitHubWorkflowRunDeleteConfirmation run={run} controller={deletion} />
+    </>
   );
 }

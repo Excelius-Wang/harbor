@@ -1890,6 +1890,10 @@ export type GitHubWorkflowRunFilterOptions = {
 
 export type GitHubWorkflowRunAction = "cancel" | "rerunAll" | "rerunFailed";
 
+export type GitHubWorkflowRunDeletion = {
+  runId: number;
+};
+
 export type GitHubWorkflowReferenceKind = "branch" | "tag";
 
 export type GitHubWorkflowDispatchInputType =
@@ -1899,11 +1903,18 @@ export type GitHubWorkflowDispatchInputType =
   | "environment"
   | "string";
 
+export type GitHubWorkflowState =
+  | "active"
+  | "disabled_manually"
+  | "disabled_inactivity"
+  | "disabled_fork"
+  | "deleted";
+
 export type GitHubWorkflow = {
   id: number;
   name: string;
   path: string;
-  state: string;
+  state: GitHubWorkflowState;
   url: string;
 };
 

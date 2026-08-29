@@ -9,47 +9,57 @@ controls, and organization-level advanced security remain out of scope.
 
 ## Current state
 
-Draft [PR #12](https://github.com/Excelius-Wang/harbor/pull/12) integrates the latest heads of PRs
-#1 through #11 on `integration/prs-1-11-20260829`; it is clean and mergeable. The combined tree adds
-repository Insights, personal Packages, Wiki, Reactions, comment lifecycle, commit details,
-conversation controls, personal collaborators, received invitations, Issue taxonomy, and Pages.
-Pages routes Actions publishing to Harbor's native Actions tab. Wiki Git/cache operations live behind
-`WikiRepositoryStore`; authentication errors remain explicit and search includes UTF-8 page bodies.
-Reaction writes serialize and restore all affected caches on failure. Comment updates preserve
-reaction subjects and allow an explicitly empty body through both frontend and Tauri validation.
-Commit detail maps 404, 409, and 422 to non-retryable states without leaking private repository
-existence. The main window defaults to 1200×760 logical pixels so it fits the built-in Retina work
-area while retaining the verified 900×620 minimum.
+[PR #12](https://github.com/Excelius-Wang/harbor/pull/12) was squash-merged to `main` as
+`b26847bb0a6e2eccf365136d6c1cad3fe04142c5`. PRs #1 through #11 were closed as superseded, and the
+remote integration and superseded feature branches were deleted. The merged slice adds repository
+Insights, personal Packages, Wiki, Reactions, comment lifecycle, commit details, conversation
+controls, personal collaborators, received invitations, Issue taxonomy, and Pages. The signed-in
+production Packages page reached its empty state after the exact API returned `200`.
 
-The primary worktree has separate, uncommitted Actions-administration work and must remain untouched.
-No generated output, credentials, or unrelated local artifacts are included. OAuth login now
-completes and saves a credential, but the configured client is a GitHub App and the issued user token
-is a `ghu_` token with no OAuth scopes. The signed-in app can call `/user`, and it is installed on the
-personal account, but `/user/packages?package_type=container` returns `403 Resource not accessible by
-integration` under both API versions `2022-11-28` and `2026-03-10`; GitHub reports
-`allows_permissionless_access=true`. This disproves the release assumption that the configured
-GitHub App user token can exercise the native Personal Packages route. Harbor now rejects GitHub
-App client IDs before sign-in and rejects new or stored `ghu_` credentials before use. Its supported
-scope-based login is documented as a classic OAuth App flow. Harbor's original code is now
-`AGPL-3.0-only`; `NOTICE` preserves the original repository attribution, the template MIT notice is
-retained separately, and About exposes the license and canonical source. Temporary diagnostic
-logging was removed. The replacement OAuth App now issues a `gho_` token. GitHub normalized
-`read:packages` into `write:packages`; Harbor now recognizes that implication. A credential-safe live
-request to `/user/packages?package_type=container` returns `200` with an empty package list. The
-ignored Cargo probe still cannot read the app-owned macOS Keychain item from the test binary, so it
-is not the release gate.
+The recovered Actions-administration slice now lives in
+`/private/tmp/harbor-actions-administration-20260830` on
+`feat/github-actions-administration`. Commit `3246afe` ports the verified checkpoint onto
+`b26847b` without changing the original worktree. The original worktree remains on local branch
+`checkpoint/github-actions-administration-20260830` at `7e2084f` with only its Cairn item unstaged.
+The migrated implementation supports workflow enable/disable and eligible workflow-run deletion
+through focused Actions Interfaces, validated Tauri commands, TanStack Query reconciliation,
+shadcn controls, and English/Chinese copy. Review added an observed `workflow_id` deletion guard,
+maps GitHub 404/409 deletion responses to refreshable conflicts, keeps selected workflow state in
+sync after a stale mutation, navigates away before clearing a deleted run's caches, and uses the
+documented shadcn menu grouping. The deletion regression test asserts list, detail, Jobs, artifacts,
+and Job-log cache behavior.
+
+Standards and Spec reviews found no hard standards violations and no scope creep. Their confirmed
+findings are fixed: eligible runs now expose deletion in the run-list destructive menu and detail
+header; every Job log is nested under the run cache root; the backend rejects no-op workflow state
+transitions; workflow states use a shared frontend union and presentation policy; and local HTTP
+tests verify workflow `GET → PUT → GET`, run `GET → DELETE → 204`, and delete-time `409` behavior.
+The shared deletion controller also removes duplicated confirmation logic, and static rendering
+tests cover eligible and ineligible run-list placement.
+
+`pnpm check` passes 34 frontend files and 180 tests. Rust library tests pass 324 tests with two
+intentional ignores. Clippy passes with the 15 existing warnings; `cargo check`, rustfmt, and
+`git diff --check` also pass. Draft [PR #13](https://github.com/Excelius-Wang/harbor/pull/13) is open
+from the pushed `feat/github-actions-administration` branch into `main`.
+
+Harbor uses a classic OAuth App for scope-based personal workflows, rejects GitHub App client IDs
+and `ghu_` tokens, and honors GitHub's normalization of `read:packages` into `write:packages`.
+Harbor-owned code is `AGPL-3.0-only`; preserve `NOTICE`, canonical source attribution, and
+`THIRD_PARTY_NOTICES.md`. Do not print, copy, or commit `.env.local`, access tokens, client secrets,
+refresh tokens, or Keychain contents.
 
 ## Next action
 
-Confirm the running Harbor Packages page reaches its empty state through the production command.
+Commit and push the verified review fixes, mark PR #13 Ready, then squash-merge it.
 
 ## Verification
 
 Run `pnpm check`, `cargo test --manifest-path src-tauri/Cargo.toml --lib`,
-`cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets`, `cargo fmt --check`, and
-`git diff --check`. Confirm PR #12 is clean and mergeable, then reconnect and confirm the in-app
-Packages page reaches a package list or its empty state instead of `githubPermission`.
+`cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features`,
+`cargo fmt --manifest-path src-tauri/Cargo.toml --check`, and `git diff --check`. Review the focused
+diff against `origin/main`, then deliver it through a Draft PR, Ready state, squash merge, `main`
+verification, and remote branch deletion.
 
-Success: `pnpm check` passes with 33 files and 174 tests; the Rust library passes 314 tests with two
-intentional ignores; Clippy passes with 15 existing warnings. PR #12 remains Draft until the live
-Packages probe succeeds.
+Success: all frontend and Rust checks pass; Standards and Spec reviews have no unresolved findings;
+the focused PR is squash-merged; remote `main` contains the verified Actions administration slice;
+the remote feature branch is absent.
