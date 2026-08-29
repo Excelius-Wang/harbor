@@ -519,6 +519,39 @@ export type GitHubRepositoryInsightsTraffic = {
   paths: GitHubTrafficPath[];
 };
 
+export type GitHubRepositoryAccessUser = {
+  id: number;
+  login: string;
+  avatarUrl: string;
+  url: string;
+};
+
+export type GitHubRepositoryCollaboratorPage = {
+  collaborators: GitHubRepositoryAccessUser[];
+  page: number;
+  hasPrevious: boolean;
+  hasMore: boolean;
+};
+
+export type GitHubRepositoryInvitation = {
+  id: number;
+  invitee: GitHubRepositoryAccessUser;
+  inviter: GitHubRepositoryAccessUser;
+  createdAt: string;
+};
+
+export type GitHubRepositoryInvitationPage = {
+  invitations: GitHubRepositoryInvitation[];
+  page: number;
+  hasPrevious: boolean;
+  hasMore: boolean;
+};
+
+export type GitHubRepositoryInviteResult = {
+  status: "invited" | "alreadyCollaborator";
+  invitation?: GitHubRepositoryInvitation | null;
+};
+
 export type GitHubGistSource = "mine" | "starred" | "public";
 
 export type GitHubGistFile = {

@@ -38,6 +38,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { parseIpcError } from "@/lib/ipc-error";
+import { GitHubRepositoryAccessCard } from "./github-repository-access-card";
 import type {
   GitHubRepository,
   GitHubRepositorySettings,
@@ -265,6 +266,8 @@ export function GitHubRepositorySettingsView({ repository }: { repository: GitHu
             </AlertDescription>
           </Alert>
         ) : null}
+
+        <GitHubRepositoryAccessCard target={target} />
 
         <Card>
           <CardHeader>

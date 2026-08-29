@@ -33,6 +33,8 @@ import {
   repositoryRelationshipQueryOptions,
   repositoryCreationOptionsQueryOptions,
   personalRepositorySettingsQueryOptions,
+  personalRepositoryCollaboratorsQueryOptions,
+  personalRepositoryInvitationsQueryOptions,
   profileActivityQueryOptions,
   profileConnectionsQueryOptions,
   starredRepositoriesQueryOptions,
@@ -172,6 +174,44 @@ describe("GitHub repository queries", () => {
     expect(invoke).toHaveBeenNthCalledWith(2, "github_get_personal_repository_settings", {
       owner: "octocat",
       repository: "harbor",
+    });
+  });
+
+  it("keeps personal collaborators and invitations in separate paginated caches", async () => {
+    const client = createTestQueryClient();
+    vi.mocked(invoke)
+      .mockResolvedValueOnce({ collaborators: [], page: 1, hasMore: false })
+      .mockResolvedValueOnce({ invitations: [], page: 1, hasMore: false });
+    const target = { owner: "octocat", repository: "harbor" };
+    const collaborators = personalRepositoryCollaboratorsQueryOptions(target);
+    const invitations = personalRepositoryInvitationsQueryOptions(target);
+
+    await client.fetchInfiniteQuery(collaborators);
+    await client.fetchInfiniteQuery(invitations);
+
+    expect(collaborators.queryKey).toEqual([
+      "github",
+      "repository",
+      "octocat",
+      "harbor",
+      "access",
+      "collaborators",
+    ]);
+    expect(invitations.queryKey).toEqual([
+      "github",
+      "repository",
+      "octocat",
+      "harbor",
+      "access",
+      "invitations",
+    ]);
+    expect(invoke).toHaveBeenNthCalledWith(1, "github_list_personal_repository_collaborators", {
+      ...target,
+      page: 1,
+    });
+    expect(invoke).toHaveBeenNthCalledWith(2, "github_list_personal_repository_invitations", {
+      ...target,
+      page: 1,
     });
   });
 

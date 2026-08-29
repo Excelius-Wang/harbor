@@ -74,7 +74,9 @@ import type {
   GitHubRepositoryInsightsContributors,
   GitHubRepositoryInsightsOverview,
   GitHubRepositoryInsightsTraffic,
+  GitHubRepositoryCollaboratorPage,
   GitHubRepositoryCreationOptions,
+  GitHubRepositoryInvitationPage,
   GitHubRepositoryRelationship,
   GitHubRepositorySettings,
   GitHubRepositoryCommitPage,
@@ -424,6 +426,12 @@ export const githubQueryKeys = {
     path,
   }: GitHubWikiComparisonTarget) =>
     ["github", "repository", owner, repository, "wiki", "compare", baseSha, headSha, path] as const,
+  repositoryAccess: ({ owner, repository }: GitHubRepositoryTarget) =>
+    ["github", "repository", owner, repository, "access"] as const,
+  repositoryCollaborators: ({ owner, repository }: GitHubRepositoryTarget) =>
+    ["github", "repository", owner, repository, "access", "collaborators"] as const,
+  repositoryInvitations: ({ owner, repository }: GitHubRepositoryTarget) =>
+    ["github", "repository", owner, repository, "access", "invitations"] as const,
   profile: ({ username }: GitHubProfileTarget) =>
     ["github", "profile", username ?? "viewer"] as const,
   profilesRoot: ["github", "profile"] as const,
@@ -1020,6 +1028,34 @@ export function repositoryInsightsTrafficQueryOptions(target: GitHubInsightsTraf
     queryKey: githubQueryKeys.repositoryInsightsTraffic(target),
     queryFn: () =>
       invoke<GitHubRepositoryInsightsTraffic>("github_get_repository_insights_traffic", target),
+    staleTime: GITHUB_QUERY_STALE_TIME,
+  });
+}
+
+export function personalRepositoryCollaboratorsQueryOptions(target: GitHubRepositoryTarget) {
+  return infiniteQueryOptions({
+    queryKey: githubQueryKeys.repositoryCollaborators(target),
+    queryFn: ({ pageParam }) =>
+      invoke<GitHubRepositoryCollaboratorPage>("github_list_personal_repository_collaborators", {
+        ...target,
+        page: pageParam,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.page + 1 : undefined),
+    staleTime: GITHUB_QUERY_STALE_TIME,
+  });
+}
+
+export function personalRepositoryInvitationsQueryOptions(target: GitHubRepositoryTarget) {
+  return infiniteQueryOptions({
+    queryKey: githubQueryKeys.repositoryInvitations(target),
+    queryFn: ({ pageParam }) =>
+      invoke<GitHubRepositoryInvitationPage>("github_list_personal_repository_invitations", {
+        ...target,
+        page: pageParam,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.page + 1 : undefined),
     staleTime: GITHUB_QUERY_STALE_TIME,
   });
 }

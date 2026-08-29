@@ -29,6 +29,7 @@ pub(crate) mod projects;
 pub(crate) mod pull_request;
 pub(crate) mod reaction;
 pub(crate) mod release;
+pub(crate) mod repository_access;
 pub(crate) mod repository_relationships;
 pub(crate) mod repository_settings;
 pub(crate) mod security;
@@ -114,6 +115,9 @@ pub use reaction::{
 pub use release::{
     GitHubRelease, GitHubReleaseArchiveFormat, GitHubReleaseAsset, GitHubReleaseMutationInput,
     GitHubReleasePage,
+};
+pub use repository_access::{
+    GitHubRepositoryCollaboratorPage, GitHubRepositoryInvitationPage, GitHubRepositoryInviteResult,
 };
 pub use repository_relationships::{
     GitHubForkInput, GitHubForkResult, GitHubRepositoryRelationship, GitHubRepositoryWatchLevel,
@@ -620,6 +624,7 @@ pub(crate) trait GitHubClient:
     + pull_request::update_branch::GitHubPullRequestBranchClient
     + reaction::GitHubReactionClient
     + release::GitHubReleaseClient
+    + repository_access::GitHubRepositoryAccessClient
     + repository_relationships::GitHubRepositoryRelationshipsClient
     + repository_settings::GitHubRepositorySettingsClient
     + security::GitHubSecurityClient
@@ -2987,6 +2992,47 @@ mod tests {
         assert_eq!(
             subscribed.viewer_subscription,
             Some(conversation::GitHubConversationSubscriptionState::Subscribed)
+        );
+    }
+
+    #[tokio::test]
+    async fn repository_access_uses_the_saved_connection() {
+        let credentials = Arc::new(MemoryCredentialStore::default());
+        credentials
+            .save_github_credentials(&oauth_credentials())
+            .expect("seed credentials");
+        let service = GitHubService::new(
+            Arc::new(FakeGitHubClient),
+            credentials,
+            Some(oauth_session("github-user-access-token")),
+        );
+
+        let collaborators = service
+            .personal_repository_collaborators("octocat", "hello-world", 1)
+            .await
+            .expect("repository collaborators");
+        let invitations = service
+            .personal_repository_invitations("octocat", "hello-world", 1)
+            .await
+            .expect("repository invitations");
+        let invited = service
+            .invite_personal_repository_collaborator("octocat", "hello-world", "hubot")
+            .await
+            .expect("invite collaborator");
+        service
+            .cancel_personal_repository_invitation("octocat", "hello-world", 7)
+            .await
+            .expect("cancel invitation");
+        service
+            .remove_personal_repository_collaborator("octocat", "hello-world", "hubot")
+            .await
+            .expect("remove collaborator");
+
+        assert_eq!(collaborators.collaborators[0].login, "hubot");
+        assert!(invitations.invitations.is_empty());
+        assert_eq!(
+            invited.status,
+            repository_access::GitHubRepositoryInviteStatus::Invited
         );
     }
 

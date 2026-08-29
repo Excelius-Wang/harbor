@@ -46,22 +46,23 @@ use crate::{
         GitHubPullRequestReviewThreadState, GitHubPullRequestSort, GitHubPullRequestState,
         GitHubReactionContent, GitHubReactionSubject, GitHubReactionSubjectRef, GitHubRelease,
         GitHubReleaseArchiveFormat, GitHubReleaseAsset, GitHubReleaseMutationInput,
-        GitHubReleasePage, GitHubRepositoryCommitPage, GitHubRepositoryCreateInput,
-        GitHubRepositoryCreationOptions, GitHubRepositoryFileCommit, GitHubRepositoryFileMutation,
-        GitHubRepositoryInsightsContributors, GitHubRepositoryInsightsOverview,
-        GitHubRepositoryInsightsTraffic, GitHubRepositoryPage, GitHubRepositoryRelationship,
-        GitHubRepositorySettings, GitHubRepositorySettingsUpdate, GitHubRepositoryWatchLevel,
-        GitHubSecretScanningLocationPage, GitHubSecurityAlertDetail, GitHubSecurityAlertFilters,
-        GitHubSecurityAlertKind, GitHubSecurityAlertMutation, GitHubSecurityAlertPage,
-        GitHubSecurityAlertSeverityFilter, GitHubSecurityAlertSort, GitHubSecurityAlertStateFilter,
-        GitHubStarredRepositoryPage, GitHubStarredRepositorySort, GitHubTagPage, GitHubUserPage,
-        GitHubUserProfile, GitHubUserProfileUpdate, GitHubWikiComparison, GitHubWikiHistoryPage,
-        GitHubWikiMutationResult, GitHubWikiOverview, GitHubWikiPage, GitHubWikiPageMutationInput,
-        GitHubWikiRevertInput, GitHubWikiRevision, GitHubWorkflow, GitHubWorkflowArtifactPage,
-        GitHubWorkflowDispatchConfig, GitHubWorkflowDispatchOptions, GitHubWorkflowJobLog,
-        GitHubWorkflowJobPage, GitHubWorkflowRun, GitHubWorkflowRunAction,
-        GitHubWorkflowRunFilterOptions, GitHubWorkflowRunFilters, GitHubWorkflowRunPage,
-        GitHubWorkflowRunStatusFilter,
+        GitHubReleasePage, GitHubRepositoryCollaboratorPage, GitHubRepositoryCommitPage,
+        GitHubRepositoryCreateInput, GitHubRepositoryCreationOptions, GitHubRepositoryFileCommit,
+        GitHubRepositoryFileMutation, GitHubRepositoryInsightsContributors,
+        GitHubRepositoryInsightsOverview, GitHubRepositoryInsightsTraffic,
+        GitHubRepositoryInvitationPage, GitHubRepositoryInviteResult, GitHubRepositoryPage,
+        GitHubRepositoryRelationship, GitHubRepositorySettings, GitHubRepositorySettingsUpdate,
+        GitHubRepositoryWatchLevel, GitHubSecretScanningLocationPage, GitHubSecurityAlertDetail,
+        GitHubSecurityAlertFilters, GitHubSecurityAlertKind, GitHubSecurityAlertMutation,
+        GitHubSecurityAlertPage, GitHubSecurityAlertSeverityFilter, GitHubSecurityAlertSort,
+        GitHubSecurityAlertStateFilter, GitHubStarredRepositoryPage, GitHubStarredRepositorySort,
+        GitHubTagPage, GitHubUserPage, GitHubUserProfile, GitHubUserProfileUpdate,
+        GitHubWikiComparison, GitHubWikiHistoryPage, GitHubWikiMutationResult, GitHubWikiOverview,
+        GitHubWikiPage, GitHubWikiPageMutationInput, GitHubWikiRevertInput, GitHubWikiRevision,
+        GitHubWorkflow, GitHubWorkflowArtifactPage, GitHubWorkflowDispatchConfig,
+        GitHubWorkflowDispatchOptions, GitHubWorkflowJobLog, GitHubWorkflowJobPage,
+        GitHubWorkflowRun, GitHubWorkflowRunAction, GitHubWorkflowRunFilterOptions,
+        GitHubWorkflowRunFilters, GitHubWorkflowRunPage, GitHubWorkflowRunStatusFilter,
     },
     github_oauth::{GitHubLoginAttempt, GitHubLoopbackListener, GITHUB_AUTH_EVENT},
     repository_context::{RepositoryContextAnswer, RepositoryRef},
@@ -414,6 +415,96 @@ pub async fn github_get_personal_repository_settings(
     state
         .github
         .personal_repository_settings(repository.owner(), repository.name())
+        .await
+}
+
+#[tauri::command]
+pub async fn github_list_personal_repository_collaborators(
+    owner: String,
+    repository: String,
+    page: u32,
+    state: State<'_, AppState>,
+) -> Result<GitHubRepositoryCollaboratorPage, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .personal_repository_collaborators(
+            repository.owner(),
+            repository.name(),
+            validate_page(page)?,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_list_personal_repository_invitations(
+    owner: String,
+    repository: String,
+    page: u32,
+    state: State<'_, AppState>,
+) -> Result<GitHubRepositoryInvitationPage, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .personal_repository_invitations(
+            repository.owner(),
+            repository.name(),
+            validate_page(page)?,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_invite_personal_repository_collaborator(
+    owner: String,
+    repository: String,
+    username: String,
+    state: State<'_, AppState>,
+) -> Result<GitHubRepositoryInviteResult, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .invite_personal_repository_collaborator(
+            repository.owner(),
+            repository.name(),
+            &crate::github::profile::normalize_user_login(&username)?,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_cancel_personal_repository_invitation(
+    owner: String,
+    repository: String,
+    invitation_id: u64,
+    state: State<'_, AppState>,
+) -> Result<(), AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .cancel_personal_repository_invitation(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(invitation_id, "repository invitation")?,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_remove_personal_repository_collaborator(
+    owner: String,
+    repository: String,
+    username: String,
+    state: State<'_, AppState>,
+) -> Result<(), AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .remove_personal_repository_collaborator(
+            repository.owner(),
+            repository.name(),
+            &crate::github::profile::normalize_user_login(&username)?,
+        )
         .await
 }
 
