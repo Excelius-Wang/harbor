@@ -1,4 +1,4 @@
-import type { QueryClient } from "@tanstack/react-query";
+import type { QueryClient, QueryKey } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
 import type {
   GitHubReactionContent,
@@ -11,6 +11,8 @@ export type GitHubReactionRepositoryTarget = {
   owner: string;
   repository: string;
 };
+
+export type GitHubReactionQuerySnapshot = [QueryKey, unknown];
 
 export const GITHUB_REACTION_BATCH_SIZE = 100;
 
@@ -126,4 +128,20 @@ export function syncReactionSubject(
       )
     );
   }
+}
+
+export function snapshotReactionQueries(
+  queryClient: QueryClient,
+  target: GitHubReactionRepositoryTarget
+): GitHubReactionQuerySnapshot[] {
+  return queryClient.getQueriesData<unknown>({
+    queryKey: githubQueryKeys.reactionsRoot(target),
+  });
+}
+
+export function restoreReactionQueries(
+  queryClient: QueryClient,
+  snapshots: GitHubReactionQuerySnapshot[]
+) {
+  for (const [queryKey, data] of snapshots) queryClient.setQueryData(queryKey, data);
 }
