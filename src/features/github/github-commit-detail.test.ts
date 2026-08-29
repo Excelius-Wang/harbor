@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { GitHubCommitDetailPage } from "./github-data";
-import { matchingCommitDetailPages } from "./github-commit-detail";
+import { matchingCommitDetailPages } from "./github-commit-detail-pages";
 import { parseGitHubFilePatch } from "./github-file-diff";
 
 function commitPage(page: number, sha = "a".repeat(40)): GitHubCommitDetailPage {

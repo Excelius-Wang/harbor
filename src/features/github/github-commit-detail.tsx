@@ -43,27 +43,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { parseIpcError } from "@/lib/ipc-error";
 import { openExternalUrl } from "@/lib/window";
-import type {
-  GitHubChangedFile,
-  GitHubCommitActor,
-  GitHubCommitDetailPage,
-  GitHubRepositoryIdentity,
-} from "./github-data";
+import type { GitHubChangedFile, GitHubCommitActor, GitHubRepositoryIdentity } from "./github-data";
+import { matchingCommitDetailPages } from "./github-commit-detail-pages";
 import { GitHubReadOnlyFileDiff } from "./github-file-diff";
 import { formatIssueDate } from "./github-issue-shared";
 import { repositoryCommitDetailQueryOptions } from "./github-queries";
-
-export function matchingCommitDetailPages(pages: GitHubCommitDetailPage[]) {
-  const first = pages[0];
-  if (!first) return [];
-  const identity = JSON.stringify(first.commit);
-  const matching = [first];
-  for (const page of pages.slice(1)) {
-    if (JSON.stringify(page.commit) !== identity || page.page !== matching.length + 1) break;
-    matching.push(page);
-  }
-  return matching;
-}
 
 function CommitActor({
   actor,
