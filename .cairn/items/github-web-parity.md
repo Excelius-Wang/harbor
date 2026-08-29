@@ -53,7 +53,7 @@ one reusable dismissal action owns the menu/dialog/mutation, eligible timeline c
 review IDs, malformed `200` payloads remain refreshable conflicts, and focused tests traverse two
 Review pages plus null and mismatched postflight responses. Spec re-review has no unresolved
 findings. Standards re-review found one new component using the legacy translation hook; it now uses
-Harbor's multi-window-safe hook, with final Standards re-review pending.
+Harbor's multi-window-safe hook, and final Standards re-review also has no unresolved findings.
 
 Post-fix verification passes `pnpm check` with 36 frontend files and 199 tests, and Rust library tests
 with 337 passing and two intentional ignores. `cargo check`, rustfmt, and `git diff --check` pass.
@@ -76,8 +76,8 @@ refresh tokens, or Keychain contents.
 
 ## Next action
 
-Commit and push the final translation-hook fix, obtain a clean Standards re-review, then mark PR #15
-Ready and squash-merge when clean.
+Mark PR #15 Ready, squash-merge the reviewed head, verify the merge on `main`, and delete the remote
+feature branch.
 
 ## Verification
 
