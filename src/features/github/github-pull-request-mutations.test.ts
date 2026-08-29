@@ -25,6 +25,7 @@ import {
   enableRepositoryPullRequestAutoMerge,
   enqueueRepositoryPullRequest,
   mergeRepositoryPullRequest,
+  invalidatePullRequestAfterBaseEdit,
   invalidatePullRequestAfterBranchUpdate,
   invalidatePullRequestAfterReviewDismissal,
   removeRepositoryPullRequestReviewers,
@@ -45,6 +46,7 @@ import {
   submitPendingRepositoryPullRequestReview,
   unresolvePullRequestReviewThread,
   updateRepositoryPullRequest,
+  updateRepositoryPullRequestBase,
   updateRepositoryPullRequestBranch,
   updateRepositoryPullRequestDraftState,
   updateRepositoryPullRequestMetadata,
@@ -276,6 +278,56 @@ describe("GitHub pull request mutations", () => {
       reviewId: 86,
       message: "Outdated approval",
     });
+  });
+
+  it("changes only the PR base with explicit ref snapshot guards", async () => {
+    vi.mocked(invoke).mockResolvedValueOnce({ ...pullRequest, baseRef: "release" });
+
+    await updateRepositoryPullRequestBase(target, {
+      expectedCurrentBase: "main",
+      expectedCurrentBaseSha: "base1234",
+      expectedHeadSha: "abc1234",
+      targetBase: "release",
+      expectedTargetBaseSha: "target123",
+    });
+
+    expect(invoke).toHaveBeenCalledWith("github_update_repository_pull_request_base", {
+      ...target,
+      expectedCurrentBase: "main",
+      expectedCurrentBaseSha: "base1234",
+      expectedHeadSha: "abc1234",
+      targetBase: "release",
+      expectedTargetBaseSha: "target123",
+    });
+  });
+
+  it("invalidates every PR-dependent cache after a base edit", async () => {
+    const queryClient = createQueryClient();
+    const keys = [
+      githubQueryKeys.pullRequestDetail({ ...target, timelinePage: 1 }),
+      githubQueryKeys.pullRequestFiles({ ...target, page: 1 }),
+      githubQueryKeys.pullRequestReviews(target),
+      githubQueryKeys.checks({
+        owner: target.owner,
+        repository: target.repository,
+        reference: pullRequest.headSha,
+        page: 1,
+      }),
+      githubQueryKeys.pullRequests({
+        owner: target.owner,
+        repository: target.repository,
+        state: "open",
+        query: "",
+        label: "",
+        sort: "updated",
+        page: 1,
+      }),
+    ];
+    keys.forEach((key) => queryClient.setQueryData(key, { cached: true }));
+
+    await invalidatePullRequestAfterBaseEdit(queryClient, target);
+
+    keys.forEach((key) => expect(queryClient.getQueryState(key)?.isInvalidated).toBe(true));
   });
 
   it("replaces the exact review across detail and paged review caches", () => {
