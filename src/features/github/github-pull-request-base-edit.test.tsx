@@ -5,9 +5,14 @@ import en from "@/i18n/locales/en.json";
 import zh from "@/i18n/locales/zh.json";
 import type { GitHubPullRequest, GitHubPullRequestBaseBranchPage } from "./github-data";
 import {
+  BaseBranchLoadError,
+  BaseBranchLoading,
   GitHubPullRequestBaseEdit,
+  canSubmitPullRequestBaseEdit,
   canChangePullRequestBase,
   collectPullRequestBaseBranches,
+  pullRequestBaseBranchSnapshotRevision,
+  shouldFetchNextPullRequestBaseBranchPage,
 } from "./github-pull-request-base-edit";
 
 vi.mock("@/hooks/use-app-translation", () => ({
@@ -84,6 +89,100 @@ describe("pull request base edit", () => {
     expect(
       collectPullRequestBaseBranches([page(), page({ page: 2, currentBaseSha: "moved" })])
     ).toBeNull();
+  });
+
+  it("automatically follows every branch page before enabling a different base", () => {
+    expect(
+      shouldFetchNextPullRequestBaseBranchPage({
+        open: true,
+        hasNextPage: true,
+        isFetchingNextPage: false,
+        hasError: false,
+        mutationPending: false,
+      })
+    ).toBe(true);
+    expect(
+      shouldFetchNextPullRequestBaseBranchPage({
+        open: true,
+        hasNextPage: true,
+        isFetchingNextPage: false,
+        hasError: true,
+        mutationPending: false,
+      })
+    ).toBe(false);
+    expect(
+      shouldFetchNextPullRequestBaseBranchPage({
+        open: true,
+        hasNextPage: true,
+        isFetchingNextPage: false,
+        hasError: false,
+        mutationPending: true,
+      })
+    ).toBe(false);
+
+    const selected = { name: "release", sha: "release123", protected: false };
+    expect(
+      canSubmitPullRequestBaseEdit({
+        selected,
+        currentBase: "main",
+        snapshotMatchesDetail: true,
+        pagesAreLoading: false,
+        hasError: false,
+      })
+    ).toBe(true);
+    expect(
+      canSubmitPullRequestBaseEdit({
+        selected,
+        currentBase: "release",
+        snapshotMatchesDetail: true,
+        pagesAreLoading: false,
+        hasError: false,
+      })
+    ).toBe(false);
+    expect(
+      canSubmitPullRequestBaseEdit({
+        selected,
+        currentBase: "main",
+        snapshotMatchesDetail: true,
+        pagesAreLoading: true,
+        hasError: false,
+      })
+    ).toBe(false);
+  });
+
+  it("changes the selection revision when any guarded branch identity moves", () => {
+    const before = collectPullRequestBaseBranches([
+      page({
+        branches: [{ name: "release", sha: "release123", protected: false }],
+      }),
+    ]);
+    const after = collectPullRequestBaseBranches([
+      page({
+        branches: [{ name: "release", sha: "release456", protected: false }],
+      }),
+    ]);
+
+    expect(pullRequestBaseBranchSnapshotRevision(before)).not.toBe(
+      pullRequestBaseBranchSnapshotRevision(after)
+    );
+  });
+
+  it("renders accessible pending and retryable error states", () => {
+    const pending = renderToStaticMarkup(<BaseBranchLoading label="Loading all branches" />);
+    const failed = renderToStaticMarkup(
+      <BaseBranchLoadError
+        error={new Error("network unavailable")}
+        disabled
+        onRetry={() => undefined}
+      />
+    );
+
+    expect(pending).toContain('role="status"');
+    expect(pending).toContain('aria-live="polite"');
+    expect(failed).toContain('role="alert"');
+    expect(failed).toContain("network unavailable");
+    expect(failed).toContain("disabled");
+    expect(failed).toContain("workspace.repositories.retry");
   });
 
   it("renders the action only for eligible pull requests", () => {

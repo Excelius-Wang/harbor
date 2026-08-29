@@ -431,6 +431,8 @@ mod tests {
     };
 
     struct MockResponse {
+        status: &'static str,
+        headers: &'static str,
         body: String,
     }
 
@@ -480,7 +482,9 @@ mod tests {
                     .expect("requests")
                     .push(String::from_utf8(buffer).expect("request utf8"));
                 let payload = format!(
-                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                    "HTTP/1.1 {}\r\nContent-Type: application/json\r\n{}Content-Length: {}\r\nConnection: close\r\n\r\n{}",
+                    response.status,
+                    response.headers,
                     response.body.len(),
                     response.body
                 );
@@ -627,18 +631,28 @@ mod tests {
         request_guard.target_base = "release/v2".to_string();
         let (client, requests, server) = mock_github(vec![
             MockResponse {
+                status: "200 OK",
+                headers: "",
                 body: pull_request_json("main", "base1234"),
             },
             MockResponse {
+                status: "200 OK",
+                headers: "",
                 body: branch_json("release/v2", "target123"),
             },
             MockResponse {
+                status: "200 OK",
+                headers: "",
                 body: pull_request_json("release/v2", "target123"),
             },
             MockResponse {
+                status: "200 OK",
+                headers: "",
                 body: pull_request_json("release/v2", "target123"),
             },
             MockResponse {
+                status: "200 OK",
+                headers: "",
                 body: branch_json("release/v2", "target123"),
             },
         ])
@@ -665,5 +679,146 @@ mod tests {
         assert!(!requests[2].contains("\"title\""));
         assert!(requests[3].starts_with("GET /repos/octocat/hello-world/pulls/12 "));
         assert!(requests[4].starts_with("GET /repos/octocat/hello-world/branches/release%2Fv2 "));
+    }
+
+    #[tokio::test]
+    async fn branch_pages_keep_link_pagination_and_authoritative_pr_guards() {
+        let branches = serde_json::json!([serde_json::from_str::<serde_json::Value>(
+            &branch_json("release", "target123")
+        )
+        .expect("branch json")])
+        .to_string();
+        let (client, requests, server) = mock_github(vec![
+            MockResponse {
+                status: "200 OK",
+                headers: "",
+                body: pull_request_json("main", "base1234"),
+            },
+            MockResponse {
+                status: "200 OK",
+                headers: "Link: <http://example.test/repos/octocat/hello-world/branches?per_page=100&page=3>; rel=\"next\"\r\n",
+                body: branches,
+            },
+        ])
+        .await;
+
+        let page = pull_request_base_branches_with_client(&client, "octocat", "hello-world", 12, 2)
+            .await
+            .expect("base branch page");
+        server.await.expect("mock server");
+
+        assert_eq!(page.current_base, "main");
+        assert_eq!(page.current_base_sha, "base1234");
+        assert_eq!(page.head_sha, "abc1234");
+        assert_eq!(page.branches[0].name, "release");
+        assert!(page.has_previous);
+        assert!(page.has_more);
+        let requests = requests.lock().expect("requests");
+        assert!(
+            requests[1].starts_with("GET /repos/octocat/hello-world/branches?per_page=100&page=2 ")
+        );
+    }
+
+    #[tokio::test]
+    async fn permission_and_rate_limit_errors_keep_shared_ipc_categories() {
+        for (status, message, rate_limited) in [
+            ("403 Forbidden", "Resource not accessible", false),
+            ("403 Forbidden", "API rate limit exceeded", true),
+        ] {
+            let (client, _requests, server) = mock_github(vec![MockResponse {
+                status,
+                headers: "",
+                body: serde_json::json!({
+                    "message": message,
+                    "documentation_url": "https://docs.github.com/rest/pulls/pulls"
+                })
+                .to_string(),
+            }])
+            .await;
+
+            let error = update_pull_request_base_with_client(
+                &client,
+                "octocat",
+                "hello-world",
+                12,
+                &guard(),
+            )
+            .await
+            .expect_err("mapped GitHub error");
+            server.await.expect("mock server");
+
+            let mapped = if rate_limited {
+                matches!(error, AppError::GitHubRateLimited(_))
+            } else {
+                matches!(error, AppError::GitHubPermission(_))
+            };
+            assert!(mapped, "{status} mapped to {error:?}");
+        }
+    }
+
+    #[tokio::test]
+    async fn null_mutation_and_mismatched_postflight_are_refreshable_conflicts() {
+        let (client, _requests, server) = mock_github(vec![
+            MockResponse {
+                status: "200 OK",
+                headers: "",
+                body: pull_request_json("main", "base1234"),
+            },
+            MockResponse {
+                status: "200 OK",
+                headers: "",
+                body: branch_json("release", "target123"),
+            },
+            MockResponse {
+                status: "200 OK",
+                headers: "",
+                body: "null".to_string(),
+            },
+        ])
+        .await;
+        let null_error =
+            update_pull_request_base_with_client(&client, "octocat", "hello-world", 12, &guard())
+                .await
+                .expect_err("null mutation response");
+        server.await.expect("mock server");
+        assert!(matches!(
+            null_error,
+            AppError::GitHubPullRequestBaseEditConflict(_)
+        ));
+
+        let changed_head = pull_request_json("release", "target123")
+            .replace("\"sha\":\"abc1234\"", "\"sha\":\"changed123\"");
+        let (client, _requests, server) = mock_github(vec![
+            MockResponse {
+                status: "200 OK",
+                headers: "",
+                body: pull_request_json("main", "base1234"),
+            },
+            MockResponse {
+                status: "200 OK",
+                headers: "",
+                body: branch_json("release", "target123"),
+            },
+            MockResponse {
+                status: "200 OK",
+                headers: "",
+                body: pull_request_json("release", "target123"),
+            },
+            MockResponse {
+                status: "200 OK",
+                headers: "",
+                body: changed_head,
+            },
+        ])
+        .await;
+        let postflight_error =
+            update_pull_request_base_with_client(&client, "octocat", "hello-world", 12, &guard())
+                .await
+                .expect_err("write-may-have-persisted conflict");
+        server.await.expect("mock server");
+        assert!(matches!(
+            postflight_error,
+            AppError::GitHubPullRequestBaseEditConflict(_)
+        ));
     }
 }

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Check, CircleAlert, GitBranch, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
@@ -76,6 +76,88 @@ export function collectPullRequestBaseBranches(pages: GitHubPullRequestBaseBranc
   };
 }
 
+export function pullRequestBaseBranchSnapshotRevision(
+  snapshot: ReturnType<typeof collectPullRequestBaseBranches>
+) {
+  if (!snapshot) return "";
+  return [
+    snapshot.pullRequestNumber,
+    snapshot.currentBase,
+    snapshot.currentBaseSha,
+    snapshot.headSha,
+    ...snapshot.branches.flatMap((branch) => [branch.name, branch.sha]),
+  ].join("\u0000");
+}
+
+export function shouldFetchNextPullRequestBaseBranchPage(value: {
+  open: boolean;
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+  hasError: boolean;
+  mutationPending: boolean;
+}) {
+  return (
+    value.open &&
+    value.hasNextPage &&
+    !value.isFetchingNextPage &&
+    !value.hasError &&
+    !value.mutationPending
+  );
+}
+
+export function canSubmitPullRequestBaseEdit(value: {
+  selected: GitHubBranch | null;
+  currentBase: string | undefined;
+  snapshotMatchesDetail: boolean;
+  pagesAreLoading: boolean;
+  hasError: boolean;
+}) {
+  return Boolean(
+    value.selected &&
+    value.selected.name !== value.currentBase &&
+    value.snapshotMatchesDetail &&
+    !value.pagesAreLoading &&
+    !value.hasError
+  );
+}
+
+export function BaseBranchLoadError({
+  error,
+  disabled,
+  onRetry,
+}: {
+  error: unknown;
+  disabled: boolean;
+  onRetry: () => void;
+}) {
+  const { t } = useAppTranslation();
+  return (
+    <Alert variant="destructive">
+      <CircleAlert />
+      <AlertTitle>{t("workspace.repositories.pullRequestBaseBranchesLoadFailed")}</AlertTitle>
+      <AlertDescription className="flex flex-col items-start gap-2">
+        <span>{parseIpcError(error).message}</span>
+        <Button type="button" variant="outline" size="xs" disabled={disabled} onClick={onRetry}>
+          {t("workspace.repositories.retry")}
+        </Button>
+      </AlertDescription>
+    </Alert>
+  );
+}
+
+export function BaseBranchLoading({ label }: { label: string }) {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="text-muted-foreground flex min-h-32 items-center justify-center gap-2 text-sm"
+    >
+      <Spinner role="presentation" aria-hidden="true" />
+      <span>{label}</span>
+    </div>
+  );
+}
+
 export function GitHubPullRequestBaseEdit({
   repository,
   pullRequest,
@@ -96,10 +178,12 @@ export function GitHubPullRequestBaseEdit({
     ...pullRequestBaseBranchesQueryOptions(target),
     enabled: open,
   });
+  const { error: branchesError, fetchNextPage, hasNextPage, isFetchingNextPage } = branchesQuery;
   const snapshot = useMemo(
     () => collectPullRequestBaseBranches(branchesQuery.data?.pages ?? []),
     [branchesQuery.data?.pages]
   );
+  const snapshotRevision = pullRequestBaseBranchSnapshotRevision(snapshot);
   const snapshotMatchesDetail =
     snapshot?.pullRequestNumber === pullRequest.number &&
     snapshot.currentBase === pullRequest.baseRef &&
@@ -126,6 +210,22 @@ export function GitHubPullRequestBaseEdit({
       void invalidatePullRequestAfterBaseEdit(queryClient, target);
     },
   });
+  useEffect(() => {
+    if (
+      shouldFetchNextPullRequestBaseBranchPage({
+        open,
+        hasNextPage,
+        isFetchingNextPage,
+        hasError: Boolean(branchesError),
+        mutationPending: mutation.isPending,
+      })
+    ) {
+      void fetchNextPage();
+    }
+  }, [open, hasNextPage, isFetchingNextPage, branchesError, fetchNextPage, mutation.isPending]);
+  useEffect(() => {
+    setTargetName("");
+  }, [snapshotRevision]);
   if (!canChangePullRequestBase(pullRequest)) return null;
   const parsedError = mutation.error ? parseIpcError(mutation.error) : null;
   const mutationMessage = parsedError
@@ -141,6 +241,20 @@ export function GitHubPullRequestBaseEdit({
     setTargetName("");
     setOpen(next);
   };
+  const refreshBaseState = () => {
+    if (mutation.isPending) return;
+    mutation.reset();
+    setTargetName("");
+    void invalidatePullRequestAfterBaseEdit(queryClient, target);
+  };
+  const pagesAreLoading = hasNextPage || isFetchingNextPage;
+  const canConfirm = canSubmitPullRequestBaseEdit({
+    selected,
+    currentBase: snapshot?.currentBase,
+    snapshotMatchesDetail,
+    pagesAreLoading,
+    hasError: Boolean(branchesError),
+  });
 
   return (
     <Dialog open={open} onOpenChange={setDialogOpen}>
@@ -150,7 +264,11 @@ export function GitHubPullRequestBaseEdit({
           {t("workspace.repositories.changePullRequestBase")}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-[560px]">
+      <DialogContent
+        className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-[560px]"
+        showCloseButton={!mutation.isPending}
+        aria-busy={mutation.isPending || pagesAreLoading || branchesQuery.isPending}
+      >
         <DialogHeader>
           <DialogTitle>{t("workspace.repositories.changePullRequestBaseTitle")}</DialogTitle>
           <DialogDescription>
@@ -167,37 +285,45 @@ export function GitHubPullRequestBaseEdit({
           </AlertDescription>
         </Alert>
         {branchesQuery.isPending && !snapshot ? (
-          <div className="flex min-h-32 items-center justify-center">
-            <Spinner />
-          </div>
-        ) : branchesQuery.error && !snapshot ? (
-          <Alert variant="destructive">
-            <CircleAlert />
-            <AlertTitle>{t("workspace.repositories.pullRequestBaseBranchesLoadFailed")}</AlertTitle>
-            <AlertDescription className="flex flex-col items-start gap-2">
-              <span>{parseIpcError(branchesQuery.error).message}</span>
-              <Button
-                type="button"
-                variant="outline"
-                size="xs"
-                onClick={() => void branchesQuery.refetch()}
-              >
-                {t("workspace.repositories.retry")}
-              </Button>
-            </AlertDescription>
-          </Alert>
+          <BaseBranchLoading label={t("workspace.repositories.loadingBaseBranches")} />
+        ) : branchesError ? (
+          <BaseBranchLoadError
+            error={branchesError}
+            disabled={mutation.isPending}
+            onRetry={() => {
+              if (snapshot && hasNextPage) {
+                void fetchNextPage();
+              } else {
+                void branchesQuery.refetch();
+              }
+            }}
+          />
+        ) : pagesAreLoading ? (
+          <BaseBranchLoading label={t("workspace.repositories.loadingMoreBaseBranches")} />
         ) : !snapshot || !snapshotMatchesDetail ? (
           <Alert variant="destructive">
             <CircleAlert />
             <AlertTitle>{t("workspace.repositories.pullRequestBaseConflictTitle")}</AlertTitle>
-            <AlertDescription>
-              {t("workspace.repositories.pullRequestBaseConflict")}
+            <AlertDescription className="flex flex-col items-start gap-2">
+              <span>{t("workspace.repositories.pullRequestBaseConflict")}</span>
+              <Button
+                type="button"
+                variant="outline"
+                size="xs"
+                disabled={mutation.isPending}
+                onClick={refreshBaseState}
+              >
+                {t("workspace.repositories.refreshPullRequestBase")}
+              </Button>
             </AlertDescription>
           </Alert>
         ) : (
           <>
             <Command className="rounded-md border">
-              <CommandInput placeholder={t("workspace.repositories.searchBaseBranches")} />
+              <CommandInput
+                placeholder={t("workspace.repositories.searchBaseBranches")}
+                disabled={mutation.isPending}
+              />
               <CommandList className="max-h-64">
                 <CommandEmpty>{t("workspace.repositories.noMatchingBaseBranches")}</CommandEmpty>
                 <CommandGroup>
@@ -233,40 +359,6 @@ export function GitHubPullRequestBaseEdit({
                 </CommandGroup>
               </CommandList>
             </Command>
-            {branchesQuery.error ? (
-              <Alert variant="destructive">
-                <CircleAlert />
-                <AlertTitle>
-                  {t("workspace.repositories.pullRequestBaseBranchesLoadFailed")}
-                </AlertTitle>
-                <AlertDescription className="flex flex-col items-start gap-2">
-                  <span>{parseIpcError(branchesQuery.error).message}</span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="xs"
-                    onClick={() => void branchesQuery.fetchNextPage()}
-                  >
-                    {t("workspace.repositories.retry")}
-                  </Button>
-                </AlertDescription>
-              </Alert>
-            ) : branchesQuery.hasNextPage ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={branchesQuery.isFetchingNextPage || mutation.isPending}
-                onClick={() => void branchesQuery.fetchNextPage()}
-              >
-                {branchesQuery.isFetchingNextPage ? <Spinner data-icon="inline-start" /> : null}
-                {t(
-                  branchesQuery.isFetchingNextPage
-                    ? "workspace.repositories.loadingMoreBaseBranches"
-                    : "workspace.repositories.loadMoreBaseBranches"
-                )}
-              </Button>
-            ) : null}
             {selected ? (
               <p className="bg-muted/45 rounded-md border px-3 py-2 text-xs">
                 <code>{snapshot.currentBase}</code>
@@ -294,7 +386,7 @@ export function GitHubPullRequestBaseEdit({
           </Button>
           <Button
             type="button"
-            disabled={!selected || !snapshotMatchesDetail || mutation.isPending}
+            disabled={!canConfirm || mutation.isPending}
             onClick={() => mutation.mutate()}
           >
             {mutation.isPending ? (

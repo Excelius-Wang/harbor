@@ -62,8 +62,19 @@ selection, current/protected labels, the official impact warning, explicit retry
 Chinese copy. There is no optimistic timeline or diff rewrite. Success and write-ambiguous failures
 refresh the complete PR root, checks, repository PR lists, and Inbox. Focused pagination, guard,
 transport, mutation-body, cache, eligibility, i18n, and error-category regressions are covered.
-Pre-PR verification passes `pnpm check` with 37 frontend files and 206 tests, and Rust library tests
-with 344 passing and two intentional ignores. `cargo check`, rustfmt, and `git diff --check` pass.
+
+Initial Standards review found duplicated initial/paged load-error UI. Initial Spec review found
+manual rather than complete branch pagination, incomplete conflict/no-op recovery, interactive
+controls left enabled while pending, and partial focused UI/transport coverage. All findings are
+fixed: one load-error component owns retry UI; every branch page loads automatically before the
+picker is enabled; explicit broad refresh and snapshot-revision resets prevent stale/no-op writes;
+pending state locks search, retries, selection, closing, and confirmation; and regression tests now
+cover paged branch transport, shared permission/rate categories, null mutation data,
+write-may-have-persisted postflight conflicts, automatic pagination, no-op confirmation, and
+rendered loading/error ARIA states.
+
+Post-fix verification passes `pnpm check` with 37 frontend files and 209 tests, and Rust library tests
+with 347 passing and two intentional ignores. `cargo check`, rustfmt, and `git diff --check` pass.
 Clippy reports exactly the 15 pre-existing warnings and no warning in this slice. Maintainer
 editability remains a separate later slice.
 
@@ -75,8 +86,8 @@ refresh tokens, or Keychain contents.
 
 ## Next action
 
-Commit and push the verified base-edit slice, open its Draft PR, then run parallel Standards and Spec
-reviews against the exact head.
+Commit and push the review fixes to Draft PR #16, then rerun parallel Standards and Spec reviews
+against the exact new head.
 
 ## Verification
 
