@@ -58,6 +58,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { parseIpcError } from "@/lib/ipc-error";
 import { openExternalUrl } from "@/lib/window";
 import type {
@@ -763,7 +764,7 @@ export function GitHubInsightsView({ repository }: { repository: GitHubRepositor
 
   return (
     <section className="@container/insights flex min-h-0 min-w-0 flex-1 flex-col">
-      <div className="flex min-h-12 shrink-0 items-center justify-between gap-3 border-b border-white/[0.065] px-4 py-2.5">
+      <div className="flex min-h-12 shrink-0 items-center justify-between gap-3 border-b px-4 py-2.5">
         <div className="flex min-w-0 items-center gap-3">
           <span className="bg-primary/10 text-primary grid size-8 shrink-0 place-items-center rounded-md">
             <BarChart3 className="size-4" />
@@ -777,19 +778,24 @@ export function GitHubInsightsView({ repository }: { repository: GitHubRepositor
             </p>
           </div>
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          aria-label={t("workspace.repositories.insights.refresh")}
-          disabled={isFetching}
-          onClick={() => void refresh()}
-        >
-          {isFetching ? <Spinner /> : <RefreshCw />}
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label={t("workspace.repositories.insights.refresh")}
+              disabled={isFetching}
+              onClick={() => void refresh()}
+            >
+              {isFetching ? <Spinner /> : <RefreshCw />}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t("workspace.repositories.insights.refresh")}</TooltipContent>
+        </Tooltip>
       </div>
 
-      <div className="flex shrink-0 items-center border-b border-white/[0.055] px-4 py-2">
+      <div className="flex shrink-0 items-center border-b px-4 py-2">
         <Tabs value={tab} onValueChange={(value) => setTab(value as InsightsTab)}>
           <TabsList variant="line" className="h-9 gap-3 p-0">
             <TabsTrigger value="overview" className="px-1.5 text-xs">
