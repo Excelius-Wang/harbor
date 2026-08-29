@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { GitHubPullRequest, GitHubPullRequestBaseBranchPage } from "./github-data";
 import { GitHubPullRequestBaseEdit } from "./github-pull-request-base-edit";
 
@@ -12,102 +12,6 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn() } }));
 vi.mock("@/hooks/use-app-translation", () => ({
   useAppTranslation: () => ({ t: (key: string) => key }),
-}));
-vi.mock("@/components/ui/dialog", async () => {
-  const React = await import("react");
-  const DialogContext = React.createContext({
-    open: false,
-    onOpenChange: (() => undefined) as (open: boolean) => void,
-  });
-  const Container = ({ children }: { children?: React.ReactNode }) => <div>{children}</div>;
-  return {
-    Dialog: ({
-      open,
-      onOpenChange,
-      children,
-    }: {
-      open: boolean;
-      onOpenChange: (open: boolean) => void;
-      children: React.ReactNode;
-    }) => (
-      <DialogContext.Provider value={{ open, onOpenChange }}>
-        <div data-dialog-open={String(open)}>{children}</div>
-      </DialogContext.Provider>
-    ),
-    DialogTrigger: ({ children }: { children: React.ReactNode }) => {
-      const context = React.useContext(DialogContext);
-      return (
-        <div
-          role="button"
-          tabIndex={0}
-          data-testid="base-dialog-trigger"
-          onClick={() => context.onOpenChange(true)}
-          onKeyDown={(event: React.KeyboardEvent) => {
-            if (event.key === "Enter" || event.key === " ") context.onOpenChange(true);
-          }}
-        >
-          {children}
-        </div>
-      );
-    },
-    DialogContent: ({
-      children,
-      showCloseButton,
-      ...props
-    }: {
-      children: React.ReactNode;
-      showCloseButton: boolean;
-      "aria-busy"?: boolean;
-    }) => {
-      const context = React.useContext(DialogContext);
-      return context.open ? (
-        <section
-          aria-busy={props["aria-busy"]}
-          data-close-button={String(showCloseButton)}
-          data-testid="base-dialog-content"
-        >
-          {children}
-        </section>
-      ) : null;
-    },
-    DialogDescription: Container,
-    DialogFooter: Container,
-    DialogHeader: Container,
-    DialogTitle: Container,
-  };
-});
-vi.mock("@/components/ui/command", () => ({
-  Command: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  CommandEmpty: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  CommandGroup: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  CommandInput: (props: React.ComponentProps<"input">) => <input role="combobox" {...props} />,
-  CommandItem: ({
-    children,
-    disabled,
-    onSelect,
-    value,
-  }: {
-    children: React.ReactNode;
-    disabled?: boolean;
-    onSelect?: () => void;
-    value: string;
-  }) => (
-    <button
-      type="button"
-      role="option"
-      disabled={disabled}
-      data-value={value}
-      onClick={() => onSelect?.()}
-      onKeyDown={(event) => {
-        if (event.key === "Enter") onSelect?.();
-      }}
-    >
-      {children}
-    </button>
-  ),
-  CommandList: ({ children }: { children: React.ReactNode }) => (
-    <div role="listbox">{children}</div>
-  ),
 }));
 
 const pullRequest: GitHubPullRequest = {
@@ -180,6 +84,19 @@ function renderBaseEdit(client: QueryClient) {
   );
 }
 
+beforeAll(() => {
+  class ResizeObserverMock implements ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  vi.stubGlobal("ResizeObserver", ResizeObserverMock);
+  HTMLElement.prototype.scrollIntoView = vi.fn();
+  Element.prototype.hasPointerCapture = () => false;
+  Element.prototype.setPointerCapture = () => undefined;
+  Element.prototype.releasePointerCapture = () => undefined;
+});
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -199,7 +116,7 @@ describe("pull request base edit dialog interactions", () => {
     const user = userEvent.setup();
     const view = renderBaseEdit(client);
 
-    screen.getByTestId("base-dialog-trigger").focus();
+    screen.getByRole("button", { name: "workspace.repositories.changePullRequestBase" }).focus();
     await user.keyboard("{Enter}");
     await waitFor(() => expect(invoke).toHaveBeenCalledTimes(2));
 
@@ -215,9 +132,9 @@ describe("pull request base edit dialog interactions", () => {
       pullRequestNumber: 12,
       page: 2,
     });
-    const release = screen.getByRole("option", { name: /release/ });
-    release.focus();
-    await user.keyboard("{Enter}");
+    const search = screen.getByRole("combobox");
+    await user.type(search, "release");
+    await user.keyboard("{ArrowDown}{Enter}");
     const confirmButtons = screen.getAllByRole("button", {
       name: "workspace.repositories.changePullRequestBase",
     });
@@ -229,17 +146,20 @@ describe("pull request base edit dialog interactions", () => {
       expect((screen.getByRole("combobox") as HTMLInputElement).disabled).toBe(true)
     );
 
-    expect(screen.getByTestId("base-dialog-content").getAttribute("aria-busy")).toBe("true");
-    expect(screen.getByTestId("base-dialog-content").getAttribute("data-close-button")).toBe(
-      "false"
-    );
+    expect(screen.getByRole("dialog").getAttribute("aria-busy")).toBe("true");
+    expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
     expect(
-      within(screen.getByTestId("base-dialog-content"))
+      within(screen.getByRole("dialog"))
         .getAllByRole("button", { hidden: true })
         .filter((button) => button.hasAttribute("disabled")).length
     ).toBeGreaterThanOrEqual(2);
     expect(
-      screen.getAllByRole("option").every((option) => (option as HTMLButtonElement).disabled)
+      screen
+        .getAllByRole("option")
+        .every(
+          (option) =>
+            option.getAttribute("aria-disabled") === "true" || option.hasAttribute("data-disabled")
+        )
     ).toBe(true);
 
     view.unmount();
@@ -256,7 +176,9 @@ describe("pull request base edit dialog interactions", () => {
     const user = userEvent.setup();
     const view = renderBaseEdit(client);
 
-    await user.click(screen.getByTestId("base-dialog-trigger"));
+    await user.click(
+      screen.getByRole("button", { name: "workspace.repositories.changePullRequestBase" })
+    );
     await screen.findByText(/network unavailable/);
 
     expect(screen.getByText("main")).toBeDefined();

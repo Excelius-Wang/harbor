@@ -85,7 +85,12 @@ retry. Focused local HTTP tests now exercise both refreshable status codes.
 Final pre-review verification passes `pnpm check` with 38 frontend files and 211 tests, and Rust
 library tests with 348 passing and two intentional ignores. `cargo check`, rustfmt, and
 `git diff --check` pass. Clippy reports exactly the 15 pre-existing warnings and no warning in this
-slice. Maintainer editability remains a separate later slice.
+slice. Final Spec review has no unresolved findings. Final Standards review found that the first
+interaction test replaced the shadcn/Radix Dialog and cmdk Command and therefore verified the test
+double's keyboard behavior instead of production primitives. The test now renders the real Dialog,
+Command, trigger `asChild`, keyboard selection, focus, pending controls, and retry path, with only
+missing jsdom browser APIs shimmed. The exact focused and full frontend suites pass. Maintainer
+editability remains a separate later slice.
 
 Harbor uses a classic OAuth App for scope-based personal workflows, rejects GitHub App client IDs
 and `ghu_` tokens, and honors GitHub's normalization of `read:packages` into `write:packages`.
@@ -95,8 +100,8 @@ refresh tokens, or Keychain contents.
 
 ## Next action
 
-Commit and push the final review fixes to Draft PR #16, then rerun parallel Standards and Spec reviews
-against the exact new head.
+Commit and push the real-primitive interaction test fix to Draft PR #16, then rerun parallel
+Standards and Spec reviews against the exact new head.
 
 ## Verification
 
