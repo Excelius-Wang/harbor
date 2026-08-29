@@ -1158,6 +1158,26 @@ export type GitHubIssueAssignment = "all" | "unassigned";
 export type GitHubIssueSort = "updated" | "created" | "comments";
 export type GitHubIssueInboxScope = "authored" | "assigned" | "mentioned";
 
+export type GitHubConversationKind = "issue" | "pullRequest";
+export type GitHubConversationLockAction = "lock" | "unlock";
+export type GitHubConversationLockReason = "offTopic" | "tooHeated" | "resolved" | "spam";
+export type GitHubConversationSubscriptionAction = "subscribe" | "unsubscribe";
+export type GitHubConversationSubscriptionState =
+  | "subscribed"
+  | "unsubscribed"
+  | "ignored"
+  | "unknown";
+
+export type GitHubConversationControls = {
+  kind: GitHubConversationKind;
+  number: number;
+  locked: boolean;
+  lockReason?: GitHubConversationLockReason | null;
+  viewerCanLock: boolean;
+  viewerCanSubscribe: boolean;
+  viewerSubscription?: GitHubConversationSubscriptionState | null;
+};
+
 export type GitHubIssue = {
   id: number;
   reactionSubject: GitHubReactionSubjectRef;

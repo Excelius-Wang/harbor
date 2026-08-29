@@ -18,6 +18,7 @@ import {
   repositoryCodeQueryOptions,
   repositoryCommitDetailQueryOptions,
   repositoryCommitsQueryOptions,
+  repositoryConversationControlsQueryOptions,
   repositoryFileQueryOptions,
   repositoryIssueDetailQueryOptions,
   repositoryIssueAssigneesQueryOptions,
@@ -904,6 +905,38 @@ describe("GitHub repository queries", () => {
       issueNumber: 7,
       timelinePage: 2,
     });
+  });
+
+  it("keys shared conversation controls by repository, kind, and number", async () => {
+    const client = createTestQueryClient();
+    vi.mocked(invoke).mockResolvedValueOnce({
+      kind: "pullRequest",
+      number: 12,
+      locked: false,
+      viewerCanLock: true,
+      viewerCanSubscribe: true,
+      viewerSubscription: "unsubscribed",
+    });
+    const target = {
+      owner: "octocat",
+      repository: "hello-world",
+      conversationKind: "pullRequest" as const,
+      conversationNumber: 12,
+    };
+    const options = repositoryConversationControlsQueryOptions(target);
+
+    await client.fetchQuery(options);
+
+    expect(options.queryKey).toEqual([
+      "github",
+      "repository",
+      "octocat",
+      "hello-world",
+      "conversation-controls",
+      "pullRequest",
+      12,
+    ]);
+    expect(invoke).toHaveBeenCalledWith("github_get_repository_conversation_controls", target);
   });
 
   it("keys and invokes account Issue pages with their complete scope", async () => {

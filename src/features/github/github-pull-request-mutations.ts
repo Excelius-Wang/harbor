@@ -410,6 +410,17 @@ export function syncUpdatedPullRequest(
   );
 }
 
+export function syncPullRequestLockedState(
+  queryClient: QueryClient,
+  target: GitHubPullRequestMutationTarget,
+  locked: boolean
+) {
+  queryClient.setQueriesData<GitHubPullRequestDetailPage>(
+    { queryKey: githubQueryKeys.pullRequestDetailRoot(target) },
+    (detail) => (detail ? { ...detail, pullRequest: { ...detail.pullRequest, locked } } : detail)
+  );
+}
+
 export function syncCreatedPullRequest(
   queryClient: QueryClient,
   target: GitHubPullRequestCreationTarget,

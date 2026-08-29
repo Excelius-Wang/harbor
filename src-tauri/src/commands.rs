@@ -10,6 +10,8 @@ use crate::{
         GitHubAuthEvent, GitHubBlame, GitHubCheckPage, GitHubCheckSuite, GitHubCodeOverview,
         GitHubCodeScanningInstancePage, GitHubCodeSearchPage, GitHubCommentMutation,
         GitHubCommitDetailPage, GitHubConnection, GitHubContentListing, GitHubContributionSummary,
+        GitHubConversationControls, GitHubConversationKind, GitHubConversationLockAction,
+        GitHubConversationLockReason, GitHubConversationSubscriptionAction,
         GitHubDeveloperFeedPage, GitHubDiscoverySearchKind, GitHubDiscoverySearchPage,
         GitHubDiscoverySearchSort, GitHubDiscussionAnsweredFilter, GitHubDiscussionCategoryPage,
         GitHubDiscussionCloseReason, GitHubDiscussionComment, GitHubDiscussionCommentDeletion,
@@ -1420,6 +1422,72 @@ pub async fn github_get_repository_issue(
             repository.name(),
             validate_item_number(issue_number, "issue")?,
             validate_page(timeline_page)?,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_get_repository_conversation_controls(
+    owner: String,
+    repository: String,
+    conversation_number: u64,
+    conversation_kind: GitHubConversationKind,
+    state: State<'_, AppState>,
+) -> Result<GitHubConversationControls, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .conversation_controls(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(conversation_number, "conversation")?,
+            conversation_kind,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_update_repository_conversation_lock(
+    owner: String,
+    repository: String,
+    conversation_number: u64,
+    conversation_kind: GitHubConversationKind,
+    action: GitHubConversationLockAction,
+    reason: Option<GitHubConversationLockReason>,
+    state: State<'_, AppState>,
+) -> Result<GitHubConversationControls, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .update_conversation_lock(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(conversation_number, "conversation")?,
+            conversation_kind,
+            action,
+            reason,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_update_repository_conversation_subscription(
+    owner: String,
+    repository: String,
+    conversation_number: u64,
+    conversation_kind: GitHubConversationKind,
+    action: GitHubConversationSubscriptionAction,
+    state: State<'_, AppState>,
+) -> Result<GitHubConversationControls, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .update_conversation_subscription(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(conversation_number, "conversation")?,
+            conversation_kind,
+            action,
         )
         .await
 }

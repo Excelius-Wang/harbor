@@ -327,10 +327,10 @@ deletion, archive or unarchive, and permanent deletion. The focused five-method
 `GitHubRepositorySettingsClient` Interface owns the transport, authoritative owner and branch guards,
 response verification, and tests. Visibility and archive changes require explicit consequence flags;
 deletion requires the exact full repository name and the OAuth connection now requests GitHub's
-`delete_repo` scope. Organization creation and transfer, organization and Team collaborator
-administration, billing, organization rulesets, and organization-level security administration
-remain deliberately outside the personal-product boundary. Collaborators on a personal repository
-remain in scope.
+`delete_repo` scope. Personal-repository collaborator and invitation workflows remain in scope;
+organization creation, transfer, organization collaborator administration, billing, organization
+rulesets, and organization-level security administration remain deliberately outside the
+personal-product boundary.
 Personal Gists now have a complete native account workspace. The focused eleven-method
 `GitHubGistClient` Interface owns personal, Starred, and recent-public pages; detail and safe file
 content; creation and multi-file editing; Star, Fork, and exact-ID deletion; revision pages and
@@ -428,6 +428,15 @@ available source files inside Harbor, and keeps an explicit GitHub fallback. A p
 audit is stored in `docs/GITHUB_PERSONAL_WEB_GAP_AUDIT.md`; it confirms that personal repository
 collaborators remain in scope while organization and Team administration do not. Delivery is open
 and mergeable in GitHub pull request #6.
+
+Issue and pull request details now share native conversation controls. The focused three-method
+`GitHubConversationClient` Interface owns exact Issue-or-pull-request identity, lock state and reason,
+viewer permissions, subscription state, and the corresponding writes. Lock and unlock reuse
+Octocrab's existing REST Issues transport for both conversation kinds; subscriptions use GitHub's
+official GraphQL `updateSubscription` mutation through the existing authenticated client. Every write
+reloads authoritative state before the focused TanStack Query cache and existing Issue or pull request
+caches are reconciled. The shared shadcn sidebar control preserves ignored notifications, exposes all
+four GitHub lock reasons, and shows lock actions only to viewers with repository write access.
 The workspace shell is responsive, starts at 1600x1000, and remains usable down to 900x620.
 Repository Wiki now has a native personal-developer workflow behind a focused Git-backed service.
 Harbor discovers the Wiki's real default branch, keeps a bounded bare cache per immutable repository
@@ -491,6 +500,17 @@ replies, Releases, separate Discussion upvotes, exact batch and mutation argumen
 eight choice menus. At 900x620 and 1600x1000 the document dimensions equal the viewport; the browser
 console reports zero errors and zero warnings. Screenshots and the reusable fixture stay ignored
 under `output/playwright/`.
+
+Conversation-control verification covers exact Issue and pull request identities, GraphQL integer
+bounds, write-permission mapping, lock-reason REST values, subscription mutation payload and response
+verification, saved-credential delegation, exact Tauri arguments, and detail/list/inbox cache
+reconciliation. `pnpm check` passes with 130 frontend tests; 231 Rust tests pass with one external
+DeepWiki test ignored by design; `cargo fmt --check`, `cargo check`, `cargo clippy --all-targets`, the
+production build, and `git diff --check` pass. Clippy reports the same 11 existing warnings and no new
+warning. A deterministic desktop fixture verified subscribe, unsubscribe, lock with reasons, unlock,
+authoritative UI updates, and exact Issue and pull request mutation arguments at 1600x1000 and
+900x620. Both sizes have no page-level horizontal overflow, and the browser reports zero errors and
+zero warnings.
 
 Repository Code mutation verification covers exact Tauri contracts, atomic rename payloads, stale
 file and branch guards, Git-compatible branch validation, empty-repository initialization, stable
@@ -1218,15 +1238,20 @@ page-level overflow, and the browser reports zero errors and zero warnings.
   Create Forks only in the signed-in personal account through Octocrab's native builder, never expose
   an organization target, and follow GitHub CLI's one-minute timestamp guard when distinguishing a
   newly accepted Fork from an existing one.
+- Keep Issue and pull request lock and subscription state behind one focused
+  `GitHubConversationClient` because GitHub models them through the same Issue-or-pull-request node.
+  Reuse Octocrab's native REST lock routes, use the existing authenticated GraphQL transport only for
+  `updateSubscription`, verify exact kind and number before writes, and reload authoritative state
+  afterward. Derive lock visibility from the personal repository's viewer permission and preserve an
+  existing Ignored subscription until the user explicitly subscribes.
 - Keep personal repository creation and lifecycle settings behind
   `GitHubRepositorySettingsClient`. Resolve ownership from the authenticated user, never accept an
   organization destination, verify template and default-branch choices against authoritative GitHub
   data, and verify every returned setting after writes. Require explicit consequence flags for
   visibility and archive transitions, the exact full repository name for deletion, and the
-  `delete_repo` OAuth scope for new connections. Do not surface organization transfer,
-  organization or Team collaborators, billing, organization rulesets, or organization security
-  administration in the personal product. Personal-repository collaborators remain a separate
-  in-scope workflow.
+  `delete_repo` OAuth scope for new connections. Keep personal-repository collaborator and invitation
+  management in the product, but do not surface organization transfer, organization collaborator
+  administration, billing, organization rulesets, or organization security administration.
 - Keep personal Gists behind `GitHubGistClient`. Reuse Octocrab's native Gist operations and add
   only its missing official Starred-list and comment routes. Validate Gist IDs, full revision SHAs,
   reserved file names, unique file sets, comment scope, and personal ownership before writes; verify

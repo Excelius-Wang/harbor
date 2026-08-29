@@ -13,6 +13,7 @@ pub(crate) mod actions;
 pub(crate) mod checks;
 pub(crate) mod code;
 pub(crate) mod comment;
+pub(crate) mod conversation;
 pub(crate) mod discovery;
 pub(crate) mod discussion;
 pub(crate) mod download;
@@ -45,6 +46,10 @@ pub use code::{
     GitHubContentListing, GitHubFilePreview, GitHubRepositoryCommitPage, GitHubTagPage,
 };
 pub use comment::GitHubCommentMutation;
+pub use conversation::{
+    GitHubConversationControls, GitHubConversationKind, GitHubConversationLockAction,
+    GitHubConversationLockReason, GitHubConversationSubscriptionAction,
+};
 pub use discovery::{
     GitHubDeveloperFeedPage, GitHubDiscoverySearchKind, GitHubDiscoverySearchPage,
     GitHubDiscoverySearchSort,
@@ -595,6 +600,7 @@ pub(crate) trait GitHubClient:
     + code::GitHubCodeClient
     + code::write::GitHubCodeMutationClient
     + comment::GitHubCommentClient
+    + conversation::GitHubConversationClient
     + discussion::GitHubDiscussionClient
     + discovery::GitHubDiscoveryClient
     + gist::GitHubGistClient
@@ -2932,6 +2938,56 @@ mod tests {
             .mark_all_notifications_read()
             .await
             .expect("mark all notifications read");
+    }
+
+    #[tokio::test]
+    async fn conversation_controls_use_the_saved_connection() {
+        let credentials = Arc::new(MemoryCredentialStore::default());
+        credentials
+            .save_github_credentials(&oauth_credentials())
+            .expect("seed credentials");
+        let service = GitHubService::new(
+            Arc::new(FakeGitHubClient),
+            credentials,
+            Some(oauth_session("github-user-access-token")),
+        );
+
+        let controls = service
+            .conversation_controls("octocat", "hello-world", 7, GitHubConversationKind::Issue)
+            .await
+            .expect("conversation controls");
+        let locked = service
+            .update_conversation_lock(
+                "octocat",
+                "hello-world",
+                7,
+                GitHubConversationKind::Issue,
+                GitHubConversationLockAction::Lock,
+                Some(GitHubConversationLockReason::Resolved),
+            )
+            .await
+            .expect("lock conversation");
+        let subscribed = service
+            .update_conversation_subscription(
+                "octocat",
+                "hello-world",
+                7,
+                GitHubConversationKind::Issue,
+                GitHubConversationSubscriptionAction::Subscribe,
+            )
+            .await
+            .expect("subscribe to conversation");
+
+        assert!(!controls.locked);
+        assert!(locked.locked);
+        assert_eq!(
+            locked.lock_reason,
+            Some(GitHubConversationLockReason::Resolved)
+        );
+        assert_eq!(
+            subscribed.viewer_subscription,
+            Some(conversation::GitHubConversationSubscriptionState::Subscribed)
+        );
     }
 
     #[tokio::test]

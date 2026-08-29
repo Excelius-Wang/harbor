@@ -7,6 +7,8 @@ import type {
   GitHubCommitDetailPage,
   GitHubCheckPage,
   GitHubCheckSuite,
+  GitHubConversationControls,
+  GitHubConversationKind,
   GitHubContentListing,
   GitHubDiscussionAnsweredFilter,
   GitHubDiscussionCategoryPage,
@@ -164,6 +166,11 @@ export type GitHubDiscussionsTarget = GitHubRepositoryTarget & {
 
 export type GitHubDiscussionTarget = GitHubRepositoryTarget & {
   discussionNumber: number;
+};
+
+export type GitHubConversationTarget = GitHubRepositoryTarget & {
+  conversationNumber: number;
+  conversationKind: GitHubConversationKind;
 };
 
 export type GitHubReleasesTarget = GitHubRepositoryTarget & {
@@ -646,6 +653,21 @@ export const githubQueryKeys = {
     ] as const,
   issueRoot: ({ owner, repository, issueNumber }: Omit<GitHubIssueDetailTarget, "timelinePage">) =>
     ["github", "repository", owner, repository, "issue", issueNumber] as const,
+  conversationControls: ({
+    owner,
+    repository,
+    conversationKind,
+    conversationNumber,
+  }: GitHubConversationTarget) =>
+    [
+      "github",
+      "repository",
+      owner,
+      repository,
+      "conversation-controls",
+      conversationKind,
+      conversationNumber,
+    ] as const,
   issueLabels: ({ owner, repository }: GitHubRepositoryTarget) =>
     ["github", "repository", owner, repository, "issue-labels"] as const,
   issueAssignees: ({ owner, repository }: GitHubRepositoryTarget) =>
@@ -1522,6 +1544,15 @@ export function repositoryIssueDetailQueryOptions(target: GitHubIssueDetailTarge
         issueNumber: target.issueNumber,
         timelinePage: target.timelinePage,
       }),
+    staleTime: GITHUB_QUERY_STALE_TIME,
+  });
+}
+
+export function repositoryConversationControlsQueryOptions(target: GitHubConversationTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.conversationControls(target),
+    queryFn: () =>
+      invoke<GitHubConversationControls>("github_get_repository_conversation_controls", target),
     staleTime: GITHUB_QUERY_STALE_TIME,
   });
 }
