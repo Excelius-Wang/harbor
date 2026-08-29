@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { parseIpcError } from "@/lib/ipc-error";
 import { openExternalUrl } from "@/lib/window";
 import type {
@@ -678,15 +679,20 @@ export function GitHubPullRequestFiles({
                     <span className="text-success text-[10px]">+{file.additions}</span>
                     <span className="text-destructive text-[10px]">-{file.deletions}</span>
                     {file.blobUrl ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-xs"
-                        aria-label={t("workspace.repositories.viewSource")}
-                        onClick={() => file.blobUrl && void openExternalUrl(file.blobUrl)}
-                      >
-                        <ExternalLink />
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-xs"
+                            aria-label={t("workspace.repositories.viewSource")}
+                            onClick={() => file.blobUrl && void openExternalUrl(file.blobUrl)}
+                          >
+                            <ExternalLink />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>{t("workspace.repositories.viewSource")}</TooltipContent>
+                      </Tooltip>
                     ) : null}
                   </div>
                   <CollapsibleContent>

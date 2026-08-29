@@ -1,5 +1,4 @@
 import { RefreshCw, SmilePlus } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,6 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useAppTranslation } from "@/hooks/use-app-translation";
 import { cn } from "@/lib/utils";
 import type { GitHubReactionContent, GitHubReactionSubjectRef } from "./github-data";
 import { useGitHubReactions } from "./github-reactions-provider";
@@ -40,7 +40,7 @@ export function GitHubReactionBar({
   subject: GitHubReactionSubjectRef;
   className?: string;
 }) {
-  const { t } = useTranslation();
+  const { t } = useAppTranslation();
   const reactions = useGitHubReactions();
   if (!reactions) return null;
   const current = reactions.subject(subject);

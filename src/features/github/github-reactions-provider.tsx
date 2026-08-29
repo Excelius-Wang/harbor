@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, type ReactNode } from "react";
 import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { useAppTranslation } from "@/hooks/use-app-translation";
 import { parseIpcError, type IpcError } from "@/lib/ipc-error";
 import type {
   GitHubReactionContent,
@@ -13,6 +13,8 @@ import { githubQueryKeys, repositoryReactionsQueryOptions } from "./github-queri
 import {
   chunkReactionSubjects,
   optimisticallyUpdateReaction,
+  restoreReactionQueries,
+  snapshotReactionQueries,
   syncReactionSubject,
   updateRepositoryReaction,
 } from "./github-reactions";
@@ -48,7 +50,7 @@ export function GitHubReactionsProvider({
   subjects: GitHubReactionSubjectRef[];
   children: ReactNode;
 }) {
-  const { t } = useTranslation();
+  const { t } = useAppTranslation();
   const queryClient = useQueryClient();
   const batches = useMemo(() => chunkReactionSubjects(subjects), [subjects]);
   const results = useQueries({
@@ -96,11 +98,9 @@ export function GitHubReactionsProvider({
           repository: repository.name,
         }),
       });
-      const snapshots = queryClient.getQueriesData<unknown>({
-        queryKey: githubQueryKeys.reactionsRoot({
-          owner: repository.owner,
-          repository: repository.name,
-        }),
+      const snapshots = snapshotReactionQueries(queryClient, {
+        owner: repository.owner,
+        repository: repository.name,
       });
       syncReactionSubject(
         queryClient,
@@ -116,9 +116,7 @@ export function GitHubReactionsProvider({
         subject
       ),
     onError: (reason, _variables, context) => {
-      for (const [queryKey, data] of context?.snapshots ?? []) {
-        queryClient.setQueryData(queryKey, data);
-      }
+      restoreReactionQueries(queryClient, context?.snapshots ?? []);
       void queryClient.invalidateQueries({
         queryKey: githubQueryKeys.reactionsRoot({
           owner: repository.owner,

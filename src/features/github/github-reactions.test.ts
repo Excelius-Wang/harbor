@@ -7,6 +7,8 @@ import {
   chunkReactionSubjects,
   normalizeReactionSubjects,
   optimisticallyUpdateReaction,
+  restoreReactionQueries,
+  snapshotReactionQueries,
   syncReactionSubject,
   updateRepositoryReaction,
 } from "./github-reactions";
@@ -93,5 +95,44 @@ describe("GitHub reactions", () => {
     ).toEqual(updated);
     expect(queryClient.getQueryData<GitHubReactionSubject[]>(batchKey)).toEqual([updated]);
     expect(queryClient.getQueryData<GitHubReactionSubject[]>(otherKey)).toEqual([issue]);
+  });
+
+  it("restores every repository reaction cache after an optimistic write fails", () => {
+    const queryClient = new QueryClient();
+    const batchKey = githubQueryKeys.reactions({ ...repository, subjects: [issueRef] });
+    const canonicalKey = githubQueryKeys.reaction({ ...repository, subject: issueRef });
+    queryClient.setQueryData(batchKey, [issue]);
+    queryClient.setQueryData(canonicalKey, issue);
+    const snapshots = snapshotReactionQueries(queryClient, repository);
+
+    syncReactionSubject(
+      queryClient,
+      repository,
+      optimisticallyUpdateReaction(issue, "rocket", true)
+    );
+    restoreReactionQueries(queryClient, snapshots);
+
+    expect(queryClient.getQueryData<GitHubReactionSubject[]>(batchKey)).toEqual([issue]);
+    expect(queryClient.getQueryData<GitHubReactionSubject>(canonicalKey)).toEqual(issue);
+  });
+
+  it("serializes desired-state writes and continues after a failed request", async () => {
+    let rejectFirst: (reason: Error) => void = () => undefined;
+    const firstRequest = new Promise<GitHubReactionSubject>((_resolve, reject) => {
+      rejectFirst = reject;
+    });
+    vi.mocked(invoke)
+      .mockImplementationOnce(() => firstRequest)
+      .mockResolvedValueOnce(issue);
+
+    const firstUpdate = updateRepositoryReaction(repository, issueRef, "rocket", true);
+    const secondUpdate = updateRepositoryReaction(repository, issueRef, "rocket", false);
+    await Promise.resolve();
+
+    expect(invoke).toHaveBeenCalledTimes(1);
+    rejectFirst(new Error("network unavailable"));
+    await expect(firstUpdate).rejects.toThrow("network unavailable");
+    await expect(secondUpdate).resolves.toEqual(issue);
+    expect(invoke).toHaveBeenCalledTimes(2);
   });
 });
