@@ -35,6 +35,8 @@ import type {
   GitHubIssueSort,
   GitHubIssueState,
   GitHubNotificationPage,
+  GitHubPagesHealth,
+  GitHubPagesWorkspace,
   GitHubContributionSummary,
   GitHubProfileActivityPage,
   GitHubProfileConnectionKind,
@@ -212,6 +214,10 @@ export type GitHubProjectTarget = {
   archived: boolean;
 };
 
+export type GitHubPagesTarget = GitHubRepositoryTarget & {
+  page: number;
+};
+
 export type GitHubSecurityAlertsTarget = GitHubRepositoryTarget & {
   kind: GitHubSecurityAlertKind;
   state: GitHubSecurityAlertStateFilter;
@@ -320,6 +326,12 @@ export const githubQueryKeys = {
   repositoryCreationOptions: ["github", "repository-creation-options"] as const,
   repositorySettings: ({ owner, repository }: GitHubRepositoryTarget) =>
     ["github", "repository", owner, repository, "settings"] as const,
+  repositoryPages: ({ owner, repository, page }: GitHubPagesTarget) =>
+    ["github", "repository", owner, repository, "pages", page] as const,
+  repositoryPagesRoot: ({ owner, repository }: GitHubRepositoryTarget) =>
+    ["github", "repository", owner, repository, "pages"] as const,
+  repositoryPagesHealth: ({ owner, repository }: GitHubRepositoryTarget) =>
+    ["github", "repository", owner, repository, "pages-health"] as const,
   profile: ({ username }: GitHubProfileTarget) =>
     ["github", "profile", username ?? "viewer"] as const,
   profilesRoot: ["github", "profile"] as const,
@@ -831,6 +843,22 @@ export function personalRepositorySettingsQueryOptions(target: GitHubRepositoryT
     queryKey: githubQueryKeys.repositorySettings(target),
     queryFn: () =>
       invoke<GitHubRepositorySettings>("github_get_personal_repository_settings", target),
+    staleTime: GITHUB_QUERY_STALE_TIME,
+  });
+}
+
+export function repositoryPagesQueryOptions(target: GitHubPagesTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.repositoryPages(target),
+    queryFn: () => invoke<GitHubPagesWorkspace>("github_get_repository_pages", target),
+    staleTime: GITHUB_QUERY_STALE_TIME,
+  });
+}
+
+export function repositoryPagesHealthQueryOptions(target: GitHubRepositoryTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.repositoryPagesHealth(target),
+    queryFn: () => invoke<GitHubPagesHealth>("github_get_repository_pages_health", target),
     staleTime: GITHUB_QUERY_STALE_TIME,
   });
 }

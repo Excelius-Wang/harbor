@@ -24,18 +24,18 @@ use crate::{
         GitHubIssueDetailPage, GitHubIssueFilters, GitHubIssueInboxFilters, GitHubIssueInboxPage,
         GitHubIssueInboxScope, GitHubIssueLabelPage, GitHubIssueMilestonePage, GitHubIssuePage,
         GitHubIssueSort, GitHubIssueState, GitHubIssueTimelineItem, GitHubLoginAvailability,
-        GitHubNotificationAction, GitHubNotificationPage, GitHubPendingPullRequestReview,
-        GitHubProfileActivityPage, GitHubProfileConnectionKind, GitHubProjectDetail,
-        GitHubProjectFilters, GitHubProjectItem, GitHubProjectItemAction,
-        GitHubProjectItemAddition, GitHubProjectItemFilters, GitHubProjectItemUpdate,
-        GitHubProjectPage, GitHubProjectSort, GitHubProjectStateFilter, GitHubProjectSummary,
-        GitHubProjectUpdate, GitHubPullRequest, GitHubPullRequestAutoMergeStatus,
-        GitHubPullRequestBranchUpdate, GitHubPullRequestBranchUpdateStatus,
-        GitHubPullRequestCommitPage, GitHubPullRequestComparison, GitHubPullRequestDetailPage,
-        GitHubPullRequestFilePage, GitHubPullRequestFilters, GitHubPullRequestInboxFilters,
-        GitHubPullRequestInboxScope, GitHubPullRequestMergeMethod,
-        GitHubPullRequestMergeQueueStatus, GitHubPullRequestPage, GitHubPullRequestReview,
-        GitHubPullRequestReviewAction, GitHubPullRequestReviewComment,
+        GitHubNotificationAction, GitHubNotificationPage, GitHubPagesHealth, GitHubPagesMutation,
+        GitHubPagesWorkspace, GitHubPendingPullRequestReview, GitHubProfileActivityPage,
+        GitHubProfileConnectionKind, GitHubProjectDetail, GitHubProjectFilters, GitHubProjectItem,
+        GitHubProjectItemAction, GitHubProjectItemAddition, GitHubProjectItemFilters,
+        GitHubProjectItemUpdate, GitHubProjectPage, GitHubProjectSort, GitHubProjectStateFilter,
+        GitHubProjectSummary, GitHubProjectUpdate, GitHubPullRequest,
+        GitHubPullRequestAutoMergeStatus, GitHubPullRequestBranchUpdate,
+        GitHubPullRequestBranchUpdateStatus, GitHubPullRequestCommitPage,
+        GitHubPullRequestComparison, GitHubPullRequestDetailPage, GitHubPullRequestFilePage,
+        GitHubPullRequestFilters, GitHubPullRequestInboxFilters, GitHubPullRequestInboxScope,
+        GitHubPullRequestMergeMethod, GitHubPullRequestMergeQueueStatus, GitHubPullRequestPage,
+        GitHubPullRequestReview, GitHubPullRequestReviewAction, GitHubPullRequestReviewComment,
         GitHubPullRequestReviewTeamPage, GitHubPullRequestReviewThreadComment,
         GitHubPullRequestReviewThreadPage, GitHubPullRequestReviewThreadResolution,
         GitHubPullRequestReviewThreadState, GitHubPullRequestSort, GitHubPullRequestState,
@@ -370,6 +370,47 @@ pub async fn github_delete_personal_repository(
             repository.name(),
             &validate_repository_deletion_confirmation(confirmation)?,
         )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_get_repository_pages(
+    owner: String,
+    repository: String,
+    page: u32,
+    state: State<'_, AppState>,
+) -> Result<GitHubPagesWorkspace, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .repository_pages(repository.owner(), repository.name(), validate_page(page)?)
+        .await
+}
+
+#[tauri::command]
+pub async fn github_get_repository_pages_health(
+    owner: String,
+    repository: String,
+    state: State<'_, AppState>,
+) -> Result<GitHubPagesHealth, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .repository_pages_health(repository.owner(), repository.name())
+        .await
+}
+
+#[tauri::command]
+pub async fn github_mutate_repository_pages(
+    owner: String,
+    repository: String,
+    mutation: GitHubPagesMutation,
+    state: State<'_, AppState>,
+) -> Result<GitHubPagesWorkspace, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .mutate_repository_pages(repository.owner(), repository.name(), mutation)
         .await
 }
 

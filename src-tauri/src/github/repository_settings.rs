@@ -411,7 +411,7 @@ impl GitHubRepositorySettingsClient for OctocrabGitHubClient {
     }
 }
 
-async fn fetch_personal_repository_settings(
+pub(super) async fn fetch_personal_repository_settings(
     client: &octocrab::Octocrab,
     owner: &str,
     repository: &str,

@@ -25,3 +25,4 @@ dist-ssr
 
 # Claude AI
 .claude/
+.playwright-cli/

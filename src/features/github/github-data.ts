@@ -304,6 +304,90 @@ export type GitHubRepositorySettingsUpdate = Omit<GitHubRepositorySettings, "rep
   confirmArchiveChange: boolean;
 };
 
+export type GitHubPagesBuildType = "legacy" | "workflow";
+
+export type GitHubPagesSourcePath = "root" | "docs";
+
+export type GitHubPagesConfiguration = {
+  buildType: GitHubPagesBuildType;
+  branch: string | null;
+  sourcePath: GitHubPagesSourcePath | null;
+  customDomain: string | null;
+  httpsEnforced: boolean;
+};
+
+export type GitHubPagesMutation =
+  | { action: "configure"; configuration: GitHubPagesConfiguration }
+  | { action: "requestBuild" }
+  | { action: "disable"; confirmation: string };
+
+export type GitHubPagesSource = {
+  branch: string;
+  path: GitHubPagesSourcePath;
+};
+
+export type GitHubPagesCertificate = {
+  state: string;
+  description?: string;
+  domains: string[];
+  expiresAt?: string;
+};
+
+export type GitHubPagesSite = {
+  status: string;
+  url: string;
+  buildType: GitHubPagesBuildType;
+  source?: GitHubPagesSource;
+  customDomain?: string;
+  custom404: boolean;
+  public: boolean;
+  httpsEnforced: boolean;
+  certificate?: GitHubPagesCertificate;
+  protectedDomainState?: string;
+  pendingDomainUnverifiedAt?: string;
+};
+
+export type GitHubPagesBuild = {
+  url?: string;
+  status: string;
+  error?: string;
+  pusher?: string;
+  pusherAvatarUrl?: string;
+  commit?: string;
+  durationMilliseconds?: number;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type GitHubPagesWorkspace = {
+  site?: GitHubPagesSite;
+  builds: GitHubPagesBuild[];
+  page: number;
+  hasPrevious: boolean;
+  hasMore: boolean;
+  isArchived: boolean;
+};
+
+export type GitHubPagesDomainHealth = {
+  host?: string;
+  uri?: string;
+  dnsResolves: boolean;
+  proxied: boolean;
+  valid: boolean;
+  reason?: string;
+  respondsToHttps: boolean;
+  enforcesHttps: boolean;
+  httpsEligible: boolean;
+  httpsError?: string;
+  caaError?: string;
+};
+
+export type GitHubPagesHealth = {
+  pending: boolean;
+  domain?: GitHubPagesDomainHealth;
+  alternateDomain?: GitHubPagesDomainHealth;
+};
+
 export type GitHubGistSource = "mine" | "starred" | "public";
 
 export type GitHubGistFile = {

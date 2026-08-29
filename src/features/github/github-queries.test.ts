@@ -28,6 +28,8 @@ import {
   repositoryRelationshipQueryOptions,
   repositoryCreationOptionsQueryOptions,
   personalRepositorySettingsQueryOptions,
+  repositoryPagesHealthQueryOptions,
+  repositoryPagesQueryOptions,
   profileActivityQueryOptions,
   profileConnectionsQueryOptions,
   starredRepositoriesQueryOptions,
@@ -162,6 +164,37 @@ describe("GitHub repository queries", () => {
     expect(settings.queryKey).toEqual(["github", "repository", "octocat", "harbor", "settings"]);
     expect(invoke).toHaveBeenNthCalledWith(1, "github_get_repository_creation_options");
     expect(invoke).toHaveBeenNthCalledWith(2, "github_get_personal_repository_settings", {
+      owner: "octocat",
+      repository: "harbor",
+    });
+  });
+
+  it("keeps Pages history pages and domain health in focused caches", async () => {
+    const client = createTestQueryClient();
+    vi.mocked(invoke)
+      .mockResolvedValueOnce({ site: { status: "built" }, builds: [], page: 2 })
+      .mockResolvedValueOnce({ pending: false, domain: { valid: true } });
+    const pages = repositoryPagesQueryOptions({
+      owner: "octocat",
+      repository: "harbor",
+      page: 2,
+    });
+    const health = repositoryPagesHealthQueryOptions({
+      owner: "octocat",
+      repository: "harbor",
+    });
+
+    await client.fetchQuery(pages);
+    await client.fetchQuery(health);
+
+    expect(pages.queryKey).toEqual(["github", "repository", "octocat", "harbor", "pages", 2]);
+    expect(health.queryKey).toEqual(["github", "repository", "octocat", "harbor", "pages-health"]);
+    expect(invoke).toHaveBeenNthCalledWith(1, "github_get_repository_pages", {
+      owner: "octocat",
+      repository: "harbor",
+      page: 2,
+    });
+    expect(invoke).toHaveBeenNthCalledWith(2, "github_get_repository_pages_health", {
       owner: "octocat",
       repository: "harbor",
     });
