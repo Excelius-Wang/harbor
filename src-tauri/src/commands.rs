@@ -37,6 +37,7 @@ use crate::{
         GitHubProjectItemAddition, GitHubProjectItemFilters, GitHubProjectItemUpdate,
         GitHubProjectPage, GitHubProjectSort, GitHubProjectStateFilter, GitHubProjectSummary,
         GitHubProjectUpdate, GitHubPullRequest, GitHubPullRequestAutoMergeStatus,
+        GitHubPullRequestBaseBranchPage, GitHubPullRequestBaseEditGuard,
         GitHubPullRequestBranchUpdate, GitHubPullRequestBranchUpdateStatus,
         GitHubPullRequestCommitPage, GitHubPullRequestComparison, GitHubPullRequestDetailPage,
         GitHubPullRequestFilePage, GitHubPullRequestFileViewState,
@@ -1946,6 +1947,58 @@ pub async fn github_update_repository_pull_request(
             validate_item_number(pull_request_number, "pull request")?,
             &title,
             &body,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_list_repository_pull_request_base_branches(
+    owner: String,
+    repository: String,
+    pull_request_number: u64,
+    page: u32,
+    state: State<'_, AppState>,
+) -> Result<GitHubPullRequestBaseBranchPage, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .pull_request_base_branches(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(pull_request_number, "pull request")?,
+            validate_page(page)?,
+        )
+        .await
+}
+
+#[allow(clippy::too_many_arguments)]
+#[tauri::command]
+pub async fn github_update_repository_pull_request_base(
+    owner: String,
+    repository: String,
+    pull_request_number: u64,
+    expected_current_base: String,
+    expected_current_base_sha: String,
+    expected_head_sha: String,
+    target_base: String,
+    expected_target_base_sha: String,
+    state: State<'_, AppState>,
+) -> Result<GitHubPullRequest, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    let guard = GitHubPullRequestBaseEditGuard {
+        expected_current_base: validate_reference(expected_current_base)?,
+        expected_current_base_sha: validate_commit_id(expected_current_base_sha)?,
+        expected_head_sha: validate_commit_id(expected_head_sha)?,
+        target_base: validate_reference(target_base)?,
+        expected_target_base_sha: validate_commit_id(expected_target_base_sha)?,
+    };
+    state
+        .github
+        .update_pull_request_base(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(pull_request_number, "pull request")?,
+            &guard,
         )
         .await
 }

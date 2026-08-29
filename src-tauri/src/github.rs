@@ -109,6 +109,9 @@ pub use projects::{
 #[cfg(test)]
 use pull_request::auto_merge::GitHubPullRequestAutoMergeState;
 pub use pull_request::auto_merge::GitHubPullRequestAutoMergeStatus;
+pub use pull_request::base_edit::{
+    GitHubPullRequestBaseBranchPage, GitHubPullRequestBaseEditGuard,
+};
 pub use pull_request::creation::GitHubPullRequestComparison;
 pub use pull_request::file_view_state::{
     GitHubPullRequestFileViewState, GitHubPullRequestFileViewStateSnapshot,
@@ -636,6 +639,7 @@ pub(crate) trait GitHubClient:
     + profile::GitHubProfileClient
     + projects::GitHubProjectsClient
     + pull_request::auto_merge::GitHubPullRequestAutoMergeClient
+    + pull_request::base_edit::GitHubPullRequestBaseEditClient
     + pull_request::GitHubPullRequestMutationClient
     + pull_request::creation::GitHubPullRequestCreationClient
     + pull_request::file_view_state::GitHubPullRequestFileViewStateClient

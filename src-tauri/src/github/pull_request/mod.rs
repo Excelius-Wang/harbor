@@ -12,6 +12,7 @@ use super::{
 use super::{item_metadata, item_metadata::GitHubItemKind};
 
 pub(crate) mod auto_merge;
+pub(crate) mod base_edit;
 pub(crate) mod creation;
 pub(crate) mod file_view_state;
 pub(crate) mod lifecycle;

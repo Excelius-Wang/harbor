@@ -17,6 +17,8 @@ pub enum AppError {
     GitHubSecurityUnavailable(String),
     #[error("GitHub could not update the pull request branch: {0}")]
     GitHubPullRequestBranchUpdateConflict(String),
+    #[error("GitHub could not change the pull request base: {0}")]
+    GitHubPullRequestBaseEditConflict(String),
     #[error("GitHub could not create the pull request: {0}")]
     GitHubPullRequestCreationConflict(String),
     #[error("GitHub could not update pull request auto-merge: {0}")]
@@ -73,6 +75,7 @@ impl Serialize for AppError {
             Self::GitHubPullRequestBranchUpdateConflict(_) => {
                 "githubPullRequestBranchUpdateConflict"
             }
+            Self::GitHubPullRequestBaseEditConflict(_) => "githubPullRequestBaseEditConflict",
             Self::GitHubPullRequestCreationConflict(_) => "githubPullRequestCreationConflict",
             Self::GitHubPullRequestAutoMergeConflict(_) => "githubPullRequestAutoMergeConflict",
             Self::GitHubPullRequestMergeQueueConflict(_) => "githubPullRequestMergeQueueConflict",
@@ -193,6 +196,22 @@ mod tests {
             serde_json::json!({
                 "code": "githubPullRequestBranchUpdateConflict",
                 "message": "GitHub could not update the pull request branch: the pull request head changed"
+            })
+        );
+    }
+
+    #[test]
+    fn pull_request_base_edit_conflict_has_a_stable_ipc_code() {
+        let payload = serde_json::to_value(AppError::GitHubPullRequestBaseEditConflict(
+            "the target branch changed".to_string(),
+        ))
+        .expect("serialize error");
+
+        assert_eq!(
+            payload,
+            serde_json::json!({
+                "code": "githubPullRequestBaseEditConflict",
+                "message": "GitHub could not change the pull request base: the target branch changed"
             })
         );
     }
