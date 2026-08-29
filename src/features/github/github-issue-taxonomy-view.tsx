@@ -506,13 +506,8 @@ function ActionButton({
       <TooltipTrigger asChild>
         <Button
           type="button"
-          variant="ghost"
+          variant={destructive ? "destructive" : "ghost"}
           size="icon-sm"
-          className={
-            destructive
-              ? "text-destructive hover:bg-destructive/10 hover:text-destructive dark:hover:bg-destructive/15"
-              : undefined
-          }
           aria-label={label}
           disabled={disabled}
           onClick={onClick}
