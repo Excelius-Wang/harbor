@@ -47,6 +47,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { parseIpcError } from "@/lib/ipc-error";
 import { cn } from "@/lib/utils";
 import type {
@@ -172,18 +173,23 @@ export function GitHubRepositoryInvitations({
 
   return (
     <section className="flex min-w-0 flex-1 flex-col bg-[color-mix(in_srgb,var(--background)_95%,transparent)]">
-      <header className="h-[74px] shrink-0 border-b border-white/[0.075] px-4 sm:px-5">
+      <header className="h-[74px] shrink-0 border-b px-4 sm:px-5">
         <div className="mx-auto flex h-full w-full max-w-[960px] items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label={t("workspace.notifications.back")}
-              onClick={onBack}
-            >
-              <ArrowLeft />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={t("workspace.notifications.back")}
+                  onClick={onBack}
+                >
+                  <ArrowLeft />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t("workspace.notifications.back")}</TooltipContent>
+            </Tooltip>
             <div className="min-w-0">
               <p className="text-primary/80 text-[10px] font-medium tracking-[0.14em] uppercase">
                 {t("workspace.notifications.invitations.eyebrow")}
@@ -210,8 +216,8 @@ export function GitHubRepositoryInvitations({
         </div>
       </header>
 
-      <div className="mx-auto flex min-h-0 w-full max-w-[960px] flex-1 flex-col border-x border-white/[0.055]">
-        <div className="border-b border-white/[0.065] px-4 py-3 sm:px-5">
+      <div className="mx-auto flex min-h-0 w-full max-w-[960px] flex-1 flex-col border-x">
+        <div className="border-b px-4 py-3 sm:px-5">
           <p className="text-muted-foreground max-w-2xl text-xs leading-5">
             {t("workspace.notifications.invitations.description")}
           </p>
