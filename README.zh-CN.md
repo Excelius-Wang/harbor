@@ -24,5 +24,12 @@ cargo check --manifest-path src-tauri/Cargo.toml
 ## 项目基础
 
 初始应用外壳基于
-[kitlib/tauri-app-template](https://github.com/kitlib/tauri-app-template)，并保留其 MIT 许可声明。
-Harbor 会维护自己的产品架构，只通过边界清晰的小接口引入外部实现。
+[kitlib/tauri-app-template](https://github.com/kitlib/tauri-app-template)。Harbor 维护自己的产品架构，
+只通过边界清晰的小接口引入外部实现。
+
+## 许可证与署名
+
+Harbor 的自有代码采用
+[AGPL-3.0-only](https://www.gnu.org/licenses/agpl-3.0.html)。复制或修改 Harbor 时，必须保留
+[NOTICE](NOTICE) 中的作者署名和原始仓库链接。模板的 MIT 声明及其他需要保留的第三方声明见
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

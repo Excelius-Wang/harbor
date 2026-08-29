@@ -2,6 +2,12 @@
   "name": "harbor",
   "private": true,
   "version": "0.1.0",
+  "license": "AGPL-3.0-only",
+  "author": "Excelius-Wang",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Excelius-Wang/harbor.git"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",

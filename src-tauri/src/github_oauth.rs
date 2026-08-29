@@ -37,17 +37,38 @@ pub struct GitHubOAuthConfig {
 }
 
 impl GitHubOAuthConfig {
-    pub fn from_build_environment() -> Option<Self> {
-        let client_id = option_env!("HARBOR_GITHUB_CLIENT_ID")?.trim();
-        let client_secret = option_env!("HARBOR_GITHUB_CLIENT_SECRET")?.trim();
+    pub fn new(client_id: String, client_secret: String) -> Result<Self, AppError> {
+        let client_id = client_id.trim();
+        let client_secret = client_secret.trim();
         if client_id.is_empty() || client_secret.is_empty() {
-            return None;
+            return Err(AppError::Validation(
+                "GitHub OAuth configuration is incomplete".to_string(),
+            ));
         }
-        Some(Self {
+        ensure_classic_oauth_app_client_id(client_id)?;
+        Ok(Self {
             client_id: client_id.to_string(),
             client_secret: client_secret.to_string(),
         })
     }
+
+    pub fn from_build_environment() -> Option<Self> {
+        Self::new(
+            option_env!("HARBOR_GITHUB_CLIENT_ID")?.to_string(),
+            option_env!("HARBOR_GITHUB_CLIENT_SECRET")?.to_string(),
+        )
+        .ok()
+    }
+}
+
+fn ensure_classic_oauth_app_client_id(client_id: &str) -> Result<(), AppError> {
+    if client_id.starts_with("Iv") {
+        return Err(AppError::Validation(
+            "Harbor requires a classic GitHub OAuth App client ID; GitHub App client IDs do not support OAuth scopes"
+                .to_string(),
+        ));
+    }
+    Ok(())
 }
 
 fn configured_callback_url() -> Result<oauth2::url::Url, AppError> {
@@ -485,7 +506,12 @@ impl GitHubOAuthSession {
             (code, pending_login.pkce_verifier)
         };
 
-        self.token_exchange.exchange_code(code, pkce_verifier).await
+        let credentials = self
+            .token_exchange
+            .exchange_code(code, pkce_verifier)
+            .await?;
+        ensure_classic_oauth_app_credentials(&credentials)?;
+        Ok(credentials)
     }
 
     pub async fn refresh_if_needed(
@@ -504,6 +530,7 @@ impl GitHubOAuthSession {
             AppError::GitHubAuthentication("GitHub login expired; sign in again".to_string())
         })?;
         let mut refreshed = self.token_exchange.refresh_token(refresh_token).await?;
+        ensure_classic_oauth_app_credentials(&refreshed)?;
         if refreshed.refresh_token.is_none() {
             refreshed.refresh_token = credentials.refresh_token;
         }
@@ -522,6 +549,7 @@ fn github_oauth_client(
             "GitHub OAuth configuration is incomplete".to_string(),
         ));
     }
+    ensure_classic_oauth_app_client_id(&config.client_id)?;
     Ok(BasicClient::new(ClientId::new(config.client_id.clone()))
         .set_client_secret(ClientSecret::new(config.client_secret.clone()))
         .set_auth_uri(
@@ -537,6 +565,18 @@ fn github_oauth_client(
                 .map_err(|error| AppError::GitHubAuthentication(error.to_string()))?,
         )
         .set_auth_type(AuthType::RequestBody))
+}
+
+pub(crate) fn ensure_classic_oauth_app_credentials(
+    credentials: &GitHubOAuthCredentials,
+) -> Result<(), AppError> {
+    if credentials.access_token.starts_with("ghu_") {
+        return Err(AppError::GitHubAuthentication(
+            "GitHub returned a GitHub App user token; Harbor requires a classic OAuth App authorization for personal GitHub workflows"
+                .to_string(),
+        ));
+    }
+    Ok(())
 }
 
 fn credentials_from_token_response(
@@ -594,6 +634,8 @@ mod tests {
 
     struct SuccessfulTokenExchange;
 
+    struct GitHubAppTokenExchange;
+
     #[async_trait]
     impl GitHubTokenExchange for SuccessfulTokenExchange {
         async fn exchange_code(
@@ -620,6 +662,51 @@ mod tests {
                 scopes: Vec::new(),
             })
         }
+    }
+
+    #[async_trait]
+    impl GitHubTokenExchange for GitHubAppTokenExchange {
+        async fn exchange_code(
+            &self,
+            _code: String,
+            _pkce_verifier: PkceCodeVerifier,
+        ) -> Result<GitHubOAuthCredentials, AppError> {
+            Ok(GitHubOAuthCredentials {
+                access_token: "ghu_github-app-user-token".to_string(),
+                refresh_token: None,
+                expires_at: None,
+                scopes: Vec::new(),
+            })
+        }
+
+        async fn refresh_token(
+            &self,
+            _refresh_token: String,
+        ) -> Result<GitHubOAuthCredentials, AppError> {
+            unreachable!("the regression token does not expire")
+        }
+    }
+
+    #[test]
+    fn scope_oauth_rejects_github_app_client_ids() {
+        let result = GitHubOAuthConfig::new(
+            "Iv1.github-app-client".to_string(),
+            "github-client-secret".to_string(),
+        );
+
+        assert!(
+            matches!(result, Err(AppError::Validation(message)) if message.contains("OAuth App"))
+        );
+    }
+
+    #[test]
+    fn scope_oauth_accepts_oauth_app_client_ids() {
+        let result = GitHubOAuthConfig::new(
+            "Ov23li.oauth-app-client".to_string(),
+            "github-client-secret".to_string(),
+        );
+
+        assert!(result.is_ok());
     }
 
     #[test]
@@ -736,6 +823,29 @@ mod tests {
 
         let replay = session.complete_login(&callback).await;
         assert!(matches!(replay, Err(AppError::GitHubAuthentication(_))));
+    }
+
+    #[tokio::test]
+    async fn login_rejects_a_github_app_user_token() {
+        let session = GitHubOAuthSession::with_token_exchange(
+            test_config(),
+            Arc::new(GitHubAppTokenExchange),
+        )
+        .expect("OAuth session");
+        let attempt = session.begin_login().expect("login attempt");
+        let authorization_url = Url::parse(&attempt.authorization_url).expect("authorization URL");
+        let state = authorization_url
+            .query_pairs()
+            .find_map(|(key, value)| (key == "state").then(|| value.into_owned()))
+            .expect("state");
+
+        let callback = format!("{GITHUB_OAUTH_CALLBACK_URL}?code=temporary-code&state={state}");
+        let result = session.complete_login(&callback).await;
+
+        assert!(matches!(
+            result,
+            Err(AppError::GitHubAuthentication(message)) if message.contains("OAuth App")
+        ));
     }
 
     #[tokio::test]

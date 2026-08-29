@@ -6,7 +6,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     error::AppError,
-    github_oauth::{GitHubLoginAttempt, GitHubOAuthCredentials, GitHubOAuthSession},
+    github_oauth::{
+        ensure_classic_oauth_app_credentials, GitHubLoginAttempt, GitHubOAuthCredentials,
+        GitHubOAuthSession,
+    },
 };
 
 pub(crate) mod actions;
@@ -965,6 +968,7 @@ impl GitHubService {
                     .ok_or(AppError::GitHubNotConnected)?
             }
         };
+        ensure_classic_oauth_app_credentials(&credentials)?;
         let refreshed = match &self.oauth {
             Some(oauth) => oauth.refresh_if_needed(credentials.clone()).await?,
             None => credentials.clone(),
@@ -2689,6 +2693,31 @@ mod tests {
 
         assert!(connection.connected);
         assert_eq!(connection.identity.expect("identity").login, "octocat");
+    }
+
+    #[tokio::test]
+    async fn status_rejects_a_saved_github_app_user_token() {
+        let credentials = Arc::new(MemoryCredentialStore::default());
+        credentials
+            .save_github_credentials(&GitHubOAuthCredentials {
+                access_token: "ghu_saved-github-app-token".to_string(),
+                refresh_token: None,
+                expires_at: None,
+                scopes: Vec::new(),
+            })
+            .expect("seed credentials");
+        let service = GitHubService::new(
+            Arc::new(FakeGitHubClient),
+            credentials,
+            Some(oauth_session("github-user-access-token")),
+        );
+
+        let result = service.status().await;
+
+        assert!(matches!(
+            result,
+            Err(AppError::GitHubAuthentication(message)) if message.contains("OAuth App")
+        ));
     }
 
     #[tokio::test]

@@ -92,6 +92,14 @@ OAuth App tokens. Treat the more specific operation contract as the implementati
 gate the slice on one live Harbor OAuth probe for `GET /user/packages`; do not assume the token can
 authenticate npm, Docker, or another registry client.
 
+The live probe on 2026-08-30 also ruled out Harbor's former GitHub App configuration. GitHub issued
+a `ghu_` user token with no OAuth scopes; `/user` succeeded, the app installation was visible for the
+personal account, but `/user/packages?package_type=container` returned `403 Resource not accessible
+by integration` with `allows_permissionless_access=true` under API versions `2022-11-28` and
+`2026-03-10`. Harbor therefore requires a classic OAuth App credential for its scope-based personal
+workflow. GitHub App client IDs are rejected before sign-in, and `ghu_` credentials are rejected
+before storage or reuse.
+
 Harbor currently requests `repo workflow security_events project delete_repo gist user` and does
 not preserve granted scopes in `GitHubOAuthCredentials`
 ([current OAuth implementation](../src-tauri/src/github_oauth.rs)). Add the package scopes to new

@@ -3,6 +3,9 @@ name = "harbor"
 version = "0.1.0"
 description = "A focused GitHub desktop workspace"
 edition = "2021"
+authors = ["Excelius-Wang"]
+license = "AGPL-3.0-only"
+repository = "https://github.com/Excelius-Wang/harbor"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
