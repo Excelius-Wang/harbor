@@ -371,6 +371,8 @@ Query provider batches each visible conversation, serializes mutations, cancels 
 optimistic updates, rolls back on failure, and replaces every cached copy with GitHub's returned
 groups. Discussion upvotes remain a separate GitHub capability instead of being conflated with
 thumbs-up reactions.
+The completed Reactions slice is open and mergeable in
+[PR #4](https://github.com/Excelius-Wang/harbor/pull/4) from `feat/github-reactions`.
 The workspace shell is responsive, starts at 1600x1000, and remains usable down to 900x620.
 
 ## Next action
