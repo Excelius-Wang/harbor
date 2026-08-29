@@ -75,8 +75,17 @@ rendered loading/error ARIA states.
 
 Post-fix verification passes `pnpm check` with 37 frontend files and 209 tests, and Rust library tests
 with 347 passing and two intentional ignores. `cargo check`, rustfmt, and `git diff --check` pass.
-Clippy reports exactly the 15 pre-existing warnings and no warning in this slice. Maintainer
-editability remains a separate later slice.
+Standards re-review has no unresolved findings. Spec re-review found that the current base disappeared
+behind complete-page loading/error panels and that actual keyboard, pending-lock, retry, and HTTP
+`404`/`422` transport interactions still lacked coverage. Both are fixed: a live current-base/range
+summary remains visible throughout loading and recovery, and a jsdom interaction suite drives the
+real component through keyboard-open, automatic pagination, keyboard selection, pending locks, and
+retry. Focused local HTTP tests now exercise both refreshable status codes.
+
+Final pre-review verification passes `pnpm check` with 38 frontend files and 211 tests, and Rust
+library tests with 348 passing and two intentional ignores. `cargo check`, rustfmt, and
+`git diff --check` pass. Clippy reports exactly the 15 pre-existing warnings and no warning in this
+slice. Maintainer editability remains a separate later slice.
 
 Harbor uses a classic OAuth App for scope-based personal workflows, rejects GitHub App client IDs
 and `ghu_` tokens, and honors GitHub's normalization of `read:packages` into `write:packages`.
@@ -86,7 +95,7 @@ refresh tokens, or Keychain contents.
 
 ## Next action
 
-Commit and push the review fixes to Draft PR #16, then rerun parallel Standards and Spec reviews
+Commit and push the final review fixes to Draft PR #16, then rerun parallel Standards and Spec reviews
 against the exact new head.
 
 ## Verification

@@ -757,6 +757,39 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn missing_and_unprocessable_http_responses_are_refreshable_conflicts() {
+        for status in ["404 Not Found", "422 Unprocessable Entity"] {
+            let (client, _requests, server) = mock_github(vec![MockResponse {
+                status,
+                headers: "",
+                body: serde_json::json!({
+                    "message": "the pull request or branch changed",
+                    "documentation_url": "https://docs.github.com/rest/pulls/pulls"
+                })
+                .to_string(),
+            }])
+            .await;
+
+            let error = update_pull_request_base_with_client(
+                &client,
+                "octocat",
+                "hello-world",
+                12,
+                &guard(),
+            )
+            .await
+            .expect_err("refreshable GitHub conflict");
+            server.await.expect("mock server");
+
+            assert!(matches!(
+                error,
+                AppError::GitHubPullRequestBaseEditConflict(message)
+                    if message.contains("refresh") && message.contains("changed")
+            ));
+        }
+    }
+
+    #[tokio::test]
     async fn null_mutation_and_mismatched_postflight_are_refreshable_conflicts() {
         let (client, _requests, server) = mock_github(vec![
             MockResponse {

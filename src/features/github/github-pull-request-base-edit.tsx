@@ -158,6 +158,29 @@ export function BaseBranchLoading({ label }: { label: string }) {
   );
 }
 
+export function BaseBranchRangeSummary({
+  currentBase,
+  targetBase,
+  currentLabel,
+}: {
+  currentBase: string;
+  targetBase: string | null;
+  currentLabel: string;
+}) {
+  return (
+    <p aria-live="polite" className="bg-muted/45 rounded-md border px-3 py-2 text-xs">
+      <span className="text-muted-foreground mr-2">{currentLabel}</span>
+      <code>{currentBase}</code>
+      {targetBase ? (
+        <>
+          <span className="text-muted-foreground mx-2">→</span>
+          <code>{targetBase}</code>
+        </>
+      ) : null}
+    </p>
+  );
+}
+
 export function GitHubPullRequestBaseEdit({
   repository,
   pullRequest,
@@ -284,6 +307,11 @@ export function GitHubPullRequestBaseEdit({
             {t("workspace.repositories.changePullRequestBaseWarning")}
           </AlertDescription>
         </Alert>
+        <BaseBranchRangeSummary
+          currentBase={snapshot?.currentBase ?? pullRequest.baseRef}
+          targetBase={selected?.name ?? null}
+          currentLabel={t("workspace.repositories.currentBase")}
+        />
         {branchesQuery.isPending && !snapshot ? (
           <BaseBranchLoading label={t("workspace.repositories.loadingBaseBranches")} />
         ) : branchesError ? (
@@ -318,55 +346,44 @@ export function GitHubPullRequestBaseEdit({
             </AlertDescription>
           </Alert>
         ) : (
-          <>
-            <Command className="rounded-md border">
-              <CommandInput
-                placeholder={t("workspace.repositories.searchBaseBranches")}
-                disabled={mutation.isPending}
-              />
-              <CommandList className="max-h-64">
-                <CommandEmpty>{t("workspace.repositories.noMatchingBaseBranches")}</CommandEmpty>
-                <CommandGroup>
-                  {snapshot.branches.map((branch) => {
-                    const current = branch.name === snapshot.currentBase;
-                    return (
-                      <CommandItem
-                        key={branch.name}
-                        value={branch.name}
-                        disabled={current || mutation.isPending}
-                        onSelect={() => {
-                          mutation.reset();
-                          setTargetName(branch.name);
-                        }}
-                      >
-                        <GitBranch />
-                        <span className="min-w-0 flex-1 truncate">{branch.name}</span>
-                        {branch.protected ? (
-                          <Badge variant="outline">
-                            {t("workspace.repositories.protectedBranch")}
-                          </Badge>
-                        ) : null}
-                        {current ? (
-                          <Badge variant="secondary">
-                            {t("workspace.repositories.currentBase")}
-                          </Badge>
-                        ) : targetName === branch.name ? (
-                          <Check className="ml-auto" />
-                        ) : null}
-                      </CommandItem>
-                    );
-                  })}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-            {selected ? (
-              <p className="bg-muted/45 rounded-md border px-3 py-2 text-xs">
-                <code>{snapshot.currentBase}</code>
-                <span className="text-muted-foreground mx-2">→</span>
-                <code>{selected.name}</code>
-              </p>
-            ) : null}
-          </>
+          <Command className="rounded-md border">
+            <CommandInput
+              placeholder={t("workspace.repositories.searchBaseBranches")}
+              disabled={mutation.isPending}
+            />
+            <CommandList className="max-h-64">
+              <CommandEmpty>{t("workspace.repositories.noMatchingBaseBranches")}</CommandEmpty>
+              <CommandGroup>
+                {snapshot.branches.map((branch) => {
+                  const current = branch.name === snapshot.currentBase;
+                  return (
+                    <CommandItem
+                      key={branch.name}
+                      value={branch.name}
+                      disabled={current || mutation.isPending}
+                      onSelect={() => {
+                        mutation.reset();
+                        setTargetName(branch.name);
+                      }}
+                    >
+                      <GitBranch />
+                      <span className="min-w-0 flex-1 truncate">{branch.name}</span>
+                      {branch.protected ? (
+                        <Badge variant="outline">
+                          {t("workspace.repositories.protectedBranch")}
+                        </Badge>
+                      ) : null}
+                      {current ? (
+                        <Badge variant="secondary">{t("workspace.repositories.currentBase")}</Badge>
+                      ) : targetName === branch.name ? (
+                        <Check className="ml-auto" />
+                      ) : null}
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            </CommandList>
+          </Command>
         )}
         {mutationMessage ? (
           <Alert variant="destructive">
