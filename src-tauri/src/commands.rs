@@ -9,12 +9,12 @@ use crate::{
     github::{
         GitHubAuthEvent, GitHubBlame, GitHubCheckPage, GitHubCheckSuite, GitHubCodeOverview,
         GitHubCodeScanningInstancePage, GitHubCodeSearchPage, GitHubCommentMutation,
-        GitHubConnection, GitHubContentListing, GitHubContributionSummary, GitHubDeveloperFeedPage,
-        GitHubDiscoverySearchKind, GitHubDiscoverySearchPage, GitHubDiscoverySearchSort,
-        GitHubDiscussionAnsweredFilter, GitHubDiscussionCategoryPage, GitHubDiscussionCloseReason,
-        GitHubDiscussionComment, GitHubDiscussionCommentDeletion, GitHubDiscussionDeletion,
-        GitHubDiscussionDetailPage, GitHubDiscussionFilters, GitHubDiscussionPage,
-        GitHubDiscussionPoll, GitHubDiscussionSort, GitHubDiscussionState,
+        GitHubCommitDetailPage, GitHubConnection, GitHubContentListing, GitHubContributionSummary,
+        GitHubDeveloperFeedPage, GitHubDiscoverySearchKind, GitHubDiscoverySearchPage,
+        GitHubDiscoverySearchSort, GitHubDiscussionAnsweredFilter, GitHubDiscussionCategoryPage,
+        GitHubDiscussionCloseReason, GitHubDiscussionComment, GitHubDiscussionCommentDeletion,
+        GitHubDiscussionDeletion, GitHubDiscussionDetailPage, GitHubDiscussionFilters,
+        GitHubDiscussionPage, GitHubDiscussionPoll, GitHubDiscussionSort, GitHubDiscussionState,
         GitHubDiscussionStateFilter, GitHubDiscussionSummary, GitHubDiscussionVote,
         GitHubFileDownload, GitHubFileDownloadResult, GitHubFilePreview, GitHubForkInput,
         GitHubForkResult, GitHubGist, GitHubGistComment, GitHubGistCommentMutation,
@@ -2745,6 +2745,26 @@ pub async fn github_list_repository_commits(
 }
 
 #[tauri::command]
+pub async fn github_get_repository_commit(
+    owner: String,
+    repository: String,
+    commit_sha: String,
+    page: u32,
+    state: State<'_, AppState>,
+) -> Result<GitHubCommitDetailPage, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .commit_detail(
+            repository.owner(),
+            repository.name(),
+            &validate_full_commit_sha(commit_sha)?,
+            validate_commit_file_page(page)?,
+        )
+        .await
+}
+
+#[tauri::command]
 pub async fn github_list_repository_tags(
     owner: String,
     repository: String,
@@ -3871,6 +3891,16 @@ fn validate_commit_id(commit_id: String) -> Result<String, AppError> {
     Ok(commit_id)
 }
 
+fn validate_full_commit_sha(commit_sha: String) -> Result<String, AppError> {
+    let commit_sha = validate_commit_id(commit_sha)?;
+    if commit_sha.len() != 40 {
+        return Err(AppError::Validation(
+            "a full 40-character commit SHA is required".to_string(),
+        ));
+    }
+    Ok(commit_sha)
+}
+
 fn validate_optional_commit_title(title: Option<String>) -> Result<Option<String>, AppError> {
     title
         .map(|title| {
@@ -3960,6 +3990,15 @@ fn validate_pull_request_review_comments(
 fn validate_page(page: u32) -> Result<u32, AppError> {
     if !(1..=1_000).contains(&page) {
         return Err(AppError::Validation("page is out of range".to_string()));
+    }
+    Ok(page)
+}
+
+fn validate_commit_file_page(page: u32) -> Result<u32, AppError> {
+    if !(1..=30).contains(&page) {
+        return Err(AppError::Validation(
+            "commit file page is out of range".to_string(),
+        ));
     }
     Ok(page)
 }
@@ -4283,6 +4322,23 @@ mod tests {
         assert!(validate_notification_page(u8::MAX as u32 + 1).is_err());
         assert_eq!(validate_notification_thread_id(42).expect("thread ID"), 42);
         assert!(validate_notification_thread_id(0).is_err());
+    }
+
+    #[test]
+    fn commit_detail_requires_a_full_sha_and_bounded_file_page() {
+        assert_eq!(
+            validate_full_commit_sha(" aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ".to_string())
+                .expect("full commit SHA"),
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        );
+        assert!(validate_full_commit_sha("abcdef1".to_string()).is_err());
+        assert!(
+            validate_full_commit_sha("gggggggggggggggggggggggggggggggggggggggg".to_string())
+                .is_err()
+        );
+        assert_eq!(validate_commit_file_page(30).expect("last page"), 30);
+        assert!(validate_commit_file_page(0).is_err());
+        assert!(validate_commit_file_page(31).is_err());
     }
 
     #[test]

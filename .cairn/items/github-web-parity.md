@@ -327,9 +327,10 @@ deletion, archive or unarchive, and permanent deletion. The focused five-method
 `GitHubRepositorySettingsClient` Interface owns the transport, authoritative owner and branch guards,
 response verification, and tests. Visibility and archive changes require explicit consequence flags;
 deletion requires the exact full repository name and the OAuth connection now requests GitHub's
-`delete_repo` scope. Organization creation, transfer, collaborators, billing, organization rulesets,
-and organization-level security administration remain deliberately outside the personal-product
-boundary.
+`delete_repo` scope. Organization creation and transfer, organization and Team collaborator
+administration, billing, organization rulesets, and organization-level security administration
+remain deliberately outside the personal-product boundary. Collaborators on a personal repository
+remain in scope.
 Personal Gists now have a complete native account workspace. The focused eleven-method
 `GitHubGistClient` Interface owns personal, Starred, and recent-public pages; detail and safe file
 content; creation and multi-file editing; Star, Fork, and exact-ID deletion; revision pages and
@@ -416,6 +417,17 @@ permission failures. Review comment database IDs accept GitHub's current GraphQL
 shape instead of relying on the removed integer field.
 The completed comment-lifecycle slice is open in
 [PR #5](https://github.com/Excelius-Wang/harbor/pull/5) from `feat/github-comment-lifecycle`.
+
+Repository commits now open in a native read-only detail from Code history, recent commits, blame,
+pull request commits and comparisons, and Commit notifications. The existing `GitHubCodeClient`
+Interface uses GitHub's authenticated commit REST endpoint and Link headers for pages of 100 changed
+files, preserves nullable actors and statistics, signatures, merge and root parents, renames, binary
+files, and GitHub's 3,000-file response limit. The UI reuses the maintained `react-diff-view` parser,
+shares its read-only renderer with pull request files, supports unified and split layouts, opens
+available source files inside Harbor, and keeps an explicit GitHub fallback. A primary-source gap
+audit is stored in `docs/GITHUB_PERSONAL_WEB_GAP_AUDIT.md`; it confirms that personal repository
+collaborators remain in scope while organization and Team administration do not. Delivery is open
+and mergeable in GitHub pull request #6.
 The workspace shell is responsive, starts at 1600x1000, and remains usable down to 900x620.
 Repository Wiki now has a native personal-developer workflow behind a focused Git-backed service.
 Harbor discovers the Wiki's real default branch, keeps a bounded bare cache per immutable repository
@@ -505,6 +517,17 @@ delete flows for Issue comments, pull request conversation comments, and submitt
 including exact Tauri arguments, authoritative refetch after deletion, retained Markdown after a
 conflict, and capability-gated actions. At 1600x1000 and 900x620, dialogs remain inside the viewport,
 document width equals viewport width, and the browser console reports zero errors and warnings.
+
+Native Commit detail verification covers the exact 40-character SHA and page Tauri contract,
+authenticated GitHub REST transport, API-version and Link headers, metadata identity across pages,
+root and merge commits, signatures, renamed and binary files, unknown future status strings, and the
+3,000-file limit. `pnpm check` passes with 129 frontend tests; 228 Rust tests pass with one external
+DeepWiki test ignored by design; `cargo fmt --check`, `cargo check`, `cargo clippy`, the production
+build, and `git diff --check` pass. Deterministic desktop QA at 1600x1000 and 900x620 covers repository
+and history entry points, paged files, parent navigation, source-file return, unified and split Diff,
+binary fallback, and the exact Commit-notification SHA. Both sizes have no page-level overflow, and
+fresh sessions report zero console errors and warnings. GitHub's live `cli/cli` endpoint confirms the
+2026-03-10 response and Link-pagination contract.
 
 Success: `pnpm check` passes; a 70-repository Playwright fixture with a 240-character unbroken token
 keeps `scrollWidth === clientWidth` at both 1600x1000 and 900x620, with 12px between descriptions and
@@ -989,10 +1012,11 @@ page-level overflow, and the browser reports zero errors and zero warnings.
   because it requires push access. Treat Wiki as a separate `.wiki.git` repository rather than
   pretending the Contents API covers it.
 - Define the requested GitHub Web parity as the personal-developer product: personal accounts,
-  personal repositories, and API-supported developer workflows. Exclude organization and Team
-  administration, Enterprise identity and policy, organization billing, and organization advanced
-  security. Keep an explicit GitHub Web fallback for sensitive or browser-only account operations
-  that GitHub does not expose to an OAuth desktop client; do not fake them with local state.
+  personal repositories, including personal-repository collaborators, and API-supported developer
+  workflows. Exclude organization and Team administration, Enterprise identity and policy,
+  organization billing, and organization advanced security. Keep an explicit GitHub Web fallback for
+  sensitive or browser-only account operations that GitHub does not expose to an OAuth desktop
+  client; do not fake them with local state.
 - Keep reactions behind one `GitHubReactionClient` and GitHub's shared `Reactable` GraphQL contract.
   Require the caller's exact closed subject kind, compare every node to the selected repository ID,
   and use read-before-write desired state so retries are idempotent. Batch visible subjects through
@@ -1150,6 +1174,12 @@ page-level overflow, and the browser reports zero errors and zero warnings.
 - Keep Code behind one cohesive `GitHubCodeClient` Interface. Move overview, history, tags, blame,
   search, contents, preview, and download together with both Adapters and their policies; leave the
   shared byte download result in the root because Actions artifacts also use it.
+- Keep Commit detail in the existing `GitHubCodeClient` rather than introducing a second client or
+  HTTP stack. Use the official authenticated REST endpoint because it returns authoritative commit
+  metadata and paged changed files together, follow Link headers rather than guessing from page
+  length, cap navigation at GitHub's 3,000-file boundary, and require a full SHA at the Tauri edge.
+  Share only the read-only Diff parser and renderer with pull request files; keep review controls in
+  the pull request workflow.
 - Keep authenticated repositories in one infinite-query cache. Show the first 100 immediately,
   follow GitHub's native page links sequentially in the background, deduplicate by immutable
   repository ID, retain loaded pages on later failures, and refetch loaded pages without discarding
@@ -1194,8 +1224,9 @@ page-level overflow, and the browser reports zero errors and zero warnings.
   data, and verify every returned setting after writes. Require explicit consequence flags for
   visibility and archive transitions, the exact full repository name for deletion, and the
   `delete_repo` OAuth scope for new connections. Do not surface organization transfer,
-  collaborators, billing, organization rulesets, or organization security administration in the
-  personal product.
+  organization or Team collaborators, billing, organization rulesets, or organization security
+  administration in the personal product. Personal-repository collaborators remain a separate
+  in-scope workflow.
 - Keep personal Gists behind `GitHubGistClient`. Reuse Octocrab's native Gist operations and add
   only its missing official Starred-list and comment routes. Validate Gist IDs, full revision SHAs,
   reserved file names, unique file sets, comment scope, and personal ownership before writes; verify

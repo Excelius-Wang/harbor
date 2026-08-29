@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { GitCommitHorizontal, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -14,6 +15,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { parseIpcError } from "@/lib/ipc-error";
 import { GitHubCommitList } from "./github-commit-list";
+import { GitHubCommitDetail } from "./github-commit-detail";
 import type { GitHubRepositoryIdentity } from "./github-data";
 import { GitHubPagination } from "./github-issue-shared";
 import { pullRequestCommitsQueryOptions } from "./github-queries";
@@ -32,6 +34,7 @@ export function GitHubPullRequestCommits({
   enabled: boolean;
 }) {
   const { t } = useTranslation();
+  const [selectedCommitSha, setSelectedCommitSha] = useState<string | null>(null);
   const result = useQuery({
     ...pullRequestCommitsQueryOptions({
       owner: repository.owner,
@@ -39,7 +42,7 @@ export function GitHubPullRequestCommits({
       pullRequestNumber,
       page,
     }),
-    enabled,
+    enabled: enabled && !selectedCommitSha,
     placeholderData: (previous) => previous,
   });
   const data = result.data;
@@ -48,7 +51,15 @@ export function GitHubPullRequestCommits({
   return (
     <ScrollArea className="min-h-0 flex-1">
       <div className="mx-auto flex w-full max-w-[1100px] flex-col px-4 py-5 sm:px-5">
-        {result.isPending ? (
+        {selectedCommitSha ? (
+          <GitHubCommitDetail
+            key={selectedCommitSha}
+            repository={repository}
+            commitSha={selectedCommitSha}
+            onBack={() => setSelectedCommitSha(null)}
+            onSelectCommit={setSelectedCommitSha}
+          />
+        ) : result.isPending ? (
           <div className="flex flex-col gap-3">
             {Array.from({ length: 6 }, (_, index) => (
               <Skeleton key={index} className="h-20 w-full" />
@@ -71,7 +82,7 @@ export function GitHubPullRequestCommits({
             </EmptyContent>
           </Empty>
         ) : data?.commits.length ? (
-          <GitHubCommitList commits={data.commits} />
+          <GitHubCommitList commits={data.commits} onSelectCommit={setSelectedCommitSha} />
         ) : (
           <Empty className="min-h-80">
             <EmptyHeader>
@@ -82,7 +93,7 @@ export function GitHubPullRequestCommits({
             </EmptyHeader>
           </Empty>
         )}
-        {data ? (
+        {data && !selectedCommitSha ? (
           <GitHubPagination
             page={data.page}
             hasPrevious={data.hasPrevious}

@@ -23,11 +23,13 @@ export function GitHubCodeHistory({
   reference,
   path,
   onBack,
+  onSelectCommit,
 }: {
   repository: GitHubRepository;
   reference: string;
   path: string;
   onBack: () => void;
+  onSelectCommit: (sha: string) => void;
 }) {
   const { t } = useTranslation();
   const [page, setPage] = useState(1);
@@ -91,7 +93,7 @@ export function GitHubCodeHistory({
           </EmptyContent>
         </Empty>
       ) : data?.commits.length ? (
-        <GitHubCommitList commits={data.commits} />
+        <GitHubCommitList commits={data.commits} onSelectCommit={onSelectCommit} />
       ) : (
         <Empty className="min-h-72 border">
           <EmptyHeader>

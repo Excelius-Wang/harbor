@@ -183,6 +183,7 @@ pub fn run() {
             commands::github_get_repository_insights_contributors,
             commands::github_get_repository_insights_traffic,
             commands::github_list_repository_commits,
+            commands::github_get_repository_commit,
             commands::github_list_repository_tags,
             commands::github_get_repository_blame,
             commands::github_search_repository_code,

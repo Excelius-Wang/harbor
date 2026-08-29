@@ -1488,6 +1488,66 @@ export type GitHubCommit = {
   verified: boolean | null;
 };
 
+export type GitHubCommitActor = {
+  name: string | null;
+  email: string | null;
+  login: string | null;
+  avatarUrl: string | null;
+  date: string | null;
+};
+
+export type GitHubCommitParent = {
+  sha: string;
+  shortSha: string;
+  url: string;
+};
+
+export type GitHubCommitStats = {
+  additions: number;
+  deletions: number;
+  total: number;
+};
+
+export type GitHubCommitVerification = {
+  verified: boolean;
+  reason: string;
+  verifiedAt: string | null;
+};
+
+export type GitHubChangedFile = {
+  sha?: string;
+  path: string;
+  previousPath?: string;
+  status: string;
+  additions: number;
+  deletions: number;
+  changes: number;
+  patch?: string;
+  blobUrl?: string;
+  rawUrl?: string;
+};
+
+export type GitHubCommitDetail = {
+  sha: string;
+  shortSha: string;
+  message: string;
+  url: string;
+  author: GitHubCommitActor | null;
+  committer: GitHubCommitActor | null;
+  parents: GitHubCommitParent[];
+  stats: GitHubCommitStats | null;
+  verification: GitHubCommitVerification | null;
+};
+
+export type GitHubCommitDetailPage = {
+  commit: GitHubCommitDetail;
+  files: GitHubChangedFile[];
+  page: number;
+  hasPrevious: boolean;
+  hasMore: boolean;
+  filesAtLimit: boolean;
+};
+
 export type GitHubPullRequestCommit = GitHubCommit;
 
 export type GitHubPullRequestCommitPage = {
