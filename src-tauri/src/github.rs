@@ -23,6 +23,7 @@ pub(crate) mod pending_review;
 pub(crate) mod profile;
 pub(crate) mod projects;
 pub(crate) mod pull_request;
+pub(crate) mod reaction;
 pub(crate) mod release;
 pub(crate) mod repository_relationships;
 pub(crate) mod repository_settings;
@@ -84,6 +85,10 @@ pub use pull_request::merge_queue::GitHubPullRequestMergeQueueStatus;
 pub use pull_request::reviewer::{GitHubPullRequestReviewTeam, GitHubPullRequestReviewTeamPage};
 pub use pull_request::update_branch::{
     GitHubPullRequestBranchUpdate, GitHubPullRequestBranchUpdateStatus,
+};
+pub use reaction::{
+    GitHubReactionContent, GitHubReactionSubject, GitHubReactionSubjectKind,
+    GitHubReactionSubjectRef,
 };
 pub use release::{
     GitHubRelease, GitHubReleaseArchiveFormat, GitHubReleaseAsset, GitHubReleaseMutationInput,
@@ -252,6 +257,7 @@ pub struct GitHubPullRequestPage {
 #[serde(rename_all = "camelCase")]
 pub struct GitHubPullRequest {
     pub id: u64,
+    pub reaction_subject: Option<GitHubReactionSubjectRef>,
     pub number: u64,
     pub title: String,
     pub body: Option<String>,
@@ -578,6 +584,7 @@ pub(crate) trait GitHubClient:
     + pull_request::merge_queue::GitHubPullRequestMergeQueueClient
     + pull_request::reviewer::GitHubPullRequestReviewerClient
     + pull_request::update_branch::GitHubPullRequestBranchClient
+    + reaction::GitHubReactionClient
     + release::GitHubReleaseClient
     + repository_relationships::GitHubRepositoryRelationshipsClient
     + repository_settings::GitHubRepositorySettingsClient
@@ -1798,6 +1805,10 @@ fn pull_request_from_octocrab(
 
     GitHubPullRequest {
         id: pull_request.id.into_inner(),
+        reaction_subject: pull_request.node_id.map(|id| GitHubReactionSubjectRef {
+            id,
+            kind: GitHubReactionSubjectKind::PullRequest,
+        }),
         number: pull_request.number,
         title: pull_request
             .title
@@ -2246,6 +2257,10 @@ mod tests {
             Ok(GitHubPullRequestDetailPage {
                 pull_request: GitHubPullRequest {
                     id: 3,
+                    reaction_subject: Some(GitHubReactionSubjectRef {
+                        id: "PR_3".to_string(),
+                        kind: GitHubReactionSubjectKind::PullRequest,
+                    }),
                     number: pull_request_number,
                     title: "Ship the PR workspace".to_string(),
                     body: Some("Pull request body".to_string()),
@@ -2639,6 +2654,28 @@ mod tests {
             .discussion_detail("octocat", "hello-world", 42, None)
             .await
             .expect("discussion detail");
+        let reaction_subject = GitHubReactionSubjectRef {
+            id: "I_kwDOA".to_string(),
+            kind: GitHubReactionSubjectKind::Issue,
+        };
+        let reactions = service
+            .reaction_subjects(
+                "octocat",
+                "hello-world",
+                std::slice::from_ref(&reaction_subject),
+            )
+            .await
+            .expect("reaction subjects");
+        let updated_reaction = service
+            .update_reaction(
+                "octocat",
+                "hello-world",
+                &reaction_subject,
+                GitHubReactionContent::Heart,
+                true,
+            )
+            .await
+            .expect("updated reaction");
         let releases = service
             .releases("octocat", "hello-world", 2)
             .await
@@ -2752,6 +2789,8 @@ mod tests {
         assert!(discussion_categories.enabled);
         assert_eq!(discussions.discussions[0].number, 42);
         assert_eq!(discussion.comments[0].body, "A focused answer.");
+        assert_eq!(reactions[0].id, reaction_subject.id);
+        assert!(updated_reaction.groups[0].viewer_has_reacted);
         assert_eq!(releases.page, 2);
         assert_eq!(release.tag_name, "v1.0.0");
         assert_eq!(release_asset.bytes, b"release-asset");
@@ -3554,6 +3593,13 @@ mod tests {
         assert_eq!(item.actor.as_deref(), Some("hubot"));
         assert_eq!(item.body.as_deref(), Some("Fixed by **#41**."));
         assert_eq!(item.author_association.as_deref(), Some("CONTRIBUTOR"));
+        assert_eq!(
+            item.reaction_subject,
+            Some(GitHubReactionSubjectRef {
+                id: "IC_42".to_string(),
+                kind: GitHubReactionSubjectKind::IssueComment,
+            })
+        );
     }
 
     #[test]
@@ -3580,6 +3626,13 @@ mod tests {
         assert_eq!(item.body.as_deref(), Some("Fixed in **#41**."));
         assert_eq!(item.author_association.as_deref(), Some("OWNER"));
         assert!(item.updated_at.is_some());
+        assert_eq!(
+            item.reaction_subject,
+            Some(GitHubReactionSubjectRef {
+                id: "IC_84".to_string(),
+                kind: GitHubReactionSubjectKind::IssueComment,
+            })
+        );
     }
 
     #[test]
@@ -3607,6 +3660,13 @@ mod tests {
         assert_eq!(item.actor.as_deref(), Some("reviewer"));
         assert!(item.created_at.is_some());
         assert_eq!(item.body.as_deref(), Some("Looks good."));
+        assert_eq!(
+            item.reaction_subject,
+            Some(GitHubReactionSubjectRef {
+                id: "PRR_43".to_string(),
+                kind: GitHubReactionSubjectKind::PullRequestReview,
+            })
+        );
     }
 
     #[test]

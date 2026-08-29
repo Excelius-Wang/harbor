@@ -558,6 +558,10 @@ impl GitHubPullRequestMutationClient for super::tests::FakeGitHubClient {
         );
         Ok(GitHubIssueTimelineItem {
             id: "IC_85".to_string(),
+            reaction_subject: Some(super::GitHubReactionSubjectRef {
+                id: "IC_85".to_string(),
+                kind: super::GitHubReactionSubjectKind::IssueComment,
+            }),
             kind: super::GitHubIssueTimelineKind::Comment,
             event: "commented".to_string(),
             actor: Some("octocat".to_string()),

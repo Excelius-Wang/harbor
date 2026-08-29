@@ -56,6 +56,8 @@ import type {
   GitHubPullRequestReviewTeamPage,
   GitHubPullRequestSort,
   GitHubPullRequestState,
+  GitHubReactionSubject,
+  GitHubReactionSubjectRef,
   GitHubRelease,
   GitHubReleasePage,
   GitHubRepositoryPage,
@@ -100,7 +102,15 @@ type GitHubContentsTarget = GitHubCodeTarget & {
   path: string;
 };
 
-type GitHubRepositoryTarget = Pick<GitHubCodeTarget, "owner" | "repository">;
+export type GitHubRepositoryTarget = Pick<GitHubCodeTarget, "owner" | "repository">;
+
+export type GitHubReactionsTarget = GitHubRepositoryTarget & {
+  subjects: GitHubReactionSubjectRef[];
+};
+
+export type GitHubReactionTarget = GitHubRepositoryTarget & {
+  subject: GitHubReactionSubjectRef;
+};
 
 export type GitHubDiscussionsTarget = GitHubRepositoryTarget & {
   categoryId: string | null;
@@ -453,6 +463,28 @@ export const githubQueryKeys = {
     ["github", "repository", owner, repository, "discussions"] as const,
   discussionDetail: ({ owner, repository, discussionNumber }: GitHubDiscussionTarget) =>
     ["github", "repository", owner, repository, "discussion", discussionNumber] as const,
+  reactions: ({ owner, repository, subjects }: GitHubReactionsTarget) =>
+    [
+      "github",
+      "repository",
+      owner,
+      repository,
+      "reactions",
+      ...subjects.map((subject) => `${subject.kind}:${subject.id}`),
+    ] as const,
+  reaction: ({ owner, repository, subject }: GitHubReactionTarget) =>
+    [
+      "github",
+      "repository",
+      owner,
+      repository,
+      "reactions",
+      "subject",
+      subject.kind,
+      subject.id,
+    ] as const,
+  reactionsRoot: ({ owner, repository }: GitHubRepositoryTarget) =>
+    ["github", "repository", owner, repository, "reactions"] as const,
   releases: ({ owner, repository, page }: GitHubReleasesTarget) =>
     ["github", "repository", owner, repository, "releases", page] as const,
   releasesRoot: ({ owner, repository }: GitHubRepositoryTarget) =>
@@ -1201,6 +1233,14 @@ export function discussionDetailQueryOptions(target: GitHubDiscussionTarget) {
       }),
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.endCursor : undefined),
+    staleTime: GITHUB_QUERY_STALE_TIME,
+  });
+}
+
+export function repositoryReactionsQueryOptions(target: GitHubReactionsTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.reactions(target),
+    queryFn: () => invoke<GitHubReactionSubject[]>("github_get_repository_reactions", target),
     staleTime: GITHUB_QUERY_STALE_TIME,
   });
 }

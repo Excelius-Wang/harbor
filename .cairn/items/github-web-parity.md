@@ -361,19 +361,43 @@ SHA confirmation. The focused `GitHubCodeMutationClient` owns normalization, per
 repository guards, conflict mapping, Git transport, response verification, and tests. The Code UI
 reuses the existing overview, Markdown editor, Shiki preview, shadcn dialogs, toasts, and query roots;
 workflow-file scope requirements and protected/default-branch failures remain explicit.
+Issues, pull requests, review summaries, inline review comments, Discussions, nested Discussion
+replies, and Releases now share one native GitHub Reactions workflow. The focused
+`GitHubReactionClient` uses GitHub's `Reactable` GraphQL contract, keeps global node IDs opaque,
+verifies exact subject kind and repository ownership, batches reads at 100 nodes, and applies
+idempotent desired-state writes with authoritative response checks. Release choices are limited to
+their documented six values while other supported subjects expose all eight. The shared TanStack
+Query provider batches each visible conversation, serializes mutations, cancels stale reads before
+optimistic updates, rolls back on failure, and replaces every cached copy with GitHub's returned
+groups. Discussion upvotes remain a separate GitHub capability instead of being conflated with
+thumbs-up reactions.
 The workspace shell is responsive, starts at 1600x1000, and remains usable down to 900x620.
 
 ## Next action
 
-Complete the remaining deterministic desktop checks for repository file rename, file deletion, and
-the 900x620 layout, then audit the next missing personal-developer GitHub Web workflow. Keep
-organization administration, Enterprise controls, and advanced organization security out of scope.
+Complete the remaining deterministic desktop checks for repository file rename and deletion, then
+audit and implement the next missing personal-developer GitHub Web workflow. Keep organization
+administration, Enterprise controls, and advanced organization security out of scope.
 
 ## Verification
 
 Each GitHub parity slice must use real API data, cover loading/empty/error/permission states, preserve
 repository context and navigation, and complete its primary path without forcing a browser fallback.
 Run `pnpm check`, the Rust check suite when Rust changes, and a focused desktop interaction check.
+
+GitHub Reactions verification covers current official GraphQL schema fields, eight supported
+Reactable kinds, opaque node IDs, selected-repository guards, Release vocabulary restrictions,
+nullable and sparse groups, duplicate and inconsistent response rejection, saved-credential
+delegation, desired-state IPC arguments, 100-node batching, canonical cache replacement, optimistic
+add/remove, rollback support, and mutation serialization. `pnpm check` passes with 129 frontend
+tests; 228 Rust tests pass with one external DeepWiki test ignored by design; `cargo fmt`, `cargo
+check`, the production build, `git diff --check`, and Clippy pass with the same 11 pre-existing
+warnings and no new warning. A deterministic Playwright fixture verified Issue and pull request
+bodies, conversation comments, review summaries, inline review comments, Discussions, nested
+replies, Releases, separate Discussion upvotes, exact batch and mutation arguments, and six-versus-
+eight choice menus. At 900x620 and 1600x1000 the document dimensions equal the viewport; the browser
+console reports zero errors and zero warnings. Screenshots and the reusable fixture stay ignored
+under `output/playwright/`.
 
 Repository Code mutation verification covers exact Tauri contracts, atomic rename payloads, stale
 file and branch guards, Git-compatible branch validation, empty-repository initialization, stable
@@ -864,6 +888,11 @@ page-level overflow, and the browser reports zero errors and zero warnings.
   administration, Enterprise identity and policy, organization billing, and organization advanced
   security. Keep an explicit GitHub Web fallback for sensitive or browser-only account operations
   that GitHub does not expose to an OAuth desktop client; do not fake them with local state.
+- Keep reactions behind one `GitHubReactionClient` and GitHub's shared `Reactable` GraphQL contract.
+  Require the caller's exact closed subject kind, compare every node to the selected repository ID,
+  and use read-before-write desired state so retries are idempotent. Batch visible subjects through
+  `nodes(ids:)`, use `reactors.totalCount`, retain Discussion upvotes separately, and restrict
+  Releases to their documented six reaction values.
 - Keep discovery behind `GitHubDiscoveryClient`. Preserve raw GitHub search syntax as GitHub CLI
   does, but own tab result discriminators, kind-valid sorts, and the 1,000-result boundary. Surface
   `incomplete_results` rather than implying the result set is complete. Use authenticated

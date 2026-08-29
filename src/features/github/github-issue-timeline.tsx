@@ -10,8 +10,11 @@ import type {
   GitHubIssueTimelineItem,
   GitHubPullRequest,
   GitHubPullRequestReviewState,
+  GitHubReactionSubjectRef,
   GitHubRepositoryContentContext,
 } from "./github-data";
+import { GitHubReactionBar } from "./github-reaction-bar";
+import { GitHubReactionsProvider } from "./github-reactions-provider";
 import { formatIssueDate, GitHubIssuePagination } from "./github-issue-shared";
 
 const GitHubReadme = lazy(() => import("./github-readme"));
@@ -58,6 +61,7 @@ function ConversationCard({
   locale,
   emptyBody,
   reviewState,
+  reactionSubject,
 }: {
   actor: string;
   avatarUrl?: string;
@@ -68,6 +72,7 @@ function ConversationCard({
   locale: string;
   emptyBody: string;
   reviewState?: GitHubPullRequestReviewState;
+  reactionSubject?: GitHubReactionSubjectRef;
 }) {
   const { t } = useTranslation();
   return (
@@ -123,6 +128,11 @@ function ConversationCard({
           <p className="text-muted-foreground">{emptyBody}</p>
         )}
       </div>
+      {reactionSubject ? (
+        <footer className="flex min-h-10 items-center border-t px-3 py-1.5">
+          <GitHubReactionBar subject={reactionSubject} />
+        </footer>
+      ) : null}
     </article>
   );
 }
@@ -140,7 +150,7 @@ export function GitHubIssueTimeline({
 }: {
   issue: Pick<
     GitHubIssue | GitHubPullRequest,
-    "author" | "authorAvatarUrl" | "authorAssociation" | "body" | "createdAt"
+    "author" | "authorAvatarUrl" | "authorAssociation" | "body" | "createdAt" | "reactionSubject"
   >;
   timeline: GitHubIssueTimelineItem[];
   repository: GitHubRepositoryContentContext;
@@ -153,58 +163,67 @@ export function GitHubIssueTimeline({
 }) {
   const { t } = useTranslation();
   const emptyBodyText = emptyBody ?? t("workspace.repositories.noIssueBody");
+  const reactionSubjects = [
+    issue.reactionSubject,
+    ...timeline.map((item) => item.reactionSubject),
+  ].filter((subject): subject is GitHubReactionSubjectRef => Boolean(subject));
   return (
-    <div className="before:bg-border relative flex min-w-0 flex-col gap-3 before:absolute before:top-8 before:bottom-4 before:left-[13px] before:w-px">
-      <div className="relative z-10 pl-10">
-        <ConversationCard
-          actor={issue.author}
-          avatarUrl={issue.authorAvatarUrl}
-          association={issue.authorAssociation}
-          body={issue.body}
-          createdAt={issue.createdAt}
-          repository={repository}
-          locale={locale}
-          emptyBody={emptyBodyText}
+    <GitHubReactionsProvider repository={repository} subjects={reactionSubjects}>
+      <div className="before:bg-border relative flex min-w-0 flex-col gap-3 before:absolute before:top-8 before:bottom-4 before:left-[13px] before:w-px">
+        <div className="relative z-10 pl-10">
+          <ConversationCard
+            actor={issue.author}
+            avatarUrl={issue.authorAvatarUrl}
+            association={issue.authorAssociation}
+            body={issue.body}
+            createdAt={issue.createdAt}
+            repository={repository}
+            locale={locale}
+            emptyBody={emptyBodyText}
+            reactionSubject={issue.reactionSubject}
+          />
+        </div>
+        {timeline.map((item) =>
+          item.kind === "comment" && item.actor && item.createdAt ? (
+            <div key={item.id} className="relative z-10 pl-10">
+              <ConversationCard
+                actor={item.actor}
+                avatarUrl={item.actorAvatarUrl}
+                association={item.authorAssociation}
+                body={item.body}
+                createdAt={item.createdAt}
+                repository={repository}
+                locale={locale}
+                emptyBody={emptyBodyText}
+                reactionSubject={item.reactionSubject}
+              />
+            </div>
+          ) : item.event === "reviewed" && item.actor && item.createdAt ? (
+            <div key={item.id} className="relative z-10 pl-10">
+              <ConversationCard
+                actor={item.actor}
+                avatarUrl={item.actorAvatarUrl}
+                association={item.authorAssociation}
+                body={item.body}
+                createdAt={item.createdAt}
+                repository={repository}
+                locale={locale}
+                emptyBody={t("workspace.repositories.reviewWithoutBody")}
+                reviewState={item.reviewState ?? "commented"}
+                reactionSubject={item.reactionSubject}
+              />
+            </div>
+          ) : (
+            <TimelineEvent key={item.id} item={item} locale={locale} />
+          )
+        )}
+        <GitHubIssuePagination
+          page={page}
+          hasPrevious={hasPrevious}
+          hasMore={hasMore}
+          onPageChange={onPageChange}
         />
       </div>
-      {timeline.map((item) =>
-        item.kind === "comment" && item.actor && item.createdAt ? (
-          <div key={item.id} className="relative z-10 pl-10">
-            <ConversationCard
-              actor={item.actor}
-              avatarUrl={item.actorAvatarUrl}
-              association={item.authorAssociation}
-              body={item.body}
-              createdAt={item.createdAt}
-              repository={repository}
-              locale={locale}
-              emptyBody={emptyBodyText}
-            />
-          </div>
-        ) : item.event === "reviewed" && item.actor && item.createdAt ? (
-          <div key={item.id} className="relative z-10 pl-10">
-            <ConversationCard
-              actor={item.actor}
-              avatarUrl={item.actorAvatarUrl}
-              association={item.authorAssociation}
-              body={item.body}
-              createdAt={item.createdAt}
-              repository={repository}
-              locale={locale}
-              emptyBody={t("workspace.repositories.reviewWithoutBody")}
-              reviewState={item.reviewState ?? "commented"}
-            />
-          </div>
-        ) : (
-          <TimelineEvent key={item.id} item={item} locale={locale} />
-        )
-      )}
-      <GitHubIssuePagination
-        page={page}
-        hasPrevious={hasPrevious}
-        hasMore={hasMore}
-        onPageChange={onPageChange}
-      />
-    </div>
+    </GitHubReactionsProvider>
   );
 }

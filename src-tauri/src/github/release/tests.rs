@@ -235,6 +235,13 @@ fn release_mapping_keeps_status_notes_author_and_asset_integrity() {
     let mapped = release();
 
     assert_eq!(mapped.id, 88);
+    assert_eq!(
+        mapped.reaction_subject,
+        GitHubReactionSubjectRef {
+            id: "RE_kwDOA".to_string(),
+            kind: GitHubReactionSubjectKind::Release,
+        }
+    );
     assert_eq!(mapped.name, None);
     assert_eq!(mapped.tag_name, "v1.0.0");
     assert!(mapped.prerelease);

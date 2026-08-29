@@ -4,7 +4,8 @@ use serde::{Deserialize, Serialize};
 use super::{
     authenticated_client, github_error, item_metadata, pull_request_review_state_from_octocrab,
     repository_coordinates_from_search_value, serialized_enum_name, GitHubPullRequestReviewState,
-    GitHubService, OctocrabGitHubClient, SearchParameters,
+    GitHubReactionSubjectKind, GitHubReactionSubjectRef, GitHubService, OctocrabGitHubClient,
+    SearchParameters,
 };
 use crate::error::AppError;
 
@@ -71,6 +72,7 @@ pub struct GitHubIssueInboxFilters {
 #[serde(rename_all = "camelCase")]
 pub struct GitHubIssue {
     pub id: u64,
+    pub reaction_subject: GitHubReactionSubjectRef,
     pub number: u64,
     pub title: String,
     pub body: Option<String>,
@@ -176,6 +178,7 @@ pub enum GitHubIssueTimelineKind {
 #[serde(rename_all = "camelCase")]
 pub struct GitHubIssueTimelineItem {
     pub id: String,
+    pub reaction_subject: Option<GitHubReactionSubjectRef>,
     pub kind: GitHubIssueTimelineKind,
     pub event: String,
     pub actor: Option<String>,
@@ -898,6 +901,10 @@ fn issue_from_octocrab(issue: octocrab::models::issues::Issue) -> GitHubIssue {
         .and_then(|milestone| u64::try_from(milestone.number).ok());
     GitHubIssue {
         id: issue.id.into_inner(),
+        reaction_subject: GitHubReactionSubjectRef {
+            id: issue.node_id,
+            kind: GitHubReactionSubjectKind::Issue,
+        },
         number: issue.number,
         title: issue.title,
         body: issue.body,
@@ -970,7 +977,11 @@ pub(super) fn timeline_item_from_issue_comment(
     comment: octocrab::models::issues::Comment,
 ) -> GitHubIssueTimelineItem {
     GitHubIssueTimelineItem {
-        id: comment.node_id,
+        id: comment.node_id.clone(),
+        reaction_subject: Some(GitHubReactionSubjectRef {
+            id: comment.node_id,
+            kind: GitHubReactionSubjectKind::IssueComment,
+        }),
         kind: GitHubIssueTimelineKind::Comment,
         event: "commented".to_string(),
         actor: Some(comment.user.login),
@@ -1042,12 +1053,21 @@ pub(super) fn timeline_item_from_octocrab(
 
     let review_state = event.state.map(pull_request_review_state_from_octocrab);
     let created_at = event.created_at.or(event.submitted_at);
+    let reaction_subject = event.node_id.clone().and_then(|id| {
+        let kind = match event_name.as_str() {
+            "commented" => GitHubReactionSubjectKind::IssueComment,
+            "reviewed" => GitHubReactionSubjectKind::PullRequestReview,
+            _ => return None,
+        };
+        Some(GitHubReactionSubjectRef { id, kind })
+    });
 
     GitHubIssueTimelineItem {
         id: event
             .node_id
             .clone()
             .unwrap_or_else(|| format!("{event_name}-{index}")),
+        reaction_subject,
         kind: if event_name == "commented" {
             GitHubIssueTimelineKind::Comment
         } else {

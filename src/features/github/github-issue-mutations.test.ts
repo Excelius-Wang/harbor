@@ -33,6 +33,7 @@ const target = {
 
 const issue: GitHubIssue = {
   id: 2,
+  reactionSubject: { id: "I_2", kind: "issue" },
   number: 7,
   title: "Keep the example focused",
   url: "https://github.com/octocat/hello-world/issues/7",
