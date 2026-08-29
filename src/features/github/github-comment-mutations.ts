@@ -12,6 +12,10 @@ import type { GitHubIssueMutationTarget } from "./github-issue-mutations";
 import type { GitHubPullRequestMutationTarget } from "./github-pull-request-mutations";
 import { githubQueryKeys } from "./github-queries";
 
+export function canSubmitCommentUpdate(draft: string, currentBody: string, pending: boolean) {
+  return !pending && draft !== currentBody;
+}
+
 export function mutateRepositoryIssueComment(
   target: GitHubIssueMutationTarget,
   mutation: GitHubCommentMutation

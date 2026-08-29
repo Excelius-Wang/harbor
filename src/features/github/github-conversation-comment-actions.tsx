@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { useAppTranslation } from "@/hooks/use-app-translation";
 import {
   mutateRepositoryIssueComment,
   mutateRepositoryPullRequestComment,
@@ -35,7 +35,7 @@ export function GitHubConversationCommentActions({
   target: GitHubConversationCommentTarget;
   repository: GitHubRepositoryContentContext;
 }) {
-  const { t } = useTranslation();
+  const { t } = useAppTranslation();
   const queryClient = useQueryClient();
   if (!comment.body || !comment.updatedAt) return null;
 

@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Pencil, Trash2 } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,9 +23,12 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useAppTranslation } from "@/hooks/use-app-translation";
 import { parseIpcError } from "@/lib/ipc-error";
 import type { GitHubCommentMutation, GitHubRepositoryContentContext } from "./github-data";
 import { GitHubMarkdownEditor } from "./github-markdown-editor";
+import { canSubmitCommentUpdate } from "./github-comment-mutations";
 
 export type GitHubMutableComment = {
   id: string;
@@ -53,7 +55,7 @@ export function GitHubCommentActions<TComment>({
   onSuccess: (comment: TComment | null, mutation: GitHubCommentMutation) => void;
   onConflict?: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t } = useAppTranslation();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [draft, setDraft] = useState(comment.body);
@@ -101,35 +103,45 @@ export function GitHubCommentActions<TComment>({
   return (
     <>
       {comment.viewerCanUpdate ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          aria-label={t("workspace.repositories.editComment")}
-          disabled={mutation.isPending}
-          onClick={() => {
-            mutation.reset();
-            setDraft(comment.body);
-            setEditOpen(true);
-          }}
-        >
-          <Pencil />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              aria-label={t("workspace.repositories.editComment")}
+              disabled={mutation.isPending}
+              onClick={() => {
+                mutation.reset();
+                setDraft(comment.body);
+                setEditOpen(true);
+              }}
+            >
+              <Pencil />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t("workspace.repositories.editComment")}</TooltipContent>
+        </Tooltip>
       ) : null}
       {comment.viewerCanDelete ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          aria-label={t("workspace.repositories.deleteComment")}
-          disabled={mutation.isPending}
-          onClick={() => {
-            mutation.reset();
-            setDeleteOpen(true);
-          }}
-        >
-          <Trash2 />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              aria-label={t("workspace.repositories.deleteComment")}
+              disabled={mutation.isPending}
+              onClick={() => {
+                mutation.reset();
+                setDeleteOpen(true);
+              }}
+            >
+              <Trash2 />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t("workspace.repositories.deleteComment")}</TooltipContent>
+        </Tooltip>
       ) : null}
 
       <Dialog
@@ -182,7 +194,7 @@ export function GitHubCommentActions<TComment>({
             </Button>
             <Button
               type="button"
-              disabled={!draft.trim() || draft === comment.body || mutation.isPending}
+              disabled={!canSubmitCommentUpdate(draft, comment.body, mutation.isPending)}
               onClick={() => mutation.mutate(updateMutation)}
             >
               {mutation.isPending ? <Spinner data-icon="inline-start" /> : null}
