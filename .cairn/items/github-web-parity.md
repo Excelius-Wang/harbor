@@ -361,13 +361,21 @@ SHA confirmation. The focused `GitHubCodeMutationClient` owns normalization, per
 repository guards, conflict mapping, Git transport, response verification, and tests. The Code UI
 reuses the existing overview, Markdown editor, Shiki preview, shadcn dialogs, toasts, and query roots;
 workflow-file scope requirements and protected/default-branch failures remain explicit.
+Repository Issue taxonomy management is now native in PR #10. The focused two-method
+`GitHubIssueTaxonomyClient` Interface owns label and milestone writes, saved-credential delegation,
+input normalization, route encoding, exact deletion confirmation, response verification, and focused
+tests. The repository Issues workspace reuses its existing label and milestone queries, TanStack Query
+roots, and shadcn components for label create, rename, color and description edits, and deletion plus
+milestone create, edit, due-date clearing, close, reopen, progress, and deletion. Returned records
+reconcile option caches immediately before related Issue, pull request, inbox, and Project queries are
+invalidated. Organization administration remains outside this repository-scoped developer workflow.
 The workspace shell is responsive, starts at 1600x1000, and remains usable down to 900x620.
 
 ## Next action
 
-Complete the remaining deterministic desktop checks for repository file rename, file deletion, and
-the 900x620 layout, then audit the next missing personal-developer GitHub Web workflow. Keep
-organization administration, Enterprise controls, and advanced organization security out of scope.
+Audit the next missing personal-developer GitHub Web workflow on a fresh branch after PR #10 is
+merge-ready. Keep organization administration, Enterprise controls, and advanced organization
+security out of scope.
 
 ## Verification
 
@@ -375,13 +383,24 @@ Each GitHub parity slice must use real API data, cover loading/empty/error/permi
 repository context and navigation, and complete its primary path without forcing a browser fallback.
 Run `pnpm check`, the Rust check suite when Rust changes, and a focused desktop interaction check.
 
+Repository Issue taxonomy verification covers exact camelCase Tauri contracts, normalized label
+colors and due dates, create-versus-clear due-date serialization, route encoding, authoritative
+response checks, deletion confirmation, and focused cache reconciliation. `pnpm check` passes with
+128 frontend tests; 229 Rust tests pass with one external DeepWiki test ignored by design; `cargo
+fmt --check`, `cargo check`, `cargo clippy --all-targets`, and `git diff --check` pass with the same 11
+existing Clippy warnings. A deterministic desktop fixture verified label create, rename, retained
+input after a permission failure, and deletion plus milestone create, edit, due-date clearing, close,
+reopen, and deletion at 1600x1000 and 900x620. Light and dark themes render cleanly, wide tables
+scroll only inside their content surface, the document width equals the viewport width, and the
+browser console reports zero errors and warnings. PR: https://github.com/Excelius-Wang/harbor/pull/10
+
 Repository Code mutation verification covers exact Tauri contracts, atomic rename payloads, stale
 file and branch guards, Git-compatible branch validation, empty-repository initialization, stable
 conflict errors, saved-credential delegation, and focused query reconciliation. `pnpm check` passes
 with 125 frontend tests; 224 Rust tests pass with one external DeepWiki test ignored by design;
 `cargo fmt --check`, `cargo check`, the production build, and `git diff --check` pass. The desktop
 fixture verified exact-SHA branch creation, branch switching, first-file creation, and rendered source
-content. Rename, deletion, and the final 900x620 interaction pass remain the next recovery action.
+content. That fixture did not claim coverage for rename, deletion, or the final 900x620 interaction.
 
 Success: `pnpm check` passes; a 70-repository Playwright fixture with a 240-character unbroken token
 keeps `scrollWidth === clientWidth` at both 1600x1000 and 900x620, with 12px between descriptions and
