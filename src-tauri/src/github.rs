@@ -30,8 +30,8 @@ pub(crate) mod security;
 pub use actions::{
     GitHubWorkflow, GitHubWorkflowArtifactPage, GitHubWorkflowDispatchConfig,
     GitHubWorkflowDispatchOptions, GitHubWorkflowJobLog, GitHubWorkflowJobPage, GitHubWorkflowRun,
-    GitHubWorkflowRunAction, GitHubWorkflowRunFilterOptions, GitHubWorkflowRunFilters,
-    GitHubWorkflowRunPage, GitHubWorkflowRunStatusFilter,
+    GitHubWorkflowRunAction, GitHubWorkflowRunDeletion, GitHubWorkflowRunFilterOptions,
+    GitHubWorkflowRunFilters, GitHubWorkflowRunPage, GitHubWorkflowRunStatusFilter,
 };
 pub use checks::{GitHubCheckPage, GitHubCheckSuite};
 pub use code::write::{GitHubRepositoryFileCommit, GitHubRepositoryFileMutation};
@@ -2820,6 +2820,18 @@ mod tests {
             .request_workflow_job_rerun("octocat", "hello-world", 42, 84)
             .await
             .expect("workflow job rerun");
+
+        let workflow = service
+            .set_workflow_enabled("octocat", "hello-world", 7, "active", false)
+            .await
+            .expect("workflow disable");
+        let deletion = service
+            .delete_workflow_run("octocat", "hello-world", 42, "2026-08-26T08:05:00Z")
+            .await
+            .expect("workflow run deletion");
+
+        assert_eq!(workflow.state, "disabled_manually");
+        assert_eq!(deletion.run_id, 42);
     }
 
     #[tokio::test]

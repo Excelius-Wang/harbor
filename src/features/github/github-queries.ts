@@ -730,6 +730,8 @@ export const githubQueryKeys = {
     ] as const,
   workflowDispatchOptions: ({ owner, repository }: GitHubRepositoryTarget) =>
     ["github", "repository", owner, repository, "workflow-dispatch", "options"] as const,
+  workflowDispatchRoot: ({ owner, repository }: GitHubRepositoryTarget) =>
+    ["github", "repository", owner, repository, "workflow-dispatch"] as const,
   workflowDispatchConfig: ({
     owner,
     repository,

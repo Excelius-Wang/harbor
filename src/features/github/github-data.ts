@@ -1329,6 +1329,10 @@ export type GitHubWorkflowRunFilterOptions = {
 
 export type GitHubWorkflowRunAction = "cancel" | "rerunAll" | "rerunFailed";
 
+export type GitHubWorkflowRunDeletion = {
+  runId: number;
+};
+
 export type GitHubWorkflowReferenceKind = "branch" | "tag";
 
 export type GitHubWorkflowDispatchInputType =
