@@ -17,6 +17,7 @@ import {
   RefreshCw,
   Rocket,
   ShieldAlert,
+  UserPlus,
   type LucideIcon,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -104,6 +105,12 @@ const GitHubSecurityAlertDetail = lazy(() =>
   }))
 );
 
+const GitHubRepositoryInvitations = lazy(() =>
+  import("./github-repository-invitations-view").then((module) => ({
+    default: module.GitHubRepositoryInvitations,
+  }))
+);
+
 type NotificationScope = "all" | "participating";
 
 const notificationIcons: Record<GitHubNotificationSubjectKind, LucideIcon> = {
@@ -118,7 +125,7 @@ const notificationIcons: Record<GitHubNotificationSubjectKind, LucideIcon> = {
   codeScanningAlert: ShieldAlert,
   secretScanningAlert: ShieldAlert,
   securityAlert: ShieldAlert,
-  repository: Github,
+  repositoryInvitation: UserPlus,
   other: Bell,
 };
 
@@ -273,6 +280,7 @@ export function GitHubNotifications({
   const [scope, setScope] = useState<NotificationScope>("all");
   const [page, setPage] = useState(1);
   const [selectedNotification, setSelectedNotification] = useState<GitHubNotification | null>(null);
+  const [showRepositoryInvitations, setShowRepositoryInvitations] = useState(false);
   const [doneCandidate, setDoneCandidate] = useState<GitHubNotification | null>(null);
   const [markAllOpen, setMarkAllOpen] = useState(false);
   const result = useQuery({
@@ -346,6 +354,25 @@ export function GitHubNotifications({
       void openExternalUrl(notification.subject.url);
     }
   };
+
+  if (showRepositoryInvitations || selectedNotification?.subject.kind === "repositoryInvitation") {
+    return (
+      <Suspense fallback={<NotificationSkeletons />}>
+        <GitHubRepositoryInvitations
+          highlightRepositoryId={selectedNotification?.repository.id}
+          onBack={() => {
+            setShowRepositoryInvitations(false);
+            setSelectedNotification(null);
+          }}
+          onResolved={(invitation) => {
+            if (selectedNotification?.repository.id === invitation.repository.id) {
+              setSelectedNotification(null);
+            }
+          }}
+        />
+      </Suspense>
+    );
+  }
 
   if (selectedNotification?.subject.kind === "issue" && selectedNotification.subject.number) {
     return (
@@ -481,6 +508,17 @@ export function GitHubNotifications({
             </h1>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSelectedNotification(null);
+                setShowRepositoryInvitations(true);
+              }}
+            >
+              <UserPlus data-icon="inline-start" />
+              {t("workspace.notifications.invitations.open")}
+            </Button>
             <Button
               variant="ghost"
               size="sm"

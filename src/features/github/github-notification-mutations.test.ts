@@ -148,5 +148,16 @@ describe("GitHub notification mutations", () => {
     ]) {
       expect(notificationCanOpenInApp({ ...release, subject })).toBe(true);
     }
+
+    expect(
+      notificationCanOpenInApp({
+        ...release,
+        subject: {
+          title: "Invitation to octocat/hello-world",
+          kind: "repositoryInvitation",
+          url: "https://github.com/octocat/hello-world",
+        },
+      })
+    ).toBe(true);
   });
 });

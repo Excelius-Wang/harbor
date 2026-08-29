@@ -442,6 +442,15 @@ official GraphQL `updateSubscription` mutation through the existing authenticate
 reloads authoritative state before the focused TanStack Query cache and existing Issue or pull request
 caches are reconciled. The shared shadcn sidebar control preserves ignored notifications, exposes all
 four GitHub lock reasons, and shows lock actions only to viewers with repository write access.
+Received repository invitations now stay inside the personal account workspace. The focused
+two-method `GitHubRepositoryInvitationClient` Interface lists every open invitation for the signed-in
+user and accepts or declines it through GitHub's official account-scoped routes. The Notifications
+header keeps a permanent invitation entry even when the inbox is empty, while exact
+`RepositoryInvitation` subjects open the same native view and mark the notification read. The lazy
+UI preserves repository, inviter, permission, privacy, pagination, loading, empty, retry, confirmed
+decline, mutation failure, and responsive states. Accepted invitations invalidate the authenticated
+repository cache; both actions reconcile the invitation and notification caches by immutable IDs.
+The verified slice is open as PR #9 from `feat/github-repository-invitations`.
 The workspace shell is responsive, starts at 1600x1000, and remains usable down to 900x620.
 Repository Wiki now has a native personal-developer workflow behind a focused Git-backed service.
 Harbor discovers the Wiki's real default branch, keeps a bounded bare cache per immutable repository
@@ -532,6 +541,15 @@ warning. A deterministic desktop fixture verified pending invitations, retained 
 successful username invitation, cancellation, collaborator removal, and consequence confirmations at
 1600x1000 and 900x620. Both sizes have no page-level horizontal overflow, and the browser reports zero
 errors and zero warnings.
+Received repository invitation verification covers the official account-scoped list, accept, and
+decline contracts; exact Tauri argument names; repository, inviter, permission, and pagination
+mapping; saved-credential delegation; notification routing; and focused TanStack Query
+reconciliation. `pnpm check` passes with 129 frontend tests. `cargo fmt --check`, 227 Rust tests,
+and `cargo check` pass with one external DeepWiki test ignored by design; Clippy retains the same 11
+pre-existing warnings. A deterministic desktop fixture verified the permanent inbox entry,
+notification-to-native routing, authoritative accept and decline payloads, confirmation, empty and
+permission-error states, no console errors, and no page-level horizontal overflow at 1600x1000 and
+900x620.
 
 Repository Code mutation verification covers exact Tauri contracts, atomic rename payloads, stale
 file and branch guards, Git-compatible branch validation, empty-repository initialization, stable

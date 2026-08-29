@@ -219,6 +219,32 @@
       "markAllTitle": "把所有通知都标为已读吗？",
       "markAllDescription": "GitHub 当前返回的所有未读通知都会从 Harbor 收件箱移除。GitHub API 暂不支持重新标为未读。",
       "cancel": "取消",
+      "invitations": {
+        "open": "仓库邀请",
+        "eyebrow": "账户访问权限",
+        "title": "仓库邀请",
+        "description": "这里会列出当前 GitHub 账户收到、尚未处理的仓库邀请。接受后，GitHub 完成授权时，仓库会出现在“我的仓库”里。",
+        "private": "私有",
+        "invitedBy": "由 {{login}} 邀请",
+        "accept": "接受",
+        "decline": "拒绝",
+        "acceptSuccess": "已接受 {{repository}} 的邀请",
+        "declineSuccess": "已拒绝 {{repository}} 的邀请",
+        "updateFailed": "暂时无法处理这条邀请",
+        "loadFailed": "Harbor 暂时无法读取仓库邀请",
+        "empty": "没有待处理的邀请",
+        "emptyDescription": "这个账户新收到的仓库邀请会显示在这里。",
+        "loadMore": "加载更多邀请",
+        "declineTitle": "拒绝这条仓库邀请吗？",
+        "declineDescription": "拒绝 {{repository}} 的邀请后，这条邀请会被移除。如果之后还需要访问，仓库所有者需要重新邀请你。",
+        "permissions": {
+          "read": "读取",
+          "triage": "分流",
+          "write": "写入",
+          "maintain": "维护",
+          "admin": "管理"
+        }
+      },
       "kinds": {
         "issue": "Issue",
         "pullRequest": "拉取请求",
@@ -231,7 +257,7 @@
         "codeScanningAlert": "代码扫描告警",
         "secretScanningAlert": "密钥扫描告警",
         "securityAlert": "安全提醒",
-        "repository": "仓库",
+        "repositoryInvitation": "仓库邀请",
         "other": "GitHub"
       },
       "reasons": {

@@ -45,6 +45,7 @@ import type {
   GitHubPackageVersionPage,
   GitHubPackageVersionState,
   GitHubPackageVisibility,
+  GitHubReceivedRepositoryInvitationPage,
   GitHubContributionSummary,
   GitHubProfileActivityPage,
   GitHubProfileConnectionKind,
@@ -472,6 +473,7 @@ export const githubQueryKeys = {
   notifications: ({ participating, page }: GitHubNotificationsTarget) =>
     ["github", "notifications", participating ? "participating" : "all", page] as const,
   notificationsRoot: ["github", "notifications"] as const,
+  receivedRepositoryInvitations: ["github", "repository-invitations"] as const,
   projects: ({ state, query, sort }: GitHubProjectsTarget) =>
     ["github", "personal-projects", state, query, sort] as const,
   projectsRoot: ["github", "personal-projects"] as const,
@@ -1264,6 +1266,20 @@ export function notificationsQueryOptions(target: GitHubNotificationsTarget) {
       }),
     staleTime: 30_000,
     refetchInterval: 60_000,
+  });
+}
+
+export function receivedRepositoryInvitationsQueryOptions() {
+  return infiniteQueryOptions({
+    queryKey: githubQueryKeys.receivedRepositoryInvitations,
+    queryFn: ({ pageParam }) =>
+      invoke<GitHubReceivedRepositoryInvitationPage>(
+        "github_list_received_repository_invitations",
+        { page: pageParam }
+      ),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.page + 1 : undefined),
+    staleTime: 30_000,
   });
 }
 

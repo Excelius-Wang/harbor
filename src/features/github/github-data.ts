@@ -747,6 +747,29 @@ export type GitHubRepositoryContentContext = Pick<
 >;
 
 export type GitHubNotificationAction = "read" | "done";
+export type GitHubReceivedRepositoryInvitationAction = "accept" | "decline";
+
+export type GitHubRepositoryInvitationActor = {
+  id: number;
+  login: string;
+  avatarUrl: string;
+  url: string;
+};
+
+export type GitHubReceivedRepositoryInvitation = {
+  id: number;
+  repository: GitHubRepository;
+  inviter: GitHubRepositoryInvitationActor;
+  permission: string;
+  createdAt: string;
+};
+
+export type GitHubReceivedRepositoryInvitationPage = {
+  invitations: GitHubReceivedRepositoryInvitation[];
+  page: number;
+  hasPrevious: boolean;
+  hasMore: boolean;
+};
 
 export type GitHubNotificationSubjectKind =
   | "issue"
@@ -760,7 +783,7 @@ export type GitHubNotificationSubjectKind =
   | "codeScanningAlert"
   | "secretScanningAlert"
   | "securityAlert"
-  | "repository"
+  | "repositoryInvitation"
   | "other";
 
 export type GitHubNotificationSubject = {
