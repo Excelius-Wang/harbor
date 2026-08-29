@@ -368,6 +368,7 @@ export function GitHubPullRequestDetail({
                         repository={repository}
                         pullRequest={detail.pullRequest}
                         reviews={detail.reviews}
+                        reviewsHaveMore={detail.reviewsHaveMore}
                       />
                       <Separator />
                       <GitHubPullRequestMetadata

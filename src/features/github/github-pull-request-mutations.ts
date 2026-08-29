@@ -15,6 +15,7 @@ import type {
   GitHubPullRequestMergeQueueStatus,
   GitHubPullRequestPage,
   GitHubPullRequestReview,
+  GitHubPullRequestReviewPage,
   GitHubPullRequestReviewAction,
   GitHubPullRequestReviewComment,
   GitHubPullRequestReviewThread,
@@ -24,6 +25,8 @@ import type {
   GitHubPullRequestSummary,
 } from "./github-data";
 import { githubQueryKeys } from "./github-queries";
+
+const PULL_REQUEST_REVIEW_PAGE_SIZE = 100;
 
 export type GitHubPullRequestMutationTarget = {
   owner: string;
@@ -219,6 +222,18 @@ export function createRepositoryPullRequestReview(
     body,
     action,
     comments,
+  });
+}
+
+export function dismissRepositoryPullRequestReview(
+  target: GitHubPullRequestMutationTarget,
+  reviewId: number,
+  message: string
+) {
+  return invoke<GitHubPullRequestReview>("github_dismiss_repository_pull_request_review", {
+    ...target,
+    reviewId,
+    message,
   });
 }
 
@@ -543,6 +558,67 @@ export function syncCreatedPullRequestReview(
       };
     }
   );
+  queryClient.setQueryData<InfiniteData<GitHubPullRequestReviewPage, number>>(
+    githubQueryKeys.pullRequestReviews(target),
+    (data) => {
+      if (!data || data.pages.some((page) => page.reviews.some((item) => item.id === review.id))) {
+        return data;
+      }
+      const lastIndex = data.pages.length - 1;
+      const lastPage = data.pages[lastIndex];
+      if (!lastPage || lastPage.hasMore) return data;
+      if (lastPage.reviews.length >= PULL_REQUEST_REVIEW_PAGE_SIZE) {
+        return {
+          pages: [
+            ...data.pages,
+            {
+              reviews: [review],
+              page: lastPage.page + 1,
+              hasPrevious: true,
+              hasMore: false,
+            },
+          ],
+          pageParams: [...data.pageParams, lastPage.page + 1],
+        };
+      }
+      return {
+        ...data,
+        pages: data.pages.map((page, index) =>
+          index === lastIndex ? { ...page, reviews: [...page.reviews, review] } : page
+        ),
+      };
+    }
+  );
+}
+
+export function syncDismissedPullRequestReview(
+  queryClient: QueryClient,
+  target: GitHubPullRequestMutationTarget,
+  review: GitHubPullRequestReview
+) {
+  queryClient.setQueriesData<GitHubPullRequestDetailPage>(
+    { queryKey: githubQueryKeys.pullRequestDetailRoot(target) },
+    (detail) =>
+      detail
+        ? {
+            ...detail,
+            reviews: detail.reviews.map((item) => (item.id === review.id ? review : item)),
+          }
+        : detail
+  );
+  queryClient.setQueryData<InfiniteData<GitHubPullRequestReviewPage, number>>(
+    githubQueryKeys.pullRequestReviews(target),
+    (data) =>
+      data
+        ? {
+            ...data,
+            pages: data.pages.map((page) => ({
+              ...page,
+              reviews: page.reviews.map((item) => (item.id === review.id ? review : item)),
+            })),
+          }
+        : data
+  );
 }
 
 export function syncPendingPullRequestReview(
@@ -635,6 +711,7 @@ export async function invalidateRepositoryPullRequest(
     queryClient.invalidateQueries({ queryKey: githubQueryKeys.pullRequestsRoot(target) }),
     queryClient.invalidateQueries({ queryKey: githubQueryKeys.pullRequestInboxRoot }),
     queryClient.invalidateQueries({ queryKey: githubQueryKeys.pullRequestReviewThreads(target) }),
+    queryClient.invalidateQueries({ queryKey: githubQueryKeys.pullRequestReviews(target) }),
   ]);
 }
 
@@ -645,6 +722,17 @@ export async function invalidatePullRequestAfterBranchUpdate(
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: githubQueryKeys.pullRequestRoot(target) }),
     queryClient.invalidateQueries({ queryKey: githubQueryKeys.checksRoot(target) }),
+    queryClient.invalidateQueries({ queryKey: githubQueryKeys.pullRequestsRoot(target) }),
+    queryClient.invalidateQueries({ queryKey: githubQueryKeys.pullRequestInboxRoot }),
+  ]);
+}
+
+export async function invalidatePullRequestAfterReviewDismissal(
+  queryClient: QueryClient,
+  target: GitHubPullRequestMutationTarget
+) {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: githubQueryKeys.pullRequestRoot(target) }),
     queryClient.invalidateQueries({ queryKey: githubQueryKeys.pullRequestsRoot(target) }),
     queryClient.invalidateQueries({ queryKey: githubQueryKeys.pullRequestInboxRoot }),
   ]);

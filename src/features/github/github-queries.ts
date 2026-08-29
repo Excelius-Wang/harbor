@@ -67,6 +67,7 @@ import type {
   GitHubPullRequestMergeQueueStatus,
   GitHubPullRequestPage,
   GitHubPullRequestReviewThreadPage,
+  GitHubPullRequestReviewPage,
   GitHubPullRequestReviewTeamPage,
   GitHubPullRequestSort,
   GitHubPullRequestState,
@@ -856,6 +857,16 @@ export const githubQueryKeys = {
       "pull-request",
       pullRequestNumber,
       "review-threads",
+    ] as const,
+  pullRequestReviews: ({ owner, repository, pullRequestNumber }: GitHubPullRequestTarget) =>
+    [
+      "github",
+      "repository",
+      owner,
+      repository,
+      "pull-request",
+      pullRequestNumber,
+      "reviews",
     ] as const,
   pendingPullRequestReview: ({
     owner,
@@ -1877,6 +1888,22 @@ export function pullRequestReviewThreadsQueryOptions(target: GitHubPullRequestRe
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) =>
       lastPage.hasMore && lastPage.endCursor ? lastPage.endCursor : undefined,
+    staleTime: GITHUB_QUERY_STALE_TIME,
+  });
+}
+
+export function pullRequestReviewsQueryOptions(target: GitHubPullRequestTarget) {
+  return infiniteQueryOptions({
+    queryKey: githubQueryKeys.pullRequestReviews(target),
+    queryFn: ({ pageParam }) =>
+      invoke<GitHubPullRequestReviewPage>("github_list_repository_pull_request_reviews", {
+        owner: target.owner,
+        repository: target.repository,
+        pullRequestNumber: target.pullRequestNumber,
+        page: pageParam,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.page + 1 : undefined),
     staleTime: GITHUB_QUERY_STALE_TIME,
   });
 }

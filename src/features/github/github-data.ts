@@ -1647,6 +1647,7 @@ export type GitHubPendingPullRequestReview = {
 
 export type GitHubPullRequestReview = {
   id: number;
+  nodeId: string;
   author: string;
   authorAvatarUrl?: string;
   authorAssociation?: string;
@@ -1655,6 +1656,13 @@ export type GitHubPullRequestReview = {
   url: string;
   commitId?: string;
   submittedAt?: string;
+};
+
+export type GitHubPullRequestReviewPage = {
+  reviews: GitHubPullRequestReview[];
+  page: number;
+  hasPrevious: boolean;
+  hasMore: boolean;
 };
 
 export type GitHubPullRequestDetailPage = {

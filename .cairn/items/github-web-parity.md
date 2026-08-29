@@ -25,37 +25,39 @@ findings. The squash tree exactly matches the reviewed head. On merged `main`, `
 34 files and 180 tests, Rust library tests pass 324 tests with two intentional ignores, Clippy passes
 with the 15 existing warnings, and `cargo check`, rustfmt, and `git diff --check` pass.
 
+[PR #14](https://github.com/Excelius-Wang/harbor/pull/14) was squash-merged to `main` as
+`e3218bb58cd95cc3bef888398b7348de23819b72`, and its remote feature branch was deleted. The merged
+slice adds native viewer-specific `viewed`, `unviewed`, and `dismissed` pull-request file state while
+retaining REST diff pages. The squash tree exactly matches reviewed head `513f657`, with no
+unresolved Standards or Spec findings.
+
+The review-dismissal slice has a primary-source research note verified against GitHub's official
+REST/GraphQL documentation and the live GitHub.com schema on 2026-08-30. The implementation uses the
+focused REST dismissal route with numeric review IDs, checks the selected review and pull-request
+scope before writing, accepts only approved or changes-requested reviews, verifies the mutation
+response and a postflight GET, and preserves shared permission/rate-limit errors plus a stable
+refreshable conflict code. Review listing now has explicit 100-item pagination and retains REST
+`node_id` identity.
+
+The PR reviewer sidebar consumes the complete paged Review cache, shows an eligible-only shadcn
+action menu and required-reason dialog, and keeps authority server-side. Success replaces only the
+verified review before invalidating the full pull-request/list/Inbox roots; failure preserves the
+dialog and input while refreshing authoritative state. Submitted reviews also reconcile the new
+paged cache, including the exact 100-item boundary. English, Chinese, ARIA, transport, identity,
+eligibility, validation, error-category, query, and cache regressions are covered.
+
+Pre-PR verification passes `pnpm check` with 36 frontend files and 197 tests, and Rust library tests
+with 336 passing and two intentional ignores. `cargo check`, rustfmt, and `git diff --check` pass.
+Strict Clippy reports exactly the 15 pre-existing warnings and no warning in this slice. Standards
+and Spec review are still required before merge.
+
 The original worktree remains on local recovery branch
 `checkpoint/github-actions-administration-20260830` at `7e2084f` with only its older Cairn item
-unstaged; no source work remains there. The next clean worktree is
-`/private/tmp/harbor-pr-file-view-state-20260830` on
-`feat/github-pull-request-file-view-state`, based on merged `main`. The current gap audit leaves PR
-review controls as the highest-ranked missing personal workflow. This slice is limited to native
-mark/unmark viewed state for pull-request files; review dismissal, base edits, and maintainer
-editability remain separate slices.
-
-The current slice now has a primary-source research note verified against GitHub's official
-GraphQL/REST documentation and the live GitHub.com schema on 2026-08-30. The implementation keeps
-REST diff pages intact, reads all viewer-specific file states through a focused cursor-paginated
-GraphQL client, validates duplicate paths/cursors and mutation response identity, and exposes
-separate validated mark/unmark Tauri commands. TanStack Query keeps the complete view-state snapshot
-separate from REST pages and joins by exact path; the shadcn file-header checkbox preserves
-`viewed`, `unviewed`, and `dismissed` states, limits pending state to the selected file, and keeps
-diffs usable through loading or mutation errors. English and Chinese copy and focused render/cache/
-transport tests are included.
-
-Standards and Spec reviews found one loading-state bug, one hard i18n-hook violation, duplicated
-retry-alert markup, and missing failure regression coverage. All are fixed: unmatched paths are
-checked only after authoritative state data and non-placeholder REST data exist; the new component
-uses Harbor's multi-window translation hook; one shared retry alert serves all four file/review
-errors; and tests cover loading, error rendering, failed-cache preservation, checked, dismissed,
-and pending states. Re-review has no unresolved Spec or Standards findings; the generic retry alert
-now lives in its own pull-request-files module instead of the file-view-state module.
-
-`pnpm check` passes 35 frontend files and 188 tests. Rust library tests pass 329 tests with two
-intentional ignores. Focused Rust tests include two-page local GraphQL transport. `cargo check`,
-rustfmt, and `git diff --check` pass. Clippy completes with exactly the 15 existing warnings and no
-warning in this slice.
+unstaged; no source work remains there. The clean development worktree is now
+`/private/tmp/harbor-pr-review-dismissal-20260830` on
+`feat/github-pull-request-review-dismissal`, based on merged `main`. The next focused PR-review
+control is dismissal of an eligible submitted review. Pull-request base edits and maintainer
+editability remain separate later slices.
 
 Harbor uses a classic OAuth App for scope-based personal workflows, rejects GitHub App client IDs
 and `ghu_` tokens, and honors GitHub's normalization of `read:packages` into `write:packages`.
@@ -65,8 +67,8 @@ refresh tokens, or Keychain contents.
 
 ## Next action
 
-Commit and push the PR #14 review fixes, confirm the Draft PR is mergeable, then make it Ready and
-squash-merge it.
+Commit and push the verified review-dismissal slice, open its Draft PR, run independent Standards and
+Spec reviews, fix every finding, then mark Ready and squash-merge when clean.
 
 ## Verification
 
@@ -77,5 +79,5 @@ diff against `origin/main`, then deliver it through a Draft PR, Ready state, squ
 verification, and remote branch deletion.
 
 Success: the focused PR is squash-merged with no unresolved Standards or Spec findings; remote
-`main` contains the verified pull-request file viewed-state slice; the remote feature branch is
+`main` contains the verified pull-request review-dismissal slice; the remote feature branch is
 absent; the remaining personal GitHub Web gaps are recorded for the next independent slice.

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, CircleAlert, Pencil, RotateCcw, UserRound, UsersRound } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -32,15 +32,23 @@ import type {
   GitHubPullRequestReviewTeam,
 } from "./github-data";
 import {
+  dismissRepositoryPullRequestReview,
+  invalidatePullRequestAfterReviewDismissal,
   invalidateRepositoryPullRequest,
   removeRepositoryPullRequestReviewers,
   requestRepositoryPullRequestReviewers,
+  syncDismissedPullRequestReview,
   syncUpdatedPullRequest,
   type GitHubPullRequestMutationTarget,
 } from "./github-pull-request-mutations";
+import {
+  GitHubPullRequestReviewDismissalDialog,
+  GitHubPullRequestReviewDismissalMenu,
+} from "./github-pull-request-review-dismissal";
 import { GitHubPullRequestConvertToDraft } from "./github-pull-request-lifecycle";
 import { ReviewStateIcon, summarizeReviews } from "./github-pull-request-shared";
 import {
+  pullRequestReviewsQueryOptions,
   repositoryIssueAssigneesQueryOptions,
   repositoryPullRequestReviewTeamsQueryOptions,
 } from "./github-queries";
@@ -348,14 +356,64 @@ export function GitHubPullRequestReviewers({
   repository,
   pullRequest,
   reviews,
+  reviewsHaveMore,
 }: {
   repository: GitHubPullRequestRepository;
   pullRequest: GitHubPullRequest;
   reviews: GitHubPullRequestReview[];
+  reviewsHaveMore: boolean;
 }) {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const reviewSummary = useMemo(() => summarizeReviews(reviews), [reviews]);
+  const [dismissalReview, setDismissalReview] = useState<GitHubPullRequestReview | null>(null);
+  const [dismissalMessage, setDismissalMessage] = useState("");
+  const target: GitHubPullRequestMutationTarget = {
+    owner: repository.owner,
+    repository: repository.name,
+    pullRequestNumber: pullRequest.number,
+  };
+  const reviewsQuery = useInfiniteQuery({
+    ...pullRequestReviewsQueryOptions(target),
+    initialData: {
+      pages: [
+        {
+          reviews,
+          page: 1,
+          hasPrevious: false,
+          hasMore: reviewsHaveMore,
+        },
+      ],
+      pageParams: [1],
+    },
+  });
+  const loadedReviews = useMemo(
+    () => reviewsQuery.data.pages.flatMap((page) => page.reviews),
+    [reviewsQuery.data.pages]
+  );
+  const reviewSummary = useMemo(() => summarizeReviews(loadedReviews), [loadedReviews]);
+  const dismissal = useMutation({
+    mutationFn: ({ review, message }: { review: GitHubPullRequestReview; message: string }) =>
+      dismissRepositoryPullRequestReview(target, review.id, message),
+    onSuccess: (updated) => {
+      syncDismissedPullRequestReview(queryClient, target, updated);
+      setDismissalReview(null);
+      setDismissalMessage("");
+      toast.success(t("workspace.repositories.reviewDismissed"));
+      void invalidatePullRequestAfterReviewDismissal(queryClient, target);
+    },
+    onError: () => {
+      void invalidatePullRequestAfterReviewDismissal(queryClient, target);
+    },
+  });
+  const dismissalError = dismissal.error ? parseIpcError(dismissal.error) : null;
+  const dismissalErrorMessage = dismissalError
+    ? dismissalError.code === "githubPermission"
+      ? t("workspace.repositories.pullRequestWritePermissionDenied")
+      : dismissalError.code === "githubPullRequestReviewDismissalConflict"
+        ? t("workspace.repositories.dismissReviewConflict")
+        : dismissalError.message
+    : null;
   const requestedUsers = new Set(
     pullRequest.requestedReviewers.map((reviewer) => reviewer.toLocaleLowerCase())
   );
@@ -390,10 +448,26 @@ export function GitHubPullRequestReviewers({
         </div>
         <div className="flex flex-col gap-2">
           {changesRequested.map((review) => (
-            <ReviewerState key={review.id} review={review} />
+            <ReviewerState
+              key={review.id}
+              review={review}
+              onDismiss={() => {
+                dismissal.reset();
+                setDismissalReview(review);
+                setDismissalMessage("");
+              }}
+            />
           ))}
           {approved.map((review) => (
-            <ReviewerState key={review.id} review={review} />
+            <ReviewerState
+              key={review.id}
+              review={review}
+              onDismiss={() => {
+                dismissal.reset();
+                setDismissalReview(review);
+                setDismissalMessage("");
+              }}
+            />
           ))}
           {pullRequest.requestedReviewers.map((reviewer) => (
             <div key={reviewer} className="flex min-w-0 items-center gap-2 text-xs">
@@ -424,6 +498,29 @@ export function GitHubPullRequestReviewers({
               {t("workspace.repositories.none")}
             </span>
           ) : null}
+          {reviewsQuery.error ? (
+            <Alert variant="destructive">
+              <CircleAlert />
+              <AlertTitle>{t("workspace.repositories.reviewsLoadFailed")}</AlertTitle>
+              <AlertDescription>{parseIpcError(reviewsQuery.error).message}</AlertDescription>
+            </Alert>
+          ) : null}
+          {reviewsQuery.hasNextPage ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              disabled={reviewsQuery.isFetchingNextPage}
+              onClick={() => void reviewsQuery.fetchNextPage()}
+            >
+              {reviewsQuery.isFetchingNextPage ? <Spinner data-icon="inline-start" /> : null}
+              {t(
+                reviewsQuery.isFetchingNextPage
+                  ? "workspace.repositories.loadingMoreReviews"
+                  : "workspace.repositories.loadMoreReviews"
+              )}
+            </Button>
+          ) : null}
         </div>
         {pullRequest.state === "open" && !pullRequest.merged && !pullRequest.draft ? (
           <GitHubPullRequestConvertToDraft repository={repository} pullRequest={pullRequest} />
@@ -433,15 +530,42 @@ export function GitHubPullRequestReviewers({
         <GitHubPullRequestReviewerDialog
           repository={repository}
           pullRequest={pullRequest}
-          reviews={reviews}
+          reviews={loadedReviews}
           onOpenChange={setOpen}
         />
       ) : null}
+      <GitHubPullRequestReviewDismissalDialog
+        open={Boolean(dismissalReview)}
+        review={dismissalReview}
+        message={dismissalMessage}
+        pending={dismissal.isPending}
+        error={dismissalErrorMessage}
+        onMessageChange={(message) => {
+          dismissal.reset();
+          setDismissalMessage(message);
+        }}
+        onConfirm={() => {
+          if (!dismissalReview || !dismissalMessage.trim()) return;
+          dismissal.mutate({ review: dismissalReview, message: dismissalMessage.trim() });
+        }}
+        onOpenChange={(next) => {
+          if (next) return;
+          dismissal.reset();
+          setDismissalReview(null);
+          setDismissalMessage("");
+        }}
+      />
     </>
   );
 }
 
-function ReviewerState({ review }: { review: GitHubPullRequestReview }) {
+function ReviewerState({
+  review,
+  onDismiss,
+}: {
+  review: GitHubPullRequestReview;
+  onDismiss: () => void;
+}) {
   const { t } = useTranslation();
   return (
     <div className="flex min-w-0 items-center gap-2 text-xs">
@@ -450,6 +574,7 @@ function ReviewerState({ review }: { review: GitHubPullRequestReview }) {
       <span className="text-muted-foreground ml-auto text-[9px]">
         {t(`workspace.repositories.reviewStates.${review.state}`)}
       </span>
+      <GitHubPullRequestReviewDismissalMenu review={review} onSelect={onDismiss} />
     </div>
   );
 }

@@ -62,6 +62,7 @@ import {
   pullRequestFilesQueryOptions,
   pullRequestFileViewStatesQueryOptions,
   pullRequestReviewThreadsQueryOptions,
+  pullRequestReviewsQueryOptions,
   pullRequestInboxQueryOptions,
   repositoryCheckSuiteRunsQueryOptions,
   repositoryCheckSuiteQueryOptions,
@@ -1259,6 +1260,30 @@ describe("GitHub repository queries", () => {
       owner: "octocat",
       repository: "hello-world",
       pullRequestNumber: 12,
+    });
+  });
+
+  it("pages submitted pull request reviews through a focused command", async () => {
+    const client = createTestQueryClient();
+    vi.mocked(invoke).mockResolvedValueOnce({
+      reviews: [{ id: 86, nodeId: "PRR_86", author: "hubot", state: "approved" }],
+      page: 2,
+      hasPrevious: true,
+      hasMore: false,
+    });
+    const options = pullRequestReviewsQueryOptions({
+      owner: "octocat",
+      repository: "hello-world",
+      pullRequestNumber: 12,
+    });
+
+    await client.fetchInfiniteQuery({ ...options, initialPageParam: 2 });
+
+    expect(invoke).toHaveBeenCalledWith("github_list_repository_pull_request_reviews", {
+      owner: "octocat",
+      repository: "hello-world",
+      pullRequestNumber: 12,
+      page: 2,
     });
   });
 
