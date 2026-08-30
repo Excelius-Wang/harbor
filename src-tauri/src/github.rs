@@ -118,7 +118,6 @@ pub use pull_request::file_view_state::{
 };
 pub use pull_request::maintainer_editability::{
     GitHubPullRequestMaintainerEditability, GitHubPullRequestMaintainerEditabilityGuard,
-    GitHubPullRequestWorkflowRisk,
 };
 #[cfg(test)]
 use pull_request::merge_queue::GitHubPullRequestMergeQueueState;

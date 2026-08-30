@@ -368,7 +368,7 @@ async fn head_workflow_risk(
         Err(error) if github_error_status(&error) == Some(404) => {
             Ok(GitHubPullRequestWorkflowRisk::Absent)
         }
-        Err(error) => match github_error(error) {
+        Err(error) => match editability_error(error) {
             error @ (AppError::GitHubAuthentication(_) | AppError::GitHubRateLimited(_)) => {
                 Err(error)
             }

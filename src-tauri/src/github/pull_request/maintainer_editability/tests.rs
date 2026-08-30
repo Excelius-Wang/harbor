@@ -549,6 +549,27 @@ async fn ambiguous_workflow_lookup_is_unknown_but_auth_and_rate_limits_propagate
     server.await.expect("mock server");
     assert_eq!(status.workflow_risk, GitHubPullRequestWorkflowRisk::Unknown);
 
+    let (client, _requests, server) = mock_github(vec![
+        ok(viewer_json("contributor", 1)),
+        ok(pull_request_json(false)),
+        ok(branch_json()),
+        MockResponse {
+            status: "401 Unauthorized",
+            body: serde_json::json!({
+                "message": "Bad credentials",
+                "documentation_url": "https://docs.github.com/rest/repos/contents"
+            })
+            .to_string(),
+        },
+    ])
+    .await;
+    let workflow_auth =
+        pull_request_maintainer_editability_with_client(&client, "octocat", "hello-world", 12)
+            .await
+            .expect_err("workflow authentication error");
+    server.await.expect("mock server");
+    assert!(matches!(workflow_auth, AppError::GitHubAuthentication(_)));
+
     for (status, message, rate_limited) in [
         ("401 Unauthorized", "Bad credentials", false),
         ("403 Forbidden", "API rate limit exceeded", true),
