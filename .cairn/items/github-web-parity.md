@@ -67,9 +67,12 @@ creator/personal-fork/live-head eligibility, full identity guards, exact-head wo
 enabling, and revocation that is not blocked by the optional workflow scan. The UI keeps production
 and tests in separate bounded files, preserves and locks cached values during refresh, offers retry
 paths, and synchronizes only affected PR caches. Initial Standards review reported two findings and
-Spec review reported five; all are fixed at head `91aec7d`. `pnpm check` passes 39 files and 221
-tests; Rust library tests pass 362 tests with two intentional ignores; `cargo check`, rustfmt, and
-`git diff --check` pass. Clippy reports exactly the 15 pre-existing warnings and none in this slice.
+Spec review reported five; the first re-reviews found two Standards and two Spec follow-ups. All
+eleven findings are fixed at source head `1c3cefd`, including disable-to-enable risk reconciliation,
+confirmed ambiguous writes, deduplicated error UI, and the remaining ARIA/cache coverage. `pnpm
+check` passes 39 files and 223 tests; Rust library tests pass 362 tests with two intentional ignores;
+`cargo check`, rustfmt, and `git diff --check` pass. Clippy reports exactly the 15 pre-existing
+warnings and none in this slice.
 
 On merged `main`, `pnpm check` passes 38 frontend files and 211 tests. Rust library tests pass 348
 tests with two intentional ignores. `cargo check`, rustfmt, and `git diff --check` pass. Clippy
