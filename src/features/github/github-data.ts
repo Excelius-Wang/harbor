@@ -120,6 +120,7 @@ export type GitHubWikiRevertInput = {
 export type GitHubReactionSubjectKind =
   | "issue"
   | "pullRequest"
+  | "commitComment"
   | "issueComment"
   | "pullRequestReview"
   | "pullRequestReviewComment"
@@ -1794,6 +1795,60 @@ export type GitHubCommitDetailPage = {
   hasMore: boolean;
   filesAtLimit: boolean;
 };
+
+export type GitHubCommitCommentAuthor = {
+  login: string;
+  avatarUrl: string | null;
+};
+
+export type GitHubCommitComment = {
+  id: string;
+  databaseId: number;
+  commitSha: string;
+  body: string;
+  path: string | null;
+  position: number | null;
+  line: number | null;
+  author: GitHubCommitCommentAuthor | null;
+  authorAssociation: string | null;
+  url: string;
+  createdAt: string;
+  updatedAt: string;
+  viewerCanUpdate: boolean;
+  viewerCanDelete: boolean;
+};
+
+export type GitHubCommitCommentPage = {
+  comments: GitHubCommitComment[];
+  page: number;
+  hasPrevious: boolean;
+  hasMore: boolean;
+};
+
+export type GitHubCommitCommentPlacement = {
+  path: string;
+  position: number;
+};
+
+export type GitHubCommitCommentGuard = {
+  commentId: number;
+  commentNodeId: string;
+  expectedUpdatedAt: string;
+};
+
+export type GitHubCommitCommentMutation =
+  | {
+      action: "create";
+      body: string;
+      placement?: GitHubCommitCommentPlacement;
+    }
+  | ({
+      action: "update";
+      body: string;
+    } & GitHubCommitCommentGuard)
+  | ({
+      action: "delete";
+    } & GitHubCommitCommentGuard);
 
 export type GitHubPullRequestCommit = GitHubCommit;
 

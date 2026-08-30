@@ -46,6 +46,10 @@ export function GitHubCommentActions<TComment>({
   mutateComment,
   onSuccess,
   onConflict,
+  onUncertainError,
+  uncertainWriteMessage,
+  requireNonEmpty = false,
+  disabled = false,
 }: {
   comment: GitHubMutableComment;
   repository: GitHubRepositoryContentContext;
@@ -53,7 +57,11 @@ export function GitHubCommentActions<TComment>({
   permissionMessage: string;
   mutateComment: (mutation: GitHubCommentMutation) => Promise<TComment | null>;
   onSuccess: (comment: TComment | null, mutation: GitHubCommentMutation) => void;
-  onConflict?: () => void;
+  onConflict?: () => void | Promise<void>;
+  onUncertainError?: () => void | Promise<void>;
+  uncertainWriteMessage?: string;
+  requireNonEmpty?: boolean;
+  disabled?: boolean;
 }) {
   const { t } = useAppTranslation();
   const [editOpen, setEditOpen] = useState(false);
@@ -69,8 +77,10 @@ export function GitHubCommentActions<TComment>({
         setDeleteOpen(false);
       }
     },
-    onError: (error) => {
-      if (parseIpcError(error).code === "githubCommentConflict") onConflict?.();
+    onError: async (error) => {
+      const code = parseIpcError(error).code;
+      if (code === "githubCommentConflict") await onConflict?.();
+      else if (code === "github" || code === "unknown") await onUncertainError?.();
     },
   });
 
@@ -86,7 +96,9 @@ export function GitHubCommentActions<TComment>({
       ? permissionMessage
       : error.code === "githubCommentConflict"
         ? t("workspace.repositories.commentChanged")
-        : error.message
+        : (error.code === "github" || error.code === "unknown") && uncertainWriteMessage
+          ? uncertainWriteMessage
+          : error.message
     : null;
   const updateMutation: GitHubCommentMutation = {
     action: "update",
@@ -110,7 +122,7 @@ export function GitHubCommentActions<TComment>({
               variant="ghost"
               size="icon-xs"
               aria-label={t("workspace.repositories.editComment")}
-              disabled={mutation.isPending}
+              disabled={mutation.isPending || disabled}
               onClick={() => {
                 mutation.reset();
                 setDraft(comment.body);
@@ -131,7 +143,7 @@ export function GitHubCommentActions<TComment>({
               variant="ghost"
               size="icon-xs"
               aria-label={t("workspace.repositories.deleteComment")}
-              disabled={mutation.isPending}
+              disabled={mutation.isPending || disabled}
               onClick={() => {
                 mutation.reset();
                 setDeleteOpen(true);
@@ -194,7 +206,11 @@ export function GitHubCommentActions<TComment>({
             </Button>
             <Button
               type="button"
-              disabled={!canSubmitCommentUpdate(draft, comment.body, mutation.isPending)}
+              disabled={
+                !canSubmitCommentUpdate(draft, comment.body, mutation.isPending) ||
+                disabled ||
+                (requireNonEmpty && !draft.trim())
+              }
               onClick={() => mutation.mutate(updateMutation)}
             >
               {mutation.isPending ? <Spinner data-icon="inline-start" /> : null}
@@ -234,7 +250,7 @@ export function GitHubCommentActions<TComment>({
             </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
-              disabled={mutation.isPending}
+              disabled={mutation.isPending || disabled}
               onClick={(event) => {
                 event.preventDefault();
                 mutation.mutate(deleteMutation);

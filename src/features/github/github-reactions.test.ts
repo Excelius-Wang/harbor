@@ -19,6 +19,7 @@ vi.mock("@tauri-apps/api/core", () => ({
 
 const repository = { owner: "octocat", repository: "hello-world" };
 const issueRef = { id: "I_kwDOA", kind: "issue" } as const;
+const commitCommentRef = { id: "CC_kwDOA", kind: "commitComment" } as const;
 const issue: GitHubReactionSubject = {
   ...issueRef,
   viewerCanReact: true,
@@ -46,14 +47,19 @@ describe("GitHub reactions", () => {
       id: "I_000",
       kind: "issueComment",
     });
+    expect(normalizeReactionSubjects([commitCommentRef])).toEqual([commitCommentRef]);
   });
 
   it("invokes native reads and desired-state writes with opaque subject references", async () => {
-    vi.mocked(invoke).mockResolvedValueOnce([issue]).mockResolvedValueOnce(issue);
+    vi.mocked(invoke)
+      .mockResolvedValueOnce([issue])
+      .mockResolvedValueOnce(issue)
+      .mockResolvedValueOnce({ ...issue, ...commitCommentRef });
     const query = repositoryReactionsQueryOptions({ ...repository, subjects: [issueRef] });
 
     await query.queryFn?.({} as never);
     await updateRepositoryReaction(repository, issueRef, "rocket", true);
+    await updateRepositoryReaction(repository, commitCommentRef, "eyes", true);
 
     expect(invoke).toHaveBeenNthCalledWith(1, "github_get_repository_reactions", {
       ...repository,
@@ -63,6 +69,12 @@ describe("GitHub reactions", () => {
       ...repository,
       subject: issueRef,
       content: "rocket",
+      reacted: true,
+    });
+    expect(invoke).toHaveBeenNthCalledWith(3, "github_update_repository_reaction", {
+      ...repository,
+      subject: commitCommentRef,
+      content: "eyes",
       reacted: true,
     });
   });

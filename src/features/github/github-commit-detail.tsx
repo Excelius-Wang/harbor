@@ -45,12 +45,19 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useAppTranslation } from "@/hooks/use-app-translation";
 import { parseIpcError } from "@/lib/ipc-error";
 import { openExternalUrl } from "@/lib/window";
-import type { GitHubChangedFile, GitHubCommitActor, GitHubRepositoryIdentity } from "./github-data";
+import { GitHubCommitCommentFileDiff } from "./github-commit-comment-diff";
+import { GitHubCommitCommentsWorkspace } from "./github-commit-comments-workspace";
+import type {
+  GitHubChangedFile,
+  GitHubCommitActor,
+  GitHubCommitComment,
+  GitHubRepositoryContentContext,
+  GitHubRepositoryIdentity,
+} from "./github-data";
 import {
   isRetryableCommitDetailError,
   matchingCommitDetailPages,
 } from "./github-commit-detail-pages";
-import { GitHubReadOnlyFileDiff } from "./github-file-diff";
 import { formatIssueDate } from "./github-issue-shared";
 import { repositoryCommitDetailQueryOptions } from "./github-queries";
 
@@ -94,11 +101,19 @@ function CommitFile({
   file,
   index,
   viewType,
+  target,
+  repository,
+  comments,
+  canCreateComment,
   onOpenFile,
 }: {
   file: GitHubChangedFile;
   index: number;
   viewType: ViewType;
+  target: { owner: string; repository: string; commitSha: string };
+  repository: GitHubRepositoryContentContext;
+  comments: GitHubCommitComment[];
+  canCreateComment: boolean;
   onOpenFile?: (file: GitHubChangedFile) => void;
 }) {
   const { t } = useAppTranslation();
@@ -152,7 +167,14 @@ function CommitFile({
         </p>
       ) : null}
       <CollapsibleContent>
-        <GitHubReadOnlyFileDiff file={file} viewType={viewType} />
+        <GitHubCommitCommentFileDiff
+          file={file}
+          viewType={viewType}
+          target={target}
+          repository={repository}
+          comments={comments}
+          canCreateComment={canCreateComment}
+        />
       </CollapsibleContent>
     </Collapsible>
   );
@@ -192,6 +214,17 @@ export function GitHubCommitDetail({
   const filesAtLimit = matchingPages.some((page) => page.filesAtLimit);
   const initialError = !commit && result.error ? parseIpcError(result.error) : null;
   const laterError = commit && result.isFetchNextPageError ? parseIpcError(result.error) : null;
+  const commentTarget = {
+    owner: repository.owner,
+    repository: repository.name,
+    commitSha,
+  };
+  const contentRepository: GitHubRepositoryContentContext = {
+    owner: repository.owner,
+    name: repository.name,
+    url: `https://github.com/${repository.owner}/${repository.name}`,
+    defaultBranch: commitSha,
+  };
 
   if (result.isPending) {
     return (
@@ -360,113 +393,132 @@ export function GitHubCommitDetail({
         </div>
       </header>
 
-      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-        <div>
-          <h4 className="text-sm font-semibold">{t("workspace.repositories.commitChanges")}</h4>
-          <p className="text-muted-foreground text-[10px]">
-            {t("workspace.repositories.commitChangesDescription")}
-          </p>
-        </div>
-        <Select value={viewType} onValueChange={(value) => setViewType(value as ViewType)}>
-          <SelectTrigger size="sm" className="w-[140px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectItem value="unified">{t("workspace.repositories.unifiedDiff")}</SelectItem>
-              <SelectItem value="split">{t("workspace.repositories.splitDiff")}</SelectItem>
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      </div>
+      <GitHubCommitCommentsWorkspace
+        target={commentTarget}
+        repository={contentRepository}
+        files={files}
+        filesStillLoading={Boolean(result.hasNextPage || result.isFetchingNextPage || pageMismatch)}
+      >
+        {({ comments, canCreateComment }) => (
+          <>
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+              <div>
+                <h4 className="text-sm font-semibold">
+                  {t("workspace.repositories.commitChanges")}
+                </h4>
+                <p className="text-muted-foreground text-[10px]">
+                  {t("workspace.repositories.commitChangesDescription")}
+                </p>
+              </div>
+              <Select value={viewType} onValueChange={(value) => setViewType(value as ViewType)}>
+                <SelectTrigger size="sm" className="w-[140px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="unified">
+                      {t("workspace.repositories.unifiedDiff")}
+                    </SelectItem>
+                    <SelectItem value="split">{t("workspace.repositories.splitDiff")}</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
 
-      {pageMismatch ? (
-        <Alert variant="destructive">
-          <CircleAlert />
-          <AlertTitle>{t("workspace.repositories.commitPageMismatch")}</AlertTitle>
-          <AlertDescription>
-            {t("workspace.repositories.commitPageMismatchDescription")}
-          </AlertDescription>
-        </Alert>
-      ) : null}
-
-      {files.length ? (
-        <div className="flex min-w-0 flex-col gap-3">
-          {files.map((file, index) => (
-            <CommitFile
-              key={`${file.sha ?? file.path}:${file.path}:${index}`}
-              file={file}
-              index={index}
-              viewType={viewType}
-              onOpenFile={
-                onOpenFile
-                  ? (selectedFile) =>
-                      onOpenFile(
-                        selectedFile,
-                        selectedFile.status === "removed"
-                          ? (commit.parents[0]?.sha ?? commit.sha)
-                          : commit.sha
-                      )
-                  : undefined
-              }
-            />
-          ))}
-        </div>
-      ) : (
-        <Empty className="min-h-48 border">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <FileDiff />
-            </EmptyMedia>
-            <EmptyTitle>{t("workspace.repositories.noCommitFiles")}</EmptyTitle>
-          </EmptyHeader>
-        </Empty>
-      )}
-
-      {laterError ? (
-        <Alert variant="destructive">
-          <CircleAlert />
-          <AlertTitle>{t("workspace.repositories.commitNextPageFailed")}</AlertTitle>
-          <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
-            <span>{laterError.message}</span>
-            {isRetryableCommitDetailError(laterError) ? (
-              <Button variant="outline" size="xs" onClick={() => void result.fetchNextPage()}>
-                <RefreshCw data-icon="inline-start" />
-                {t("workspace.repositories.retry")}
-              </Button>
+            {pageMismatch ? (
+              <Alert variant="destructive">
+                <CircleAlert />
+                <AlertTitle>{t("workspace.repositories.commitPageMismatch")}</AlertTitle>
+                <AlertDescription>
+                  {t("workspace.repositories.commitPageMismatchDescription")}
+                </AlertDescription>
+              </Alert>
             ) : null}
-          </AlertDescription>
-        </Alert>
-      ) : null}
 
-      {result.hasNextPage && !pageMismatch && !laterError ? (
-        <div className="flex justify-center">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={result.isFetchingNextPage}
-            onClick={() => void result.fetchNextPage()}
-          >
-            {result.isFetchingNextPage ? <Spinner data-icon="inline-start" /> : null}
-            {t(
-              result.isFetchingNextPage
-                ? "workspace.repositories.loadingMoreCommitFiles"
-                : "workspace.repositories.loadMoreCommitFiles"
+            {files.length ? (
+              <div className="flex min-w-0 flex-col gap-3">
+                {files.map((file, index) => (
+                  <CommitFile
+                    key={`${file.sha ?? file.path}:${file.path}:${index}`}
+                    file={file}
+                    index={index}
+                    viewType={viewType}
+                    target={commentTarget}
+                    repository={contentRepository}
+                    comments={comments}
+                    canCreateComment={canCreateComment}
+                    onOpenFile={
+                      onOpenFile
+                        ? (selectedFile) =>
+                            onOpenFile(
+                              selectedFile,
+                              selectedFile.status === "removed"
+                                ? (commit.parents[0]?.sha ?? commit.sha)
+                                : commit.sha
+                            )
+                        : undefined
+                    }
+                  />
+                ))}
+              </div>
+            ) : (
+              <Empty className="min-h-48 border">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <FileDiff />
+                  </EmptyMedia>
+                  <EmptyTitle>{t("workspace.repositories.noCommitFiles")}</EmptyTitle>
+                </EmptyHeader>
+              </Empty>
             )}
-          </Button>
-        </div>
-      ) : null}
 
-      {filesAtLimit ? (
-        <Alert>
-          <CircleAlert />
-          <AlertTitle>{t("workspace.repositories.commitFileLimit")}</AlertTitle>
-          <AlertDescription>
-            {t("workspace.repositories.commitFileLimitDescription")}
-          </AlertDescription>
-        </Alert>
-      ) : null}
+            {laterError ? (
+              <Alert variant="destructive">
+                <CircleAlert />
+                <AlertTitle>{t("workspace.repositories.commitNextPageFailed")}</AlertTitle>
+                <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
+                  <span>{laterError.message}</span>
+                  {isRetryableCommitDetailError(laterError) ? (
+                    <Button variant="outline" size="xs" onClick={() => void result.fetchNextPage()}>
+                      <RefreshCw data-icon="inline-start" />
+                      {t("workspace.repositories.retry")}
+                    </Button>
+                  ) : null}
+                </AlertDescription>
+              </Alert>
+            ) : null}
+
+            {result.hasNextPage && !pageMismatch && !laterError ? (
+              <div className="flex justify-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={result.isFetchingNextPage}
+                  onClick={() => void result.fetchNextPage()}
+                >
+                  {result.isFetchingNextPage ? <Spinner data-icon="inline-start" /> : null}
+                  {t(
+                    result.isFetchingNextPage
+                      ? "workspace.repositories.loadingMoreCommitFiles"
+                      : "workspace.repositories.loadMoreCommitFiles"
+                  )}
+                </Button>
+              </div>
+            ) : null}
+
+            {filesAtLimit ? (
+              <Alert>
+                <CircleAlert />
+                <AlertTitle>{t("workspace.repositories.commitFileLimit")}</AlertTitle>
+                <AlertDescription>
+                  {t("workspace.repositories.commitFileLimitDescription")}
+                </AlertDescription>
+              </Alert>
+            ) : null}
+          </>
+        )}
+      </GitHubCommitCommentsWorkspace>
     </div>
   );
 }

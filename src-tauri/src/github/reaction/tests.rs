@@ -214,7 +214,11 @@ fn reaction_subjects_require_the_selected_repository_and_supported_types() {
         }),
         discussion: None,
     };
-    assert!(reaction_subject_from_graphql(commit_comment, &comment_ref, "R_1").is_err());
+    let commit_comment_ref = GitHubReactionSubjectRef {
+        id: "CC_1".to_string(),
+        kind: GitHubReactionSubjectKind::CommitComment,
+    };
+    assert!(reaction_subject_from_graphql(commit_comment, &commit_comment_ref, "R_1").is_ok());
 
     assert!(ensure_reaction_content_supported(
         GitHubReactionSubjectKind::Release,
@@ -232,6 +236,7 @@ fn reaction_subjects_require_the_selected_repository_and_supported_types() {
 fn reaction_operations_use_current_graphql_contracts() {
     assert!(REACTION_SUBJECTS_QUERY.contains("nodes(ids: $ids)"));
     assert!(REACTION_SUBJECTS_QUERY.contains("... on Reactable"));
+    assert!(REACTION_SUBJECTS_QUERY.contains("... on CommitComment { repository { id } }"));
     assert!(REACTION_SUBJECTS_QUERY.contains("viewerCanReact"));
     assert!(REACTION_SUBJECTS_QUERY.contains("reactors { totalCount }"));
     assert!(ADD_REACTION_MUTATION.contains("addReaction"));
