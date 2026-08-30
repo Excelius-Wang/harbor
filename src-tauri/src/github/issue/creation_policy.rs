@@ -7,6 +7,8 @@ use super::super::{
 };
 use crate::error::AppError;
 
+mod templates;
+
 const ISSUE_TEMPLATE_CONFIG_PATH: &str = ".github/ISSUE_TEMPLATE/config.yml";
 const ISSUE_TEMPLATE_CONFIG_MAX_BYTES: usize = 64 * 1024;
 const ISSUE_CREATION_POLICY_QUERY: &str = r#"
@@ -32,8 +34,11 @@ pub struct GitHubIssueContactLink {
 pub struct GitHubIssueCreationPolicy {
     pub blank_issue_allowed: bool,
     pub contact_links: Vec<GitHubIssueContactLink>,
+    pub templates: Vec<GitHubIssueTemplate>,
     pub template_chooser_url: String,
 }
+
+pub use templates::GitHubIssueTemplate;
 
 #[async_trait]
 pub(crate) trait GitHubIssueCreationPolicyClient: Send + Sync {
@@ -77,6 +82,7 @@ async fn load_issue_creation_policy_with_client(
     repository: &str,
 ) -> Result<GitHubIssueCreationPolicy, AppError> {
     let configuration = load_issue_template_configuration(client, owner, repository).await?;
+    let templates = templates::load_issue_templates(client, owner, repository).await?;
     let blank_issue_allowed = if configuration.blank_issues_enabled {
         true
     } else {
@@ -86,6 +92,7 @@ async fn load_issue_creation_policy_with_client(
     Ok(GitHubIssueCreationPolicy {
         blank_issue_allowed,
         contact_links: configuration.contact_links,
+        templates,
         template_chooser_url: format!("https://github.com/{owner}/{repository}/issues/new/choose"),
     })
 }
@@ -291,6 +298,7 @@ impl GitHubIssueCreationPolicyClient for super::super::tests::FakeGitHubClient {
         Ok(GitHubIssueCreationPolicy {
             blank_issue_allowed: true,
             contact_links: Vec::new(),
+            templates: Vec::new(),
             template_chooser_url: "https://github.com/octocat/hello-world/issues/new/choose"
                 .to_string(),
         })

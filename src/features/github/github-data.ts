@@ -1398,9 +1398,24 @@ export type GitHubIssueContactLink = {
   url: string;
 };
 
+export type GitHubIssueTemplateKind = "markdown" | "form" | "github";
+
+export type GitHubIssueTemplate = {
+  path: string;
+  kind: GitHubIssueTemplateKind;
+  name: string;
+  about: string;
+  defaultTitle: string;
+  body: string;
+  labels: string[];
+  assignees: string[];
+  templateUrl: string;
+};
+
 export type GitHubIssueCreationPolicy = {
   blankIssueAllowed: boolean;
   contactLinks: GitHubIssueContactLink[];
+  templates: GitHubIssueTemplate[];
   templateChooserUrl: string;
 };
 

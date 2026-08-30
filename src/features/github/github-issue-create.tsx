@@ -1,15 +1,30 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ExternalLink, RefreshCw, TriangleAlert } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { parseIpcError } from "@/lib/ipc-error";
 import { openExternalUrl } from "@/lib/window";
-import type { GitHubIssue, GitHubIssueContactLink, GitHubRepository } from "./github-data";
+import type {
+  GitHubIssue,
+  GitHubIssueContactLink,
+  GitHubIssueTemplate,
+  GitHubRepository,
+} from "./github-data";
 import { issueCreationPolicyQueryOptions } from "./github-issue-creation-policy-queries";
 import { GitHubIssueForm, type GitHubIssueFormValue } from "./github-issue-form";
 import {
@@ -32,14 +47,150 @@ function IssueCreationPolicySkeleton() {
   );
 }
 
+const BLANK_ISSUE_TEMPLATE_VALUE = "__blank_issue__";
+
+type IssueExternalLink = {
+  key: string;
+  name: string;
+  about: string;
+  url: string;
+  screenReaderLabel?: string;
+};
+
+function IssueExternalLinks({ links }: { links: IssueExternalLink[] }) {
+  if (links.length === 0) return null;
+
+  return (
+    <div className="flex flex-col gap-2">
+      {links.map((link) => (
+        <Button
+          key={link.key}
+          type="button"
+          variant="outline"
+          className="h-auto justify-start px-3 py-2 text-left"
+          onClick={() => void openExternalUrl(link.url)}
+        >
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-xs font-medium">{link.name}</span>
+            {link.about ? (
+              <span className="text-muted-foreground block truncate text-[11px] font-normal">
+                {link.about}
+              </span>
+            ) : null}
+          </span>
+          <ExternalLink data-icon="inline-end" />
+          {link.screenReaderLabel ? (
+            <span className="sr-only">{link.screenReaderLabel}</span>
+          ) : null}
+        </Button>
+      ))}
+    </div>
+  );
+}
+
+function issueTemplateExternalLinks(templates: GitHubIssueTemplate[]): IssueExternalLink[] {
+  return templates
+    .filter((template) => template.kind !== "markdown")
+    .map((template) => ({
+      key: template.path,
+      name: template.name,
+      about: template.about,
+      url: template.templateUrl,
+    }));
+}
+
+function IssueTemplatePicker({
+  blankIssueAllowed,
+  templates,
+  value,
+  onValueChange,
+}: {
+  blankIssueAllowed: boolean;
+  templates: GitHubIssueTemplate[];
+  value: string;
+  onValueChange: (value: string) => void;
+}) {
+  const { t } = useTranslation();
+  const markdownTemplates = templates.filter((template) => template.kind === "markdown");
+  const externalTemplateLinks = issueTemplateExternalLinks(templates).map((link) => ({
+    ...link,
+    screenReaderLabel: t("workspace.repositories.openIssueTemplate", { template: link.name }),
+  }));
+  const selectedTemplate = markdownTemplates.find((template) => template.path === value);
+
+  if (markdownTemplates.length === 0 && templates.length === 0) return null;
+
+  return (
+    <Card className="mb-4 gap-4 py-4 shadow-none">
+      <CardHeader className="px-4">
+        <CardTitle className="text-sm">{t("workspace.repositories.issueTemplate")}</CardTitle>
+        <CardDescription className="text-xs">
+          {selectedTemplate?.about ?? t("workspace.repositories.issueTemplateDescription")}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3 px-4">
+        {markdownTemplates.length > 0 ? (
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="github-new-issue-template">
+                {t("workspace.repositories.issueTemplate")}
+              </FieldLabel>
+              <Select value={value} onValueChange={onValueChange}>
+                <SelectTrigger id="github-new-issue-template" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {blankIssueAllowed ? (
+                      <SelectItem value={BLANK_ISSUE_TEMPLATE_VALUE}>
+                        {t("workspace.repositories.blankIssue")}
+                      </SelectItem>
+                    ) : null}
+                    {markdownTemplates.map((template) => (
+                      <SelectItem key={template.path} value={template.path}>
+                        {template.name}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </Field>
+          </FieldGroup>
+        ) : null}
+        {templates.some((template) => template.kind !== "markdown") ? (
+          <CardDescription className="text-xs">
+            {t("workspace.repositories.issueTemplateGitHubOnly")}
+          </CardDescription>
+        ) : null}
+        <IssueExternalLinks links={externalTemplateLinks} />
+      </CardContent>
+    </Card>
+  );
+}
+
 function IssueTemplateFallback({
   templateChooserUrl,
   contactLinks,
+  templates,
 }: {
   templateChooserUrl: string;
   contactLinks: GitHubIssueContactLink[];
+  templates: GitHubIssueTemplate[];
 }) {
   const { t } = useTranslation();
+  const externalTemplateLinks = issueTemplateExternalLinks(templates);
+  const externalLinks = [
+    ...externalTemplateLinks.map((link) => ({
+      ...link,
+      screenReaderLabel: t("workspace.repositories.openIssueTemplate", { template: link.name }),
+    })),
+    ...contactLinks.map((link) => ({
+      key: `${link.name}:${link.url}`,
+      name: link.name,
+      about: link.about,
+      url: link.url,
+    })),
+  ];
 
   return (
     <Card className="gap-4 py-5 shadow-none">
@@ -56,23 +207,7 @@ function IssueTemplateFallback({
           <ExternalLink data-icon="inline-start" />
           {t("workspace.repositories.openIssueTemplates")}
         </Button>
-        {contactLinks.map((link) => (
-          <Button
-            key={`${link.name}:${link.url}`}
-            type="button"
-            variant="outline"
-            className="h-auto justify-start px-3 py-2 text-left"
-            onClick={() => void openExternalUrl(link.url)}
-          >
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-xs font-medium">{link.name}</span>
-              <span className="text-muted-foreground block truncate text-[11px] font-normal">
-                {link.about}
-              </span>
-            </span>
-            <ExternalLink data-icon="inline-end" />
-          </Button>
-        ))}
+        <IssueExternalLinks links={externalLinks} />
       </CardContent>
     </Card>
   );
@@ -117,9 +252,34 @@ export function GitHubIssueCreate({
   const queryClient = useQueryClient();
   const target = { owner: repository.owner, repository: repository.name };
   const policyResult = useQuery(issueCreationPolicyQueryOptions(target));
+  const policy = policyResult.data;
+  const markdownTemplates =
+    policy?.templates.filter((template) => template.kind === "markdown") ?? [];
+  const defaultTemplateValue = policy?.blankIssueAllowed
+    ? BLANK_ISSUE_TEMPLATE_VALUE
+    : (markdownTemplates[0]?.path ?? BLANK_ISSUE_TEMPLATE_VALUE);
+  const [selectedTemplateValue, setSelectedTemplateValue] = useState<string>();
+  useEffect(() => {
+    setSelectedTemplateValue(undefined);
+  }, [repository.name, repository.owner]);
+  const selectedMarkdownTemplate = markdownTemplates.find(
+    (template) => template.path === selectedTemplateValue
+  );
+  const templateValue =
+    selectedTemplateValue === BLANK_ISSUE_TEMPLATE_VALUE && policy?.blankIssueAllowed
+      ? BLANK_ISSUE_TEMPLATE_VALUE
+      : (selectedMarkdownTemplate?.path ?? defaultTemplateValue);
+  const selectedTemplate = markdownTemplates.find((template) => template.path === templateValue);
   const mutation = useMutation({
     mutationFn: ({ title, body }: GitHubIssueFormValue) =>
-      createRepositoryIssue(target, title, body),
+      createRepositoryIssue(
+        target,
+        title,
+        body,
+        selectedTemplate
+          ? { labels: selectedTemplate.labels, assignees: selectedTemplate.assignees }
+          : undefined
+      ),
     onSuccess: (issue) => {
       syncCreatedIssue(queryClient, target, issue);
       toast.success(t("workspace.repositories.issueCreated"));
@@ -164,14 +324,24 @@ export function GitHubIssueCreate({
               }
               onRetry={() => void policyResult.refetch()}
             />
-          ) : !policyResult.data.blankIssueAllowed ? (
+          ) : !policyResult.data.blankIssueAllowed && markdownTemplates.length === 0 ? (
             <IssueTemplateFallback {...policyResult.data} />
           ) : (
             <section className="bg-card/25 rounded-lg border p-4 sm:p-5">
+              <IssueTemplatePicker
+                blankIssueAllowed={policyResult.data.blankIssueAllowed}
+                templates={policyResult.data.templates}
+                value={templateValue}
+                onValueChange={setSelectedTemplateValue}
+              />
               <GitHubIssueForm
+                key={templateValue}
                 repository={repository}
                 idPrefix="github-new-issue"
-                initialValue={{ title: "", body: "" }}
+                initialValue={{
+                  title: selectedTemplate?.defaultTitle ?? "",
+                  body: selectedTemplate?.body ?? "",
+                }}
                 submitLabel={t("workspace.repositories.createIssue")}
                 pendingLabel={t("workspace.repositories.creatingIssue")}
                 pending={mutation.isPending}

@@ -24,17 +24,18 @@ use crate::{
         GitHubGistCommentPage, GitHubGistCreateInput, GitHubGistFileInput, GitHubGistFileMutation,
         GitHubGistPage, GitHubGistRevisionDetail, GitHubGistRevisionPage, GitHubGistSource,
         GitHubGistUpdateInput, GitHubInsightsTrafficPeriod, GitHubIssue, GitHubIssueAssigneePage,
-        GitHubIssueAssignment, GitHubIssueCreationPolicy, GitHubIssueDependenciesPage,
-        GitHubIssueDetailPage, GitHubIssueDuplicateReference, GitHubIssueFilters,
-        GitHubIssueInboxFilters, GitHubIssueInboxPage, GitHubIssueInboxScope, GitHubIssueLabel,
-        GitHubIssueLabelMutation, GitHubIssueLabelPage, GitHubIssueLinkedPullRequestPage,
-        GitHubIssueMilestone, GitHubIssueMilestoneMutation, GitHubIssueMilestonePage,
-        GitHubIssuePage, GitHubIssueRelationshipsPage, GitHubIssueSort, GitHubIssueState,
-        GitHubIssueStateCapabilities, GitHubIssueStateMutation, GitHubIssueTimelineItem,
-        GitHubLoginAvailability, GitHubNotificationAction, GitHubNotificationPage, GitHubPackage,
-        GitHubPackagePage, GitHubPackageType, GitHubPackageVersionMutationInput,
-        GitHubPackageVersionMutationResult, GitHubPackageVersionPage, GitHubPackageVersionState,
-        GitHubPackageVisibility, GitHubPagesHealth, GitHubPagesMutation, GitHubPagesWorkspace,
+        GitHubIssueAssignment, GitHubIssueCreateInput, GitHubIssueCreationPolicy,
+        GitHubIssueDependenciesPage, GitHubIssueDetailPage, GitHubIssueDuplicateReference,
+        GitHubIssueFilters, GitHubIssueInboxFilters, GitHubIssueInboxPage, GitHubIssueInboxScope,
+        GitHubIssueLabel, GitHubIssueLabelMutation, GitHubIssueLabelPage,
+        GitHubIssueLinkedPullRequestPage, GitHubIssueMilestone, GitHubIssueMilestoneMutation,
+        GitHubIssueMilestonePage, GitHubIssuePage, GitHubIssueRelationshipsPage, GitHubIssueSort,
+        GitHubIssueState, GitHubIssueStateCapabilities, GitHubIssueStateMutation,
+        GitHubIssueTimelineItem, GitHubLoginAvailability, GitHubNotificationAction,
+        GitHubNotificationPage, GitHubPackage, GitHubPackagePage, GitHubPackageType,
+        GitHubPackageVersionMutationInput, GitHubPackageVersionMutationResult,
+        GitHubPackageVersionPage, GitHubPackageVersionState, GitHubPackageVisibility,
+        GitHubPagesHealth, GitHubPagesMutation, GitHubPagesWorkspace,
         GitHubPendingPullRequestReview, GitHubProfileActivityPage, GitHubProfileConnectionKind,
         GitHubProjectDetail, GitHubProjectFilters, GitHubProjectItem, GitHubProjectItemAction,
         GitHubProjectItemAddition, GitHubProjectItemFilters, GitHubProjectItemUpdate,
@@ -1836,14 +1837,20 @@ pub async fn github_create_repository_issue(
     repository: String,
     title: String,
     body: String,
+    labels: Option<Vec<String>>,
+    assignees: Option<Vec<String>>,
     state: State<'_, AppState>,
 ) -> Result<GitHubIssue, AppError> {
     let repository = RepositoryRef::new(owner, repository)?;
-    let title = validate_issue_title(title)?;
-    let body = validate_issue_body(body)?;
+    let input = GitHubIssueCreateInput::new(
+        validate_issue_title(title)?,
+        validate_issue_body(body)?,
+        validate_named_values(labels.unwrap_or_default(), "issue label", 100, 128)?,
+        validate_named_values(assignees.unwrap_or_default(), "issue assignee", 10, 100)?,
+    );
     state
         .github
-        .create_issue(repository.owner(), repository.name(), &title, &body)
+        .create_issue(repository.owner(), repository.name(), &input)
         .await
 }
 

@@ -14,6 +14,7 @@ use crate::error::AppError;
 mod content;
 mod creation_policy;
 mod lifecycle;
+pub(crate) use content::GitHubIssueCreateInput;
 pub use creation_policy::GitHubIssueCreationPolicy;
 pub use lifecycle::{
     GitHubIssueStateCapabilities, GitHubIssueStateMutation, GitHubIssueStateReason,

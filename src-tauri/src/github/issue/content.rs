@@ -10,6 +10,33 @@ use super::{
 };
 use crate::error::AppError;
 
+#[cfg(test)]
+mod tests;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct GitHubIssueCreateInput {
+    title: String,
+    body: String,
+    labels: Vec<String>,
+    assignees: Vec<String>,
+}
+
+impl GitHubIssueCreateInput {
+    pub(crate) fn new(
+        title: String,
+        body: String,
+        labels: Vec<String>,
+        assignees: Vec<String>,
+    ) -> Self {
+        Self {
+            title,
+            body,
+            labels,
+            assignees,
+        }
+    }
+}
+
 #[async_trait]
 pub(crate) trait GitHubIssueContentClient: Send + Sync {
     async fn create_issue(
@@ -17,8 +44,7 @@ pub(crate) trait GitHubIssueContentClient: Send + Sync {
         token: &str,
         owner: &str,
         repository: &str,
-        title: &str,
-        body: &str,
+        input: &GitHubIssueCreateInput,
     ) -> Result<GitHubIssue, AppError>;
 
     async fn update_issue_content(
@@ -46,12 +72,11 @@ impl GitHubService {
         &self,
         owner: &str,
         repository: &str,
-        title: &str,
-        body: &str,
+        input: &GitHubIssueCreateInput,
     ) -> Result<GitHubIssue, AppError> {
         let token = self.load_access_token().await?;
         self.client
-            .create_issue(&token, owner, repository, title, body)
+            .create_issue(&token, owner, repository, input)
             .await
     }
 
@@ -90,19 +115,10 @@ impl GitHubIssueContentClient for OctocrabGitHubClient {
         token: &str,
         owner: &str,
         repository: &str,
-        title: &str,
-        body: &str,
+        input: &GitHubIssueCreateInput,
     ) -> Result<GitHubIssue, AppError> {
         let client = authenticated_client(token)?;
-        let issue = client
-            .issues(owner, repository)
-            .create(title)
-            .body(body.to_string())
-            .send()
-            .await
-            .map_err(github_error)?;
-
-        Ok(issue_from_octocrab(issue))
+        create_issue_with_client(&client, owner, repository, input).await
     }
 
     async fn update_issue_content(
@@ -165,6 +181,24 @@ impl GitHubIssueContentClient for OctocrabGitHubClient {
     }
 }
 
+async fn create_issue_with_client(
+    client: &octocrab::Octocrab,
+    owner: &str,
+    repository: &str,
+    input: &GitHubIssueCreateInput,
+) -> Result<GitHubIssue, AppError> {
+    let handler = client.issues(owner, repository);
+    let mut request = handler.create(input.title.clone()).body(input.body.clone());
+    if !input.labels.is_empty() {
+        request = request.labels(input.labels.clone());
+    }
+    if !input.assignees.is_empty() {
+        request = request.assignees(input.assignees.clone());
+    }
+    let issue = request.send().await.map_err(github_error)?;
+    Ok(issue_from_octocrab(issue))
+}
+
 #[cfg(test)]
 #[async_trait]
 impl GitHubIssueContentClient for super::super::tests::FakeGitHubClient {
@@ -173,8 +207,7 @@ impl GitHubIssueContentClient for super::super::tests::FakeGitHubClient {
         token: &str,
         owner: &str,
         repository: &str,
-        title: &str,
-        body: &str,
+        input: &GitHubIssueCreateInput,
     ) -> Result<GitHubIssue, AppError> {
         assert_eq!(token, "github-user-access-token");
         assert_eq!((owner, repository), ("octocat", "hello-world"));
@@ -184,8 +217,8 @@ impl GitHubIssueContentClient for super::super::tests::FakeGitHubClient {
             .issue;
         issue.id = 9;
         issue.number = 9;
-        issue.title = title.to_string();
-        issue.body = Some(body.to_string());
+        issue.title = input.title.clone();
+        issue.body = Some(input.body.clone());
         issue.url = "https://github.com/octocat/hello-world/issues/9".to_string();
         Ok(issue)
     }
