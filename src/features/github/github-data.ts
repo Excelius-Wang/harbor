@@ -1392,6 +1392,18 @@ export type GitHubIssue = {
   updatedAt: string;
 };
 
+export type GitHubIssueContactLink = {
+  name: string;
+  about: string;
+  url: string;
+};
+
+export type GitHubIssueCreationPolicy = {
+  blankIssueAllowed: boolean;
+  contactLinks: GitHubIssueContactLink[];
+  templateChooserUrl: string;
+};
+
 export type GitHubIssuePage = {
   issues: GitHubIssue[];
   totalCount: number;

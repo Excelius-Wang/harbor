@@ -11,7 +11,10 @@ use super::{
 };
 use crate::error::AppError;
 
+mod content;
+mod creation_policy;
 mod lifecycle;
+pub use creation_policy::GitHubIssueCreationPolicy;
 pub use lifecycle::{
     GitHubIssueStateCapabilities, GitHubIssueStateMutation, GitHubIssueStateReason,
 };
@@ -223,7 +226,11 @@ pub struct GitHubIssueDetailPage {
 
 #[async_trait]
 pub(crate) trait GitHubIssueClient:
-    lifecycle::GitHubIssueLifecycleClient + Send + Sync
+    content::GitHubIssueContentClient
+    + creation_policy::GitHubIssueCreationPolicyClient
+    + lifecycle::GitHubIssueLifecycleClient
+    + Send
+    + Sync
 {
     async fn list_issues(
         &self,
@@ -269,25 +276,6 @@ pub(crate) trait GitHubIssueClient:
         timeline_page: u32,
     ) -> Result<GitHubIssueDetailPage, AppError>;
 
-    async fn create_issue(
-        &self,
-        token: &str,
-        owner: &str,
-        repository: &str,
-        title: &str,
-        body: &str,
-    ) -> Result<GitHubIssue, AppError>;
-
-    async fn update_issue_content(
-        &self,
-        token: &str,
-        owner: &str,
-        repository: &str,
-        issue_number: u64,
-        title: &str,
-        body: &str,
-    ) -> Result<GitHubIssue, AppError>;
-
     #[allow(clippy::too_many_arguments)]
     async fn update_issue_metadata(
         &self,
@@ -299,15 +287,6 @@ pub(crate) trait GitHubIssueClient:
         assignees: &[String],
         milestone: Option<u64>,
     ) -> Result<GitHubIssue, AppError>;
-
-    async fn create_issue_comment(
-        &self,
-        token: &str,
-        owner: &str,
-        repository: &str,
-        issue_number: u64,
-        body: &str,
-    ) -> Result<GitHubIssueTimelineItem, AppError>;
 }
 
 impl GitHubService {
@@ -377,33 +356,6 @@ impl GitHubService {
             .await
     }
 
-    pub async fn create_issue(
-        &self,
-        owner: &str,
-        repository: &str,
-        title: &str,
-        body: &str,
-    ) -> Result<GitHubIssue, AppError> {
-        let token = self.load_access_token().await?;
-        self.client
-            .create_issue(&token, owner, repository, title, body)
-            .await
-    }
-
-    pub async fn update_issue_content(
-        &self,
-        owner: &str,
-        repository: &str,
-        issue_number: u64,
-        title: &str,
-        body: &str,
-    ) -> Result<GitHubIssue, AppError> {
-        let token = self.load_access_token().await?;
-        self.client
-            .update_issue_content(&token, owner, repository, issue_number, title, body)
-            .await
-    }
-
     #[allow(clippy::too_many_arguments)]
     pub async fn update_issue_metadata(
         &self,
@@ -425,19 +377,6 @@ impl GitHubService {
                 assignees,
                 milestone,
             )
-            .await
-    }
-
-    pub async fn create_issue_comment(
-        &self,
-        owner: &str,
-        repository: &str,
-        issue_number: u64,
-        body: &str,
-    ) -> Result<GitHubIssueTimelineItem, AppError> {
-        let token = self.load_access_token().await?;
-        self.client
-            .create_issue_comment(&token, owner, repository, issue_number, body)
             .await
     }
 }
@@ -640,54 +579,6 @@ impl GitHubIssueClient for OctocrabGitHubClient {
         })
     }
 
-    async fn create_issue(
-        &self,
-        token: &str,
-        owner: &str,
-        repository: &str,
-        title: &str,
-        body: &str,
-    ) -> Result<GitHubIssue, AppError> {
-        let client = authenticated_client(token)?;
-        let issue = client
-            .issues(owner, repository)
-            .create(title)
-            .body(body.to_string())
-            .send()
-            .await
-            .map_err(github_error)?;
-
-        Ok(issue_from_octocrab(issue))
-    }
-
-    async fn update_issue_content(
-        &self,
-        token: &str,
-        owner: &str,
-        repository: &str,
-        issue_number: u64,
-        title: &str,
-        body: &str,
-    ) -> Result<GitHubIssue, AppError> {
-        let client = authenticated_client(token)?;
-        let handler = client.issues(owner, repository);
-        let issue = handler.get(issue_number).await.map_err(github_error)?;
-        ensure_octocrab_issue(&issue)?;
-        if issue.title == title && issue.body.as_deref().unwrap_or_default() == body {
-            return Ok(issue_from_octocrab(issue));
-        }
-
-        let issue = handler
-            .update(issue_number)
-            .title(title)
-            .body(body)
-            .send()
-            .await
-            .map_err(github_error)?;
-
-        Ok(issue_from_octocrab(issue))
-    }
-
     async fn update_issue_metadata(
         &self,
         token: &str,
@@ -712,37 +603,6 @@ impl GitHubIssueClient for OctocrabGitHubClient {
         .await?;
 
         Ok(issue_from_octocrab(issue))
-    }
-
-    async fn create_issue_comment(
-        &self,
-        token: &str,
-        owner: &str,
-        repository: &str,
-        issue_number: u64,
-        body: &str,
-    ) -> Result<GitHubIssueTimelineItem, AppError> {
-        let client = authenticated_client(token)?;
-        let handler = client.issues(owner, repository);
-        let issue = handler.get(issue_number).await.map_err(github_error)?;
-        ensure_octocrab_issue(&issue)?;
-        let comment = handler
-            .create_comment(issue_number, body)
-            .await
-            .map_err(github_error)?;
-
-        let timeline = enrich_issue_timeline_comments(
-            &client,
-            owner,
-            repository,
-            issue_number,
-            GitHubConversationCommentKind::Issue,
-            vec![timeline_item_from_issue_comment(comment)],
-        )
-        .await?;
-        timeline.into_iter().next().ok_or_else(|| {
-            AppError::GitHub("GitHub did not return the created issue comment".to_string())
-        })
     }
 }
 
@@ -880,7 +740,7 @@ fn issue_search_terms(query: &str) -> String {
         .join(" ")
 }
 
-fn issue_from_octocrab(issue: octocrab::models::issues::Issue) -> GitHubIssue {
+pub(super) fn issue_from_octocrab(issue: octocrab::models::issues::Issue) -> GitHubIssue {
     let state = match issue.state {
         octocrab::models::IssueState::Open => GitHubIssueState::Open,
         octocrab::models::IssueState::Closed => GitHubIssueState::Closed,
@@ -966,7 +826,9 @@ pub(super) fn issue_summary_from_rest_value(
     })
 }
 
-fn ensure_octocrab_issue(issue: &octocrab::models::issues::Issue) -> Result<(), AppError> {
+pub(super) fn ensure_octocrab_issue(
+    issue: &octocrab::models::issues::Issue,
+) -> Result<(), AppError> {
     if issue.pull_request.is_some() {
         return Err(AppError::Validation(
             "requested number belongs to a pull request".to_string(),

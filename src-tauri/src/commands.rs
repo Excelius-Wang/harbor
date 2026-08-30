@@ -24,12 +24,12 @@ use crate::{
         GitHubGistCommentPage, GitHubGistCreateInput, GitHubGistFileInput, GitHubGistFileMutation,
         GitHubGistPage, GitHubGistRevisionDetail, GitHubGistRevisionPage, GitHubGistSource,
         GitHubGistUpdateInput, GitHubInsightsTrafficPeriod, GitHubIssue, GitHubIssueAssigneePage,
-        GitHubIssueAssignment, GitHubIssueDependenciesPage, GitHubIssueDetailPage,
-        GitHubIssueDuplicateReference, GitHubIssueFilters, GitHubIssueInboxFilters,
-        GitHubIssueInboxPage, GitHubIssueInboxScope, GitHubIssueLabel, GitHubIssueLabelMutation,
-        GitHubIssueLabelPage, GitHubIssueLinkedPullRequestPage, GitHubIssueMilestone,
-        GitHubIssueMilestoneMutation, GitHubIssueMilestonePage, GitHubIssuePage,
-        GitHubIssueRelationshipsPage, GitHubIssueSort, GitHubIssueState,
+        GitHubIssueAssignment, GitHubIssueCreationPolicy, GitHubIssueDependenciesPage,
+        GitHubIssueDetailPage, GitHubIssueDuplicateReference, GitHubIssueFilters,
+        GitHubIssueInboxFilters, GitHubIssueInboxPage, GitHubIssueInboxScope, GitHubIssueLabel,
+        GitHubIssueLabelMutation, GitHubIssueLabelPage, GitHubIssueLinkedPullRequestPage,
+        GitHubIssueMilestone, GitHubIssueMilestoneMutation, GitHubIssueMilestonePage,
+        GitHubIssuePage, GitHubIssueRelationshipsPage, GitHubIssueSort, GitHubIssueState,
         GitHubIssueStateCapabilities, GitHubIssueStateMutation, GitHubIssueTimelineItem,
         GitHubLoginAvailability, GitHubNotificationAction, GitHubNotificationPage, GitHubPackage,
         GitHubPackagePage, GitHubPackageType, GitHubPackageVersionMutationInput,
@@ -1814,6 +1814,19 @@ pub async fn github_update_repository_conversation_subscription(
             conversation_kind,
             action,
         )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_get_repository_issue_creation_policy(
+    owner: String,
+    repository: String,
+    state: State<'_, AppState>,
+) -> Result<GitHubIssueCreationPolicy, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .issue_creation_policy(repository.owner(), repository.name())
         .await
 }
 

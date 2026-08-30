@@ -182,46 +182,6 @@ impl GitHubIssueClient for super::super::tests::FakeGitHubClient {
         })
     }
 
-    async fn create_issue(
-        &self,
-        token: &str,
-        owner: &str,
-        repository: &str,
-        title: &str,
-        body: &str,
-    ) -> Result<GitHubIssue, AppError> {
-        assert_eq!(token, "github-user-access-token");
-        assert_eq!((owner, repository), ("octocat", "hello-world"));
-        let mut issue = self
-            .issue_detail(token, owner, repository, 7, 1)
-            .await?
-            .issue;
-        issue.id = 9;
-        issue.number = 9;
-        issue.title = title.to_string();
-        issue.body = Some(body.to_string());
-        issue.url = "https://github.com/octocat/hello-world/issues/9".to_string();
-        Ok(issue)
-    }
-
-    async fn update_issue_content(
-        &self,
-        token: &str,
-        owner: &str,
-        repository: &str,
-        issue_number: u64,
-        title: &str,
-        body: &str,
-    ) -> Result<GitHubIssue, AppError> {
-        let mut issue = self
-            .issue_detail(token, owner, repository, issue_number, 1)
-            .await?
-            .issue;
-        issue.title = title.to_string();
-        issue.body = Some(body.to_string());
-        Ok(issue)
-    }
-
     async fn update_issue_metadata(
         &self,
         token: &str,
@@ -249,51 +209,6 @@ impl GitHubIssueClient for super::super::tests::FakeGitHubClient {
         issue.milestone = milestone.map(|_| "Harbor 0.2".to_string());
         issue.milestone_number = milestone;
         Ok(issue)
-    }
-
-    async fn create_issue_comment(
-        &self,
-        token: &str,
-        owner: &str,
-        repository: &str,
-        issue_number: u64,
-        body: &str,
-    ) -> Result<GitHubIssueTimelineItem, AppError> {
-        assert_eq!(token, "github-user-access-token");
-        assert_eq!(
-            (owner, repository, issue_number),
-            ("octocat", "hello-world", 7)
-        );
-        Ok(GitHubIssueTimelineItem {
-            id: "IC_84".to_string(),
-            reaction_subject: Some(GitHubReactionSubjectRef {
-                id: "IC_84".to_string(),
-                kind: GitHubReactionSubjectKind::IssueComment,
-            }),
-            kind: GitHubIssueTimelineKind::Comment,
-            event: "commented".to_string(),
-            actor: Some("octocat".to_string()),
-            actor_avatar_url: Some("https://github.com/octocat.png".to_string()),
-            author_association: Some("OWNER".to_string()),
-            body: Some(body.to_string()),
-            url: Some(
-                "https://github.com/octocat/hello-world/issues/7#issuecomment-84".to_string(),
-            ),
-            created_at: Some("2026-08-26T10:00:00+00:00".to_string()),
-            updated_at: Some("2026-08-26T10:00:00+00:00".to_string()),
-            viewer_can_update: true,
-            viewer_can_delete: true,
-            is_minimized: false,
-            minimized_reason: None,
-            label: None,
-            assignee: None,
-            milestone: None,
-            rename_from: None,
-            rename_to: None,
-            commit_id: None,
-            review_id: None,
-            review_state: None,
-        })
     }
 }
 
