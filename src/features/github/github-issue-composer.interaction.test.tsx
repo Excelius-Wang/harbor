@@ -92,7 +92,9 @@ describe("GitHub Issue composer state controls", () => {
       return Promise.reject(new Error(`unexpected command ${command}`));
     });
     const user = userEvent.setup();
-    renderComposer();
+    const queryClient = renderComposer();
+    const detailKey = githubQueryKeys.issueDetail({ ...target, timelinePage: 2 });
+    queryClient.setQueryData(detailKey, { cached: true });
 
     const textbox = await screen.findByRole("textbox");
     await user.type(textbox, "Keep this draft");
@@ -127,6 +129,7 @@ describe("GitHub Issue composer state controls", () => {
       })
     );
     expect((textbox as HTMLTextAreaElement).value).toBe("Keep this draft");
+    await waitFor(() => expect(queryClient.getQueryState(detailKey)?.isInvalidated).toBe(true));
   });
 
   it("keeps comments usable and offers Retry when capability loading fails", async () => {
@@ -158,7 +161,9 @@ describe("GitHub Issue composer state controls", () => {
       return Promise.reject(new Error(`unexpected command ${command}`));
     });
     const user = userEvent.setup();
-    renderComposer();
+    const queryClient = renderComposer();
+    const detailKey = githubQueryKeys.issueDetail({ ...target, timelinePage: 2 });
+    queryClient.setQueryData(detailKey, { cached: true });
 
     const textbox = await screen.findByRole("textbox");
     await user.type(textbox, "Keep this permission draft");
@@ -236,6 +241,47 @@ describe("GitHub Issue composer state controls", () => {
 
     expect(await screen.findByText("workspace.repositories.issueActionsLoadFailed")).toBeDefined();
     await waitFor(() => expect(close.hasAttribute("disabled")).toBe(true));
+  });
+
+  it("keeps Retry reachable when a failed mutation is followed by a failed capability refresh", async () => {
+    let capabilityReads = 0;
+    vi.mocked(invoke).mockImplementation((command) => {
+      if (command === "github_get_repository_issue_state_capabilities") {
+        capabilityReads += 1;
+        return capabilityReads === 2
+          ? Promise.reject({ code: "github", message: "refresh unavailable" })
+          : Promise.resolve(capabilities);
+      }
+      if (command === "github_update_repository_issue_state") {
+        return Promise.reject({ code: "github", message: "temporary write failure" });
+      }
+      return Promise.reject(new Error(`unexpected command ${command}`));
+    });
+    const user = userEvent.setup();
+    const queryClient = renderComposer();
+    const detailKey = githubQueryKeys.issueDetail({ ...target, timelinePage: 2 });
+    queryClient.setQueryData(detailKey, { cached: true });
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "workspace.repositories.closeIssueAsCompleted",
+      })
+    );
+
+    expect(await screen.findByText("workspace.repositories.issueActionsLoadFailed")).toBeDefined();
+    const retry = screen.getByRole("button", { name: "workspace.repositories.retry" });
+    const close = screen.getByRole("button", {
+      name: "workspace.repositories.closeIssueAsCompleted",
+    });
+    expect(close.hasAttribute("disabled")).toBe(true);
+    expect(queryClient.getQueryState(detailKey)?.isInvalidated).toBe(true);
+
+    await user.click(retry);
+
+    await waitFor(() => expect(capabilityReads).toBe(3));
+    await waitFor(() => expect(close.hasAttribute("disabled")).toBe(false));
+    expect(screen.queryByRole("button", { name: "workspace.repositories.retry" })).toBeNull();
+    expect(screen.getByText("workspace.repositories.issueStateChangeFailed")).toBeDefined();
   });
 
   it("refreshes repository navigation when GitHub reports a moved Issue", async () => {

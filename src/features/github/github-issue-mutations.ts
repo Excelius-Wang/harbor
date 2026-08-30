@@ -14,6 +14,8 @@ import type {
 } from "./github-data";
 import { githubQueryKeys } from "./github-queries";
 
+const GITHUB_ISSUE_PAGE_SIZE = 30;
+
 export type GitHubRepositoryIssueMutationTarget = {
   owner: string;
   repository: string;
@@ -250,29 +252,44 @@ function updateRepositoryIssuePages(
     if (!page) continue;
     const matches = page.issues.filter((item) => item.number === target.issueNumber);
     const cachedState = issueStateFromQueryKey(queryKey);
-    const shouldInsert =
-      !matches.length && cachedState === issue.state && repositoryIssuePageAccepts(queryKey, issue);
-    if (!matches.length && !shouldInsert) continue;
+    const exactDestination = repositoryIssuePageAccepts(queryKey, issue);
+    const shouldInsert = !matches.length && cachedState === issue.state && exactDestination;
+    if (!matches.length && !shouldInsert) {
+      if (cachedState === issue.state) {
+        void queryClient.invalidateQueries({ queryKey, exact: true });
+      }
+      continue;
+    }
+    const withoutIssue = page.issues.filter((item) => item.number !== target.issueNumber);
+    const orderedIssues = [issue, ...withoutIssue];
+    const moveToFront = queryKey[9] === "updated" && queryKey[10] === 1;
     queryClient.setQueryData<GitHubIssuePage>(
       queryKey,
       cachedState && cachedState !== issue.state
         ? {
             ...page,
-            issues: page.issues.filter((item) => item.number !== target.issueNumber),
+            issues: withoutIssue,
             totalCount: Math.max(0, page.totalCount - matches.length),
           }
         : shouldInsert
           ? {
               ...page,
-              issues: [issue, ...page.issues],
+              issues: orderedIssues.slice(0, GITHUB_ISSUE_PAGE_SIZE),
               totalCount: page.totalCount + 1,
+              hasMore: page.hasMore || orderedIssues.length > GITHUB_ISSUE_PAGE_SIZE,
             }
-          : {
-              ...page,
-              issues: page.issues.map((item) =>
-                item.number === target.issueNumber ? issue : item
-              ),
-            }
+          : moveToFront
+            ? {
+                ...page,
+                issues: orderedIssues.slice(0, GITHUB_ISSUE_PAGE_SIZE),
+                hasMore: page.hasMore || orderedIssues.length > GITHUB_ISSUE_PAGE_SIZE,
+              }
+            : {
+                ...page,
+                issues: page.issues.map((item) =>
+                  item.number === target.issueNumber ? issue : item
+                ),
+              }
     );
   }
 }
@@ -281,9 +298,11 @@ function repositoryIssuePageAccepts(queryKey: QueryKey, issue: GitHubIssue) {
   const assignment = queryKey[6];
   const query = queryKey[7];
   const label = queryKey[8];
+  const sort = queryKey[9];
   const page = queryKey[10];
   return (
     page === 1 &&
+    sort === "updated" &&
     (assignment === "all" || (assignment === "unassigned" && !issue.assignees.length)) &&
     query === "" &&
     (label === "" || issue.labels.some((item) => item.name === label))
@@ -322,33 +341,46 @@ function updateIssueInboxPages(
     const cachedState = issueStateFromQueryKey(queryKey);
     const scope = queryKey[2];
     const template = typeof scope === "string" ? templates.get(scope) : undefined;
+    const exactDestination = queryKey[4] === "" && queryKey[5] === "updated" && queryKey[6] === 1;
     const shouldInsert =
-      !matches.length &&
-      nextState === cachedState &&
-      queryKey[4] === "" &&
-      queryKey[6] === 1 &&
-      Boolean(template);
-    if (!matches.length && !shouldInsert) continue;
+      !matches.length && nextState === cachedState && exactDestination && Boolean(template);
+    if (!matches.length && !shouldInsert) {
+      if (nextState === cachedState && template) {
+        void queryClient.invalidateQueries({ queryKey, exact: true });
+      }
+      continue;
+    }
+    const withoutIssue = page.issues.filter((summary) => !matchesIssueSummary(summary, target));
+    const updatedSummary = template ? update(template) : undefined;
+    const orderedIssues = updatedSummary ? [updatedSummary, ...withoutIssue] : withoutIssue;
+    const moveToFront = queryKey[5] === "updated" && queryKey[6] === 1;
     queryClient.setQueryData<GitHubIssueInboxPage>(
       queryKey,
       nextState && cachedState && cachedState !== nextState
         ? {
             ...page,
-            issues: page.issues.filter((summary) => !matchesIssueSummary(summary, target)),
+            issues: withoutIssue,
             totalCount: Math.max(0, page.totalCount - matches.length),
           }
-        : shouldInsert && template
+        : shouldInsert && updatedSummary
           ? {
               ...page,
-              issues: [update(template), ...page.issues],
+              issues: orderedIssues.slice(0, GITHUB_ISSUE_PAGE_SIZE),
               totalCount: page.totalCount + 1,
+              hasMore: page.hasMore || orderedIssues.length > GITHUB_ISSUE_PAGE_SIZE,
             }
-          : {
-              ...page,
-              issues: page.issues.map((summary) =>
-                matchesIssueSummary(summary, target) ? update(summary) : summary
-              ),
-            }
+          : moveToFront && updatedSummary
+            ? {
+                ...page,
+                issues: orderedIssues.slice(0, GITHUB_ISSUE_PAGE_SIZE),
+                hasMore: page.hasMore || orderedIssues.length > GITHUB_ISSUE_PAGE_SIZE,
+              }
+            : {
+                ...page,
+                issues: page.issues.map((summary) =>
+                  matchesIssueSummary(summary, target) ? update(summary) : summary
+                ),
+              }
     );
   }
 }

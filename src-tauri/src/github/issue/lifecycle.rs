@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use http::StatusCode;
@@ -7,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use super::{ensure_octocrab_issue, issue_from_octocrab, GitHubIssue, GitHubIssueState};
 use crate::{
     error::AppError,
-    github::{authenticated_client, github_error, GitHubService, OctocrabGitHubClient},
+    github::{github_error, GitHubService, OctocrabGitHubClient},
 };
 
 const GITHUB_API_VERSION: &str = "2026-03-10";
@@ -44,16 +46,14 @@ pub struct GitHubIssueStateReason(String);
 impl GitHubIssueStateReason {
     fn new(value: impl Into<String>) -> Self {
         let value = value.into();
-        Self(
-            match value.as_str() {
-                "COMPLETED" => "completed",
-                "NOT_PLANNED" | "not_planned" => "notPlanned",
-                "DUPLICATE" => "duplicate",
-                "REOPENED" => "reopened",
-                _ => return Self(value),
-            }
-            .to_string(),
-        )
+        let normalized = match value.as_str() {
+            "COMPLETED" => "completed",
+            "NOT_PLANNED" | "not_planned" => "notPlanned",
+            "DUPLICATE" => "duplicate",
+            "REOPENED" => "reopened",
+            _ => return Self(value),
+        };
+        Self(normalized.to_string())
     }
 
     fn as_str(&self) -> &str {
@@ -181,15 +181,29 @@ impl GitHubIssueLifecycleClient for OctocrabGitHubClient {
         issue_number: u64,
         mutation: &GitHubIssueStateMutation,
     ) -> Result<GitHubIssue, AppError> {
-        let client = authenticated_client(token)?;
+        let client = build_issue_state_client(token, None)?;
         update_issue_state_with_client(&client, owner, repository, issue_number, mutation).await
     }
 }
 
 fn authenticated_issue_state_client(token: &str) -> Result<octocrab::Octocrab, AppError> {
-    octocrab::Octocrab::builder()
+    build_issue_state_client(token, None)
+}
+
+fn build_issue_state_client(
+    token: &str,
+    base_uri: Option<&str>,
+) -> Result<octocrab::Octocrab, AppError> {
+    let builder = octocrab::Octocrab::builder()
         .add_retry_config(octocrab::service::middleware::retry::RetryConfig::None)
-        .personal_token(token.to_string())
+        .personal_token(token.to_string());
+    let builder = match base_uri {
+        Some(base_uri) => builder
+            .base_uri(base_uri)
+            .map_err(|error| AppError::GitHub(error.to_string()))?,
+        None => builder,
+    };
+    builder
         .build()
         .map_err(|error| AppError::GitHub(error.to_string()))
 }
@@ -787,4 +801,3 @@ impl GitHubIssueLifecycleClient for super::super::tests::FakeGitHubClient {
 
 #[cfg(test)]
 mod tests;
-use std::ops::Deref;

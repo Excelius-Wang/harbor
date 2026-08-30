@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
-    net::TcpListener,
+    net::{TcpListener, TcpStream},
 };
 
 use super::*;
@@ -10,6 +10,45 @@ use super::*;
 struct MockResponse {
     status: &'static str,
     body: String,
+}
+
+async fn read_request(stream: &mut TcpStream) -> String {
+    let mut buffer = Vec::new();
+    loop {
+        let mut chunk = [0_u8; 1024];
+        let read = stream.read(&mut chunk).await.expect("mock read");
+        if read == 0 {
+            break;
+        }
+        buffer.extend_from_slice(&chunk[..read]);
+        if let Some(header_end) = buffer.windows(4).position(|part| part == b"\r\n\r\n") {
+            let headers = String::from_utf8_lossy(&buffer[..header_end]);
+            let content_length = headers.lines().find_map(|line| {
+                line.split_once(':').and_then(|(name, value)| {
+                    name.eq_ignore_ascii_case("content-length")
+                        .then(|| value.trim().parse::<usize>().ok())
+                        .flatten()
+                })
+            });
+            if buffer.len() >= header_end + 4 + content_length.unwrap_or(0) {
+                break;
+            }
+        }
+    }
+    String::from_utf8(buffer).expect("request utf8")
+}
+
+async fn write_response(stream: &mut TcpStream, response: &MockResponse) {
+    let payload = format!(
+        "HTTP/1.1 {}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+        response.status,
+        response.body.len(),
+        response.body
+    );
+    stream
+        .write_all(payload.as_bytes())
+        .await
+        .expect("mock write");
 }
 
 async fn mock_github(
@@ -26,51 +65,55 @@ async fn mock_github(
     let server = tokio::spawn(async move {
         for response in responses {
             let (mut stream, _) = listener.accept().await.expect("mock accept");
-            let mut buffer = Vec::new();
-            loop {
-                let mut chunk = [0_u8; 1024];
-                let read = stream.read(&mut chunk).await.expect("mock read");
-                if read == 0 {
-                    break;
-                }
-                buffer.extend_from_slice(&chunk[..read]);
-                if let Some(header_end) = buffer.windows(4).position(|part| part == b"\r\n\r\n") {
-                    let headers = String::from_utf8_lossy(&buffer[..header_end]);
-                    let content_length = headers.lines().find_map(|line| {
-                        line.split_once(':').and_then(|(name, value)| {
-                            name.eq_ignore_ascii_case("content-length")
-                                .then(|| value.trim().parse::<usize>().ok())
-                                .flatten()
-                        })
-                    });
-                    if buffer.len() >= header_end + 4 + content_length.unwrap_or(0) {
-                        break;
-                    }
-                }
-            }
-            captured
-                .lock()
-                .expect("request lock")
-                .push(String::from_utf8(buffer).expect("request utf8"));
-            let payload = format!(
-                "HTTP/1.1 {}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-                response.status,
-                response.body.len(),
-                response.body
-            );
-            stream
-                .write_all(payload.as_bytes())
-                .await
-                .expect("mock write");
+            let request = read_request(&mut stream).await;
+            captured.lock().expect("request lock").push(request);
+            write_response(&mut stream, &response).await;
         }
     });
-    let client = octocrab::Octocrab::builder()
-        .add_retry_config(octocrab::service::middleware::retry::RetryConfig::None)
-        .base_uri(format!("http://{address}"))
-        .expect("mock base uri")
-        .personal_token("github-user-access-token".to_string())
-        .build()
-        .expect("mock client");
+    let base_uri = format!("http://{address}");
+    let client =
+        build_issue_state_client("github-user-access-token", Some(&base_uri)).expect("mock client");
+    (client, requests, server)
+}
+
+async fn retry_probe_github() -> (
+    octocrab::Octocrab,
+    Arc<Mutex<Vec<String>>>,
+    tokio::task::JoinHandle<()>,
+) {
+    let listener = TcpListener::bind("127.0.0.1:0").await.expect("mock bind");
+    let address = listener.local_addr().expect("mock address");
+    let requests = Arc::new(Mutex::new(Vec::new()));
+    let captured = Arc::clone(&requests);
+    let server = tokio::spawn(async move {
+        loop {
+            let (mut stream, _) = listener.accept().await.expect("mock accept");
+            let request = read_request(&mut stream).await;
+            let request_number = {
+                let mut requests = captured.lock().expect("request lock");
+                requests.push(request);
+                requests.len()
+            };
+            let response = match request_number {
+                1 => response(
+                    "200 OK",
+                    issue_json("open", None, "2026-08-30T08:00:00Z", false),
+                ),
+                2 => response(
+                    "200 OK",
+                    capability_json("OPEN", None, "2026-08-30T08:00:00Z", true, false),
+                ),
+                _ => response(
+                    "503 Service Unavailable",
+                    serde_json::json!({"message": "temporary failure"}).to_string(),
+                ),
+            };
+            write_response(&mut stream, &response).await;
+        }
+    });
+    let base_uri = format!("http://{address}");
+    let client = build_issue_state_client("github-user-access-token", Some(&base_uri))
+        .expect("retry probe client");
     (client, requests, server)
 }
 
@@ -291,6 +334,88 @@ fn malformed_or_cross_repository_capabilities_are_rejected() {
         .expect("repository")
         .name_with_owner = "octocat/other".to_string();
     assert!(capability_from_graphql(wrong_repository, "octocat", "hello-world", 7).is_err());
+
+    let null_issue: IssueStateCapabilitiesQuery = serde_json::from_value(serde_json::json!({
+        "repository": {
+            "id": "R_1",
+            "nameWithOwner": "octocat/hello-world",
+            "issue": null
+        }
+    }))
+    .expect("null Issue fixture");
+    assert!(capability_from_graphql(null_issue, "octocat", "hello-world", 7).is_err());
+}
+
+#[test]
+fn rest_preflight_rejects_every_stale_identity_and_revision_guard() {
+    for case in [
+        "state reason",
+        "updated timestamp",
+        "numeric id",
+        "node id",
+        "number",
+    ] {
+        let issue = rest_issue_from_slice(
+            issue_json("open", None, "2026-08-30T08:00:00Z", false).as_bytes(),
+        )
+        .expect("Issue fixture");
+        let mut expected = mutation(
+            GitHubIssueState::Open,
+            None,
+            GitHubIssueState::Closed,
+            Some(GitHubIssueCloseReason::Completed),
+        )
+        .expected;
+        let requested_number = match case {
+            "state reason" => {
+                expected.state_reason = Some(GitHubIssueStateReason::new("completed"));
+                7
+            }
+            "updated timestamp" => {
+                expected.updated_at = "2026-08-30T08:00:01Z".to_string();
+                7
+            }
+            "numeric id" => {
+                expected.issue_id = 8;
+                7
+            }
+            "node id" => {
+                expected.issue_node_id = "I_8".to_string();
+                7
+            }
+            "number" => 8,
+            _ => unreachable!(),
+        };
+
+        assert!(
+            matches!(
+                ensure_rest_preflight(
+                    &issue,
+                    "octocat",
+                    "hello-world",
+                    requested_number,
+                    &expected
+                ),
+                Err(AppError::GitHubIssueStateConflict(_))
+            ),
+            "{case} must stop before the write"
+        );
+    }
+}
+
+#[test]
+fn malformed_rest_identity_is_not_accepted_as_an_issue() {
+    for field in ["id", "node_id", "number", "url"] {
+        let mut value: serde_json::Value =
+            serde_json::from_str(&issue_json("open", None, "2026-08-30T08:00:00Z", false))
+                .expect("Issue fixture");
+        value[field] = serde_json::Value::Null;
+
+        assert!(
+            rest_issue_from_value(value).is_err(),
+            "null {field} must fail"
+        );
+    }
 }
 
 #[tokio::test]
@@ -394,6 +519,44 @@ async fn close_as_completed_runs_the_full_read_capability_write_postflight_seque
         serde_json::json!({"state": "closed", "state_reason": "completed"})
     );
     assert_rest_request(&requests[3], "GET");
+}
+
+#[tokio::test]
+async fn mismatched_patch_response_stops_before_postflight() {
+    let (client, requests, server) = mock_github(vec![
+        response(
+            "200 OK",
+            issue_json("open", None, "2026-08-30T08:00:00Z", false),
+        ),
+        response(
+            "200 OK",
+            capability_json("OPEN", None, "2026-08-30T08:00:00Z", true, false),
+        ),
+        response(
+            "200 OK",
+            issue_json("closed", Some("not_planned"), "2026-08-30T08:01:00Z", false),
+        ),
+    ])
+    .await;
+
+    let error = update_issue_state_with_client(
+        &client,
+        "octocat",
+        "hello-world",
+        7,
+        &mutation(
+            GitHubIssueState::Open,
+            None,
+            GitHubIssueState::Closed,
+            Some(GitHubIssueCloseReason::Completed),
+        ),
+    )
+    .await
+    .expect_err("mismatched PATCH response");
+    server.await.expect("mock server");
+
+    assert!(matches!(error, AppError::GitHubIssueStateConflict(_)));
+    assert_eq!(requests.lock().expect("requests").len(), 3);
 }
 
 #[tokio::test]
@@ -650,4 +813,36 @@ async fn documented_write_statuses_keep_stable_error_categories() {
             "{status} mapped to {error:?}"
         );
     }
+}
+
+#[tokio::test]
+async fn production_issue_state_client_never_retries_a_failed_patch() {
+    let (client, requests, server) = retry_probe_github().await;
+
+    let error = update_issue_state_with_client(
+        &client,
+        "octocat",
+        "hello-world",
+        7,
+        &mutation(
+            GitHubIssueState::Open,
+            None,
+            GitHubIssueState::Closed,
+            Some(GitHubIssueCloseReason::Completed),
+        ),
+    )
+    .await
+    .expect_err("503 must fail without retrying the write");
+
+    server.abort();
+    let requests = requests.lock().expect("requests");
+    assert!(matches!(error, AppError::GitHub(_)));
+    assert_eq!(requests.len(), 3);
+    assert_eq!(
+        requests
+            .iter()
+            .filter(|request| request.starts_with("PATCH "))
+            .count(),
+        1
+    );
 }

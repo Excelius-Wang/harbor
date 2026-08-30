@@ -118,40 +118,44 @@ export function GitHubIssueComposer({
       ? t("workspace.repositories.issueWritePermissionDenied")
       : commentError.message
     : null;
+  const stateErrorMessage = stateError
+    ? stateError.code === "githubPermission"
+      ? t("workspace.repositories.issueWritePermissionDenied")
+      : stateError.code === "githubIssueStateConflict"
+        ? t("workspace.repositories.issueStateChanged")
+        : stateError.code === "githubIssueMoved"
+          ? t("workspace.repositories.issueMoved")
+          : stateError.message
+    : null;
   const retryStateRead = () => void refreshIssueState();
-  const stateNotice = stateError ? (
-    <Alert variant="destructive" className="py-2.5 text-xs">
-      <CircleAlert />
-      <AlertTitle>{t("workspace.repositories.issueStateChangeFailed")}</AlertTitle>
-      <AlertDescription>
-        {stateError.code === "githubPermission"
-          ? t("workspace.repositories.issueWritePermissionDenied")
-          : stateError.code === "githubIssueStateConflict"
-            ? t("workspace.repositories.issueStateChanged")
-            : stateError.code === "githubIssueMoved"
-              ? t("workspace.repositories.issueMoved")
-              : stateError.message}
-      </AlertDescription>
-    </Alert>
-  ) : capabilityError || (capabilities && !capabilityMatches) ? (
-    <Alert variant="destructive" className="py-2.5 text-xs">
-      <CircleAlert />
-      <AlertTitle>{t("workspace.repositories.issueActionsLoadFailed")}</AlertTitle>
-      <AlertDescription className="flex flex-wrap items-center gap-2">
-        <span>{capabilityError?.message ?? t("workspace.repositories.issueStateChanged")}</span>
-        <Button type="button" variant="outline" size="xs" onClick={retryStateRead}>
-          <RefreshCw data-icon="inline-start" />
-          {t("workspace.repositories.retry")}
-        </Button>
-      </AlertDescription>
-    </Alert>
-  ) : capabilities && !viewerCanChange ? (
-    <Alert className="py-2.5 text-xs">
-      <CircleAlert />
-      <AlertTitle>{t("workspace.repositories.issueStateUnavailable")}</AlertTitle>
-      <AlertDescription>{t("workspace.repositories.issueWritePermissionDenied")}</AlertDescription>
-    </Alert>
-  ) : null;
+  const stateNotice =
+    capabilityError || (capabilities && !capabilityMatches) ? (
+      <Alert variant="destructive" className="py-2.5 text-xs">
+        <CircleAlert />
+        <AlertTitle>{t("workspace.repositories.issueActionsLoadFailed")}</AlertTitle>
+        <AlertDescription className="flex flex-wrap items-center gap-2">
+          <span>{capabilityError?.message ?? t("workspace.repositories.issueStateChanged")}</span>
+          <Button type="button" variant="outline" size="xs" onClick={retryStateRead}>
+            <RefreshCw data-icon="inline-start" />
+            {t("workspace.repositories.retry")}
+          </Button>
+        </AlertDescription>
+      </Alert>
+    ) : stateError ? (
+      <Alert variant="destructive" className="py-2.5 text-xs">
+        <CircleAlert />
+        <AlertTitle>{t("workspace.repositories.issueStateChangeFailed")}</AlertTitle>
+        <AlertDescription>{stateErrorMessage}</AlertDescription>
+      </Alert>
+    ) : capabilities && !viewerCanChange ? (
+      <Alert className="py-2.5 text-xs">
+        <CircleAlert />
+        <AlertTitle>{t("workspace.repositories.issueStateUnavailable")}</AlertTitle>
+        <AlertDescription>
+          {t("workspace.repositories.issueWritePermissionDenied")}
+        </AlertDescription>
+      </Alert>
+    ) : null;
   return (
     <GitHubCommentForm
       repository={repository}

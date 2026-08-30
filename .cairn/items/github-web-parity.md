@@ -24,9 +24,11 @@ module, a small state-control component, and a separate query helper; tests rema
 
 The first independent Standards and Spec reviews found checkpoint, translation-hook, tooltip,
 capability-refresh, forward-compatibility, moved-resource, destination-cache, copy, and test-matrix
-gaps. Those findings are fixed. Exact-head full verification now passes 49 frontend files and 261
-tests, 394 Rust tests with two intentional external-service ignores, cargo check, rustfmt, and
-Clippy with exactly the 15 existing warnings. The focused diff also passes `git diff --check`.
+gaps. Those findings are fixed. A second exact-head review found production retry, combined-error
+recovery, bounded cache-ordering, and remaining matrix gaps; those are also fixed. Full verification
+now passes 49 frontend files and 264 tests, 398 Rust tests with two intentional external-service
+ignores, cargo check, rustfmt, and Clippy with exactly the 15 existing warnings. The focused diff
+also passes `git diff --check`.
 
 The original worktree remains on local recovery branch
 `checkpoint/github-actions-administration-20260830` at `7e2084f` with only its separate Cairn item
@@ -40,8 +42,8 @@ refresh tokens, or Keychain contents.
 
 ## Next action
 
-Commit and push the verified PR #20 review fixes, then request independent Standards and Spec
-re-reviews on the exact pushed head. If both report no unresolved findings, mark the PR Ready,
+Commit and push the final verified PR #20 review fixes, then request independent Standards and Spec
+re-reviews on the replacement exact head. If both report no unresolved findings, mark the PR Ready,
 squash merge, verify merged `main`, and delete the feature branch.
 
 ## Verification
