@@ -1417,6 +1417,14 @@ export type GitHubIssueInboxPage = {
   hasMore: boolean;
 };
 
+export type GitHubIssueRelationshipsPage = {
+  parent?: GitHubIssueSummary | null;
+  subIssues: GitHubIssueSummary[];
+  page: number;
+  hasPrevious: boolean;
+  hasMore: boolean;
+};
+
 export type GitHubIssueTimelineItem = {
   id: string;
   reactionSubject?: GitHubReactionSubjectRef;

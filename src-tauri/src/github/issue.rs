@@ -939,12 +939,19 @@ fn issue_from_octocrab(issue: octocrab::models::issues::Issue) -> GitHubIssue {
 pub(super) fn issue_summary_from_search_value(
     value: serde_json::Value,
 ) -> Result<GitHubIssueSummary, AppError> {
+    issue_summary_from_rest_value(value, "GitHub search returned")
+}
+
+pub(super) fn issue_summary_from_rest_value(
+    value: serde_json::Value,
+    source: &str,
+) -> Result<GitHubIssueSummary, AppError> {
     let (owner, name) = repository_coordinates_from_search_value(&value, "issue")?;
     let issue = lifecycle::rest_issue_from_value(value)?;
     if issue.issue.pull_request.is_some() {
-        return Err(AppError::GitHub(
-            "GitHub search returned a pull request in the issue inbox".to_string(),
-        ));
+        return Err(AppError::GitHub(format!(
+            "{source} a pull request where Harbor expected an Issue"
+        )));
     }
 
     Ok(GitHubIssueSummary {

@@ -22,6 +22,12 @@ import type { GitHubIssue, GitHubRepositoryContentContext } from "./github-data"
 import { GitHubCommentForm } from "./github-comment-form";
 import { GitHubIssueEditDialog } from "./github-issue-edit-dialog";
 import { GitHubIssueMetadata } from "./github-issue-metadata";
+import {
+  issueDetailLocation,
+  popIssueDetailLocation,
+  pushIssueDetailLocation,
+} from "./github-issue-detail-navigation";
+import { GitHubIssueRelationships } from "./github-issue-relationships";
 import { GitHubIssueStateAction } from "./github-issue-state-action";
 import {
   createRepositoryIssueComment,
@@ -193,16 +199,18 @@ export function GitHubIssueComposer({
   );
 }
 
-export function GitHubIssueDetail({
+function GitHubIssueDetailScreen({
   repository,
   issueNumber,
   onBack,
   backLabel,
+  onNavigate,
 }: {
   repository: GitHubRepositoryContentContext;
   issueNumber: number;
   onBack: () => void;
   backLabel?: string;
+  onNavigate: (repository: GitHubRepositoryContentContext, issueNumber: number) => void;
 }) {
   const { t, i18n } = useTranslation();
   const [timelinePage, setTimelinePage] = useState(1);
@@ -312,6 +320,13 @@ export function GitHubIssueDetail({
                     repository: repository.name,
                     issueNumber: detail.issue.number,
                   }}
+                  afterIssue={
+                    <GitHubIssueRelationships
+                      repository={repository}
+                      issueNumber={detail.issue.number}
+                      onNavigate={(summary) => onNavigate(summary.repository, summary.issue.number)}
+                    />
+                  }
                 />
                 <GitHubIssueComposer
                   issue={detail.issue}
@@ -337,5 +352,57 @@ export function GitHubIssueDetail({
         />
       ) : null}
     </div>
+  );
+}
+
+export function GitHubIssueDetail({
+  repository,
+  issueNumber,
+  onBack,
+  backLabel,
+}: {
+  repository: GitHubRepositoryContentContext;
+  issueNumber: number;
+  onBack: () => void;
+  backLabel?: string;
+}) {
+  const { t } = useAppTranslation();
+  const root = issueDetailLocation(repository, issueNumber);
+  const rootKey = `${repository.owner.toLowerCase()}/${repository.name.toLowerCase()}#${issueNumber}`;
+  const [navigation, setNavigation] = useState({ rootKey, history: [root] });
+  const history = navigation.rootKey === rootKey ? navigation.history : [root];
+  const current = history[history.length - 1] ?? root;
+  const currentKey = `${current.repository.owner.toLowerCase()}/${current.repository.name.toLowerCase()}#${current.issueNumber}`;
+
+  const navigate = (nextRepository: GitHubRepositoryContentContext, nextIssueNumber: number) => {
+    const next = issueDetailLocation(nextRepository, nextIssueNumber);
+    setNavigation((currentNavigation) => {
+      const currentHistory =
+        currentNavigation.rootKey === rootKey ? currentNavigation.history : [root];
+      return { rootKey, history: pushIssueDetailLocation(currentHistory, next) };
+    });
+  };
+  const goBack = () => {
+    if (history.length === 1) {
+      onBack();
+      return;
+    }
+    setNavigation((currentNavigation) => ({
+      rootKey,
+      history: popIssueDetailLocation(
+        currentNavigation.rootKey === rootKey ? currentNavigation.history : [root]
+      ),
+    }));
+  };
+
+  return (
+    <GitHubIssueDetailScreen
+      key={currentKey}
+      repository={current.repository}
+      issueNumber={current.issueNumber}
+      onBack={goBack}
+      backLabel={history.length > 1 ? t("workspace.repositories.backToPreviousIssue") : backLabel}
+      onNavigate={navigate}
+    />
   );
 }

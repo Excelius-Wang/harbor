@@ -229,6 +229,7 @@ export function GitHubIssueTimeline({
   onPageChange,
   commentTarget,
   emptyBody,
+  afterIssue,
 }: {
   issue: Pick<
     GitHubIssue | GitHubPullRequest,
@@ -243,6 +244,7 @@ export function GitHubIssueTimeline({
   onPageChange: (page: number) => void;
   commentTarget: GitHubConversationCommentTarget;
   emptyBody?: string;
+  afterIssue?: ReactNode;
 }) {
   const { t } = useTranslation();
   const emptyBodyText = emptyBody ?? t("workspace.repositories.noIssueBody");
@@ -266,6 +268,7 @@ export function GitHubIssueTimeline({
             reactionSubject={issue.reactionSubject}
           />
         </div>
+        {afterIssue ? <div className="relative z-10 pl-10">{afterIssue}</div> : null}
         {timeline.map((item) =>
           item.kind === "comment" && item.actor && item.createdAt ? (
             <div key={item.id} className="relative z-10 pl-10">
