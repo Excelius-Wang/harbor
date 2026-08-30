@@ -502,6 +502,19 @@ fn mutation_guards_reject_stale_noop_and_ineligible_snapshots() {
         &revocation
     )
     .is_ok());
+
+    let acknowledged_strong_warning = GitHubPullRequestMaintainerEditabilityGuard {
+        expected_workflow_risk: GitHubPullRequestWorkflowRisk::Unknown,
+        ..guard()
+    };
+    assert!(ensure_preflight(
+        &snapshot(),
+        1,
+        GitHubPullRequestMaintainerEditabilityState::Available,
+        GitHubPullRequestWorkflowRisk::Present,
+        &acknowledged_strong_warning
+    )
+    .is_ok());
 }
 
 #[test]
@@ -674,6 +687,34 @@ async fn disabling_skips_workflow_scans_but_keeps_identity_and_postflight_guards
     assert!(requests
         .iter()
         .all(|request| !request.contains("contents/.github/workflows")));
+
+    let reenabling = GitHubPullRequestMaintainerEditabilityGuard {
+        expected_workflow_risk: status.workflow_risk,
+        ..guard()
+    };
+    let (client, _requests, server) = mock_github(vec![
+        ok(viewer_json("contributor", 1)),
+        ok(pull_request_json(false)),
+        ok(branch_json()),
+        ok(workflows_json()),
+        ok(pull_request_json(true)),
+        ok(pull_request_json(true)),
+        ok(branch_json()),
+        ok(workflows_json()),
+    ])
+    .await;
+    let status = update_pull_request_maintainer_editability_with_client(
+        &client,
+        "octocat",
+        "hello-world",
+        12,
+        &reenabling,
+    )
+    .await
+    .expect("re-enabled after revocation");
+    server.await.expect("mock server");
+    assert!(status.current_value);
+    assert_eq!(status.workflow_risk, GitHubPullRequestWorkflowRisk::Present);
 }
 
 #[tokio::test]

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CircleAlert, RefreshCw, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
@@ -28,6 +28,33 @@ const HIDDEN_STATES: GitHubPullRequestMaintainerEditability["state"][] = [
   "organizationFork",
   "closed",
 ];
+
+function MaintainerEditabilityLoadError({
+  message,
+  className,
+  onRetry,
+}: {
+  message: string;
+  className: string;
+  onRetry: () => void;
+}) {
+  const { t } = useAppTranslation();
+  return (
+    <Alert variant="destructive" className={className}>
+      <CircleAlert />
+      <AlertTitle>
+        {t("workspace.repositories.pullRequestMaintainerEditabilityLoadFailed")}
+      </AlertTitle>
+      <AlertDescription className="flex flex-col items-start gap-2">
+        <span>{message}</span>
+        <Button type="button" variant="outline" size="xs" onClick={onRetry}>
+          <RefreshCw data-icon="inline-start" />
+          {t("workspace.repositories.retry")}
+        </Button>
+      </AlertDescription>
+    </Alert>
+  );
+}
 
 export function shouldShowPullRequestMaintainerEditability(
   status: GitHubPullRequestMaintainerEditability
@@ -93,6 +120,28 @@ export function GitHubPullRequestMaintainerEditability({
       );
     },
   });
+  const mutationRequestedValue = mutation.variables;
+  const mutationIsError = mutation.isError;
+  const resetMutation = mutation.reset;
+  const confirmedCurrentValue = result.data?.currentValue;
+  useEffect(() => {
+    if (
+      mutationIsError &&
+      !result.isFetching &&
+      !result.error &&
+      mutationRequestedValue !== undefined &&
+      confirmedCurrentValue === mutationRequestedValue
+    ) {
+      resetMutation();
+    }
+  }, [
+    confirmedCurrentValue,
+    mutationIsError,
+    mutationRequestedValue,
+    resetMutation,
+    result.error,
+    result.isFetching,
+  ]);
 
   if (!canCheck) return null;
 
@@ -120,19 +169,11 @@ export function GitHubPullRequestMaintainerEditability({
     return (
       <>
         <Separator />
-        <Alert variant="destructive" className="py-2.5 text-xs">
-          <CircleAlert />
-          <AlertTitle>
-            {t("workspace.repositories.pullRequestMaintainerEditabilityLoadFailed")}
-          </AlertTitle>
-          <AlertDescription className="flex flex-col items-start gap-2">
-            <span>{error.message}</span>
-            <Button type="button" variant="outline" size="xs" onClick={() => void result.refetch()}>
-              <RefreshCw data-icon="inline-start" />
-              {t("workspace.repositories.retry")}
-            </Button>
-          </AlertDescription>
-        </Alert>
+        <MaintainerEditabilityLoadError
+          message={error.message}
+          className="py-2.5 text-xs"
+          onRetry={() => void result.refetch()}
+        />
       </>
     );
   }
@@ -231,24 +272,11 @@ export function GitHubPullRequestMaintainerEditability({
           </p>
         ) : null}
         {refreshError ? (
-          <Alert variant="destructive" className="py-2.5 text-[11px]">
-            <CircleAlert />
-            <AlertTitle>
-              {t("workspace.repositories.pullRequestMaintainerEditabilityLoadFailed")}
-            </AlertTitle>
-            <AlertDescription className="flex flex-col items-start gap-2">
-              <span>{refreshError.message}</span>
-              <Button
-                type="button"
-                variant="outline"
-                size="xs"
-                onClick={() => void result.refetch()}
-              >
-                <RefreshCw data-icon="inline-start" />
-                {t("workspace.repositories.retry")}
-              </Button>
-            </AlertDescription>
-          </Alert>
+          <MaintainerEditabilityLoadError
+            message={refreshError.message}
+            className="py-2.5 text-[11px]"
+            onRetry={() => void result.refetch()}
+          />
         ) : null}
         {mutation.isPending ? (
           <p role="status" className="text-muted-foreground flex items-center gap-1.5 text-[11px]">

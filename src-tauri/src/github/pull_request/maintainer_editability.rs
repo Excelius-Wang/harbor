@@ -488,7 +488,8 @@ fn ensure_preflight(
         || head.id != guard.expected_head_repository_id
         || snapshot.head_ref != guard.expected_head_ref
         || snapshot.head_sha != guard.expected_head_sha
-        || (guard.requested_value && workflow_risk != guard.expected_workflow_risk)
+        || (guard.requested_value
+            && !workflow_risk_is_covered_by_warning(guard.expected_workflow_risk, workflow_risk))
         || snapshot.current_value == guard.requested_value
     {
         return Err(editability_conflict(
@@ -496,6 +497,14 @@ fn ensure_preflight(
         ));
     }
     Ok(())
+}
+
+fn workflow_risk_is_covered_by_warning(
+    expected: GitHubPullRequestWorkflowRisk,
+    actual: GitHubPullRequestWorkflowRisk,
+) -> bool {
+    expected != GitHubPullRequestWorkflowRisk::Absent
+        || actual == GitHubPullRequestWorkflowRisk::Absent
 }
 
 fn ensure_updated(

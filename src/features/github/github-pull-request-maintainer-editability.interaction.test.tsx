@@ -118,6 +118,34 @@ describe("pull request maintainer editability", () => {
     );
   });
 
+  it("announces initial loading and the stronger unknown-workflow warning", async () => {
+    const pendingStatus = new Promise(() => undefined);
+    vi.mocked(invoke).mockReturnValueOnce(pendingStatus);
+    const loadingClient = createQueryClient();
+    const loadingView = renderSetting(loadingClient);
+    expect(
+      screen.getByRole("status", {
+        name: "workspace.repositories.loadingPullRequestMaintainerEditability",
+      })
+    ).toBeDefined();
+    loadingView.unmount();
+    loadingClient.clear();
+
+    vi.mocked(invoke).mockResolvedValueOnce(status({ workflowRisk: "unknown" }));
+    const warningClient = createQueryClient();
+    const warningView = renderSetting(warningClient);
+    const checkbox = await screen.findByRole("checkbox", {
+      name: "workspace.repositories.allowMaintainerEditsWithSecrets",
+    });
+    expect(checkbox.getAttribute("aria-describedby")).toContain("warning");
+    expect(
+      screen.getByText("workspace.repositories.pullRequestMaintainerWorkflowUnknownWarning")
+    ).toBeDefined();
+    expect(screen.getByRole("alert")).toBeDefined();
+    warningView.unmount();
+    warningClient.clear();
+  });
+
   it("warns about workflows and locks the checkbox while a keyboard update is pending", async () => {
     const pendingMutation = new Promise(() => undefined);
     vi.mocked(invoke).mockResolvedValueOnce(status()).mockReturnValueOnce(pendingMutation);
@@ -173,6 +201,7 @@ describe("pull request maintainer editability", () => {
     const view = renderSetting(client);
 
     expect(await screen.findByText(/network unavailable/)).toBeDefined();
+    expect(screen.getByRole("alert")).toBeDefined();
     await user.click(screen.getByRole("button", { name: "workspace.repositories.retry" }));
 
     expect(
@@ -265,6 +294,34 @@ describe("pull request maintainer editability", () => {
     expect(
       screen.getByText("workspace.repositories.refreshingPullRequestMaintainerEditability")
     ).toBeDefined();
+    view.unmount();
+    client.clear();
+  });
+
+  it("clears an ambiguous error when the authoritative refresh confirms the write", async () => {
+    vi.mocked(invoke)
+      .mockResolvedValueOnce(status({ workflowRisk: "absent" }))
+      .mockRejectedValueOnce({ code: "github", message: "transport interrupted" })
+      .mockResolvedValueOnce(
+        status({
+          workflowRisk: "absent",
+          currentValue: true,
+          pullRequest: { ...pullRequest, maintainerCanModify: true },
+        })
+      );
+    const client = createQueryClient();
+    const user = userEvent.setup();
+    const view = renderSetting(client);
+    const checkbox = await screen.findByRole("checkbox", {
+      name: "workspace.repositories.allowMaintainerEdits",
+    });
+
+    await user.click(checkbox);
+
+    await waitFor(() => expect(checkbox.getAttribute("aria-checked")).toBe("true"));
+    await waitFor(() => expect(screen.queryByText("transport interrupted")).toBeNull());
+    expect(screen.queryByRole("button", { name: "workspace.repositories.retry" })).toBeNull();
+    expect(invoke).toHaveBeenCalledTimes(3);
     view.unmount();
     client.clear();
   });

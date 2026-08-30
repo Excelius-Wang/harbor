@@ -364,8 +364,26 @@ describe("GitHub pull request mutations", () => {
     const queryClient = createQueryClient();
     const detailKey = githubQueryKeys.pullRequestDetail({ ...target, timelinePage: 1 });
     const statusKey = githubQueryKeys.pullRequestMaintainerEditability(target);
+    const repositoryKey = githubQueryKeys.pullRequests({
+      owner: target.owner,
+      repository: target.repository,
+      state: "open",
+      query: "",
+      label: "",
+      sort: "updated",
+      page: 1,
+    });
+    const inboxKey = githubQueryKeys.pullRequestInbox({
+      scope: "authored",
+      state: "open",
+      query: "",
+      sort: "updated",
+      page: 1,
+    });
     queryClient.setQueryData(detailKey, detailPage());
     queryClient.setQueryData(statusKey, maintainerEditability);
+    queryClient.setQueryData(repositoryKey, listPage());
+    queryClient.setQueryData(inboxKey, listPage());
     const updated = {
       ...maintainerEditability,
       currentValue: true,
@@ -382,6 +400,8 @@ describe("GitHub pull request mutations", () => {
     ).toBe(true);
     expect(queryClient.getQueryState(detailKey)?.isInvalidated).toBe(true);
     expect(queryClient.getQueryState(statusKey)?.isInvalidated).toBe(false);
+    expect(queryClient.getQueryState(repositoryKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(inboxKey)?.isInvalidated).toBe(true);
 
     await invalidatePullRequestAfterMaintainerEditability(queryClient, target, true);
     expect(queryClient.getQueryState(statusKey)?.isInvalidated).toBe(true);
