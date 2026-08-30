@@ -116,6 +116,9 @@ pub use pull_request::creation::GitHubPullRequestComparison;
 pub use pull_request::file_view_state::{
     GitHubPullRequestFileViewState, GitHubPullRequestFileViewStateSnapshot,
 };
+pub use pull_request::maintainer_editability::{
+    GitHubPullRequestMaintainerEditability, GitHubPullRequestMaintainerEditabilityGuard,
+};
 #[cfg(test)]
 use pull_request::merge_queue::GitHubPullRequestMergeQueueState;
 pub use pull_request::merge_queue::GitHubPullRequestMergeQueueStatus;
@@ -317,6 +320,7 @@ pub struct GitHubPullRequest {
     pub merged: bool,
     pub mergeable: Option<bool>,
     pub mergeable_state: Option<String>,
+    pub maintainer_can_modify: Option<bool>,
     pub author: String,
     pub author_avatar_url: Option<String>,
     pub author_association: Option<String>,
@@ -640,6 +644,7 @@ pub(crate) trait GitHubClient:
     + projects::GitHubProjectsClient
     + pull_request::auto_merge::GitHubPullRequestAutoMergeClient
     + pull_request::base_edit::GitHubPullRequestBaseEditClient
+    + pull_request::maintainer_editability::GitHubPullRequestMaintainerEditabilityClient
     + pull_request::GitHubPullRequestMutationClient
     + pull_request::creation::GitHubPullRequestCreationClient
     + pull_request::file_view_state::GitHubPullRequestFileViewStateClient
@@ -1949,6 +1954,7 @@ fn pull_request_from_octocrab(
             .mergeable_state
             .as_ref()
             .and_then(serialized_enum_name),
+        maintainer_can_modify: pull_request.maintainer_can_modify,
         author: author
             .map(|author| author.login.clone())
             .unwrap_or_else(|| "ghost".to_string()),
@@ -2399,6 +2405,7 @@ mod tests {
                     merged: false,
                     mergeable: Some(true),
                     mergeable_state: Some("clean".to_string()),
+                    maintainer_can_modify: Some(false),
                     author: "octocat".to_string(),
                     author_avatar_url: Some("https://github.com/octocat.png".to_string()),
                     author_association: Some("owner".to_string()),

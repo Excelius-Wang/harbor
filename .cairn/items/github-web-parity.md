@@ -46,51 +46,39 @@ reviewed tree completed with exactly the 15 pre-existing warnings and no warning
 The original worktree remains on local recovery branch
 `checkpoint/github-actions-administration-20260830` at `7e2084f` with only its older Cairn item
 unstaged; no source work remains there. The clean development worktree is now
-`/private/tmp/harbor-pr-base-edit-20260830` on `feat/github-pull-request-base-edit`, based on merged
-`main`.
+`/private/tmp/harbor-pr-maintainer-editability-20260830` on
+`feat/github-pull-request-maintainer-editability`, based on merged `main` at `f6e5b99`.
 
-The pull-request base-edit slice is implemented against the primary-source contract recorded in
-`docs/GITHUB_PULL_REQUEST_BASE_EDIT_RESEARCH.md`. It lists every branch page from the current base
-repository and applies snapshot guards to the current base name/OID, head OID, target name, and
-target OID. The backend preflights the PR and target branch, PATCHes only the `base` field, then
-postflights both resources before returning verified state. Open drafts are supported; closed,
-merged, no-op, stale, cross-scope, malformed, missing, and unprocessable states remain focused
-refreshable conflicts while shared permission and rate-limit categories are preserved.
+[PR #16](https://github.com/Excelius-Wang/harbor/pull/16) was squash-merged to `main` as
+`f6e5b99b2749bb8b87319ec57752bc2e2fbf2a7f`, and its remote feature branch was deleted. The merged
+slice adds native pull-request base editing with complete automatic branch pagination, base/head/
+target OID guards, preflight/write/postflight verification, focused conflict mapping, broad cache
+refresh, the official impact warning, persistent current-base context, and English/Chinese UI.
+Real shadcn/Radix/cmdk keyboard, focus, retry, and pending-lock interactions are covered. Every
+initial Standards and Spec finding was fixed; final reviews at head `91d77e9` have no unresolved
+findings, and its tree exactly matches the squash merge.
 
-The pull-request header now opens an independent shadcn dialog with searchable, paged branch
-selection, current/protected labels, the official impact warning, explicit retry, and English and
-Chinese copy. There is no optimistic timeline or diff rewrite. Success and write-ambiguous failures
-refresh the complete PR root, checks, repository PR lists, and Inbox. Focused pagination, guard,
-transport, mutation-body, cache, eligibility, i18n, and error-category regressions are covered.
+[Draft PR #17](https://github.com/Excelius-Wang/harbor/pull/17) contains the focused
+maintainer-editability slice on `feat/github-pull-request-maintainer-editability`. Research,
+guarded Rust/Tauri support, and the PR-sidebar UI are separate logical commits; later focused fixes
+preserve postflight ambiguity, group IPC guards, and address every initial review finding. The
+slice uses the scoped REST PR GET/PATCH route with a boolean-only write,
+creator/personal-fork/live-head eligibility, full identity guards, exact-head workflow risk for
+enabling, and revocation that is not blocked by the optional workflow scan. The UI keeps production
+and tests in separate bounded files, preserves and locks cached values during refresh, offers retry
+paths, and synchronizes only affected PR caches. Initial Standards review reported two findings and
+Spec review reported five; the first re-reviews found two Standards and two Spec follow-ups. All
+eleven findings are fixed at source head `1c3cefd`, including disable-to-enable risk reconciliation,
+confirmed ambiguous writes, deduplicated error UI, and the remaining ARIA/cache coverage. `pnpm
+check` passes 39 files and 223 tests; Rust library tests pass 362 tests with two intentional ignores;
+`cargo check`, rustfmt, and `git diff --check` pass. Clippy reports exactly the 15 pre-existing
+warnings and none in this slice.
 
-Initial Standards review found duplicated initial/paged load-error UI. Initial Spec review found
-manual rather than complete branch pagination, incomplete conflict/no-op recovery, interactive
-controls left enabled while pending, and partial focused UI/transport coverage. All findings are
-fixed: one load-error component owns retry UI; every branch page loads automatically before the
-picker is enabled; explicit broad refresh and snapshot-revision resets prevent stale/no-op writes;
-pending state locks search, retries, selection, closing, and confirmation; and regression tests now
-cover paged branch transport, shared permission/rate categories, null mutation data,
-write-may-have-persisted postflight conflicts, automatic pagination, no-op confirmation, and
-rendered loading/error ARIA states.
-
-Post-fix verification passes `pnpm check` with 37 frontend files and 209 tests, and Rust library tests
-with 347 passing and two intentional ignores. `cargo check`, rustfmt, and `git diff --check` pass.
-Standards re-review has no unresolved findings. Spec re-review found that the current base disappeared
-behind complete-page loading/error panels and that actual keyboard, pending-lock, retry, and HTTP
-`404`/`422` transport interactions still lacked coverage. Both are fixed: a live current-base/range
-summary remains visible throughout loading and recovery, and a jsdom interaction suite drives the
-real component through keyboard-open, automatic pagination, keyboard selection, pending locks, and
-retry. Focused local HTTP tests now exercise both refreshable status codes.
-
-Final pre-review verification passes `pnpm check` with 38 frontend files and 211 tests, and Rust
-library tests with 348 passing and two intentional ignores. `cargo check`, rustfmt, and
-`git diff --check` pass. Clippy reports exactly the 15 pre-existing warnings and no warning in this
-slice. Final Spec review has no unresolved findings. Final Standards review found that the first
-interaction test replaced the shadcn/Radix Dialog and cmdk Command and therefore verified the test
-double's keyboard behavior instead of production primitives. The test now renders the real Dialog,
-Command, trigger `asChild`, keyboard selection, focus, pending controls, and retry path, with only
-missing jsdom browser APIs shimmed. The exact focused and full frontend suites pass. Maintainer
-editability remains a separate later slice.
+On merged `main`, `pnpm check` passes 38 frontend files and 211 tests. Rust library tests pass 348
+tests with two intentional ignores. `cargo check`, rustfmt, and `git diff --check` pass. Clippy
+reports exactly the 15 pre-existing warnings and no warning in the merged slice. The next focused PR
+control is author-controlled maintainer editability; it remains distinct from base editing and from
+organization administration.
 
 Harbor uses a classic OAuth App for scope-based personal workflows, rejects GitHub App client IDs
 and `ghu_` tokens, and honors GitHub's normalization of `read:packages` into `write:packages`.
@@ -100,8 +88,9 @@ refresh tokens, or Keychain contents.
 
 ## Next action
 
-Commit and push the real-primitive interaction test fix to Draft PR #16, then rerun parallel
-Standards and Spec reviews against the exact new head.
+Run final independent Standards and Spec re-reviews on the exact current head. If both report no
+unresolved findings, mark PR #17 Ready, squash-merge it, verify merged `main`, and delete the remote
+feature branch.
 
 ## Verification
 
@@ -112,5 +101,5 @@ diff against `origin/main`, then deliver it through a Draft PR, Ready state, squ
 verification, and remote branch deletion.
 
 Success: the focused PR is squash-merged with no unresolved Standards or Spec findings; remote
-`main` contains the verified pull-request base-edit slice; its remote feature branch is absent; the
-remaining personal GitHub Web gaps are recorded for the next independent slice.
+`main` contains the verified pull-request maintainer-editability slice; its remote feature branch is
+absent; the remaining personal GitHub Web gaps are recorded for the next independent slice.

@@ -42,31 +42,32 @@ use crate::{
         GitHubPullRequestCommitPage, GitHubPullRequestComparison, GitHubPullRequestDetailPage,
         GitHubPullRequestFilePage, GitHubPullRequestFileViewState,
         GitHubPullRequestFileViewStateSnapshot, GitHubPullRequestFilters,
-        GitHubPullRequestInboxFilters, GitHubPullRequestInboxScope, GitHubPullRequestMergeMethod,
-        GitHubPullRequestMergeQueueStatus, GitHubPullRequestPage, GitHubPullRequestReview,
-        GitHubPullRequestReviewAction, GitHubPullRequestReviewComment, GitHubPullRequestReviewPage,
-        GitHubPullRequestReviewTeamPage, GitHubPullRequestReviewThreadComment,
-        GitHubPullRequestReviewThreadPage, GitHubPullRequestReviewThreadResolution,
-        GitHubPullRequestReviewThreadState, GitHubPullRequestSort, GitHubPullRequestState,
-        GitHubReactionContent, GitHubReactionSubject, GitHubReactionSubjectRef,
-        GitHubReceivedRepositoryInvitationAction, GitHubReceivedRepositoryInvitationPage,
-        GitHubRelease, GitHubReleaseArchiveFormat, GitHubReleaseAsset, GitHubReleaseMutationInput,
-        GitHubReleasePage, GitHubRepositoryCollaboratorPage, GitHubRepositoryCommitPage,
-        GitHubRepositoryCreateInput, GitHubRepositoryCreationOptions, GitHubRepositoryFileCommit,
-        GitHubRepositoryFileMutation, GitHubRepositoryInsightsContributors,
-        GitHubRepositoryInsightsOverview, GitHubRepositoryInsightsTraffic,
-        GitHubRepositoryInvitationPage, GitHubRepositoryInviteResult, GitHubRepositoryPage,
-        GitHubRepositoryRelationship, GitHubRepositorySettings, GitHubRepositorySettingsUpdate,
-        GitHubRepositoryWatchLevel, GitHubSecretScanningLocationPage, GitHubSecurityAlertDetail,
-        GitHubSecurityAlertFilters, GitHubSecurityAlertKind, GitHubSecurityAlertMutation,
-        GitHubSecurityAlertPage, GitHubSecurityAlertSeverityFilter, GitHubSecurityAlertSort,
-        GitHubSecurityAlertStateFilter, GitHubStarredRepositoryPage, GitHubStarredRepositorySort,
-        GitHubTagPage, GitHubUserPage, GitHubUserProfile, GitHubUserProfileUpdate,
-        GitHubWikiComparison, GitHubWikiHistoryPage, GitHubWikiMutationResult, GitHubWikiOverview,
-        GitHubWikiPage, GitHubWikiPageMutationInput, GitHubWikiRevertInput, GitHubWikiRevision,
-        GitHubWikiSearchResult, GitHubWorkflow, GitHubWorkflowArtifactPage,
-        GitHubWorkflowDispatchConfig, GitHubWorkflowDispatchOptions, GitHubWorkflowJobLog,
-        GitHubWorkflowJobPage, GitHubWorkflowRun, GitHubWorkflowRunAction,
+        GitHubPullRequestInboxFilters, GitHubPullRequestInboxScope,
+        GitHubPullRequestMaintainerEditability, GitHubPullRequestMaintainerEditabilityGuard,
+        GitHubPullRequestMergeMethod, GitHubPullRequestMergeQueueStatus, GitHubPullRequestPage,
+        GitHubPullRequestReview, GitHubPullRequestReviewAction, GitHubPullRequestReviewComment,
+        GitHubPullRequestReviewPage, GitHubPullRequestReviewTeamPage,
+        GitHubPullRequestReviewThreadComment, GitHubPullRequestReviewThreadPage,
+        GitHubPullRequestReviewThreadResolution, GitHubPullRequestReviewThreadState,
+        GitHubPullRequestSort, GitHubPullRequestState, GitHubReactionContent,
+        GitHubReactionSubject, GitHubReactionSubjectRef, GitHubReceivedRepositoryInvitationAction,
+        GitHubReceivedRepositoryInvitationPage, GitHubRelease, GitHubReleaseArchiveFormat,
+        GitHubReleaseAsset, GitHubReleaseMutationInput, GitHubReleasePage,
+        GitHubRepositoryCollaboratorPage, GitHubRepositoryCommitPage, GitHubRepositoryCreateInput,
+        GitHubRepositoryCreationOptions, GitHubRepositoryFileCommit, GitHubRepositoryFileMutation,
+        GitHubRepositoryInsightsContributors, GitHubRepositoryInsightsOverview,
+        GitHubRepositoryInsightsTraffic, GitHubRepositoryInvitationPage,
+        GitHubRepositoryInviteResult, GitHubRepositoryPage, GitHubRepositoryRelationship,
+        GitHubRepositorySettings, GitHubRepositorySettingsUpdate, GitHubRepositoryWatchLevel,
+        GitHubSecretScanningLocationPage, GitHubSecurityAlertDetail, GitHubSecurityAlertFilters,
+        GitHubSecurityAlertKind, GitHubSecurityAlertMutation, GitHubSecurityAlertPage,
+        GitHubSecurityAlertSeverityFilter, GitHubSecurityAlertSort, GitHubSecurityAlertStateFilter,
+        GitHubStarredRepositoryPage, GitHubStarredRepositorySort, GitHubTagPage, GitHubUserPage,
+        GitHubUserProfile, GitHubUserProfileUpdate, GitHubWikiComparison, GitHubWikiHistoryPage,
+        GitHubWikiMutationResult, GitHubWikiOverview, GitHubWikiPage, GitHubWikiPageMutationInput,
+        GitHubWikiRevertInput, GitHubWikiRevision, GitHubWikiSearchResult, GitHubWorkflow,
+        GitHubWorkflowArtifactPage, GitHubWorkflowDispatchConfig, GitHubWorkflowDispatchOptions,
+        GitHubWorkflowJobLog, GitHubWorkflowJobPage, GitHubWorkflowRun, GitHubWorkflowRunAction,
         GitHubWorkflowRunDeletion, GitHubWorkflowRunFilterOptions, GitHubWorkflowRunFilters,
         GitHubWorkflowRunPage, GitHubWorkflowRunStatusFilter,
     },
@@ -1995,6 +1996,75 @@ pub async fn github_update_repository_pull_request_base(
     state
         .github
         .update_pull_request_base(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(pull_request_number, "pull request")?,
+            &guard,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_get_repository_pull_request_maintainer_editability(
+    owner: String,
+    repository: String,
+    pull_request_number: u64,
+    state: State<'_, AppState>,
+) -> Result<GitHubPullRequestMaintainerEditability, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .pull_request_maintainer_editability(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(pull_request_number, "pull request")?,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_update_repository_pull_request_maintainer_editability(
+    owner: String,
+    repository: String,
+    pull_request_number: u64,
+    guard: GitHubPullRequestMaintainerEditabilityGuard,
+    state: State<'_, AppState>,
+) -> Result<GitHubPullRequestMaintainerEditability, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    let GitHubPullRequestMaintainerEditabilityGuard {
+        expected_current_value,
+        expected_pull_request_id,
+        expected_pull_request_node_id,
+        expected_author_id,
+        expected_head_repository_id,
+        expected_head_ref,
+        expected_head_sha,
+        expected_workflow_risk,
+        requested_value,
+    } = guard;
+    let guard = GitHubPullRequestMaintainerEditabilityGuard {
+        expected_current_value,
+        expected_pull_request_id: validate_item_number(
+            expected_pull_request_id,
+            "pull request ID",
+        )?,
+        expected_pull_request_node_id: validate_graphql_node_id(
+            expected_pull_request_node_id,
+            "pull request",
+        )?,
+        expected_author_id: validate_item_number(expected_author_id, "pull request author")?,
+        expected_head_repository_id: validate_item_number(
+            expected_head_repository_id,
+            "head repository",
+        )?,
+        expected_head_ref: validate_reference(expected_head_ref)?,
+        expected_head_sha: validate_commit_id(expected_head_sha)?,
+        expected_workflow_risk,
+        requested_value,
+    };
+    state
+        .github
+        .update_pull_request_maintainer_editability(
             repository.owner(),
             repository.name(),
             validate_item_number(pull_request_number, "pull request")?,

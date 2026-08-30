@@ -66,6 +66,7 @@ import type {
   GitHubPullRequestFileViewStateSnapshot,
   GitHubPullRequestInboxScope,
   GitHubPullRequestMergeQueueStatus,
+  GitHubPullRequestMaintainerEditability,
   GitHubPullRequestPage,
   GitHubPullRequestReviewThreadPage,
   GitHubPullRequestReviewPage,
@@ -878,6 +879,20 @@ export const githubQueryKeys = {
       "pull-request",
       pullRequestNumber,
       "base-branches",
+    ] as const,
+  pullRequestMaintainerEditability: ({
+    owner,
+    repository,
+    pullRequestNumber,
+  }: GitHubPullRequestTarget) =>
+    [
+      "github",
+      "repository",
+      owner,
+      repository,
+      "pull-request",
+      pullRequestNumber,
+      "maintainer-editability",
     ] as const,
   pendingPullRequestReview: ({
     owner,
@@ -1929,6 +1944,18 @@ export function pullRequestBaseBranchesQueryOptions(target: GitHubPullRequestTar
       }),
     initialPageParam: 1,
     getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.page + 1 : undefined),
+    staleTime: GITHUB_QUERY_STALE_TIME,
+  });
+}
+
+export function pullRequestMaintainerEditabilityQueryOptions(target: GitHubPullRequestTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.pullRequestMaintainerEditability(target),
+    queryFn: () =>
+      invoke<GitHubPullRequestMaintainerEditability>(
+        "github_get_repository_pull_request_maintainer_editability",
+        target
+      ),
     staleTime: GITHUB_QUERY_STALE_TIME,
   });
 }
