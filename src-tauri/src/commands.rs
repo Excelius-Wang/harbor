@@ -24,16 +24,16 @@ use crate::{
         GitHubGistCommentPage, GitHubGistCreateInput, GitHubGistFileInput, GitHubGistFileMutation,
         GitHubGistPage, GitHubGistRevisionDetail, GitHubGistRevisionPage, GitHubGistSource,
         GitHubGistUpdateInput, GitHubInsightsTrafficPeriod, GitHubIssue, GitHubIssueAssigneePage,
-        GitHubIssueAssignment, GitHubIssueDetailPage, GitHubIssueFilters, GitHubIssueInboxFilters,
-        GitHubIssueInboxPage, GitHubIssueInboxScope, GitHubIssueLabel, GitHubIssueLabelMutation,
-        GitHubIssueLabelPage, GitHubIssueMilestone, GitHubIssueMilestoneMutation,
-        GitHubIssueMilestonePage, GitHubIssuePage, GitHubIssueRelationshipsPage, GitHubIssueSort,
-        GitHubIssueState, GitHubIssueStateCapabilities, GitHubIssueStateMutation,
-        GitHubIssueTimelineItem, GitHubLoginAvailability, GitHubNotificationAction,
-        GitHubNotificationPage, GitHubPackage, GitHubPackagePage, GitHubPackageType,
-        GitHubPackageVersionMutationInput, GitHubPackageVersionMutationResult,
-        GitHubPackageVersionPage, GitHubPackageVersionState, GitHubPackageVisibility,
-        GitHubPagesHealth, GitHubPagesMutation, GitHubPagesWorkspace,
+        GitHubIssueAssignment, GitHubIssueDependenciesPage, GitHubIssueDetailPage,
+        GitHubIssueFilters, GitHubIssueInboxFilters, GitHubIssueInboxPage, GitHubIssueInboxScope,
+        GitHubIssueLabel, GitHubIssueLabelMutation, GitHubIssueLabelPage, GitHubIssueMilestone,
+        GitHubIssueMilestoneMutation, GitHubIssueMilestonePage, GitHubIssuePage,
+        GitHubIssueRelationshipsPage, GitHubIssueSort, GitHubIssueState,
+        GitHubIssueStateCapabilities, GitHubIssueStateMutation, GitHubIssueTimelineItem,
+        GitHubLoginAvailability, GitHubNotificationAction, GitHubNotificationPage, GitHubPackage,
+        GitHubPackagePage, GitHubPackageType, GitHubPackageVersionMutationInput,
+        GitHubPackageVersionMutationResult, GitHubPackageVersionPage, GitHubPackageVersionState,
+        GitHubPackageVisibility, GitHubPagesHealth, GitHubPagesMutation, GitHubPagesWorkspace,
         GitHubPendingPullRequestReview, GitHubProfileActivityPage, GitHubProfileConnectionKind,
         GitHubProjectDetail, GitHubProjectFilters, GitHubProjectItem, GitHubProjectItemAction,
         GitHubProjectItemAddition, GitHubProjectItemFilters, GitHubProjectItemUpdate,
@@ -1633,6 +1633,26 @@ pub async fn github_get_repository_issue_relationships(
     state
         .github
         .issue_relationships(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(issue_number, "issue")?,
+            validate_page(page)?,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_get_repository_issue_dependencies(
+    owner: String,
+    repository: String,
+    issue_number: u64,
+    page: u32,
+    state: State<'_, AppState>,
+) -> Result<GitHubIssueDependenciesPage, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .issue_dependencies(
             repository.owner(),
             repository.name(),
             validate_item_number(issue_number, "issue")?,

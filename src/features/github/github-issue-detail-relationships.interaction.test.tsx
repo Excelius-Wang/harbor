@@ -93,6 +93,15 @@ beforeEach(() => {
         hasMore: false,
       });
     }
+    if (command === "github_get_repository_issue_dependencies") {
+      return Promise.resolve({
+        blockedBy: [],
+        blocking: [],
+        page: 1,
+        hasPrevious: false,
+        hasMore: false,
+      });
+    }
     return Promise.reject(new Error(`unexpected command ${command}`));
   });
 });

@@ -1425,6 +1425,14 @@ export type GitHubIssueRelationshipsPage = {
   hasMore: boolean;
 };
 
+export type GitHubIssueDependenciesPage = {
+  blockedBy: GitHubIssueSummary[];
+  blocking: GitHubIssueSummary[];
+  page: number;
+  hasPrevious: boolean;
+  hasMore: boolean;
+};
+
 export type GitHubIssueTimelineItem = {
   id: string;
   reactionSubject?: GitHubReactionSubjectRef;
