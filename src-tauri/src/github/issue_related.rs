@@ -4,6 +4,7 @@ use super::{
 };
 use crate::error::AppError;
 use octocrab::FromResponse;
+use serde::Serialize;
 
 pub(super) const RELATED_ISSUE_PAGE_SIZE: u8 = 30;
 const GITHUB_API_VERSION: &str = "2026-03-10";
@@ -105,14 +106,21 @@ pub(super) fn api_request(
     client: &octocrab::Octocrab,
     route: String,
 ) -> Result<http::Request<octocrab::OctoBody>, AppError> {
+    api_request_with_body(client, http::Method::GET, route, None::<&()>)
+}
+
+pub(super) fn api_request_with_body<T: Serialize + ?Sized>(
+    client: &octocrab::Octocrab,
+    method: http::Method,
+    route: String,
+    body: Option<&T>,
+) -> Result<http::Request<octocrab::OctoBody>, AppError> {
     let request = http::Request::builder()
-        .method(http::Method::GET)
+        .method(method)
         .uri(route)
         .header(http::header::ACCEPT, "application/vnd.github+json")
         .header("X-GitHub-Api-Version", GITHUB_API_VERSION);
-    client
-        .build_request(request, None::<&()>)
-        .map_err(github_error)
+    client.build_request(request, body).map_err(github_error)
 }
 
 pub(super) fn link_header_has_next(value: &str) -> bool {

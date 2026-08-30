@@ -11,6 +11,13 @@ use super::{
 };
 use crate::error::AppError;
 
+mod mutations;
+
+pub(crate) use mutations::IssueDependencyMutation;
+#[cfg(test)]
+use mutations::{add_blocked_by_route, remove_blocked_by_route};
+use mutations::{add_issue_dependency_with_client, remove_issue_dependency_with_client};
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GitHubIssueDependenciesPage {
@@ -28,6 +35,19 @@ pub(crate) trait GitHubIssueDependenciesClient: Send + Sync {
         token: &str,
         request: RelatedIssueRequest<'_>,
     ) -> Result<GitHubIssueDependenciesPage, AppError>;
+
+    async fn add_issue_dependency(
+        &self,
+        token: &str,
+        mutation: IssueDependencyMutation<'_>,
+    ) -> Result<(), AppError>;
+
+    async fn remove_issue_dependency(
+        &self,
+        token: &str,
+        current: RelatedIssueRequest<'_>,
+        blocking_issue_id: u64,
+    ) -> Result<(), AppError>;
 }
 
 impl GitHubService {
@@ -42,6 +62,46 @@ impl GitHubService {
         let token = self.load_access_token().await?;
         self.client.issue_dependencies(&token, request).await
     }
+
+    pub async fn add_issue_dependency(
+        &self,
+        owner: &str,
+        repository: &str,
+        issue_number: u64,
+        blocking_owner: &str,
+        blocking_repository: &str,
+        blocking_issue_number: u64,
+    ) -> Result<(), AppError> {
+        let mutation = IssueDependencyMutation::new(
+            owner,
+            repository,
+            issue_number,
+            blocking_owner,
+            blocking_repository,
+            blocking_issue_number,
+        )?;
+        let token = self.load_access_token().await?;
+        self.client.add_issue_dependency(&token, mutation).await
+    }
+
+    pub async fn remove_issue_dependency(
+        &self,
+        owner: &str,
+        repository: &str,
+        issue_number: u64,
+        blocking_issue_id: u64,
+    ) -> Result<(), AppError> {
+        if blocking_issue_id == 0 {
+            return Err(AppError::Validation(
+                "blocking Issue ID must be greater than zero".to_string(),
+            ));
+        }
+        let current = RelatedIssueRequest::new(owner, repository, issue_number, 1)?;
+        let token = self.load_access_token().await?;
+        self.client
+            .remove_issue_dependency(&token, current, blocking_issue_id)
+            .await
+    }
 }
 
 #[async_trait]
@@ -53,6 +113,25 @@ impl GitHubIssueDependenciesClient for OctocrabGitHubClient {
     ) -> Result<GitHubIssueDependenciesPage, AppError> {
         let client = authenticated_client(token)?;
         load_issue_dependencies_with_client(&client, request).await
+    }
+
+    async fn add_issue_dependency(
+        &self,
+        token: &str,
+        mutation: IssueDependencyMutation<'_>,
+    ) -> Result<(), AppError> {
+        let client = authenticated_client(token)?;
+        add_issue_dependency_with_client(&client, mutation).await
+    }
+
+    async fn remove_issue_dependency(
+        &self,
+        token: &str,
+        current: RelatedIssueRequest<'_>,
+        blocking_issue_id: u64,
+    ) -> Result<(), AppError> {
+        let client = authenticated_client(token)?;
+        remove_issue_dependency_with_client(&client, current, blocking_issue_id).await
     }
 }
 
@@ -140,6 +219,45 @@ impl GitHubIssueDependenciesClient for super::tests::FakeGitHubClient {
             has_previous: request.page > 1,
             has_more: false,
         })
+    }
+
+    async fn add_issue_dependency(
+        &self,
+        token: &str,
+        mutation: IssueDependencyMutation<'_>,
+    ) -> Result<(), AppError> {
+        assert_eq!(token, "github-user-access-token");
+        assert_eq!(
+            (
+                mutation.current.owner,
+                mutation.current.repository,
+                mutation.current.issue_number,
+                mutation.blocking_owner,
+                mutation.blocking_repository,
+                mutation.blocking_issue_number,
+            ),
+            ("octocat", "hello-world", 7, "octocat", "api", 9)
+        );
+        Ok(())
+    }
+
+    async fn remove_issue_dependency(
+        &self,
+        token: &str,
+        current: RelatedIssueRequest<'_>,
+        blocking_issue_id: u64,
+    ) -> Result<(), AppError> {
+        assert_eq!(token, "github-user-access-token");
+        assert_eq!(
+            (
+                current.owner,
+                current.repository,
+                current.issue_number,
+                blocking_issue_id
+            ),
+            ("octocat", "hello-world", 7, 9)
+        );
+        Ok(())
     }
 }
 

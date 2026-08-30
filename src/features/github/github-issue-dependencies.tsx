@@ -9,6 +9,11 @@ import { parseIpcError } from "@/lib/ipc-error";
 import type { GitHubIssueSummary, GitHubRepositoryContentContext } from "./github-data";
 import { issueDependenciesQueryOptions } from "./github-issue-dependency-queries";
 import {
+  GitHubIssueAddDependencyAction,
+  GitHubIssueRemoveDependencyAction,
+} from "./github-issue-dependency-actions";
+import type { GitHubIssueDependencyMutationTarget } from "./github-issue-dependency-mutations";
+import {
   GitHubIssueRelatedIssueRow,
   GitHubIssueRelationLoadError,
 } from "./github-issue-relation-ui";
@@ -32,10 +37,12 @@ function DependencySection({
   title,
   dependencies,
   onNavigate,
+  removeTarget,
 }: {
   title: string;
   dependencies: GitHubIssueSummary[];
   onNavigate: (summary: GitHubIssueSummary) => void;
+  removeTarget?: GitHubIssueDependencyMutationTarget;
 }) {
   if (dependencies.length === 0) return null;
 
@@ -46,11 +53,15 @@ function DependencySection({
       </h3>
       <div className="flex flex-col gap-0.5">
         {dependencies.map((summary) => (
-          <GitHubIssueRelatedIssueRow
+          <div
             key={`${summary.repository.fullName}#${summary.issue.number}`}
-            summary={summary}
-            onNavigate={onNavigate}
-          />
+            className="flex items-center gap-1"
+          >
+            <GitHubIssueRelatedIssueRow summary={summary} onNavigate={onNavigate} />
+            {removeTarget ? (
+              <GitHubIssueRemoveDependencyAction target={removeTarget} dependency={summary} />
+            ) : null}
+          </div>
         ))}
       </div>
     </section>
@@ -77,6 +88,11 @@ function GitHubIssueDependenciesContent({
     })
   );
   const error = result.error ? parseIpcError(result.error) : null;
+  const mutationTarget = {
+    owner: repository.owner,
+    repository: repository.name,
+    issueNumber,
+  };
 
   if (result.isPending) return <DependenciesSkeleton />;
 
@@ -97,13 +113,16 @@ function GitHubIssueDependenciesContent({
   return (
     <Card className="gap-0 overflow-hidden py-0 shadow-none" aria-busy={result.isFetching}>
       <CardHeader className="border-b px-4 py-3">
-        <CardTitle className="flex items-center gap-2 text-xs">
-          <GitFork className="text-muted-foreground size-3.5" />
-          {t("workspace.repositories.issueDependencies")}
-          {result.isFetching ? (
-            <RefreshCw className="text-muted-foreground size-3 animate-spin" />
-          ) : null}
-        </CardTitle>
+        <div className="flex items-center justify-between gap-3">
+          <CardTitle className="flex items-center gap-2 text-xs">
+            <GitFork className="text-muted-foreground size-3.5" />
+            {t("workspace.repositories.issueDependencies")}
+            {result.isFetching ? (
+              <RefreshCw className="text-muted-foreground size-3 animate-spin" />
+            ) : null}
+          </CardTitle>
+          <GitHubIssueAddDependencyAction target={mutationTarget} />
+        </div>
       </CardHeader>
       <CardContent className="px-0 py-1">
         {error ? (
@@ -135,6 +154,7 @@ function GitHubIssueDependenciesContent({
           title={t("workspace.repositories.blockedByIssues")}
           dependencies={blockedBy}
           onNavigate={onNavigate}
+          removeTarget={mutationTarget}
         />
         <DependencySection
           title={t("workspace.repositories.blockingIssues")}
