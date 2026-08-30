@@ -12,11 +12,25 @@ import type {
   GitHubCommitCommentPage,
 } from "./github-data";
 import { GitHubCommitCommentsWorkspace } from "./github-commit-comments-workspace";
+import { githubQueryKeys } from "./github-queries";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
+vi.mock("@/hooks/use-app-translation", () => ({
+  useAppTranslation: () => ({ t: (key: string) => key }),
+}));
 vi.mock("./github-commit-comment-card", () => ({
-  GitHubCommitCommentCard: ({ comment }: { comment: GitHubCommitComment }) => (
-    <article>{comment.body}</article>
+  GitHubCommitCommentCard: ({
+    comment,
+    disabled,
+  }: {
+    comment: GitHubCommitComment;
+    disabled?: boolean;
+  }) => (
+    <article>
+      <button type="button" disabled={disabled}>
+        {comment.body}
+      </button>
+    </article>
   ),
 }));
 vi.mock("./github-commit-comment-composer", () => ({
@@ -154,6 +168,41 @@ describe("GitHub commit comments workspace", () => {
     expect(await screen.findByText(/page two unavailable/)).toBeDefined();
     expect(screen.getByText("General feedback")).toBeDefined();
     expect(screen.getByTestId("child-state").textContent).toBe("1:true");
+  });
+
+  it("locks comment writes until an authoritative refetch retry succeeds", async () => {
+    vi.mocked(invoke)
+      .mockResolvedValueOnce(page([comment()]))
+      .mockRejectedValueOnce(new Error("refresh unavailable"))
+      .mockResolvedValueOnce(page([comment()]));
+    const client = createQueryClient();
+    const user = userEvent.setup();
+    renderWorkspace(client);
+
+    expect(await screen.findByText("General feedback")).toBeDefined();
+    await client.invalidateQueries({ queryKey: githubQueryKeys.commitComments(target) });
+
+    expect(
+      await screen.findByText("workspace.repositories.commitCommentsRefreshFailed")
+    ).toBeDefined();
+    expect((screen.getByRole("button", { name: "composer" }) as HTMLButtonElement).disabled).toBe(
+      true
+    );
+    expect(
+      (screen.getByRole("button", { name: "General feedback" }) as HTMLButtonElement).disabled
+    ).toBe(true);
+    expect(screen.getByTestId("child-state").textContent).toBe("1:false");
+
+    await user.click(screen.getByRole("button", { name: "workspace.repositories.retry" }));
+    await waitFor(() =>
+      expect(screen.queryByText("workspace.repositories.commitCommentsRefreshFailed")).toBeNull()
+    );
+    expect((screen.getByRole("button", { name: "composer" }) as HTMLButtonElement).disabled).toBe(
+      false
+    );
+    expect(
+      (screen.getByRole("button", { name: "General feedback" }) as HTMLButtonElement).disabled
+    ).toBe(false);
   });
 
   it("keeps line comments readable until their exact diff position is loaded", async () => {

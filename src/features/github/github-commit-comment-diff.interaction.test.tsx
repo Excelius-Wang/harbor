@@ -2,10 +2,14 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import type { GitHubCommitComment } from "./github-data";
 import { GitHubCommitCommentFileDiff } from "./github-commit-comment-diff";
 
+vi.mock("@/hooks/use-app-translation", () => ({
+  useAppTranslation: () => ({ t: (key: string) => key }),
+}));
 vi.mock("./github-commit-comment-card", () => ({
   GitHubCommitCommentCard: ({ comment }: { comment: GitHubCommitComment }) => (
     <article>{comment.body}</article>
@@ -39,20 +43,31 @@ const file = {
   patch: "@@ -1 +1 @@\n-before\n+after",
 };
 
+beforeAll(() => {
+  class ResizeObserverMock implements ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  vi.stubGlobal("ResizeObserver", ResizeObserverMock);
+});
+
 afterEach(() => cleanup());
 
 describe("GitHub commit comment diff", () => {
   it("keeps keyboard-accessible comment actions tied to exact raw positions", async () => {
     const user = userEvent.setup();
     render(
-      <GitHubCommitCommentFileDiff
-        file={file}
-        viewType="unified"
-        target={target}
-        repository={repository}
-        comments={[]}
-        canCreateComment
-      />
+      <TooltipProvider>
+        <GitHubCommitCommentFileDiff
+          file={file}
+          viewType="unified"
+          target={target}
+          repository={repository}
+          comments={[]}
+          canCreateComment
+        />
+      </TooltipProvider>
     );
 
     const actions = screen.getAllByRole("button", {
@@ -81,14 +96,16 @@ describe("GitHub commit comment diff", () => {
       viewerCanDelete: false,
     };
     render(
-      <GitHubCommitCommentFileDiff
-        file={file}
-        viewType="unified"
-        target={target}
-        repository={repository}
-        comments={[comment]}
-        canCreateComment={false}
-      />
+      <TooltipProvider>
+        <GitHubCommitCommentFileDiff
+          file={file}
+          viewType="unified"
+          target={target}
+          repository={repository}
+          comments={[comment]}
+          canCreateComment={false}
+        />
+      </TooltipProvider>
     );
 
     expect(screen.getByText("Line feedback")).toBeDefined();

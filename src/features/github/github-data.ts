@@ -1830,25 +1830,25 @@ export type GitHubCommitCommentPlacement = {
   position: number;
 };
 
+export type GitHubCommitCommentGuard = {
+  commentId: number;
+  commentNodeId: string;
+  expectedUpdatedAt: string;
+};
+
 export type GitHubCommitCommentMutation =
   | {
       action: "create";
       body: string;
       placement?: GitHubCommitCommentPlacement;
     }
-  | {
+  | ({
       action: "update";
-      commentId: number;
-      commentNodeId: string;
-      expectedUpdatedAt: string;
       body: string;
-    }
-  | {
+    } & GitHubCommitCommentGuard)
+  | ({
       action: "delete";
-      commentId: number;
-      commentNodeId: string;
-      expectedUpdatedAt: string;
-    };
+    } & GitHubCommitCommentGuard);
 
 export type GitHubPullRequestCommit = GitHubCommit;
 

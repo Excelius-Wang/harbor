@@ -1,7 +1,6 @@
 import { useMemo, type ReactNode } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { CircleAlert, MessageSquareText, RefreshCw } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +12,7 @@ import {
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { useAppTranslation } from "@/hooks/use-app-translation";
 import { parseIpcError } from "@/lib/ipc-error";
 import { GitHubCommitCommentCard } from "./github-commit-comment-card";
 import { GitHubCommitCommentComposer } from "./github-commit-comment-composer";
@@ -32,6 +32,32 @@ export type GitHubCommitCommentsContext = {
   canCreateComment: boolean;
 };
 
+function CommitCommentsLoadError({
+  title,
+  message,
+  retryLabel,
+  onRetry,
+}: {
+  title: string;
+  message: string;
+  retryLabel: string;
+  onRetry: () => void;
+}) {
+  return (
+    <Alert variant="destructive">
+      <CircleAlert />
+      <AlertTitle>{title}</AlertTitle>
+      <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
+        <span>{message}</span>
+        <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+          <RefreshCw data-icon="inline-start" />
+          {retryLabel}
+        </Button>
+      </AlertDescription>
+    </Alert>
+  );
+}
+
 export function GitHubCommitCommentsWorkspace({
   target,
   repository,
@@ -45,7 +71,7 @@ export function GitHubCommitCommentsWorkspace({
   filesStillLoading: boolean;
   children: (context: GitHubCommitCommentsContext) => ReactNode;
 }) {
-  const { t } = useTranslation();
+  const { t } = useAppTranslation();
   const result = useInfiniteQuery(repositoryCommitCommentsQueryOptions(target));
   const comments = useMemo(
     () => result.data?.pages.flatMap((page) => page.comments) ?? [],
@@ -54,6 +80,10 @@ export function GitHubCommitCommentsWorkspace({
   const initialError = !result.data && result.error ? parseIpcError(result.error) : null;
   const laterError =
     result.data && result.isFetchNextPageError ? parseIpcError(result.error) : null;
+  const refreshError =
+    result.data && result.isRefetchError && !result.isFetchNextPageError
+      ? parseIpcError(result.error)
+      : null;
   const placedCommentIds = useMemo(() => {
     const ids = new Set<string>();
     for (const file of files) {
@@ -73,7 +103,8 @@ export function GitHubCommitCommentsWorkspace({
     () => comments.map((comment) => ({ id: comment.id, kind: "commitComment" as const })),
     [comments]
   );
-  const canCreateComment = Boolean(result.data) && !initialError;
+  const canCreateComment =
+    Boolean(result.data) && !initialError && !refreshError && !result.isRefetching;
 
   return (
     <GitHubReactionsProvider repository={repository} subjects={subjects}>
@@ -95,22 +126,12 @@ export function GitHubCommitCommentsWorkspace({
             <Skeleton className="h-24 w-full" />
           </div>
         ) : initialError ? (
-          <Alert variant="destructive">
-            <CircleAlert />
-            <AlertTitle>{t("workspace.repositories.commitCommentsLoadFailed")}</AlertTitle>
-            <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
-              <span>{initialError.message}</span>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => void result.refetch()}
-              >
-                <RefreshCw data-icon="inline-start" />
-                {t("workspace.repositories.retry")}
-              </Button>
-            </AlertDescription>
-          </Alert>
+          <CommitCommentsLoadError
+            title={t("workspace.repositories.commitCommentsLoadFailed")}
+            message={initialError.message}
+            retryLabel={t("workspace.repositories.retry")}
+            onRetry={() => void result.refetch()}
+          />
         ) : comments.length === 0 ? (
           <Empty className="min-h-36 border">
             <EmptyHeader>
@@ -131,9 +152,19 @@ export function GitHubCommitCommentsWorkspace({
                 target={target}
                 repository={repository}
                 comment={comment}
+                disabled={!canCreateComment}
               />
             ))}
           </div>
+        ) : null}
+
+        {refreshError ? (
+          <CommitCommentsLoadError
+            title={t("workspace.repositories.commitCommentsRefreshFailed")}
+            message={refreshError.message}
+            retryLabel={t("workspace.repositories.retry")}
+            onRetry={() => void result.refetch()}
+          />
         ) : null}
 
         <GitHubCommitCommentComposer
@@ -144,22 +175,12 @@ export function GitHubCommitCommentsWorkspace({
         />
 
         {laterError ? (
-          <Alert variant="destructive">
-            <CircleAlert />
-            <AlertTitle>{t("workspace.repositories.commitCommentsNextPageFailed")}</AlertTitle>
-            <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
-              <span>{laterError.message}</span>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => void result.fetchNextPage()}
-              >
-                <RefreshCw data-icon="inline-start" />
-                {t("workspace.repositories.retry")}
-              </Button>
-            </AlertDescription>
-          </Alert>
+          <CommitCommentsLoadError
+            title={t("workspace.repositories.commitCommentsNextPageFailed")}
+            message={laterError.message}
+            retryLabel={t("workspace.repositories.retry")}
+            onRetry={() => void result.fetchNextPage()}
+          />
         ) : null}
 
         {result.hasNextPage && !laterError ? (
@@ -205,6 +226,7 @@ export function GitHubCommitCommentsWorkspace({
                 target={target}
                 repository={repository}
                 comment={comment}
+                disabled={!canCreateComment}
               />
             ))}
           </div>

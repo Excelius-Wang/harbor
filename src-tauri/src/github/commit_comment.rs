@@ -49,6 +49,14 @@ pub struct GitHubCommitCommentPlacement {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitHubCommitCommentGuard {
+    pub comment_id: u64,
+    pub comment_node_id: String,
+    pub expected_updated_at: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 #[serde(
     tag = "action",
     rename_all = "camelCase",
@@ -60,15 +68,13 @@ pub enum GitHubCommitCommentMutation {
         placement: Option<GitHubCommitCommentPlacement>,
     },
     Update {
-        comment_id: u64,
-        comment_node_id: String,
-        expected_updated_at: String,
+        #[serde(flatten)]
+        guard: GitHubCommitCommentGuard,
         body: String,
     },
     Delete {
-        comment_id: u64,
-        comment_node_id: String,
-        expected_updated_at: String,
+        #[serde(flatten)]
+        guard: GitHubCommitCommentGuard,
     },
 }
 
@@ -185,27 +191,26 @@ fn normalize_commit_comment_mutation(
                 placement: placement.map(normalize_comment_placement).transpose()?,
             })
         }
-        GitHubCommitCommentMutation::Update {
-            comment_id,
-            comment_node_id,
-            expected_updated_at,
-            body,
-        } => Ok(GitHubCommitCommentMutation::Update {
-            comment_id: normalize_comment_database_id(comment_id)?,
-            comment_node_id: normalize_comment_node_id(comment_node_id)?,
-            expected_updated_at: normalize_comment_revision(expected_updated_at)?,
-            body: normalize_comment_body(body)?,
-        }),
-        GitHubCommitCommentMutation::Delete {
-            comment_id,
-            comment_node_id,
-            expected_updated_at,
-        } => Ok(GitHubCommitCommentMutation::Delete {
-            comment_id: normalize_comment_database_id(comment_id)?,
-            comment_node_id: normalize_comment_node_id(comment_node_id)?,
-            expected_updated_at: normalize_comment_revision(expected_updated_at)?,
+        GitHubCommitCommentMutation::Update { guard, body } => {
+            Ok(GitHubCommitCommentMutation::Update {
+                guard: normalize_comment_guard(guard)?,
+                body: normalize_comment_body(body)?,
+            })
+        }
+        GitHubCommitCommentMutation::Delete { guard } => Ok(GitHubCommitCommentMutation::Delete {
+            guard: normalize_comment_guard(guard)?,
         }),
     }
+}
+
+fn normalize_comment_guard(
+    guard: GitHubCommitCommentGuard,
+) -> Result<GitHubCommitCommentGuard, AppError> {
+    Ok(GitHubCommitCommentGuard {
+        comment_id: normalize_comment_database_id(guard.comment_id)?,
+        comment_node_id: normalize_comment_node_id(guard.comment_node_id)?,
+        expected_updated_at: normalize_comment_revision(guard.expected_updated_at)?,
+    })
 }
 
 fn normalize_comment_body(body: String) -> Result<String, AppError> {
@@ -220,12 +225,9 @@ fn normalize_comment_body(body: String) -> Result<String, AppError> {
 fn normalize_comment_placement(
     placement: GitHubCommitCommentPlacement,
 ) -> Result<GitHubCommitCommentPlacement, AppError> {
-    let path = placement.path.trim().to_string();
-    if path.is_empty()
-        || path.len() > 4_096
-        || path
-            .chars()
-            .any(|character| character.is_control() || character == '\\')
+    if placement.path.is_empty()
+        || placement.path.len() > 4_096
+        || placement.path.contains('\0')
         || placement.position == 0
         || placement.position > i64::MAX as u64
     {
@@ -233,10 +235,7 @@ fn normalize_comment_placement(
             "commit comment placement is invalid".to_string(),
         ));
     }
-    Ok(GitHubCommitCommentPlacement {
-        path,
-        position: placement.position,
-    })
+    Ok(placement)
 }
 
 fn normalize_comment_database_id(comment_id: u64) -> Result<u64, AppError> {

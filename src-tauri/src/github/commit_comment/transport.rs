@@ -204,25 +204,12 @@ pub(super) async fn mutate_commit_comment_with_client(
             .await
             .map(Some);
     }
-    let (comment_id, comment_node_id, expected_updated_at) = match mutation {
-        GitHubCommitCommentMutation::Update {
-            comment_id,
-            comment_node_id,
-            expected_updated_at,
-            ..
-        }
-        | GitHubCommitCommentMutation::Delete {
-            comment_id,
-            comment_node_id,
-            expected_updated_at,
-        } => (
-            *comment_id,
-            comment_node_id.as_str(),
-            expected_updated_at.as_str(),
-        ),
+    let guard = match mutation {
+        GitHubCommitCommentMutation::Update { guard, .. }
+        | GitHubCommitCommentMutation::Delete { guard } => guard,
         GitHubCommitCommentMutation::Create { .. } => unreachable!(),
     };
-    let current = get_commit_comment(client, owner, repository, comment_id).await?;
+    let current = get_commit_comment(client, owner, repository, guard.comment_id).await?;
     let capabilities =
         commit_comment_capabilities(client, owner, repository, vec![current.node_id.as_str()])
             .await?;
@@ -233,9 +220,9 @@ pub(super) async fn mutate_commit_comment_with_client(
         .ok_or_else(|| AppError::GitHub("GitHub did not return the commit comment".to_string()))?;
     ensure_comment_mutation_allowed(
         &current,
-        comment_id,
-        comment_node_id,
-        expected_updated_at,
+        guard.comment_id,
+        &guard.comment_node_id,
+        &guard.expected_updated_at,
         matches!(mutation, GitHubCommitCommentMutation::Update { .. }),
     )?;
 
@@ -245,7 +232,7 @@ pub(super) async fn mutate_commit_comment_with_client(
             let request = api_request(
                 client,
                 http::Method::PATCH,
-                commit_comment_route(owner, repository, comment_id),
+                commit_comment_route(owner, repository, guard.comment_id),
                 Some(&payload),
             )?;
             let response = client.execute(request).await.map_err(github_error)?;
@@ -275,7 +262,7 @@ pub(super) async fn mutate_commit_comment_with_client(
             let request = api_request(
                 client,
                 http::Method::DELETE,
-                commit_comment_route(owner, repository, comment_id),
+                commit_comment_route(owner, repository, guard.comment_id),
                 None::<&()>,
             )?;
             let response = client.execute(request).await.map_err(github_error)?;

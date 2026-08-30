@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { MessageSquarePlus } from "lucide-react";
 import { Diff, Hunk, getChangeKey, type ChangeData, type ViewType } from "react-diff-view";
-import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useAppTranslation } from "@/hooks/use-app-translation";
 import type {
   GitHubChangedFile,
   GitHubCommitComment,
@@ -41,7 +42,7 @@ export function GitHubCommitCommentFileDiff({
   comments: GitHubCommitComment[];
   canCreateComment: boolean;
 }) {
-  const { t } = useTranslation();
+  const { t } = useAppTranslation();
   const [openPosition, setOpenPosition] = useState<number | null>(null);
   const diff = useMemo(() => parseGitHubFilePatch(file), [file]);
   const changes = useMemo(() => diff?.hunks.flatMap((hunk) => hunk.changes) ?? [], [diff]);
@@ -84,6 +85,7 @@ export function GitHubCommitCommentFileDiff({
                 repository={repository}
                 comment={comment}
                 compact
+                disabled={!canCreateComment}
               />
             ))}
             {composerOpen && position !== undefined ? (
@@ -122,22 +124,28 @@ export function GitHubCommitCommentFileDiff({
           const position = positions.get(changeKey);
           const commentable =
             canCreateComment && position !== undefined && side === preferredCommentSide(change);
+          const commentLabel = t("workspace.repositories.commentOnLine", {
+            line: displayedLine(change),
+          });
           return (
             <span className="group flex min-w-9 items-center justify-end gap-1 px-1">
               {commentable ? (
-                <Button
-                  type="button"
-                  size="icon-xs"
-                  className="size-4 rounded-sm opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
-                  aria-label={t("workspace.repositories.commentOnLine", {
-                    line: displayedLine(change),
-                  })}
-                  onClick={() =>
-                    setOpenPosition((current) => (current === position ? null : position))
-                  }
-                >
-                  <MessageSquarePlus />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      size="icon-xs"
+                      className="size-4 rounded-sm opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+                      aria-label={commentLabel}
+                      onClick={() =>
+                        setOpenPosition((current) => (current === position ? null : position))
+                      }
+                    >
+                      <MessageSquarePlus />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{commentLabel}</TooltipContent>
+                </Tooltip>
               ) : null}
               {wrapInAnchor(renderDefault())}
             </span>

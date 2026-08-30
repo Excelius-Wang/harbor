@@ -32,34 +32,38 @@ export function GitHubCommitCommentCard({
   repository,
   comment,
   compact = false,
+  disabled = false,
 }: {
   target: GitHubCommitDetailTarget;
   repository: GitHubRepositoryContentContext;
   comment: GitHubCommitComment;
   compact?: boolean;
+  disabled?: boolean;
 }) {
   const { t, i18n } = useTranslation();
   const { t: appT } = useAppTranslation();
   const queryClient = useQueryClient();
   const author = comment.author?.login ?? t("workspace.repositories.unknownActor");
-  const mutateComment = (mutation: GitHubCommentMutation) =>
-    mutateRepositoryCommitComment(
+  const mutateComment = (mutation: GitHubCommentMutation) => {
+    const guard = {
+      commentId: comment.databaseId,
+      commentNodeId: comment.id,
+      expectedUpdatedAt: mutation.expectedUpdatedAt,
+    };
+    return mutateRepositoryCommitComment(
       target,
       mutation.action === "update"
         ? {
             action: "update",
-            commentId: comment.databaseId,
-            commentNodeId: comment.id,
-            expectedUpdatedAt: mutation.expectedUpdatedAt,
+            ...guard,
             body: mutation.body,
           }
         : {
             action: "delete",
-            commentId: comment.databaseId,
-            commentNodeId: comment.id,
-            expectedUpdatedAt: mutation.expectedUpdatedAt,
+            ...guard,
           }
     );
+  };
 
   return (
     <article className="bg-card/30 min-w-0 overflow-hidden rounded-lg border">
@@ -97,6 +101,7 @@ export function GitHubCommitCommentCard({
             permissionMessage={appT("workspace.repositories.commitCommentPermissionDenied")}
             uncertainWriteMessage={appT("workspace.repositories.commitCommentWriteUncertain")}
             requireNonEmpty
+            disabled={disabled}
             mutateComment={mutateComment}
             onConflict={() => invalidateRepositoryCommitComments(queryClient, target)}
             onUncertainError={() => invalidateRepositoryCommitComments(queryClient, target)}

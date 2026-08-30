@@ -51,11 +51,15 @@ describe("GitHub reactions", () => {
   });
 
   it("invokes native reads and desired-state writes with opaque subject references", async () => {
-    vi.mocked(invoke).mockResolvedValueOnce([issue]).mockResolvedValueOnce(issue);
+    vi.mocked(invoke)
+      .mockResolvedValueOnce([issue])
+      .mockResolvedValueOnce(issue)
+      .mockResolvedValueOnce({ ...issue, ...commitCommentRef });
     const query = repositoryReactionsQueryOptions({ ...repository, subjects: [issueRef] });
 
     await query.queryFn?.({} as never);
     await updateRepositoryReaction(repository, issueRef, "rocket", true);
+    await updateRepositoryReaction(repository, commitCommentRef, "eyes", true);
 
     expect(invoke).toHaveBeenNthCalledWith(1, "github_get_repository_reactions", {
       ...repository,
@@ -65,6 +69,12 @@ describe("GitHub reactions", () => {
       ...repository,
       subject: issueRef,
       content: "rocket",
+      reacted: true,
+    });
+    expect(invoke).toHaveBeenNthCalledWith(3, "github_update_repository_reaction", {
+      ...repository,
+      subject: commitCommentRef,
+      content: "eyes",
       reacted: true,
     });
   });

@@ -6,16 +6,23 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { openExternalUrl } from "@/lib/window";
 import { GitHubCommitCommentCard } from "./github-commit-comment-card";
 import type { GitHubCommitComment } from "./github-data";
 import { githubQueryKeys } from "./github-queries";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn() } }));
+vi.mock("@/lib/window", () => ({ openExternalUrl: vi.fn() }));
 vi.mock("@/hooks/use-app-translation", () => ({
   useAppTranslation: () => ({ t: (key: string) => key }),
 }));
 vi.mock("./github-readme", () => ({ default: ({ content }: { content: string }) => content }));
+vi.mock("./github-reaction-bar", () => ({
+  GitHubReactionBar: ({ subject }: { subject: { id: string; kind: string } }) => (
+    <span>{`reaction:${subject.kind}:${subject.id}`}</span>
+  ),
+}));
 
 const target = {
   owner: "octocat",
@@ -54,7 +61,7 @@ function createQueryClient() {
   });
 }
 
-function renderCard(client: QueryClient) {
+function renderCard(client: QueryClient, disabled = false) {
   client.setQueryData(githubQueryKeys.commitComments(target), {
     pages: [{ comments: [comment()], page: 1, hasPrevious: false, hasMore: false }],
     pageParams: [1],
@@ -62,7 +69,12 @@ function renderCard(client: QueryClient) {
   return render(
     <QueryClientProvider client={client}>
       <TooltipProvider>
-        <GitHubCommitCommentCard target={target} repository={repository} comment={comment()} />
+        <GitHubCommitCommentCard
+          target={target}
+          repository={repository}
+          comment={comment()}
+          disabled={disabled}
+        />
       </TooltipProvider>
     </QueryClientProvider>
   );
@@ -81,6 +93,33 @@ beforeEach(() => vi.clearAllMocks());
 afterEach(() => cleanup());
 
 describe("GitHub commit comment card", () => {
+  it("keeps external navigation and the commit-comment reaction subject independent", async () => {
+    const client = createQueryClient();
+    const user = userEvent.setup();
+    renderCard(client, true);
+
+    expect(screen.getByText("reaction:commitComment:CC_42")).toBeDefined();
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "workspace.repositories.editComment",
+        }) as HTMLButtonElement
+      ).disabled
+    ).toBe(true);
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "workspace.repositories.deleteComment",
+        }) as HTMLButtonElement
+      ).disabled
+    ).toBe(true);
+    await user.click(screen.getByRole("button", { name: "workspace.openOnGitHub" }));
+    expect(openExternalUrl).toHaveBeenCalledWith(
+      `${repository.url}/commit/${target.commitSha}#commitcomment-42`
+    );
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
   it("adapts the shared editor to numeric and Node ID guarded commit-comment writes", async () => {
     vi.mocked(invoke).mockResolvedValueOnce(comment("New body"));
     const client = createQueryClient();

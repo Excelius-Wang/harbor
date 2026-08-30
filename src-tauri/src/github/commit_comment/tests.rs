@@ -15,7 +15,7 @@ use super::transport::{
 };
 use super::{
     normalize_commit_comment_mutation, normalize_commit_comment_page, normalize_commit_comment_sha,
-    GitHubCommitCommentMutation, GitHubCommitCommentPlacement,
+    GitHubCommitCommentGuard, GitHubCommitCommentMutation, GitHubCommitCommentPlacement,
 };
 
 struct SavedCredentialStore;
@@ -122,6 +122,14 @@ fn capability_fixture(sha: &str) -> CommitCommentCapabilitiesQuery {
         }]
     }))
     .expect("capability fixture")
+}
+
+fn comment_guard(comment_id: u64) -> GitHubCommitCommentGuard {
+    GitHubCommitCommentGuard {
+        comment_id,
+        comment_node_id: "CC_42".to_string(),
+        expected_updated_at: "2026-08-30T01:01:00Z".to_string(),
+    }
 }
 
 struct MockResponse {
@@ -464,7 +472,7 @@ fn mutations_require_complete_placement_and_bounded_identity() {
     let create = normalize_commit_comment_mutation(GitHubCommitCommentMutation::Create {
         body: "  Markdown stays intact  ".to_string(),
         placement: Some(GitHubCommitCommentPlacement {
-            path: " src/main.rs ".to_string(),
+            path: " src\\main.rs ".to_string(),
             position: 7,
         }),
     })
@@ -474,7 +482,7 @@ fn mutations_require_complete_placement_and_bounded_identity() {
         GitHubCommitCommentMutation::Create {
             body,
             placement: Some(GitHubCommitCommentPlacement { path, position: 7 })
-        } if body == "  Markdown stays intact  " && path == "src/main.rs"
+        } if body == "  Markdown stays intact  " && path == " src\\main.rs "
     ));
     assert!(
         normalize_commit_comment_mutation(GitHubCommitCommentMutation::Create {
@@ -494,12 +502,42 @@ fn mutations_require_complete_placement_and_bounded_identity() {
         .is_err()
     );
     assert!(
-        normalize_commit_comment_mutation(GitHubCommitCommentMutation::Delete {
-            comment_id: 0,
-            comment_node_id: "CC_42".to_string(),
-            expected_updated_at: "2026-08-30T01:01:00Z".to_string(),
+        normalize_commit_comment_mutation(GitHubCommitCommentMutation::Create {
+            body: "Body".to_string(),
+            placement: Some(GitHubCommitCommentPlacement {
+                path: "src/invalid\0name.rs".to_string(),
+                position: 7,
+            }),
         })
         .is_err()
+    );
+    assert!(
+        normalize_commit_comment_mutation(GitHubCommitCommentMutation::Delete {
+            guard: comment_guard(0),
+        })
+        .is_err()
+    );
+}
+
+#[test]
+fn mutation_guard_keeps_the_flat_tauri_contract() {
+    let value = serde_json::json!({
+        "action": "update",
+        "commentId": 42,
+        "commentNodeId": "CC_42",
+        "expectedUpdatedAt": "2026-08-30T01:01:00Z",
+        "body": "New body"
+    });
+    let mutation: GitHubCommitCommentMutation =
+        serde_json::from_value(value.clone()).expect("flat mutation");
+    assert!(matches!(
+        &mutation,
+        GitHubCommitCommentMutation::Update { guard, body }
+            if guard == &comment_guard(42) && body == "New body"
+    ));
+    assert_eq!(
+        serde_json::to_value(mutation).expect("flat mutation JSON"),
+        value
     );
 }
 
@@ -525,9 +563,7 @@ async fn update_transport_preflights_scope_capability_and_revision() {
     ])
     .await;
     let mutation = GitHubCommitCommentMutation::Update {
-        comment_id: 42,
-        comment_node_id: "CC_42".to_string(),
-        expected_updated_at: "2026-08-30T01:01:00Z".to_string(),
+        guard: comment_guard(42),
         body: "New body".to_string(),
     };
 
@@ -573,9 +609,7 @@ async fn delete_transport_preflights_before_no_content() {
     ])
     .await;
     let mutation = GitHubCommitCommentMutation::Delete {
-        comment_id: 42,
-        comment_node_id: "CC_42".to_string(),
-        expected_updated_at: "2026-08-30T01:01:00Z".to_string(),
+        guard: comment_guard(42),
     };
 
     let deleted =
@@ -606,9 +640,7 @@ async fn stale_revision_stops_before_update() {
     ])
     .await;
     let mutation = GitHubCommitCommentMutation::Update {
-        comment_id: 42,
-        comment_node_id: "CC_42".to_string(),
-        expected_updated_at: "2026-08-30T01:01:00Z".to_string(),
+        guard: comment_guard(42),
         body: "New body".to_string(),
     };
 
@@ -629,9 +661,7 @@ async fn stale_revision_stops_before_update() {
 async fn missing_preflight_and_denied_capability_stop_before_writes() {
     let sha = "a".repeat(40);
     let mutation = GitHubCommitCommentMutation::Update {
-        comment_id: 42,
-        comment_node_id: "CC_42".to_string(),
-        expected_updated_at: "2026-08-30T01:01:00Z".to_string(),
+        guard: comment_guard(42),
         body: "New body".to_string(),
     };
     let (missing_client, missing_requests, missing_server) = mock_github(vec![MockResponse {
@@ -690,9 +720,7 @@ async fn missing_preflight_and_denied_capability_stop_before_writes() {
 async fn delete_capability_and_update_response_placement_are_guarded() {
     let sha = "a".repeat(40);
     let delete = GitHubCommitCommentMutation::Delete {
-        comment_id: 42,
-        comment_node_id: "CC_42".to_string(),
-        expected_updated_at: "2026-08-30T01:01:00Z".to_string(),
+        guard: comment_guard(42),
     };
     let (delete_client, delete_requests, delete_server) = mock_github(vec![
         MockResponse {
@@ -719,9 +747,7 @@ async fn delete_capability_and_update_response_placement_are_guarded() {
     assert_eq!(delete_requests.lock().expect("requests").len(), 2);
 
     let update = GitHubCommitCommentMutation::Update {
-        comment_id: 42,
-        comment_node_id: "CC_42".to_string(),
-        expected_updated_at: "2026-08-30T01:01:00Z".to_string(),
+        guard: comment_guard(42),
         body: "New body".to_string(),
     };
     let mut moved_response: serde_json::Value =

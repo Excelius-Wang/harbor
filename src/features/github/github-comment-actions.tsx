@@ -49,6 +49,7 @@ export function GitHubCommentActions<TComment>({
   onUncertainError,
   uncertainWriteMessage,
   requireNonEmpty = false,
+  disabled = false,
 }: {
   comment: GitHubMutableComment;
   repository: GitHubRepositoryContentContext;
@@ -60,6 +61,7 @@ export function GitHubCommentActions<TComment>({
   onUncertainError?: () => void | Promise<void>;
   uncertainWriteMessage?: string;
   requireNonEmpty?: boolean;
+  disabled?: boolean;
 }) {
   const { t } = useAppTranslation();
   const [editOpen, setEditOpen] = useState(false);
@@ -120,7 +122,7 @@ export function GitHubCommentActions<TComment>({
               variant="ghost"
               size="icon-xs"
               aria-label={t("workspace.repositories.editComment")}
-              disabled={mutation.isPending}
+              disabled={mutation.isPending || disabled}
               onClick={() => {
                 mutation.reset();
                 setDraft(comment.body);
@@ -141,7 +143,7 @@ export function GitHubCommentActions<TComment>({
               variant="ghost"
               size="icon-xs"
               aria-label={t("workspace.repositories.deleteComment")}
-              disabled={mutation.isPending}
+              disabled={mutation.isPending || disabled}
               onClick={() => {
                 mutation.reset();
                 setDeleteOpen(true);
@@ -206,6 +208,7 @@ export function GitHubCommentActions<TComment>({
               type="button"
               disabled={
                 !canSubmitCommentUpdate(draft, comment.body, mutation.isPending) ||
+                disabled ||
                 (requireNonEmpty && !draft.trim())
               }
               onClick={() => mutation.mutate(updateMutation)}
@@ -247,7 +250,7 @@ export function GitHubCommentActions<TComment>({
             </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
-              disabled={mutation.isPending}
+              disabled={mutation.isPending || disabled}
               onClick={(event) => {
                 event.preventDefault();
                 mutation.mutate(deleteMutation);
