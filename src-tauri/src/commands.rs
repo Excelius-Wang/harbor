@@ -9,6 +9,7 @@ use crate::{
     github::{
         GitHubAuthEvent, GitHubBlame, GitHubCheckPage, GitHubCheckSuite, GitHubCodeOverview,
         GitHubCodeScanningInstancePage, GitHubCodeSearchPage, GitHubCommentMutation,
+        GitHubCommitComment, GitHubCommitCommentMutation, GitHubCommitCommentPage,
         GitHubCommitDetailPage, GitHubConnection, GitHubContentListing, GitHubContributionSummary,
         GitHubConversationControls, GitHubConversationKind, GitHubConversationLockAction,
         GitHubConversationLockReason, GitHubConversationSubscriptionAction,
@@ -3276,6 +3277,46 @@ pub async fn github_get_repository_commit(
             repository.name(),
             &validate_full_commit_sha(commit_sha)?,
             validate_commit_file_page(page)?,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_list_repository_commit_comments(
+    owner: String,
+    repository: String,
+    commit_sha: String,
+    page: u32,
+    state: State<'_, AppState>,
+) -> Result<GitHubCommitCommentPage, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .commit_comments(
+            repository.owner(),
+            repository.name(),
+            &validate_full_commit_sha(commit_sha)?,
+            validate_page(page)?,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_mutate_repository_commit_comment(
+    owner: String,
+    repository: String,
+    commit_sha: String,
+    mutation: GitHubCommitCommentMutation,
+    state: State<'_, AppState>,
+) -> Result<Option<GitHubCommitComment>, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .mutate_commit_comment(
+            repository.owner(),
+            repository.name(),
+            &validate_full_commit_sha(commit_sha)?,
+            mutation,
         )
         .await
 }

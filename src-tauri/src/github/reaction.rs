@@ -26,6 +26,7 @@ query HarborReactionSubjects(
     ... on IssueComment { repository { id } }
     ... on PullRequestReview { repository { id } }
     ... on PullRequestReviewComment { repository { id } }
+    ... on CommitComment { repository { id } }
     ... on Discussion { repository { id } }
     ... on Release { repository { id } }
     ... on DiscussionComment {
@@ -76,6 +77,7 @@ fragment HarborReactionGroup on ReactionGroup {
 pub enum GitHubReactionSubjectKind {
     Issue,
     PullRequest,
+    CommitComment,
     IssueComment,
     PullRequestReview,
     PullRequestReviewComment,
@@ -89,6 +91,7 @@ impl GitHubReactionSubjectKind {
         match self {
             Self::Issue => "Issue",
             Self::PullRequest => "PullRequest",
+            Self::CommitComment => "CommitComment",
             Self::IssueComment => "IssueComment",
             Self::PullRequestReview => "PullRequestReview",
             Self::PullRequestReviewComment => "PullRequestReviewComment",

@@ -16,6 +16,7 @@ pub(crate) mod actions;
 pub(crate) mod checks;
 pub(crate) mod code;
 pub(crate) mod comment;
+pub(crate) mod commit_comment;
 pub(crate) mod conversation;
 pub(crate) mod discovery;
 pub(crate) mod discussion;
@@ -53,6 +54,9 @@ pub use code::{
     GitHubContentListing, GitHubFilePreview, GitHubRepositoryCommitPage, GitHubTagPage,
 };
 pub use comment::GitHubCommentMutation;
+pub use commit_comment::{
+    GitHubCommitComment, GitHubCommitCommentMutation, GitHubCommitCommentPage,
+};
 pub use conversation::{
     GitHubConversationControls, GitHubConversationKind, GitHubConversationLockAction,
     GitHubConversationLockReason, GitHubConversationSubscriptionAction,
@@ -629,6 +633,7 @@ pub(crate) trait GitHubClient:
     + checks::GitHubCheckClient
     + code::GitHubCodeClient
     + code::write::GitHubCodeMutationClient
+    + commit_comment::GitHubCommitCommentClient
     + comment::GitHubCommentClient
     + conversation::GitHubConversationClient
     + discussion::GitHubDiscussionClient
@@ -2628,7 +2633,7 @@ mod tests {
         }
     }
 
-    fn oauth_session(access_token: &'static str) -> Arc<GitHubOAuthSession> {
+    pub(super) fn oauth_session(access_token: &'static str) -> Arc<GitHubOAuthSession> {
         Arc::new(
             GitHubOAuthSession::with_token_exchange(
                 GitHubOAuthConfig {
