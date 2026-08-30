@@ -26,8 +26,8 @@ fn duplicate_response(source_id: &str, state_reason: Option<&str>) -> String {
     .to_string()
 }
 
-fn duplicate_request() -> IssueDuplicateRequest<'static> {
-    IssueDuplicateRequest::new("octocat", "hello-world", 7, "I_7").expect("duplicate request")
+fn duplicate_request() -> IssueGraphQlRequest<'static> {
+    IssueGraphQlRequest::new("octocat", "hello-world", 7, "I_7").expect("duplicate request")
 }
 
 #[tokio::test]

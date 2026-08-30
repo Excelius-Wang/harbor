@@ -2,8 +2,12 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    authenticated_client, github_error, issue_related::issue_url_matches, GitHubService,
-    OctocrabGitHubClient,
+    authenticated_client, github_error,
+    issue_related::{
+        graphql_node_id_is_valid, issue_url_matches, split_repository_full_name,
+        IssueGraphQlRequest,
+    },
+    GitHubService, OctocrabGitHubClient,
 };
 use crate::error::AppError;
 
@@ -43,46 +47,12 @@ pub struct GitHubIssueDuplicateReference {
     pub url: String,
 }
 
-#[derive(Clone, Copy)]
-pub(crate) struct IssueDuplicateRequest<'a> {
-    owner: &'a str,
-    repository: &'a str,
-    issue_number: u64,
-    expected_issue_node_id: &'a str,
-}
-
-impl<'a> IssueDuplicateRequest<'a> {
-    fn new(
-        owner: &'a str,
-        repository: &'a str,
-        issue_number: u64,
-        expected_issue_node_id: &'a str,
-    ) -> Result<Self, AppError> {
-        if issue_number == 0 {
-            return Err(AppError::Validation(
-                "issue number must be greater than zero".to_string(),
-            ));
-        }
-        if !valid_node_id(expected_issue_node_id) {
-            return Err(AppError::Validation(
-                "the expected Issue node ID is invalid".to_string(),
-            ));
-        }
-        Ok(Self {
-            owner,
-            repository,
-            issue_number,
-            expected_issue_node_id,
-        })
-    }
-}
-
 #[async_trait]
 pub(crate) trait GitHubIssueDuplicateClient: Send + Sync {
     async fn issue_duplicate(
         &self,
         token: &str,
-        request: IssueDuplicateRequest<'_>,
+        request: IssueGraphQlRequest<'_>,
     ) -> Result<Option<GitHubIssueDuplicateReference>, AppError>;
 }
 
@@ -95,7 +65,7 @@ impl GitHubService {
         expected_issue_node_id: &str,
     ) -> Result<Option<GitHubIssueDuplicateReference>, AppError> {
         let request =
-            IssueDuplicateRequest::new(owner, repository, issue_number, expected_issue_node_id)?;
+            IssueGraphQlRequest::new(owner, repository, issue_number, expected_issue_node_id)?;
         let token = self.load_access_token().await?;
         self.client.issue_duplicate(&token, request).await
     }
@@ -106,7 +76,7 @@ impl GitHubIssueDuplicateClient for OctocrabGitHubClient {
     async fn issue_duplicate(
         &self,
         token: &str,
-        request: IssueDuplicateRequest<'_>,
+        request: IssueGraphQlRequest<'_>,
     ) -> Result<Option<GitHubIssueDuplicateReference>, AppError> {
         let client = authenticated_client(token)?;
         load_issue_duplicate_with_client(&client, request).await
@@ -115,7 +85,7 @@ impl GitHubIssueDuplicateClient for OctocrabGitHubClient {
 
 async fn load_issue_duplicate_with_client(
     client: &octocrab::Octocrab,
-    request: IssueDuplicateRequest<'_>,
+    request: IssueGraphQlRequest<'_>,
 ) -> Result<Option<GitHubIssueDuplicateReference>, AppError> {
     let payload = issue_duplicate_payload(request)?;
     let response: IssueDuplicateQuery = client.graphql(&payload).await.map_err(github_error)?;
@@ -123,7 +93,7 @@ async fn load_issue_duplicate_with_client(
 }
 
 fn issue_duplicate_payload(
-    request: IssueDuplicateRequest<'_>,
+    request: IssueGraphQlRequest<'_>,
 ) -> Result<serde_json::Value, AppError> {
     let number = i32::try_from(request.issue_number).map_err(|_| {
         AppError::Validation("issue number is too large for GitHub GraphQL".to_string())
@@ -140,7 +110,7 @@ fn issue_duplicate_payload(
 
 fn duplicate_from_graphql(
     response: IssueDuplicateQuery,
-    request: IssueDuplicateRequest<'_>,
+    request: IssueGraphQlRequest<'_>,
 ) -> Result<Option<GitHubIssueDuplicateReference>, AppError> {
     let repository_node = response.repository.ok_or_else(|| {
         AppError::GitHub("GitHub did not return the Issue repository".to_string())
@@ -183,13 +153,13 @@ fn canonical_reference(
     issue: GraphQlDuplicateIssue,
     source_issue_node_id: &str,
 ) -> Result<GitHubIssueDuplicateReference, &'static str> {
-    if !valid_node_id(&issue.id) || issue.id == source_issue_node_id {
+    if !graphql_node_id_is_valid(&issue.id) || issue.id == source_issue_node_id {
         return Err("the canonical Issue identity is invalid");
     }
     if issue.number == 0 || issue.title.trim().is_empty() {
         return Err("the canonical Issue fields are invalid");
     }
-    let (owner, repository) = split_full_name(&issue.repository.name_with_owner)
+    let (owner, repository) = split_repository_full_name(&issue.repository.name_with_owner)
         .ok_or("the canonical Issue repository is invalid")?;
     if !issue_url_matches(
         &issue.url,
@@ -208,29 +178,6 @@ fn canonical_reference(
         title: issue.title,
         url: issue.url,
     })
-}
-
-fn valid_node_id(value: &str) -> bool {
-    !value.trim().is_empty()
-        && value.len() <= 512
-        && !value
-            .chars()
-            .any(|character| character.is_whitespace() || character.is_control())
-}
-
-fn split_full_name(value: &str) -> Option<(String, String)> {
-    let (owner, repository) = value.split_once('/')?;
-    if owner.is_empty()
-        || repository.is_empty()
-        || repository.contains('/')
-        || owner
-            .chars()
-            .chain(repository.chars())
-            .any(|character| character.is_whitespace() || character.is_control())
-    {
-        return None;
-    }
-    Some((owner.to_string(), repository.to_string()))
 }
 
 #[derive(Deserialize)]
@@ -278,7 +225,7 @@ impl GitHubIssueDuplicateClient for super::tests::FakeGitHubClient {
     async fn issue_duplicate(
         &self,
         token: &str,
-        request: IssueDuplicateRequest<'_>,
+        request: IssueGraphQlRequest<'_>,
     ) -> Result<Option<GitHubIssueDuplicateReference>, AppError> {
         assert_eq!(token, "github-user-access-token");
         assert_eq!(

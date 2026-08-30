@@ -10,6 +10,40 @@ pub(super) const RELATED_ISSUE_PAGE_SIZE: u8 = 30;
 const GITHUB_API_VERSION: &str = "2026-03-10";
 
 #[derive(Clone, Copy)]
+pub(crate) struct IssueGraphQlRequest<'a> {
+    pub(super) owner: &'a str,
+    pub(super) repository: &'a str,
+    pub(super) issue_number: u64,
+    pub(super) expected_issue_node_id: &'a str,
+}
+
+impl<'a> IssueGraphQlRequest<'a> {
+    pub(super) fn new(
+        owner: &'a str,
+        repository: &'a str,
+        issue_number: u64,
+        expected_issue_node_id: &'a str,
+    ) -> Result<Self, AppError> {
+        if issue_number == 0 {
+            return Err(AppError::Validation(
+                "issue number must be greater than zero".to_string(),
+            ));
+        }
+        if !graphql_node_id_is_valid(expected_issue_node_id) {
+            return Err(AppError::Validation(
+                "the expected Issue node ID is invalid".to_string(),
+            ));
+        }
+        Ok(Self {
+            owner,
+            repository,
+            issue_number,
+            expected_issue_node_id,
+        })
+    }
+}
+
+#[derive(Clone, Copy)]
 pub(crate) struct RelatedIssueRequest<'a> {
     pub(super) owner: &'a str,
     pub(super) repository: &'a str,
@@ -158,8 +192,7 @@ fn validate_identity(
     let issue = &summary.issue;
     if issue.id == 0
         || issue.number == 0
-        || issue.reaction_subject.id.trim().is_empty()
-        || issue.reaction_subject.id.chars().any(char::is_whitespace)
+        || !graphql_node_id_is_valid(&issue.reaction_subject.id)
         || !issue_url_matches(
             api_url,
             "api.github.com",
@@ -196,6 +229,29 @@ pub(super) fn issue_url_matches(value: &str, host: &str, path: &str) -> bool {
         && url.path().eq_ignore_ascii_case(path)
         && url.query().is_none()
         && url.fragment().is_none()
+}
+
+pub(super) fn graphql_node_id_is_valid(value: &str) -> bool {
+    !value.trim().is_empty()
+        && value.len() <= 512
+        && !value
+            .chars()
+            .any(|character| character.is_whitespace() || character.is_control())
+}
+
+pub(super) fn split_repository_full_name(value: &str) -> Option<(String, String)> {
+    let (owner, repository) = value.split_once('/')?;
+    if owner.is_empty()
+        || repository.is_empty()
+        || repository.contains('/')
+        || owner
+            .chars()
+            .chain(repository.chars())
+            .any(|character| character.is_whitespace() || character.is_control())
+    {
+        return None;
+    }
+    Some((owner.to_string(), repository.to_string()))
 }
 
 fn invalid_identity(source: &str) -> AppError {

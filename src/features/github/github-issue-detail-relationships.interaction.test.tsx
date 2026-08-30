@@ -102,6 +102,9 @@ beforeEach(() => {
         hasMore: false,
       });
     }
+    if (command === "github_get_repository_issue_linked_pull_requests") {
+      return Promise.resolve({ pullRequests: [], nextCursor: null });
+    }
     return Promise.reject(new Error(`unexpected command ${command}`));
   });
 });

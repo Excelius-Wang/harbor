@@ -29,6 +29,7 @@ import {
 } from "./github-issue-detail-navigation";
 import { GitHubIssueDependencies } from "./github-issue-dependencies";
 import { GitHubIssueDuplicate } from "./github-issue-duplicate";
+import { GitHubIssueLinkedPullRequests } from "./github-issue-linked-pull-requests";
 import { GitHubIssueRelationships } from "./github-issue-relationships";
 import { GitHubIssueStateAction } from "./github-issue-state-action";
 import {
@@ -339,6 +340,7 @@ function GitHubIssueDetailScreen({
                           )
                         }
                       />
+                      <GitHubIssueLinkedPullRequests repository={repository} issue={detail.issue} />
                       <GitHubIssueRelationships
                         repository={repository}
                         issueNumber={detail.issue.number}
