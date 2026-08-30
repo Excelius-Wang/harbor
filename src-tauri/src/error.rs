@@ -19,6 +19,8 @@ pub enum AppError {
     GitHubPullRequestBranchUpdateConflict(String),
     #[error("GitHub could not change the pull request base: {0}")]
     GitHubPullRequestBaseEditConflict(String),
+    #[error("GitHub could not update pull request maintainer editability: {0}")]
+    GitHubPullRequestMaintainerEditabilityConflict(String),
     #[error("GitHub could not create the pull request: {0}")]
     GitHubPullRequestCreationConflict(String),
     #[error("GitHub could not update pull request auto-merge: {0}")]
@@ -76,6 +78,9 @@ impl Serialize for AppError {
                 "githubPullRequestBranchUpdateConflict"
             }
             Self::GitHubPullRequestBaseEditConflict(_) => "githubPullRequestBaseEditConflict",
+            Self::GitHubPullRequestMaintainerEditabilityConflict(_) => {
+                "githubPullRequestMaintainerEditabilityConflict"
+            }
             Self::GitHubPullRequestCreationConflict(_) => "githubPullRequestCreationConflict",
             Self::GitHubPullRequestAutoMergeConflict(_) => "githubPullRequestAutoMergeConflict",
             Self::GitHubPullRequestMergeQueueConflict(_) => "githubPullRequestMergeQueueConflict",
@@ -212,6 +217,23 @@ mod tests {
             serde_json::json!({
                 "code": "githubPullRequestBaseEditConflict",
                 "message": "GitHub could not change the pull request base: the target branch changed"
+            })
+        );
+    }
+
+    #[test]
+    fn pull_request_maintainer_editability_conflict_has_a_stable_ipc_code() {
+        let payload =
+            serde_json::to_value(AppError::GitHubPullRequestMaintainerEditabilityConflict(
+                "the head branch changed".to_string(),
+            ))
+            .expect("serialize error");
+
+        assert_eq!(
+            payload,
+            serde_json::json!({
+                "code": "githubPullRequestMaintainerEditabilityConflict",
+                "message": "GitHub could not update pull request maintainer editability: the head branch changed"
             })
         );
     }

@@ -148,6 +148,8 @@ pub fn run() {
             commands::github_update_repository_pull_request,
             commands::github_list_repository_pull_request_base_branches,
             commands::github_update_repository_pull_request_base,
+            commands::github_get_repository_pull_request_maintainer_editability,
+            commands::github_update_repository_pull_request_maintainer_editability,
             commands::github_update_repository_pull_request_state,
             commands::github_update_repository_pull_request_draft_state,
             commands::github_update_repository_pull_request_metadata,

@@ -16,6 +16,7 @@ pub(crate) mod base_edit;
 pub(crate) mod creation;
 pub(crate) mod file_view_state;
 pub(crate) mod lifecycle;
+pub(crate) mod maintainer_editability;
 pub(crate) mod merge_queue;
 pub(crate) mod review_dismissal;
 pub(crate) mod reviewer;
