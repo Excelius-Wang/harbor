@@ -133,6 +133,8 @@ pub fn run() {
             commands::github_get_repository_issue,
             commands::github_get_repository_issue_relationships,
             commands::github_get_repository_issue_dependencies,
+            commands::github_add_repository_issue_dependency,
+            commands::github_remove_repository_issue_dependency,
             commands::github_get_repository_conversation_controls,
             commands::github_update_repository_conversation_lock,
             commands::github_update_repository_conversation_subscription,

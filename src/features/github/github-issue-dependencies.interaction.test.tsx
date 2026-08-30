@@ -110,6 +110,87 @@ describe("GitHub Issue dependencies", () => {
     expect(onNavigate).toHaveBeenNthCalledWith(2, dependent);
   });
 
+  it("adds one blocking Issue from its GitHub Issue URL and refreshes the dependency page", async () => {
+    const blocker = summary("api", 9, "Ship API first");
+    vi.mocked(invoke).mockImplementation((command) => {
+      if (command === "github_get_repository_issue_dependencies") {
+        return Promise.resolve({
+          blockedBy: [],
+          blocking: [],
+          page: 1,
+          hasPrevious: false,
+          hasMore: false,
+        });
+      }
+      if (command === "github_add_repository_issue_dependency") {
+        return Promise.resolve();
+      }
+      return Promise.resolve();
+    });
+    const user = userEvent.setup();
+    renderDependencies();
+
+    await screen.findByText("workspace.repositories.noIssueDependencies");
+    await user.click(screen.getByRole("button", { name: "workspace.repositories.addDependency" }));
+    const issueUrl = screen.getByLabelText("workspace.repositories.dependencyIssueUrl");
+    await user.type(issueUrl, blocker.issue.url);
+    await user.click(
+      screen.getByRole("button", { name: "workspace.repositories.addDependencyConfirm" })
+    );
+
+    await waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith("github_add_repository_issue_dependency", {
+        owner: "octocat",
+        repository: "hello-world",
+        issueNumber: 7,
+        blockingOwner: "octocat",
+        blockingRepository: "api",
+        blockingIssueNumber: 9,
+      })
+    );
+  });
+
+  it("requires confirmation before removing a selected blocking Issue", async () => {
+    const blocker = summary("api", 9, "Ship API first");
+    vi.mocked(invoke).mockImplementation((command) => {
+      if (command === "github_get_repository_issue_dependencies") {
+        return Promise.resolve({
+          blockedBy: [blocker],
+          blocking: [],
+          page: 1,
+          hasPrevious: false,
+          hasMore: false,
+        });
+      }
+      if (command === "github_remove_repository_issue_dependency") {
+        return Promise.resolve();
+      }
+      return Promise.resolve();
+    });
+    const user = userEvent.setup();
+    renderDependencies();
+
+    await screen.findByText("Ship API first");
+    await user.click(
+      screen.getByRole("button", { name: "workspace.repositories.removeDependency" })
+    );
+    expect(
+      await screen.findByRole("heading", { name: "workspace.repositories.removeDependencyConfirm" })
+    ).toBeDefined();
+    await user.click(
+      screen.getByRole("button", { name: "workspace.repositories.removeDependencyConfirm" })
+    );
+
+    await waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith("github_remove_repository_issue_dependency", {
+        owner: "octocat",
+        repository: "hello-world",
+        issueNumber: 7,
+        blockingIssueId: 9,
+      })
+    );
+  });
+
   it("keeps cached dependencies visible and retries after a permission refresh failure", async () => {
     vi.mocked(invoke)
       .mockResolvedValueOnce({

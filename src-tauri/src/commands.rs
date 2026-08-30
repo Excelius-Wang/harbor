@@ -1662,6 +1662,51 @@ pub async fn github_get_repository_issue_dependencies(
 }
 
 #[tauri::command]
+pub async fn github_add_repository_issue_dependency(
+    owner: String,
+    repository: String,
+    issue_number: u64,
+    blocking_owner: String,
+    blocking_repository: String,
+    blocking_issue_number: u64,
+    state: State<'_, AppState>,
+) -> Result<(), AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    let blocking_repository = RepositoryRef::new(blocking_owner, blocking_repository)?;
+    state
+        .github
+        .add_issue_dependency(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(issue_number, "issue")?,
+            blocking_repository.owner(),
+            blocking_repository.name(),
+            validate_item_number(blocking_issue_number, "blocking issue")?,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_remove_repository_issue_dependency(
+    owner: String,
+    repository: String,
+    issue_number: u64,
+    blocking_issue_id: u64,
+    state: State<'_, AppState>,
+) -> Result<(), AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .remove_issue_dependency(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(issue_number, "issue")?,
+            validate_item_number(blocking_issue_id, "blocking issue ID")?,
+        )
+        .await
+}
+
+#[tauri::command]
 pub async fn github_get_repository_conversation_controls(
     owner: String,
     repository: String,
