@@ -47,7 +47,10 @@ export function GitHubCommitCommentsWorkspace({
 }) {
   const { t } = useTranslation();
   const result = useInfiniteQuery(repositoryCommitCommentsQueryOptions(target));
-  const comments = result.data?.pages.flatMap((page) => page.comments) ?? [];
+  const comments = useMemo(
+    () => result.data?.pages.flatMap((page) => page.comments) ?? [],
+    [result.data]
+  );
   const initialError = !result.data && result.error ? parseIpcError(result.error) : null;
   const laterError =
     result.data && result.isFetchNextPageError ? parseIpcError(result.error) : null;
@@ -66,10 +69,10 @@ export function GitHubCommitCommentsWorkspace({
     (comment) =>
       comment.path !== null && comment.position !== null && !placedCommentIds.has(comment.id)
   );
-  const subjects = comments.map((comment) => ({
-    id: comment.id,
-    kind: "commitComment" as const,
-  }));
+  const subjects = useMemo(
+    () => comments.map((comment) => ({ id: comment.id, kind: "commitComment" as const })),
+    [comments]
+  );
   const canCreateComment = Boolean(result.data) && !initialError;
 
   return (

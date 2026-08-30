@@ -39,15 +39,16 @@ describe("GitHub commit comment positions", () => {
     expect(commitCommentChangeKeyAtPosition(positions, 7)).toBe(getChangeKey(changes[4]));
     expect(commitCommentChangeKeyAtPosition(positions, 5)).toBeUndefined();
     expect(commitCommentChangeKeyAtPosition(positions, 6)).toBeUndefined();
+    expect(
+      commitCommentPositionsByChangeKey({ ...file, patch: `${file.patch}\n` }, changes)
+    ).toEqual(positions);
   });
 
   it("does not invent positions for missing or malformed patches", () => {
-    expect(commitCommentPositionsByChangeKey({ ...file, patch: undefined }, new Array())).toEqual(
+    expect(commitCommentPositionsByChangeKey({ ...file, patch: undefined }, [])).toEqual(new Map());
+    expect(commitCommentPositionsByChangeKey({ ...file, patch: "not a patch" }, [])).toEqual(
       new Map()
     );
-    expect(
-      commitCommentPositionsByChangeKey({ ...file, patch: "not a patch" }, new Array())
-    ).toEqual(new Map());
   });
 
   it("places only comments that match the file path and exact diff position", () => {

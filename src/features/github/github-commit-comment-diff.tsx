@@ -53,7 +53,10 @@ export function GitHubCommitCommentFileDiff({
     () =>
       comments.reduce((grouped, comment) => {
         const changeKey = commitCommentChangeKeyForFile(file, comment, positions);
-        if (changeKey) grouped.set(changeKey, [...(grouped.get(changeKey) ?? []), comment]);
+        if (!changeKey) return grouped;
+        const existing = grouped.get(changeKey);
+        if (existing) existing.push(comment);
+        else grouped.set(changeKey, [comment]);
         return grouped;
       }, new Map<string, GitHubCommitComment[]>()),
     [comments, file, positions]

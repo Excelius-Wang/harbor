@@ -11,7 +11,8 @@ export function commitCommentPositionsByChangeKey(
   let position = 0;
   let sawFirstHunk = false;
 
-  for (const line of file.patch.split("\n")) {
+  const patch = file.patch.endsWith("\n") ? file.patch.slice(0, -1) : file.patch;
+  for (const line of patch.split("\n")) {
     if (line.startsWith("@@")) {
       if (sawFirstHunk) position += 1;
       else sawFirstHunk = true;

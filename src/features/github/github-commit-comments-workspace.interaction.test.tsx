@@ -6,7 +6,11 @@ import { invoke } from "@tauri-apps/api/core";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { GitHubCommitComment, GitHubCommitCommentPage } from "./github-data";
+import type {
+  GitHubChangedFile,
+  GitHubCommitComment,
+  GitHubCommitCommentPage,
+} from "./github-data";
 import { GitHubCommitCommentsWorkspace } from "./github-commit-comments-workspace";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
@@ -72,7 +76,7 @@ function createQueryClient() {
   });
 }
 
-function renderWorkspace(client: QueryClient, files = new Array()) {
+function renderWorkspace(client: QueryClient, files: GitHubChangedFile[] = []) {
   return render(
     <QueryClientProvider client={client}>
       <GitHubCommitCommentsWorkspace
