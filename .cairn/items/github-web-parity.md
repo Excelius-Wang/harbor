@@ -9,30 +9,36 @@ controls, and organization-level advanced security remain out of scope.
 
 ## Current state
 
-PRs #1 through #17 have been consolidated and squash-merged through
-`a4a1dd48749b677408de0358c6b3316027c3d2cc`; superseded and merged remote feature branches were
-deleted. PR #17 delivered author-controlled pull-request maintainer editability with guarded
-preflight/write/postflight verification and no unresolved Standards or Spec findings.
+PRs #1 through #19 are squash-merged. PR #18 delivered commit comments at `3eb1a04`; PR #19
+refreshed the personal GitHub Web gap audit at `a59f9f3`, selected Issue close reasons as the next
+small slice, and recorded the later auth, secret, and repository-administration boundaries. Their
+remote branches are absent.
 
-The next focused slice is in the clean worktree
-`/private/tmp/harbor-github-web-parity-next-20260830` on `feat/github-commit-comments`, based on
-`origin/main` at `a4a1dd4`. It adds native paginated commit-comment reads, general and exact
-diff-position creation, revision/capability-guarded edit and delete, commit-comment reactions,
-unplaceable-comment recovery UI, English/Chinese copy, and focused transport and interaction tests.
-Rust production code is split between a 338-line domain/service module and a 631-line transport
-module; tests remain separate. [Draft PR #18](https://github.com/Excelius-Wang/harbor/pull/18) is
-open. Initial Standards review reported four findings and Spec review reported five; all are fixed.
-The first final Standards review had zero findings. Its paired Spec review found one remaining low
-REST-contract test gap, fixed at source head `7b23a44` with shared-header assertions across REST
-verbs and a successful commit-level POST that omits `path` and `position`. The fixes also cover
-authoritative-refetch write locks, exact Git path preservation, terminal-newline diff mapping,
-repository translation hooks, required tooltips, bounded shared types/components, and independent
-navigation/reaction coverage. `pnpm check` passes 45 files and 245 tests; focused commit-comment
-Rust tests pass 17 cases; full Rust library tests pass 378 cases with two intentional ignores;
-`cargo check`, rustfmt, `git diff --check`, and Clippy pass with exactly the 15 pre-existing warnings.
+The current slice is in `/private/tmp/harbor-github-issue-close-reasons-20260830` on
+`feat/github-issue-close-reasons-20260830`, based on `origin/main` at `a59f9f3`. [Draft PR
+#20](https://github.com/Excelius-Wang/harbor/pull/20) adds GraphQL close/reopen capabilities,
+Completed and Not planned selection, forward-compatible close-reason display, guarded REST
+preflight/write/postflight verification, destination-cache reconciliation, English/Chinese copy,
+and focused transport and interaction tests. Production code is split into an Issue lifecycle
+module, a small state-control component, and a separate query helper; tests remain separate.
+
+The first independent Standards and Spec reviews found checkpoint, translation-hook, tooltip,
+capability-refresh, forward-compatibility, moved-resource, destination-cache, copy, and test-matrix
+gaps. Those findings are fixed. A second exact-head review found production retry, combined-error
+recovery, bounded cache-ordering, and remaining matrix gaps; those are also fixed. Full verification
+now passes 49 frontend files and 264 tests, 398 Rust tests with two intentional external-service
+ignores, cargo check, rustfmt, and Clippy with exactly the 15 existing warnings. The focused diff
+also passes `git diff --check`. The final review pass found an updated-sort page-two duplicate edge
+and small code-quality issues; the edge now removes and invalidates stale non-first-page copies, and
+the shared state type, error formatter, cache-page reconciler, and lifecycle client seam are cleaned
+up. The same full verification passes after those changes.
+
+Independent Spec review of exact head `7600305` reports zero unresolved findings. Independent
+Standards review confirms every code-quality finding is resolved and reports only that this
+checkpoint's delivery step needs to advance now that both reviews have completed.
 
 The original worktree remains on local recovery branch
-`checkpoint/github-actions-administration-20260830` at `7e2084f` with only its older Cairn item
+`checkpoint/github-actions-administration-20260830` at `7e2084f` with only its separate Cairn item
 unstaged. Do not reset, stash, clean, or use it for source edits.
 
 Harbor uses a classic OAuth App for scope-based personal workflows, rejects GitHub App client IDs
@@ -43,18 +49,17 @@ refresh tokens, or Keychain contents.
 
 ## Next action
 
-Run full Rust verification and final independent Standards and Spec re-reviews on Draft PR #18's
-exact head, then carry the reviewed head through Ready state, squash merge, merged-`main`
-verification, and remote branch deletion if both reviews have no unresolved findings.
+Mark PR #20 Ready, confirm the final remote head remains clean and mergeable, squash merge it,
+verify merged `main`, and delete the feature branch.
 
 ## Verification
 
 Run `pnpm check`, `cargo test --manifest-path src-tauri/Cargo.toml --lib`,
 `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features`,
-`cargo fmt --manifest-path src-tauri/Cargo.toml --check`, and `git diff --check`. Review the focused
+`cargo fmt --manifest-path src-tauri/Cargo.toml -- --check`, and `git diff --check`. Review the focused
 diff against `origin/main`, then deliver it through a Draft PR, Ready state, squash merge, `main`
 verification, and remote branch deletion.
 
 Success: the focused PR is squash-merged with no unresolved Standards or Spec findings; remote
-`main` contains the verified commit-comment slice; its remote feature branch is absent; the
+`main` contains the verified Issue-close-reason slice; its remote feature branch is absent; the
 remaining personal GitHub Web gaps are recorded for the next independent slice.

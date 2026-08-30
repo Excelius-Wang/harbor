@@ -12,6 +12,8 @@ import type {
 import {
   createRepositoryIssue,
   createRepositoryIssueComment,
+  invalidateRepositoryIssue,
+  issueStateMutationInput,
   syncCreatedIssue,
   syncCreatedIssueComment,
   syncIssueLockedState,
@@ -101,7 +103,13 @@ describe("GitHub Issue mutations", () => {
       milestoneNumber: 3,
     });
     await createRepositoryIssueComment(target, "Fixed in #41.");
-    await updateRepositoryIssueState(target, "closed");
+    await updateRepositoryIssueState(
+      target,
+      issueStateMutationInput(issue, {
+        desiredState: "closed",
+        closeReason: "notPlanned",
+      })
+    );
 
     expect(invoke).toHaveBeenNthCalledWith(1, "github_create_repository_issue", {
       owner: target.owner,
@@ -126,7 +134,17 @@ describe("GitHub Issue mutations", () => {
     });
     expect(invoke).toHaveBeenNthCalledWith(5, "github_update_repository_issue_state", {
       ...target,
-      issueState: "closed",
+      mutation: {
+        desiredState: "closed",
+        closeReason: "notPlanned",
+        expected: {
+          issueId: issue.id,
+          issueNodeId: issue.reactionSubject.id,
+          state: "open",
+          stateReason: null,
+          updatedAt: issue.updatedAt,
+        },
+      },
     });
   });
 
@@ -309,10 +327,9 @@ describe("GitHub Issue mutations", () => {
       hasPrevious: false,
       hasMore: false,
     });
-    const previouslyClosed = { ...issue, state: "closed" as const, stateReason: "notPlanned" };
     queryClient.setQueryData<GitHubIssuePage>(closedListKey, {
-      issues: [previouslyClosed],
-      totalCount: 1,
+      issues: [],
+      totalCount: 0,
       page: 1,
       hasPrevious: false,
       hasMore: false,
@@ -325,8 +342,8 @@ describe("GitHub Issue mutations", () => {
       hasMore: false,
     });
     queryClient.setQueryData<GitHubIssueInboxPage>(closedInboxKey, {
-      issues: [{ ...summary, issue: previouslyClosed }],
-      totalCount: 1,
+      issues: [],
+      totalCount: 0,
       page: 1,
       hasPrevious: false,
       hasMore: false,
@@ -353,5 +370,254 @@ describe("GitHub Issue mutations", () => {
     expect(queryClient.getQueryData<GitHubIssueInboxPage>(closedInboxKey)?.issues[0].issue).toEqual(
       closedIssue
     );
+  });
+
+  it("bounds updated destination pages and invalidates destinations whose order is not exact", () => {
+    const queryClient = new QueryClient();
+    const openListKey = githubQueryKeys.issues({
+      owner: target.owner,
+      repository: target.repository,
+      state: "open",
+      assignment: "all",
+      query: "",
+      label: "",
+      sort: "updated",
+      page: 1,
+    });
+    const closedUpdatedListKey = githubQueryKeys.issues({
+      owner: target.owner,
+      repository: target.repository,
+      state: "closed",
+      assignment: "all",
+      query: "",
+      label: "",
+      sort: "updated",
+      page: 1,
+    });
+    const closedUpdatedListSecondKey = githubQueryKeys.issues({
+      owner: target.owner,
+      repository: target.repository,
+      state: "closed",
+      assignment: "all",
+      query: "",
+      label: "",
+      sort: "updated",
+      page: 2,
+    });
+    const closedCreatedListKey = githubQueryKeys.issues({
+      owner: target.owner,
+      repository: target.repository,
+      state: "closed",
+      assignment: "all",
+      query: "",
+      label: "",
+      sort: "created",
+      page: 1,
+    });
+    const openInboxKey = githubQueryKeys.issueInbox({
+      scope: "authored",
+      state: "open",
+      query: "",
+      sort: "updated",
+      page: 1,
+    });
+    const closedUpdatedInboxKey = githubQueryKeys.issueInbox({
+      scope: "authored",
+      state: "closed",
+      query: "",
+      sort: "updated",
+      page: 1,
+    });
+    const closedUpdatedInboxSecondKey = githubQueryKeys.issueInbox({
+      scope: "authored",
+      state: "closed",
+      query: "",
+      sort: "updated",
+      page: 2,
+    });
+    const closedCommentsInboxKey = githubQueryKeys.issueInbox({
+      scope: "authored",
+      state: "closed",
+      query: "",
+      sort: "comments",
+      page: 1,
+    });
+    const existingIssues = Array.from({ length: 30 }, (_, index) => ({
+      ...issue,
+      id: 100 + index,
+      number: 100 + index,
+      reactionSubject: { id: `I_${100 + index}`, kind: "issue" as const },
+      url: `https://github.com/octocat/hello-world/issues/${100 + index}`,
+      state: "closed" as const,
+      stateReason: "completed",
+    }));
+    const existingSummaries = existingIssues.map((existingIssue) => ({
+      ...summary,
+      issue: existingIssue,
+    }));
+    const closedIssue = { ...issue, state: "closed" as const, stateReason: "completed" };
+    const secondPageIssue = {
+      ...existingIssues[0],
+      id: 200,
+      number: 200,
+      reactionSubject: { id: "I_200", kind: "issue" as const },
+      url: "https://github.com/octocat/hello-world/issues/200",
+    };
+    queryClient.setQueryData<GitHubIssuePage>(openListKey, {
+      issues: [issue],
+      totalCount: 1,
+      page: 1,
+      hasPrevious: false,
+      hasMore: false,
+    });
+    queryClient.setQueryData<GitHubIssuePage>(closedUpdatedListKey, {
+      issues: existingIssues,
+      totalCount: 30,
+      page: 1,
+      hasPrevious: false,
+      hasMore: false,
+    });
+    queryClient.setQueryData<GitHubIssuePage>(closedUpdatedListSecondKey, {
+      issues: [closedIssue, secondPageIssue],
+      totalCount: 31,
+      page: 2,
+      hasPrevious: true,
+      hasMore: false,
+    });
+    queryClient.setQueryData<GitHubIssuePage>(closedCreatedListKey, {
+      issues: [],
+      totalCount: 0,
+      page: 1,
+      hasPrevious: false,
+      hasMore: false,
+    });
+    queryClient.setQueryData<GitHubIssueInboxPage>(openInboxKey, {
+      issues: [summary],
+      totalCount: 1,
+      page: 1,
+      hasPrevious: false,
+      hasMore: false,
+    });
+    queryClient.setQueryData<GitHubIssueInboxPage>(closedUpdatedInboxKey, {
+      issues: existingSummaries,
+      totalCount: 30,
+      page: 1,
+      hasPrevious: false,
+      hasMore: false,
+    });
+    queryClient.setQueryData<GitHubIssueInboxPage>(closedUpdatedInboxSecondKey, {
+      issues: [
+        { ...summary, issue: closedIssue },
+        { ...summary, issue: secondPageIssue },
+      ],
+      totalCount: 31,
+      page: 2,
+      hasPrevious: true,
+      hasMore: false,
+    });
+    queryClient.setQueryData<GitHubIssueInboxPage>(closedCommentsInboxKey, {
+      issues: [],
+      totalCount: 0,
+      page: 1,
+      hasPrevious: false,
+      hasMore: false,
+    });
+    syncUpdatedIssue(queryClient, target, closedIssue);
+
+    expect(queryClient.getQueryData<GitHubIssuePage>(closedUpdatedListKey)).toMatchObject({
+      totalCount: 31,
+      hasMore: true,
+    });
+    expect(queryClient.getQueryData<GitHubIssuePage>(closedUpdatedListKey)?.issues).toHaveLength(
+      30
+    );
+    expect(queryClient.getQueryData<GitHubIssuePage>(closedUpdatedListKey)?.issues[0]).toEqual(
+      closedIssue
+    );
+    expect(
+      queryClient
+        .getQueryData<GitHubIssuePage>(closedUpdatedListSecondKey)
+        ?.issues.some((item) => item.number === target.issueNumber)
+    ).toBe(false);
+    expect(queryClient.getQueryData<GitHubIssuePage>(closedUpdatedListSecondKey)?.totalCount).toBe(
+      31
+    );
+    expect(queryClient.getQueryState(closedUpdatedListSecondKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(closedCreatedListKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryData<GitHubIssuePage>(closedCreatedListKey)?.issues).toEqual([]);
+    expect(queryClient.getQueryData<GitHubIssueInboxPage>(closedUpdatedInboxKey)).toMatchObject({
+      totalCount: 31,
+      hasMore: true,
+    });
+    expect(
+      queryClient.getQueryData<GitHubIssueInboxPage>(closedUpdatedInboxKey)?.issues
+    ).toHaveLength(30);
+    expect(
+      queryClient.getQueryData<GitHubIssueInboxPage>(closedUpdatedInboxKey)?.issues[0].issue
+    ).toEqual(closedIssue);
+    expect(
+      queryClient
+        .getQueryData<GitHubIssueInboxPage>(closedUpdatedInboxSecondKey)
+        ?.issues.some((item) => item.issue.number === target.issueNumber)
+    ).toBe(false);
+    expect(
+      queryClient.getQueryData<GitHubIssueInboxPage>(closedUpdatedInboxSecondKey)?.totalCount
+    ).toBe(31);
+    expect(queryClient.getQueryState(closedUpdatedInboxSecondKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(closedCommentsInboxKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryData<GitHubIssueInboxPage>(closedCommentsInboxKey)?.issues).toEqual(
+      []
+    );
+  });
+
+  it("invalidates only Issue detail, list, and inbox roots", async () => {
+    const queryClient = new QueryClient();
+    const affected = [
+      githubQueryKeys.issueDetail({ ...target, timelinePage: 1 }),
+      githubQueryKeys.issueDetail({ ...target, timelinePage: 2 }),
+      githubQueryKeys.issues({
+        owner: target.owner,
+        repository: target.repository,
+        state: "open" as const,
+        assignment: "all" as const,
+        query: "",
+        label: "",
+        sort: "updated" as const,
+        page: 1,
+      }),
+      githubQueryKeys.issueInbox({
+        scope: "authored" as const,
+        state: "open" as const,
+        query: "",
+        sort: "updated" as const,
+        page: 1,
+      }),
+    ];
+    const untouched = [
+      githubQueryKeys.pullRequestDetail({
+        owner: target.owner,
+        repository: target.repository,
+        pullRequestNumber: 7,
+        timelinePage: 1,
+      }),
+      githubQueryKeys.issueLabels(target),
+      githubQueryKeys.projects({ state: "open", query: "", sort: "updated" }),
+      githubQueryKeys.notifications({ participating: false, page: 1 }),
+      githubQueryKeys.commitComments({
+        owner: target.owner,
+        repository: target.repository,
+        commitSha: "a".repeat(40),
+      }),
+    ];
+    for (const key of [...affected, ...untouched]) queryClient.setQueryData(key, { cached: true });
+
+    await invalidateRepositoryIssue(queryClient, target);
+
+    for (const key of affected) {
+      expect(queryClient.getQueryState(key)?.isInvalidated, JSON.stringify(key)).toBe(true);
+    }
+    for (const key of untouched) {
+      expect(queryClient.getQueryState(key)?.isInvalidated, JSON.stringify(key)).toBe(false);
+    }
   });
 });

@@ -43,6 +43,10 @@ pub enum AppError {
     GitHubWikiUnsupportedPath(String),
     #[error("GitHub comment changed: {0}")]
     GitHubCommentConflict(String),
+    #[error("GitHub Issue state changed: {0}")]
+    GitHubIssueStateConflict(String),
+    #[error("GitHub Issue moved: {0}")]
+    GitHubIssueMoved(String),
     #[error("GitHub workflow artifact has expired")]
     GitHubArtifactExpired,
     #[error("GitHub authentication error: {0}")]
@@ -94,6 +98,8 @@ impl Serialize for AppError {
             Self::GitHubWikiTooLarge(_) => "githubWikiTooLarge",
             Self::GitHubWikiUnsupportedPath(_) => "githubWikiUnsupportedPath",
             Self::GitHubCommentConflict(_) => "githubCommentConflict",
+            Self::GitHubIssueStateConflict(_) => "githubIssueStateConflict",
+            Self::GitHubIssueMoved(_) => "githubIssueMoved",
             Self::GitHubArtifactExpired => "githubArtifactExpired",
             Self::GitHubAuthentication(_) => "githubAuthentication",
             Self::GitHubNotConnected => "githubNotConnected",
@@ -121,6 +127,38 @@ mod tests {
             serde_json::json!({
                 "code": "githubNotConnected",
                 "message": "GitHub is not connected"
+            })
+        );
+    }
+
+    #[test]
+    fn github_issue_state_conflict_has_a_stable_ipc_code() {
+        let payload = serde_json::to_value(AppError::GitHubIssueStateConflict(
+            "the Issue changed".to_string(),
+        ))
+        .expect("serialize error");
+
+        assert_eq!(
+            payload,
+            serde_json::json!({
+                "code": "githubIssueStateConflict",
+                "message": "GitHub Issue state changed: the Issue changed"
+            })
+        );
+    }
+
+    #[test]
+    fn github_issue_moved_has_a_stable_ipc_code() {
+        let payload = serde_json::to_value(AppError::GitHubIssueMoved(
+            "the repository moved".to_string(),
+        ))
+        .expect("serialize error");
+
+        assert_eq!(
+            payload,
+            serde_json::json!({
+                "code": "githubIssueMoved",
+                "message": "GitHub Issue moved: the repository moved"
             })
         );
     }

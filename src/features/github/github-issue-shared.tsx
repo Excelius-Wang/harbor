@@ -1,6 +1,5 @@
 import type { ComponentProps, MouseEvent } from "react";
 import { CheckCircle2, ChevronLeft, ChevronRight, CircleDot } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import {
   Pagination,
@@ -9,7 +8,9 @@ import {
   PaginationLink,
 } from "@/components/ui/pagination";
 import { cn } from "@/lib/utils";
-import type { GitHubIssueState } from "./github-data";
+import { useAppTranslation } from "@/hooks/use-app-translation";
+import type { GitHubIssueState, GitHubIssueStateReason } from "./github-data";
+import { issueStateLabel } from "./github-issue-state";
 
 export function formatIssueDate(value: string | undefined, locale: string) {
   if (!value) return "";
@@ -22,8 +23,14 @@ export function formatIssueDate(value: string | undefined, locale: string) {
   }).format(new Date(value));
 }
 
-export function GitHubIssueStateBadge({ state }: { state: GitHubIssueState }) {
-  const { t } = useTranslation();
+export function GitHubIssueStateBadge({
+  state,
+  stateReason,
+}: {
+  state: GitHubIssueState;
+  stateReason?: GitHubIssueStateReason;
+}) {
+  const { t } = useAppTranslation();
   const Icon = state === "open" ? CircleDot : CheckCircle2;
   return (
     <Badge
@@ -36,7 +43,7 @@ export function GitHubIssueStateBadge({ state }: { state: GitHubIssueState }) {
       )}
     >
       <Icon />
-      {t(`workspace.repositories.${state}`)}
+      {t(issueStateLabel(state, stateReason))}
     </Badge>
   );
 }
@@ -67,7 +74,7 @@ export function GitHubPagination({
   onPageChange: (page: number) => void;
   ariaLabel: string;
 }) {
-  const { t } = useTranslation();
+  const { t } = useAppTranslation();
   if (!hasPrevious && !hasMore) return null;
 
   const navigate = (event: MouseEvent<HTMLAnchorElement>, enabled: boolean, nextPage: number) => {
@@ -124,6 +131,6 @@ export function GitHubPagination({
 export function GitHubIssuePagination(
   props: Omit<ComponentProps<typeof GitHubPagination>, "ariaLabel">
 ) {
-  const { t } = useTranslation();
+  const { t } = useAppTranslation();
   return <GitHubPagination {...props} ariaLabel={t("workspace.repositories.issuePagination")} />;
 }

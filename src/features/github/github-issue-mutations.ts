@@ -2,15 +2,36 @@ import type { QueryClient, QueryKey } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
 import type {
   GitHubIssue,
+  GitHubIssueCloseReason,
   GitHubIssueDetailPage,
   GitHubIssueInboxPage,
   GitHubIssuePage,
   GitHubIssueState,
+  GitHubIssueStateReason,
   GitHubIssueTimelineItem,
   GitHubIssueSummary,
   GitHubItemMetadataValue,
 } from "./github-data";
 import { githubQueryKeys } from "./github-queries";
+
+const GITHUB_ISSUE_PAGE_SIZE = 30;
+
+function reconcileUpdatedPageItems<T>(
+  items: T[],
+  updatedItem: T,
+  matches: (item: T) => boolean,
+  hasMore: boolean
+) {
+  const remainingItems = items.filter((item) => !matches(item));
+  const orderedItems = [updatedItem, ...remainingItems];
+  return {
+    remainingItems,
+    updatedPage: {
+      issues: orderedItems.slice(0, GITHUB_ISSUE_PAGE_SIZE),
+      hasMore: hasMore || orderedItems.length > GITHUB_ISSUE_PAGE_SIZE,
+    },
+  };
+}
 
 export type GitHubRepositoryIssueMutationTarget = {
   owner: string;
@@ -20,6 +41,39 @@ export type GitHubRepositoryIssueMutationTarget = {
 export type GitHubIssueMutationTarget = GitHubRepositoryIssueMutationTarget & {
   issueNumber: number;
 };
+
+export type GitHubIssueStateMutationInput = {
+  desiredState: GitHubIssueState;
+  closeReason: GitHubIssueCloseReason | null;
+  expected: {
+    issueId: number;
+    issueNodeId: string;
+    state: GitHubIssueState;
+    stateReason: GitHubIssueStateReason | null;
+    updatedAt: string;
+  };
+};
+
+export type GitHubIssueStateChoice = Pick<
+  GitHubIssueStateMutationInput,
+  "desiredState" | "closeReason"
+>;
+
+export function issueStateMutationInput(
+  issue: GitHubIssue,
+  choice: GitHubIssueStateChoice
+): GitHubIssueStateMutationInput {
+  return {
+    ...choice,
+    expected: {
+      issueId: issue.id,
+      issueNodeId: issue.reactionSubject.id,
+      state: issue.state,
+      stateReason: issue.stateReason ?? null,
+      updatedAt: issue.updatedAt,
+    },
+  };
+}
 
 export type GitHubIssueMetadataValue = GitHubItemMetadataValue;
 
@@ -75,13 +129,11 @@ export function createRepositoryIssueComment(target: GitHubIssueMutationTarget, 
 
 export function updateRepositoryIssueState(
   target: GitHubIssueMutationTarget,
-  issueState: GitHubIssueState
+  input: GitHubIssueStateMutationInput
 ) {
   return invoke<GitHubIssue>("github_update_repository_issue_state", {
-    owner: target.owner,
-    repository: target.repository,
-    issueNumber: target.issueNumber,
-    issueState,
+    ...target,
+    mutation: input,
   });
 }
 
@@ -216,22 +268,74 @@ function updateRepositoryIssuePages(
   })) {
     if (!page) continue;
     const matches = page.issues.filter((item) => item.number === target.issueNumber);
-    if (!matches.length) continue;
     const cachedState = issueStateFromQueryKey(queryKey);
+    const exactDestination = repositoryIssuePageAccepts(queryKey, issue);
+    const shouldInsert = !matches.length && cachedState === issue.state && exactDestination;
+    if (!matches.length && !shouldInsert) {
+      if (cachedState === issue.state) {
+        void queryClient.invalidateQueries({ queryKey, exact: true });
+      }
+      continue;
+    }
+    const { remainingItems: withoutIssue, updatedPage } = reconcileUpdatedPageItems(
+      page.issues,
+      issue,
+      (item) => item.number === target.issueNumber,
+      page.hasMore
+    );
+    const staleUpdatedPage =
+      cachedState === issue.state && queryKey[9] === "updated" && queryKey[10] !== 1;
+    if (staleUpdatedPage) {
+      queryClient.setQueryData<GitHubIssuePage>(queryKey, {
+        ...page,
+        issues: withoutIssue,
+      });
+      void queryClient.invalidateQueries({ queryKey, exact: true });
+      continue;
+    }
+    const moveToFront = queryKey[9] === "updated" && queryKey[10] === 1;
     queryClient.setQueryData<GitHubIssuePage>(
       queryKey,
       cachedState && cachedState !== issue.state
         ? {
             ...page,
-            issues: page.issues.filter((item) => item.number !== target.issueNumber),
+            issues: withoutIssue,
             totalCount: Math.max(0, page.totalCount - matches.length),
           }
-        : {
-            ...page,
-            issues: page.issues.map((item) => (item.number === target.issueNumber ? issue : item)),
-          }
+        : shouldInsert
+          ? {
+              ...page,
+              ...updatedPage,
+              totalCount: page.totalCount + 1,
+            }
+          : moveToFront
+            ? {
+                ...page,
+                ...updatedPage,
+              }
+            : {
+                ...page,
+                issues: page.issues.map((item) =>
+                  item.number === target.issueNumber ? issue : item
+                ),
+              }
     );
   }
+}
+
+function repositoryIssuePageAccepts(queryKey: QueryKey, issue: GitHubIssue) {
+  const assignment = queryKey[6];
+  const query = queryKey[7];
+  const label = queryKey[8];
+  const sort = queryKey[9];
+  const page = queryKey[10];
+  return (
+    page === 1 &&
+    sort === "updated" &&
+    (assignment === "all" || (assignment === "unassigned" && !issue.assignees.length)) &&
+    query === "" &&
+    (label === "" || issue.labels.some((item) => item.name === label))
+  );
 }
 
 function matchesIssueSummary(summary: GitHubIssueSummary, target: GitHubIssueMutationTarget) {
@@ -248,27 +352,78 @@ function updateIssueInboxPages(
   update: (summary: GitHubIssueSummary) => GitHubIssueSummary,
   nextState?: GitHubIssueState
 ) {
-  for (const [queryKey, page] of queryClient.getQueriesData<GitHubIssueInboxPage>({
+  const pages = queryClient.getQueriesData<GitHubIssueInboxPage>({
     queryKey: githubQueryKeys.issueInboxRoot,
-  })) {
+  });
+  const templates = new Map<string, GitHubIssueSummary>();
+  if (nextState) {
+    for (const [queryKey, page] of pages) {
+      const scope = queryKey[2];
+      const match = page?.issues.find((summary) => matchesIssueSummary(summary, target));
+      if (typeof scope === "string" && match) templates.set(scope, match);
+    }
+  }
+
+  for (const [queryKey, page] of pages) {
     if (!page) continue;
     const matches = page.issues.filter((summary) => matchesIssueSummary(summary, target));
-    if (!matches.length) continue;
     const cachedState = issueStateFromQueryKey(queryKey);
+    const scope = queryKey[2];
+    const template = typeof scope === "string" ? templates.get(scope) : undefined;
+    const exactDestination = queryKey[4] === "" && queryKey[5] === "updated" && queryKey[6] === 1;
+    const shouldInsert =
+      !matches.length && nextState === cachedState && exactDestination && Boolean(template);
+    if (!matches.length && !shouldInsert) {
+      if (nextState === cachedState && template) {
+        void queryClient.invalidateQueries({ queryKey, exact: true });
+      }
+      continue;
+    }
+    const baseSummary = matches[0] ?? template;
+    if (!baseSummary) continue;
+    const updatedSummary = update(baseSummary);
+    const { remainingItems: withoutIssue, updatedPage } = reconcileUpdatedPageItems(
+      page.issues,
+      updatedSummary,
+      (summary) => matchesIssueSummary(summary, target),
+      page.hasMore
+    );
+    const staleUpdatedPage =
+      nextState === cachedState && queryKey[5] === "updated" && queryKey[6] !== 1;
+    if (staleUpdatedPage) {
+      queryClient.setQueryData<GitHubIssueInboxPage>(queryKey, {
+        ...page,
+        issues: withoutIssue,
+      });
+      void queryClient.invalidateQueries({ queryKey, exact: true });
+      continue;
+    }
+    const moveToFront = queryKey[5] === "updated" && queryKey[6] === 1;
     queryClient.setQueryData<GitHubIssueInboxPage>(
       queryKey,
       nextState && cachedState && cachedState !== nextState
         ? {
             ...page,
-            issues: page.issues.filter((summary) => !matchesIssueSummary(summary, target)),
+            issues: withoutIssue,
             totalCount: Math.max(0, page.totalCount - matches.length),
           }
-        : {
-            ...page,
-            issues: page.issues.map((summary) =>
-              matchesIssueSummary(summary, target) ? update(summary) : summary
-            ),
-          }
+        : shouldInsert
+          ? {
+              ...page,
+              ...updatedPage,
+              totalCount: page.totalCount + 1,
+            }
+          : moveToFront
+            ? {
+                ...page,
+                ...updatedPage,
+              }
+            : {
+                ...page,
+                issues: page.issues.map((summary) =>
+                  matchesIssueSummary(summary, target) ? update(summary) : summary
+                ),
+              }
     );
   }
 }

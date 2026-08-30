@@ -87,7 +87,8 @@ pub use issue::{
     GitHubIssue, GitHubIssueAssigneePage, GitHubIssueAssignment, GitHubIssueDetailPage,
     GitHubIssueFilters, GitHubIssueInboxFilters, GitHubIssueInboxPage, GitHubIssueInboxScope,
     GitHubIssueLabel, GitHubIssueLabelPage, GitHubIssueMilestone, GitHubIssueMilestonePage,
-    GitHubIssuePage, GitHubIssueSort, GitHubIssueState, GitHubIssueTimelineItem,
+    GitHubIssuePage, GitHubIssueSort, GitHubIssueState, GitHubIssueStateCapabilities,
+    GitHubIssueStateMutation, GitHubIssueTimelineItem,
 };
 #[cfg(test)]
 use issue_taxonomy::GitHubIssueMilestoneState;
@@ -3226,8 +3227,20 @@ mod tests {
             .await
             .expect("updated issue comment")
             .expect("returned issue comment");
+        let state_mutation: GitHubIssueStateMutation = serde_json::from_value(serde_json::json!({
+            "desiredState": "closed",
+            "closeReason": "completed",
+            "expected": {
+                "issueId": 2,
+                "issueNodeId": "I_2",
+                "state": "open",
+                "stateReason": null,
+                "updatedAt": "2026-08-25T08:00:00+00:00"
+            }
+        }))
+        .expect("Issue state mutation");
         let issue = service
-            .update_issue_state("octocat", "hello-world", 7, GitHubIssueState::Closed)
+            .update_issue_state("octocat", "hello-world", 7, &state_mutation)
             .await
             .expect("closed issue");
         let label = service

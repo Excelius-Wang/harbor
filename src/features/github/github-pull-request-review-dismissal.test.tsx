@@ -115,7 +115,6 @@ describe("pull request review dismissal", () => {
         <GitHubIssueTimeline
           issue={{
             author: "octocat",
-            body: "Pull request body",
             createdAt: "2026-08-26T10:00:00Z",
           }}
           timeline={[
@@ -125,7 +124,6 @@ describe("pull request review dismissal", () => {
               kind: "event",
               event: "reviewed",
               actor: "hubot",
-              body: "Looks good.",
               url: review.url,
               createdAt: "2026-08-26T12:00:00Z",
               viewerCanUpdate: false,

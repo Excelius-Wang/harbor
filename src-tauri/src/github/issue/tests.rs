@@ -295,29 +295,6 @@ impl GitHubIssueClient for super::super::tests::FakeGitHubClient {
             review_state: None,
         })
     }
-
-    async fn update_issue_state(
-        &self,
-        token: &str,
-        owner: &str,
-        repository: &str,
-        issue_number: u64,
-        state: GitHubIssueState,
-    ) -> Result<GitHubIssue, AppError> {
-        let mut issue = self
-            .issue_detail(token, owner, repository, issue_number, 1)
-            .await?
-            .issue;
-        issue.state = state;
-        issue.state_reason = Some(
-            match state {
-                GitHubIssueState::Open => "reopened",
-                GitHubIssueState::Closed => "completed",
-            }
-            .to_string(),
-        );
-        Ok(issue)
-    }
 }
 
 fn author_json(login: &str) -> serde_json::Value {
@@ -399,6 +376,37 @@ fn issue_page_maps_fields_and_removes_pull_requests() {
     assert_eq!(page.issues[0].state, GitHubIssueState::Open);
     assert_eq!(page.issues[0].labels[0].name, "bug");
     assert_eq!(page.issues[0].comments, 2);
+}
+
+#[test]
+fn issue_state_reasons_keep_the_known_frontend_vocabulary() {
+    let mut not_planned = issue_json(7, false);
+    not_planned["state"] = serde_json::json!("closed");
+    not_planned["state_reason"] = serde_json::json!("not_planned");
+    let not_planned = issue_from_octocrab(
+        serde_json::from_value(not_planned).expect("not-planned Issue fixture"),
+    );
+
+    let mut duplicate = issue_json(8, false);
+    duplicate["state"] = serde_json::json!("closed");
+    duplicate["state_reason"] = serde_json::json!("duplicate");
+    let duplicate =
+        issue_from_octocrab(serde_json::from_value(duplicate).expect("duplicate Issue fixture"));
+
+    assert_eq!(not_planned.state_reason.as_deref(), Some("notPlanned"));
+    assert_eq!(duplicate.state_reason.as_deref(), Some("duplicate"));
+}
+
+#[test]
+fn issue_search_items_keep_unknown_future_state_reasons() {
+    let mut value = issue_json(7, false);
+    value["state"] = serde_json::json!("closed");
+    value["state_reason"] = serde_json::json!("future_reason");
+
+    let summary = issue_summary_from_search_value(value).expect("future reason search item");
+
+    assert_eq!(summary.issue.state, GitHubIssueState::Closed);
+    assert_eq!(summary.issue.state_reason.as_deref(), Some("future_reason"));
 }
 
 #[test]
