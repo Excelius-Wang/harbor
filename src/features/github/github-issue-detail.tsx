@@ -28,6 +28,7 @@ import {
   pushIssueDetailLocation,
 } from "./github-issue-detail-navigation";
 import { GitHubIssueDependencies } from "./github-issue-dependencies";
+import { GitHubIssueDuplicate } from "./github-issue-duplicate";
 import { GitHubIssueRelationships } from "./github-issue-relationships";
 import { GitHubIssueStateAction } from "./github-issue-state-action";
 import {
@@ -323,6 +324,21 @@ function GitHubIssueDetailScreen({
                   }}
                   afterIssue={
                     <>
+                      <GitHubIssueDuplicate
+                        repository={repository}
+                        issue={detail.issue}
+                        onNavigate={(duplicate) =>
+                          onNavigate(
+                            {
+                              owner: duplicate.owner,
+                              name: duplicate.repository,
+                              url: duplicate.repositoryUrl,
+                              defaultBranch: "HEAD",
+                            },
+                            duplicate.issueNumber
+                          )
+                        }
+                      />
                       <GitHubIssueRelationships
                         repository={repository}
                         issueNumber={detail.issue.number}

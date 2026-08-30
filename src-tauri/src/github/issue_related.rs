@@ -182,7 +182,7 @@ fn validate_identity(
     Ok(())
 }
 
-fn issue_url_matches(value: &str, host: &str, path: &str) -> bool {
+pub(super) fn issue_url_matches(value: &str, host: &str, path: &str) -> bool {
     let Ok(url) = url::Url::parse(value) else {
         return false;
     };
@@ -292,8 +292,21 @@ pub(crate) mod test_support {
                         break;
                     }
                     buffer.extend_from_slice(&chunk[..read]);
-                    if buffer.windows(4).any(|window| window == b"\r\n\r\n") {
-                        break;
+                    if let Some(header_end) =
+                        buffer.windows(4).position(|window| window == b"\r\n\r\n")
+                    {
+                        let headers = String::from_utf8_lossy(&buffer[..header_end]);
+                        let content_length = headers.lines().find_map(|line| {
+                            line.split_once(':').and_then(|(name, value)| {
+                                name.eq_ignore_ascii_case("content-length")
+                                    .then(|| value.trim().parse::<usize>().ok())
+                                    .flatten()
+                            })
+                        });
+                        let body_end = header_end + 4 + content_length.unwrap_or(0);
+                        if buffer.len() >= body_end {
+                            break;
+                        }
                     }
                 }
                 captured

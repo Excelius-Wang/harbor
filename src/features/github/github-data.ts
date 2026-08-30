@@ -1433,6 +1433,16 @@ export type GitHubIssueDependenciesPage = {
   hasMore: boolean;
 };
 
+export type GitHubIssueDuplicateReference = {
+  owner: string;
+  repository: string;
+  fullName: string;
+  repositoryUrl: string;
+  issueNumber: number;
+  title: string;
+  url: string;
+};
+
 export type GitHubIssueTimelineItem = {
   id: string;
   reactionSubject?: GitHubReactionSubjectRef;
