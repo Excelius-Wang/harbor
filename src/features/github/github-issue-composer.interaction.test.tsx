@@ -4,11 +4,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { GitHubIssue, GitHubIssueStateCapabilities } from "./github-data";
 import { GitHubIssueComposer } from "./github-issue-detail";
+import { githubIssueStateQueryKeys } from "./github-issue-state-queries";
+import { githubQueryKeys } from "./github-queries";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
-vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
+vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(), isTauri: () => false }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }),
@@ -53,15 +56,26 @@ function createQueryClient() {
   });
 }
 
-function renderComposer() {
+function renderComposer(renderedIssue = issue) {
   const queryClient = createQueryClient();
   render(
     <QueryClientProvider client={queryClient}>
-      <GitHubIssueComposer issue={issue} repository={repository} target={target} />
+      <TooltipProvider>
+        <GitHubIssueComposer issue={renderedIssue} repository={repository} target={target} />
+      </TooltipProvider>
     </QueryClientProvider>
   );
   return queryClient;
 }
+
+beforeAll(() => {
+  class ResizeObserverMock implements ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  vi.stubGlobal("ResizeObserver", ResizeObserverMock);
+});
 
 beforeEach(() => vi.clearAllMocks());
 afterEach(() => cleanup());
@@ -87,7 +101,7 @@ describe("GitHub Issue composer state controls", () => {
     );
     await user.click(
       screen.getByRole("menuitem", {
-        name: "workspace.repositories.closeIssueAsNotPlanned",
+        name: /workspace\.repositories\.closeIssueAsNotPlanned/,
       })
     );
     await user.click(
@@ -131,5 +145,141 @@ describe("GitHub Issue composer state controls", () => {
         .getByRole("button", { name: "workspace.repositories.closeIssueAsCompleted" })
         .hasAttribute("disabled")
     ).toBe(true);
+  });
+
+  it("preserves the selected reason and comment draft after permission denial", async () => {
+    vi.mocked(invoke).mockImplementation((command) => {
+      if (command === "github_get_repository_issue_state_capabilities") {
+        return Promise.resolve(capabilities);
+      }
+      if (command === "github_update_repository_issue_state") {
+        return Promise.reject({ code: "githubPermission", message: "forbidden" });
+      }
+      return Promise.reject(new Error(`unexpected command ${command}`));
+    });
+    const user = userEvent.setup();
+    renderComposer();
+
+    const textbox = await screen.findByRole("textbox");
+    await user.type(textbox, "Keep this permission draft");
+    await user.click(
+      screen.getByRole("button", { name: "workspace.repositories.chooseIssueCloseReason" })
+    );
+    await user.click(
+      screen.getByRole("menuitem", {
+        name: /workspace\.repositories\.closeIssueAsNotPlanned/,
+      })
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "workspace.repositories.closeIssueAsNotPlanned",
+      })
+    );
+
+    expect(
+      await screen.findByText("workspace.repositories.issueWritePermissionDenied")
+    ).toBeDefined();
+    expect((textbox as HTMLTextAreaElement).value).toBe("Keep this permission draft");
+    expect(
+      screen.getByRole("button", {
+        name: "workspace.repositories.closeIssueAsNotPlanned",
+      })
+    ).toBeDefined();
+  });
+
+  it("locks comment submission while an Issue state write is pending", async () => {
+    vi.mocked(invoke).mockImplementation((command) => {
+      if (command === "github_get_repository_issue_state_capabilities") {
+        return Promise.resolve(capabilities);
+      }
+      if (command === "github_update_repository_issue_state") {
+        return new Promise(() => undefined);
+      }
+      return Promise.reject(new Error(`unexpected command ${command}`));
+    });
+    const user = userEvent.setup();
+    renderComposer();
+
+    const textbox = await screen.findByRole("textbox");
+    await user.type(textbox, "Do not submit this yet");
+    await user.click(
+      screen.getByRole("button", {
+        name: "workspace.repositories.closeIssueAsCompleted",
+      })
+    );
+
+    expect(
+      screen
+        .getByRole("button", { name: "workspace.repositories.comment" })
+        .hasAttribute("disabled")
+    ).toBe(true);
+    expect(
+      screen
+        .getByRole("button", { name: "workspace.repositories.closingIssue" })
+        .hasAttribute("disabled")
+    ).toBe(true);
+  });
+
+  it("locks stale controls when a background capability refresh fails", async () => {
+    vi.mocked(invoke)
+      .mockResolvedValueOnce(capabilities)
+      .mockRejectedValueOnce({ code: "github", message: "refresh unavailable" });
+    const queryClient = renderComposer();
+
+    const close = await screen.findByRole("button", {
+      name: "workspace.repositories.closeIssueAsCompleted",
+    });
+    expect(close.hasAttribute("disabled")).toBe(false);
+    await queryClient.invalidateQueries({
+      queryKey: githubIssueStateQueryKeys.capabilitiesRoot(target),
+    });
+
+    expect(await screen.findByText("workspace.repositories.issueActionsLoadFailed")).toBeDefined();
+    await waitFor(() => expect(close.hasAttribute("disabled")).toBe(true));
+  });
+
+  it("refreshes repository navigation when GitHub reports a moved Issue", async () => {
+    vi.mocked(invoke).mockImplementation((command) => {
+      if (command === "github_get_repository_issue_state_capabilities") {
+        return Promise.resolve(capabilities);
+      }
+      if (command === "github_update_repository_issue_state") {
+        return Promise.reject({ code: "githubIssueMoved", message: "moved" });
+      }
+      return Promise.reject(new Error(`unexpected command ${command}`));
+    });
+    const queryClient = renderComposer();
+    queryClient.setQueryData(githubQueryKeys.repositories, { pages: [] });
+    const user = userEvent.setup();
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "workspace.repositories.closeIssueAsCompleted",
+      })
+    );
+
+    expect(await screen.findByText("workspace.repositories.issueMoved")).toBeDefined();
+    await waitFor(() =>
+      expect(queryClient.getQueryState(githubQueryKeys.repositories)?.isInvalidated).toBe(true)
+    );
+  });
+
+  it("does not expose Reopen when GitHub denies that capability", async () => {
+    const closedIssue: GitHubIssue = {
+      ...issue,
+      state: "closed",
+      stateReason: "completed",
+    };
+    vi.mocked(invoke).mockResolvedValueOnce({
+      ...capabilities,
+      state: "closed",
+      stateReason: "completed",
+      viewerCanClose: false,
+      viewerCanReopen: false,
+    });
+    renderComposer(closedIssue);
+
+    expect(await screen.findByText("workspace.repositories.issueStateUnavailable")).toBeDefined();
+    expect(screen.queryByRole("button", { name: "workspace.repositories.reopenIssue" })).toBeNull();
   });
 });

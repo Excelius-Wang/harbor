@@ -1328,13 +1328,19 @@ export type GitHubItemMetadataValue = {
 
 export type GitHubIssueState = "open" | "closed";
 export type GitHubIssueCloseReason = "completed" | "notPlanned";
+export type GitHubIssueStateReason =
+  | "completed"
+  | "notPlanned"
+  | "duplicate"
+  | "reopened"
+  | (string & {});
 export type GitHubIssueStateCapabilities = {
   repositoryId: string;
   repositoryFullName: string;
   issueNodeId: string;
   number: number;
   state: GitHubIssueState;
-  stateReason?: string;
+  stateReason?: GitHubIssueStateReason;
   updatedAt: string;
   viewerCanClose: boolean;
   viewerCanReopen: boolean;
@@ -1371,7 +1377,7 @@ export type GitHubIssue = {
   body?: string;
   url: string;
   state: GitHubIssueState;
-  stateReason?: string;
+  stateReason?: GitHubIssueStateReason;
   author: string;
   authorAvatarUrl?: string;
   authorAssociation?: string;

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/empty";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAppTranslation } from "@/hooks/use-app-translation";
 import { parseIpcError } from "@/lib/ipc-error";
 import { openExternalUrl } from "@/lib/window";
 import type { GitHubIssue, GitHubRepositoryContentContext } from "./github-data";
@@ -38,7 +39,7 @@ import {
 } from "./github-issue-state-queries";
 import { formatIssueDate, GitHubIssueStateBadge } from "./github-issue-shared";
 import { GitHubIssueTimeline } from "./github-issue-timeline";
-import { repositoryIssueDetailQueryOptions } from "./github-queries";
+import { githubQueryKeys, repositoryIssueDetailQueryOptions } from "./github-queries";
 
 export function GitHubIssueComposer({
   issue,
@@ -49,10 +50,18 @@ export function GitHubIssueComposer({
   repository: GitHubRepositoryContentContext;
   target: GitHubIssueMutationTarget;
 }) {
-  const { t } = useTranslation();
+  const { t } = useAppTranslation();
   const queryClient = useQueryClient();
   const [body, setBody] = useState("");
   const capabilityResult = useQuery(issueStateCapabilitiesQueryOptions(target, issue.updatedAt));
+  const refreshIssueState = (refreshNavigation = false) =>
+    Promise.all([
+      invalidateRepositoryIssue(queryClient, target),
+      invalidateIssueStateCapabilities(queryClient, target),
+      ...(refreshNavigation
+        ? [queryClient.invalidateQueries({ queryKey: githubQueryKeys.repositories })]
+        : []),
+    ]);
   const commentMutation = useMutation({
     mutationFn: (commentBody: string) => createRepositoryIssueComment(target, commentBody),
     onSuccess: (comment) => {
@@ -74,10 +83,7 @@ export function GitHubIssueComposer({
             : "workspace.repositories.issueReopened"
         )
       );
-      void Promise.all([
-        invalidateRepositoryIssue(queryClient, target),
-        invalidateIssueStateCapabilities(queryClient, target),
-      ]);
+      void refreshIssueState();
     },
     onError: (error) => {
       const parsed = parseIpcError(error);
@@ -87,17 +93,17 @@ export function GitHubIssueComposer({
             ? t("workspace.repositories.issueWritePermissionDenied")
             : parsed.code === "githubIssueStateConflict"
               ? t("workspace.repositories.issueStateChanged")
-              : parsed.message,
+              : parsed.code === "githubIssueMoved"
+                ? t("workspace.repositories.issueMoved")
+                : parsed.message,
       });
-      void Promise.all([
-        invalidateRepositoryIssue(queryClient, target),
-        invalidateIssueStateCapabilities(queryClient, target),
-      ]);
+      void refreshIssueState(parsed.code === "githubIssueMoved");
     },
   });
   const commentError = commentMutation.error ? parseIpcError(commentMutation.error) : null;
   const stateError = stateMutation.error ? parseIpcError(stateMutation.error) : null;
   const capabilityError = capabilityResult.error ? parseIpcError(capabilityResult.error) : null;
+  const capabilityBusy = capabilityResult.isPending || capabilityResult.isFetching;
   const capabilities = capabilityResult.data;
   const capabilityMatches = capabilities
     ? issueStateCapabilitiesMatchIssue(capabilities, issue, target)
@@ -112,12 +118,7 @@ export function GitHubIssueComposer({
       ? t("workspace.repositories.issueWritePermissionDenied")
       : commentError.message
     : null;
-  const retryStateRead = () => {
-    void Promise.all([
-      invalidateRepositoryIssue(queryClient, target),
-      invalidateIssueStateCapabilities(queryClient, target),
-    ]);
-  };
+  const retryStateRead = () => void refreshIssueState();
   const stateNotice = stateError ? (
     <Alert variant="destructive" className="py-2.5 text-xs">
       <CircleAlert />
@@ -127,7 +128,9 @@ export function GitHubIssueComposer({
           ? t("workspace.repositories.issueWritePermissionDenied")
           : stateError.code === "githubIssueStateConflict"
             ? t("workspace.repositories.issueStateChanged")
-            : stateError.message}
+            : stateError.code === "githubIssueMoved"
+              ? t("workspace.repositories.issueMoved")
+              : stateError.message}
       </AlertDescription>
     </Alert>
   ) : capabilityError || (capabilities && !capabilityMatches) ? (
@@ -160,15 +163,26 @@ export function GitHubIssueComposer({
       errorMessage={commentErrorMessage}
       notice={stateNotice}
       secondaryAction={
-        <GitHubIssueStateAction
-          state={issue.state}
-          pending={stateMutation.isPending}
-          loading={capabilityResult.isPending}
-          disabled={
-            commentMutation.isPending || !capabilities || !capabilityMatches || !viewerCanChange
-          }
-          onChange={(choice) => stateMutation.mutate(choice)}
-        />
+        capabilities &&
+        capabilityMatches &&
+        !capabilityBusy &&
+        !capabilityError &&
+        !viewerCanChange ? null : (
+          <GitHubIssueStateAction
+            state={issue.state}
+            pending={stateMutation.isPending}
+            loading={capabilityBusy}
+            disabled={
+              commentMutation.isPending ||
+              capabilityBusy ||
+              Boolean(capabilityError) ||
+              !capabilities ||
+              !capabilityMatches ||
+              !viewerCanChange
+            }
+            onChange={(choice) => stateMutation.mutate(choice)}
+          />
+        )
       }
       onBodyChange={(value) => {
         setBody(value);

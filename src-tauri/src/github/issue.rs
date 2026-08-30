@@ -12,7 +12,9 @@ use super::{
 use crate::error::AppError;
 
 mod lifecycle;
-pub use lifecycle::{GitHubIssueStateCapabilities, GitHubIssueStateMutation};
+pub use lifecycle::{
+    GitHubIssueStateCapabilities, GitHubIssueStateMutation, GitHubIssueStateReason,
+};
 
 const ISSUE_PAGE_SIZE: u8 = 30;
 const ISSUE_TIMELINE_PAGE_SIZE: u8 = 100;
@@ -85,7 +87,7 @@ pub struct GitHubIssue {
     pub body: Option<String>,
     pub url: String,
     pub state: GitHubIssueState,
-    pub state_reason: Option<String>,
+    pub state_reason: Option<GitHubIssueStateReason>,
     pub author: String,
     pub author_avatar_url: Option<String>,
     pub author_association: Option<String>,
@@ -451,22 +453,31 @@ impl GitHubIssueClient for OctocrabGitHubClient {
     ) -> Result<GitHubIssuePage, AppError> {
         let client = authenticated_client(token)?;
         let query = issue_search_query(owner, repository, filters);
-        let page = client
-            .search()
-            .issues_and_pull_requests(&query)
-            .sort::<String>(Some(issue_search_sort(filters.sort).to_string()))
-            .order::<String>(Some("desc".to_string()))
-            .per_page(ISSUE_PAGE_SIZE)
-            .page(filters.page)
-            .send()
+        let parameters = SearchParameters {
+            query: &query,
+            sort: issue_search_sort(filters.sort),
+            order: "desc",
+            per_page: ISSUE_PAGE_SIZE,
+            page: filters.page,
+        };
+        let page: octocrab::Page<serde_json::Value> = client
+            .get("/search/issues", Some(&parameters))
             .await
             .map_err(github_error)?;
-        Ok(issue_page_from_octocrab(
-            page.items,
-            page.total_count.unwrap_or_default(),
-            filters.page,
-            page.next.is_some(),
-        ))
+        let mut issues = Vec::with_capacity(page.items.len());
+        for value in page.items {
+            let issue = lifecycle::rest_issue_from_value(value)?;
+            if issue.issue.pull_request.is_none() {
+                issues.push(lifecycle::issue_from_rest(issue));
+            }
+        }
+        Ok(GitHubIssuePage {
+            issues,
+            total_count: page.total_count.unwrap_or_default(),
+            page: filters.page,
+            has_previous: filters.page > 1,
+            has_more: page.next.is_some(),
+        })
     }
 
     async fn list_issue_inbox(
@@ -592,15 +603,15 @@ impl GitHubIssueClient for OctocrabGitHubClient {
         let client = authenticated_client(token)?;
         let handler = client.issues(owner, repository);
         let (issue, timeline) = tokio::join!(
-            handler.get(issue_number),
+            lifecycle::load_rest_issue(&client, owner, repository, issue_number, false),
             handler
                 .list_timeline_events(issue_number)
                 .per_page(ISSUE_TIMELINE_PAGE_SIZE)
                 .page(timeline_page)
                 .send(),
         );
-        let issue = issue.map_err(github_error)?;
-        ensure_octocrab_issue(&issue)?;
+        let issue = issue?;
+        ensure_octocrab_issue(&issue.issue)?;
         let timeline = timeline.map_err(github_error)?;
         let timeline_has_more = timeline.next.is_some();
 
@@ -621,7 +632,7 @@ impl GitHubIssueClient for OctocrabGitHubClient {
         .await?;
 
         Ok(GitHubIssueDetailPage {
-            issue: issue_from_octocrab(issue),
+            issue: lifecycle::issue_from_rest(issue),
             timeline,
             timeline_page,
             timeline_has_previous: timeline_page > 1,
@@ -744,6 +755,7 @@ struct IssueMilestoneParameters<'a> {
     page: u32,
 }
 
+#[cfg(test)]
 fn issue_page_from_octocrab(
     issues: Vec<octocrab::models::issues::Issue>,
     total_count: u64,
@@ -892,7 +904,7 @@ fn issue_from_octocrab(issue: octocrab::models::issues::Issue) -> GitHubIssue {
         state_reason: issue
             .state_reason
             .as_ref()
-            .map(lifecycle::issue_state_reason_name),
+            .map(lifecycle::issue_state_reason),
         author: issue.user.login,
         author_avatar_url: Some(issue.user.avatar_url.to_string()),
         author_association: issue
@@ -928,16 +940,15 @@ pub(super) fn issue_summary_from_search_value(
     value: serde_json::Value,
 ) -> Result<GitHubIssueSummary, AppError> {
     let (owner, name) = repository_coordinates_from_search_value(&value, "issue")?;
-    let issue: octocrab::models::issues::Issue = serde_json::from_value(value)
-        .map_err(|error| AppError::GitHub(format!("GitHub returned an invalid issue: {error}")))?;
-    if issue.pull_request.is_some() {
+    let issue = lifecycle::rest_issue_from_value(value)?;
+    if issue.issue.pull_request.is_some() {
         return Err(AppError::GitHub(
             "GitHub search returned a pull request in the issue inbox".to_string(),
         ));
     }
 
     Ok(GitHubIssueSummary {
-        issue: issue_from_octocrab(issue),
+        issue: lifecycle::issue_from_rest(issue),
         repository: GitHubIssueRepository {
             full_name: format!("{owner}/{name}"),
             url: format!("https://github.com/{owner}/{name}"),

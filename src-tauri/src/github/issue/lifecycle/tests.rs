@@ -65,6 +65,7 @@ async fn mock_github(
         }
     });
     let client = octocrab::Octocrab::builder()
+        .add_retry_config(octocrab::service::middleware::retry::RetryConfig::None)
         .base_uri(format!("http://{address}"))
         .expect("mock base uri")
         .personal_token("github-user-access-token".to_string())
@@ -177,7 +178,7 @@ fn mutation(
             issue_id: 7,
             issue_node_id: "I_7".to_string(),
             state: expected_state,
-            state_reason: expected_reason.map(str::to_string),
+            state_reason: expected_reason.map(GitHubIssueStateReason::new),
             updated_at: "2026-08-30T08:00:00Z".to_string(),
         },
     }
@@ -246,6 +247,52 @@ fn state_payloads_are_exact_and_no_op_transitions_are_rejected() {
     ));
 }
 
+#[test]
+fn unknown_rest_state_reasons_remain_readable() {
+    let raw = issue_json(
+        "closed",
+        Some("future_reason"),
+        "2026-08-30T08:01:00Z",
+        false,
+    );
+
+    let issue = issue_from_rest(rest_issue_from_slice(raw.as_bytes()).expect("future reason"));
+
+    assert_eq!(issue.state, GitHubIssueState::Closed);
+    assert_eq!(issue.state_reason.as_deref(), Some("future_reason"));
+    assert_eq!(
+        serde_json::to_value(issue.state_reason).expect("serialize reason"),
+        serde_json::json!("future_reason")
+    );
+}
+
+#[test]
+fn malformed_or_cross_repository_capabilities_are_rejected() {
+    let missing: IssueStateCapabilitiesQuery =
+        serde_json::from_value(serde_json::json!({"repository": null})).expect("missing fixture");
+    assert!(capability_from_graphql(missing, "octocat", "hello-world", 7).is_err());
+
+    let wrong_repository: IssueStateCapabilitiesQuery = serde_json::from_value(
+        serde_json::from_str::<serde_json::Value>(&capability_json(
+            "OPEN",
+            None,
+            "2026-08-30T08:00:00Z",
+            true,
+            false,
+        ))
+        .expect("capability fixture")["data"]
+            .clone(),
+    )
+    .expect("capability data");
+    let mut wrong_repository = wrong_repository;
+    wrong_repository
+        .repository
+        .as_mut()
+        .expect("repository")
+        .name_with_owner = "octocat/other".to_string();
+    assert!(capability_from_graphql(wrong_repository, "octocat", "hello-world", 7).is_err());
+}
+
 #[tokio::test]
 async fn close_as_not_planned_uses_the_exact_guarded_contract() {
     let (client, requests, server) = mock_github(vec![
@@ -295,6 +342,56 @@ async fn close_as_not_planned_uses_the_exact_guarded_contract() {
     assert_eq!(
         request_json(&requests[2]),
         serde_json::json!({"state": "closed", "state_reason": "not_planned"})
+    );
+    assert_rest_request(&requests[3], "GET");
+}
+
+#[tokio::test]
+async fn close_as_completed_runs_the_full_read_capability_write_postflight_sequence() {
+    let (client, requests, server) = mock_github(vec![
+        response(
+            "200 OK",
+            issue_json("open", None, "2026-08-30T08:00:00Z", false),
+        ),
+        response(
+            "200 OK",
+            capability_json("OPEN", None, "2026-08-30T08:00:00Z", true, false),
+        ),
+        response(
+            "200 OK",
+            issue_json("closed", Some("completed"), "2026-08-30T08:01:00Z", false),
+        ),
+        response(
+            "200 OK",
+            issue_json("closed", Some("completed"), "2026-08-30T08:01:00Z", false),
+        ),
+    ])
+    .await;
+
+    update_issue_state_with_client(
+        &client,
+        "octocat",
+        "hello-world",
+        7,
+        &mutation(
+            GitHubIssueState::Open,
+            None,
+            GitHubIssueState::Closed,
+            Some(GitHubIssueCloseReason::Completed),
+        ),
+    )
+    .await
+    .expect("close completed");
+    server.await.expect("mock server");
+
+    let requests = requests.lock().expect("requests");
+    assert_eq!(requests.len(), 4);
+    assert_rest_request(&requests[0], "GET");
+    assert!(requests[1].starts_with("POST /graphql HTTP/1.1"));
+    assert_rest_request(&requests[2], "PATCH");
+    assert_eq!(
+        request_json(&requests[2]),
+        serde_json::json!({"state": "closed", "state_reason": "completed"})
     );
     assert_rest_request(&requests[3], "GET");
 }
@@ -494,4 +591,63 @@ async fn postflight_mismatch_reports_that_the_write_may_have_persisted() {
         AppError::GitHubIssueStateConflict(message) if message.contains("may have persisted")
     ));
     assert_eq!(requests.lock().expect("requests").len(), 4);
+}
+
+#[tokio::test]
+async fn documented_write_statuses_keep_stable_error_categories() {
+    for (status, expected_code) in [
+        ("301 Moved Permanently", "moved"),
+        ("403 Forbidden", "permission"),
+        ("404 Not Found", "conflict"),
+        ("410 Gone", "conflict"),
+        ("422 Unprocessable Entity", "validation"),
+        ("429 Too Many Requests", "rate"),
+        ("503 Service Unavailable", "github"),
+    ] {
+        let (client, requests, server) = mock_github(vec![
+            response(
+                "200 OK",
+                issue_json("open", None, "2026-08-30T08:00:00Z", false),
+            ),
+            response(
+                "200 OK",
+                capability_json("OPEN", None, "2026-08-30T08:00:00Z", true, false),
+            ),
+            response(
+                status,
+                serde_json::json!({"message": format!("Issue state {expected_code}")}).to_string(),
+            ),
+        ])
+        .await;
+
+        let error = update_issue_state_with_client(
+            &client,
+            "octocat",
+            "hello-world",
+            7,
+            &mutation(
+                GitHubIssueState::Open,
+                None,
+                GitHubIssueState::Closed,
+                Some(GitHubIssueCloseReason::Completed),
+            ),
+        )
+        .await
+        .expect_err(status);
+        server.await.expect("mock server");
+        assert_eq!(requests.lock().expect("requests").len(), 3);
+
+        assert!(
+            match expected_code {
+                "moved" => matches!(error, AppError::GitHubIssueMoved(_)),
+                "permission" => matches!(error, AppError::GitHubPermission(_)),
+                "conflict" => matches!(error, AppError::GitHubIssueStateConflict(_)),
+                "validation" => matches!(error, AppError::Validation(_)),
+                "rate" => matches!(error, AppError::GitHubRateLimited(_)),
+                "github" => matches!(error, AppError::GitHub(_)),
+                _ => false,
+            },
+            "{status} mapped to {error:?}"
+        );
+    }
 }

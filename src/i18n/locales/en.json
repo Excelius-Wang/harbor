@@ -2309,6 +2309,8 @@
       "closeIssue": "Close Issue",
       "closeIssueAsCompleted": "Close as completed",
       "closeIssueAsNotPlanned": "Close as not planned",
+      "closeIssueCompletedDescription": "The work is finished or resolved.",
+      "closeIssueNotPlannedDescription": "The work will not be completed.",
       "chooseIssueCloseReason": "Choose close reason",
       "loadingIssueActions": "Loading Issue actions…",
       "closingIssue": "Closing…",
@@ -2318,12 +2320,13 @@
       "issueReopened": "Issue reopened",
       "issueStateChangeFailed": "Harbor could not update this Issue",
       "issueStateChanged": "This Issue changed on GitHub. Harbor is loading the latest state; review it before trying again.",
+      "issueMoved": "This Issue moved to another repository location. Harbor refreshed repository navigation; reopen the Issue from its canonical location.",
       "issueActionsLoadFailed": "Harbor could not load Issue actions",
       "issueStateUnavailable": "This Issue state cannot be changed",
       "issueStateReasons": {
-        "completed": "Completed",
-        "notPlanned": "Not planned",
-        "duplicate": "Duplicate"
+        "completed": "Closed as completed",
+        "notPlanned": "Closed as not planned",
+        "duplicate": "Closed as duplicate"
       },
       "allDiscussionCategories": "All categories",
       "discussionCount": "{{count}} discussions",

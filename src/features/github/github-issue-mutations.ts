@@ -7,6 +7,7 @@ import type {
   GitHubIssueInboxPage,
   GitHubIssuePage,
   GitHubIssueState,
+  GitHubIssueStateReason,
   GitHubIssueTimelineItem,
   GitHubIssueSummary,
   GitHubItemMetadataValue,
@@ -29,7 +30,7 @@ export type GitHubIssueStateMutationInput = {
     issueId: number;
     issueNodeId: string;
     state: GitHubIssueState;
-    stateReason: string | null;
+    stateReason: GitHubIssueStateReason | null;
     updatedAt: string;
   };
 };
@@ -248,8 +249,10 @@ function updateRepositoryIssuePages(
   })) {
     if (!page) continue;
     const matches = page.issues.filter((item) => item.number === target.issueNumber);
-    if (!matches.length) continue;
     const cachedState = issueStateFromQueryKey(queryKey);
+    const shouldInsert =
+      !matches.length && cachedState === issue.state && repositoryIssuePageAccepts(queryKey, issue);
+    if (!matches.length && !shouldInsert) continue;
     queryClient.setQueryData<GitHubIssuePage>(
       queryKey,
       cachedState && cachedState !== issue.state
@@ -258,12 +261,33 @@ function updateRepositoryIssuePages(
             issues: page.issues.filter((item) => item.number !== target.issueNumber),
             totalCount: Math.max(0, page.totalCount - matches.length),
           }
-        : {
-            ...page,
-            issues: page.issues.map((item) => (item.number === target.issueNumber ? issue : item)),
-          }
+        : shouldInsert
+          ? {
+              ...page,
+              issues: [issue, ...page.issues],
+              totalCount: page.totalCount + 1,
+            }
+          : {
+              ...page,
+              issues: page.issues.map((item) =>
+                item.number === target.issueNumber ? issue : item
+              ),
+            }
     );
   }
+}
+
+function repositoryIssuePageAccepts(queryKey: QueryKey, issue: GitHubIssue) {
+  const assignment = queryKey[6];
+  const query = queryKey[7];
+  const label = queryKey[8];
+  const page = queryKey[10];
+  return (
+    page === 1 &&
+    (assignment === "all" || (assignment === "unassigned" && !issue.assignees.length)) &&
+    query === "" &&
+    (label === "" || issue.labels.some((item) => item.name === label))
+  );
 }
 
 function matchesIssueSummary(summary: GitHubIssueSummary, target: GitHubIssueMutationTarget) {
@@ -280,13 +304,31 @@ function updateIssueInboxPages(
   update: (summary: GitHubIssueSummary) => GitHubIssueSummary,
   nextState?: GitHubIssueState
 ) {
-  for (const [queryKey, page] of queryClient.getQueriesData<GitHubIssueInboxPage>({
+  const pages = queryClient.getQueriesData<GitHubIssueInboxPage>({
     queryKey: githubQueryKeys.issueInboxRoot,
-  })) {
+  });
+  const templates = new Map<string, GitHubIssueSummary>();
+  if (nextState) {
+    for (const [queryKey, page] of pages) {
+      const scope = queryKey[2];
+      const match = page?.issues.find((summary) => matchesIssueSummary(summary, target));
+      if (typeof scope === "string" && match) templates.set(scope, match);
+    }
+  }
+
+  for (const [queryKey, page] of pages) {
     if (!page) continue;
     const matches = page.issues.filter((summary) => matchesIssueSummary(summary, target));
-    if (!matches.length) continue;
     const cachedState = issueStateFromQueryKey(queryKey);
+    const scope = queryKey[2];
+    const template = typeof scope === "string" ? templates.get(scope) : undefined;
+    const shouldInsert =
+      !matches.length &&
+      nextState === cachedState &&
+      queryKey[4] === "" &&
+      queryKey[6] === 1 &&
+      Boolean(template);
+    if (!matches.length && !shouldInsert) continue;
     queryClient.setQueryData<GitHubIssueInboxPage>(
       queryKey,
       nextState && cachedState && cachedState !== nextState
@@ -295,12 +337,18 @@ function updateIssueInboxPages(
             issues: page.issues.filter((summary) => !matchesIssueSummary(summary, target)),
             totalCount: Math.max(0, page.totalCount - matches.length),
           }
-        : {
-            ...page,
-            issues: page.issues.map((summary) =>
-              matchesIssueSummary(summary, target) ? update(summary) : summary
-            ),
-          }
+        : shouldInsert && template
+          ? {
+              ...page,
+              issues: [update(template), ...page.issues],
+              totalCount: page.totalCount + 1,
+            }
+          : {
+              ...page,
+              issues: page.issues.map((summary) =>
+                matchesIssueSummary(summary, target) ? update(summary) : summary
+              ),
+            }
     );
   }
 }

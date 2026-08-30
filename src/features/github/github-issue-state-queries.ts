@@ -2,6 +2,7 @@ import { queryOptions, type QueryClient } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
 import type { GitHubIssue, GitHubIssueStateCapabilities } from "./github-data";
 import type { GitHubIssueMutationTarget } from "./github-issue-mutations";
+import { normalizeIssueStateReason } from "./github-issue-state";
 
 export const githubIssueStateQueryKeys = {
   capabilitiesRoot: (target: GitHubIssueMutationTarget) =>
@@ -31,10 +32,6 @@ export function issueStateCapabilitiesQueryOptions(
   });
 }
 
-function normalizeReason(reason?: string) {
-  return reason === "not_planned" ? "notPlanned" : (reason ?? null);
-}
-
 export function issueStateCapabilitiesMatchIssue(
   capabilities: GitHubIssueStateCapabilities,
   issue: GitHubIssue,
@@ -46,7 +43,8 @@ export function issueStateCapabilitiesMatchIssue(
     capabilities.issueNodeId === issue.reactionSubject.id &&
     capabilities.number === issue.number &&
     capabilities.state === issue.state &&
-    normalizeReason(capabilities.stateReason) === normalizeReason(issue.stateReason) &&
+    normalizeIssueStateReason(capabilities.stateReason) ===
+      normalizeIssueStateReason(issue.stateReason) &&
     Date.parse(capabilities.updatedAt) === Date.parse(issue.updatedAt)
   );
 }

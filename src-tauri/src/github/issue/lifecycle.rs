@@ -38,6 +38,55 @@ pub enum GitHubIssueCloseReason {
     NotPlanned,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct GitHubIssueStateReason(String);
+
+impl GitHubIssueStateReason {
+    fn new(value: impl Into<String>) -> Self {
+        let value = value.into();
+        Self(
+            match value.as_str() {
+                "COMPLETED" => "completed",
+                "NOT_PLANNED" | "not_planned" => "notPlanned",
+                "DUPLICATE" => "duplicate",
+                "REOPENED" => "reopened",
+                _ => return Self(value),
+            }
+            .to_string(),
+        )
+    }
+
+    fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl Deref for GitHubIssueStateReason {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        self.as_str()
+    }
+}
+
+impl Serialize for GitHubIssueStateReason {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> Deserialize<'de> for GitHubIssueStateReason {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        String::deserialize(deserializer).map(Self::new)
+    }
+}
+
 impl GitHubIssueCloseReason {
     fn api_name(self) -> &'static str {
         match self {
@@ -46,11 +95,11 @@ impl GitHubIssueCloseReason {
         }
     }
 
-    fn state_reason_name(self) -> &'static str {
-        match self {
+    fn state_reason(self) -> GitHubIssueStateReason {
+        GitHubIssueStateReason::new(match self {
             Self::Completed => "completed",
             Self::NotPlanned => "notPlanned",
-        }
+        })
     }
 }
 
@@ -62,7 +111,7 @@ pub struct GitHubIssueStateCapabilities {
     pub issue_node_id: String,
     pub number: u64,
     pub state: GitHubIssueState,
-    pub state_reason: Option<String>,
+    pub state_reason: Option<GitHubIssueStateReason>,
     pub updated_at: String,
     pub viewer_can_close: bool,
     pub viewer_can_reopen: bool,
@@ -74,7 +123,7 @@ pub struct GitHubIssueStateExpectation {
     pub issue_id: u64,
     pub issue_node_id: String,
     pub state: GitHubIssueState,
-    pub state_reason: Option<String>,
+    pub state_reason: Option<GitHubIssueStateReason>,
     pub updated_at: String,
 }
 
@@ -84,6 +133,11 @@ pub struct GitHubIssueStateMutation {
     pub desired_state: GitHubIssueState,
     pub close_reason: Option<GitHubIssueCloseReason>,
     pub expected: GitHubIssueStateExpectation,
+}
+
+pub(super) struct RestIssue {
+    pub(super) issue: octocrab::models::issues::Issue,
+    pub(super) state_reason: Option<GitHubIssueStateReason>,
 }
 
 #[async_trait]
@@ -115,7 +169,7 @@ impl GitHubIssueLifecycleClient for OctocrabGitHubClient {
         repository: &str,
         issue_number: u64,
     ) -> Result<GitHubIssueStateCapabilities, AppError> {
-        let client = authenticated_client(token)?;
+        let client = authenticated_issue_state_client(token)?;
         issue_state_capabilities_with_client(&client, owner, repository, issue_number).await
     }
 
@@ -130,6 +184,14 @@ impl GitHubIssueLifecycleClient for OctocrabGitHubClient {
         let client = authenticated_client(token)?;
         update_issue_state_with_client(&client, owner, repository, issue_number, mutation).await
     }
+}
+
+fn authenticated_issue_state_client(token: &str) -> Result<octocrab::Octocrab, AppError> {
+    octocrab::Octocrab::builder()
+        .add_retry_config(octocrab::service::middleware::retry::RetryConfig::None)
+        .personal_token(token.to_string())
+        .build()
+        .map_err(|error| AppError::GitHub(error.to_string()))
 }
 
 impl GitHubService {
@@ -159,10 +221,10 @@ impl GitHubService {
     }
 }
 
-pub(super) fn issue_state_reason_name(
+pub(super) fn issue_state_reason(
     reason: &octocrab::models::issues::IssueStateReason,
-) -> String {
-    match reason {
+) -> GitHubIssueStateReason {
+    GitHubIssueStateReason::new(match reason {
         octocrab::models::issues::IssueStateReason::Completed => "completed".to_string(),
         octocrab::models::issues::IssueStateReason::NotPlanned => "notPlanned".to_string(),
         octocrab::models::issues::IssueStateReason::Reopened => "reopened".to_string(),
@@ -171,7 +233,7 @@ pub(super) fn issue_state_reason_name(
             .ok()
             .and_then(|value| value.as_str().map(str::to_string))
             .unwrap_or_else(|| "unknown".to_string()),
-    }
+    })
 }
 
 async fn issue_state_capabilities_with_client(
@@ -215,7 +277,7 @@ async fn update_issue_state_with_client(
         repository,
         issue_number,
         mutation,
-        Some(current.updated_at),
+        Some(current.issue.updated_at),
         "update response",
     )?;
 
@@ -226,10 +288,10 @@ async fn update_issue_state_with_client(
         repository,
         issue_number,
         mutation,
-        Some(updated.updated_at),
+        Some(updated.issue.updated_at),
         "postflight read",
     )?;
-    Ok(issue_from_octocrab(postflight))
+    Ok(issue_from_rest(postflight))
 }
 
 fn issue_state_capabilities_payload(
@@ -284,7 +346,7 @@ fn capability_from_graphql(
         issue_node_id: issue.id,
         number: issue.number,
         state: issue.state.into(),
-        state_reason: issue.state_reason.map(GraphQlIssueStateReason::name),
+        state_reason: issue.state_reason.map(GitHubIssueStateReason::new),
         updated_at: issue.updated_at,
         viewer_can_close: issue.viewer_can_close,
         viewer_can_reopen: issue.viewer_can_reopen,
@@ -315,7 +377,7 @@ fn validate_mutation(mutation: &GitHubIssueStateMutation) -> Result<(), AppError
 }
 
 fn ensure_rest_preflight(
-    issue: &octocrab::models::issues::Issue,
+    issue: &RestIssue,
     owner: &str,
     repository: &str,
     issue_number: u64,
@@ -329,11 +391,10 @@ fn ensure_rest_preflight(
         expected.issue_id,
         &expected.issue_node_id,
     )?;
-    let state = strict_issue_state(issue)?;
-    let reason = normalized_rest_reason(issue);
+    let state = strict_issue_state(&issue.issue)?;
     if state != expected.state
-        || reason != normalize_expected_reason(expected.state_reason.as_deref())
-        || !same_timestamp(&issue.updated_at, &expected.updated_at)?
+        || issue.state_reason != expected.state_reason
+        || !same_timestamp(&issue.issue.updated_at, &expected.updated_at)?
     {
         return Err(issue_state_conflict(
             "the Issue changed before Harbor could update its state",
@@ -349,7 +410,7 @@ fn ensure_capability_preflight(
 ) -> Result<(), AppError> {
     if capabilities.issue_node_id != expected.issue_node_id
         || capabilities.state != expected.state
-        || capabilities.state_reason != normalize_expected_reason(expected.state_reason.as_deref())
+        || capabilities.state_reason != expected.state_reason
         || !same_timestamp_text(&capabilities.updated_at, &expected.updated_at)?
     {
         return Err(issue_state_conflict(
@@ -369,7 +430,7 @@ fn ensure_capability_preflight(
 }
 
 fn ensure_desired_result(
-    issue: &octocrab::models::issues::Issue,
+    issue: &RestIssue,
     owner: &str,
     repository: &str,
     issue_number: u64,
@@ -385,10 +446,10 @@ fn ensure_desired_result(
         mutation.expected.issue_id,
         &mutation.expected.issue_node_id,
     )?;
-    let expected_reason = desired_reason_name(mutation)?;
-    if strict_issue_state(issue)? != mutation.desired_state
-        || normalized_rest_reason(issue).as_deref() != Some(expected_reason)
-        || minimum_updated_at.is_some_and(|minimum| issue.updated_at < minimum)
+    let expected_reason = desired_reason(mutation)?;
+    if strict_issue_state(&issue.issue)? != mutation.desired_state
+        || issue.state_reason.as_ref() != Some(&expected_reason)
+        || minimum_updated_at.is_some_and(|minimum| issue.issue.updated_at < minimum)
     {
         return Err(issue_state_conflict(&format!(
             "the Issue {phase} did not match the requested state; the write may have persisted"
@@ -398,22 +459,26 @@ fn ensure_desired_result(
 }
 
 fn ensure_rest_identity(
-    issue: &octocrab::models::issues::Issue,
+    issue: &RestIssue,
     owner: &str,
     repository: &str,
     issue_number: u64,
     issue_id: u64,
     issue_node_id: &str,
 ) -> Result<(), AppError> {
-    ensure_octocrab_issue(issue).map_err(|_| {
+    ensure_octocrab_issue(&issue.issue).map_err(|_| {
         issue_state_conflict("GitHub returned a pull request for the Issue state operation")
     })?;
     let expected_path = format!("/repos/{owner}/{repository}/issues/{issue_number}");
-    if issue.number != issue_number
-        || issue.id.into_inner() != issue_id
-        || issue.node_id != issue_node_id
-        || !issue.url.path().eq_ignore_ascii_case(&expected_path)
-    {
+    let matches_identity = issue.issue.number == issue_number
+        && issue.issue.id.into_inner() == issue_id
+        && issue.issue.node_id == issue_node_id;
+    if matches_identity && !issue.issue.url.path().eq_ignore_ascii_case(&expected_path) {
+        return Err(AppError::GitHubIssueMoved(
+            "GitHub returned the Issue from a different repository location".to_string(),
+        ));
+    }
+    if !matches_identity {
         return Err(issue_state_conflict(
             "GitHub returned a different Issue for the state operation",
         ));
@@ -433,23 +498,12 @@ fn strict_issue_state(
     }
 }
 
-fn normalized_rest_reason(issue: &octocrab::models::issues::Issue) -> Option<String> {
-    issue.state_reason.as_ref().map(issue_state_reason_name)
-}
-
-fn normalize_expected_reason(reason: Option<&str>) -> Option<String> {
-    reason.map(|reason| match reason {
-        "not_planned" => "notPlanned".to_string(),
-        value => value.to_string(),
-    })
-}
-
-fn desired_reason_name(mutation: &GitHubIssueStateMutation) -> Result<&'static str, AppError> {
+fn desired_reason(mutation: &GitHubIssueStateMutation) -> Result<GitHubIssueStateReason, AppError> {
     match mutation.desired_state {
-        GitHubIssueState::Open => Ok("reopened"),
+        GitHubIssueState::Open => Ok(GitHubIssueStateReason::new("reopened")),
         GitHubIssueState::Closed => mutation
             .close_reason
-            .map(GitHubIssueCloseReason::state_reason_name)
+            .map(GitHubIssueCloseReason::state_reason)
             .ok_or_else(|| AppError::Validation("a close reason is required".to_string())),
     }
 }
@@ -474,13 +528,13 @@ fn parse_github_timestamp(value: &str, label: &str) -> Result<DateTime<Utc>, App
         .map_err(|_| AppError::GitHub(format!("GitHub returned an invalid {label} timestamp")))
 }
 
-async fn load_rest_issue(
+pub(super) async fn load_rest_issue(
     client: &octocrab::Octocrab,
     owner: &str,
     repository: &str,
     issue_number: u64,
     postflight: bool,
-) -> Result<octocrab::models::issues::Issue, AppError> {
+) -> Result<RestIssue, AppError> {
     let request = api_request(
         client,
         http::Method::GET,
@@ -496,7 +550,7 @@ async fn patch_rest_issue(
     repository: &str,
     issue_number: u64,
     payload: &IssueStatePayload,
-) -> Result<octocrab::models::issues::Issue, AppError> {
+) -> Result<RestIssue, AppError> {
     let request = api_request(
         client,
         http::Method::PATCH,
@@ -510,7 +564,7 @@ async fn read_issue_response(
     client: &octocrab::Octocrab,
     request: http::Request<octocrab::OctoBody>,
     conflict_on_missing: bool,
-) -> Result<octocrab::models::issues::Issue, AppError> {
+) -> Result<RestIssue, AppError> {
     let response = client.execute(request).await.map_err(github_error)?;
     let status = response.status();
     let response = octocrab::map_github_error(response)
@@ -527,8 +581,43 @@ async fn read_issue_response(
         .await
         .map_err(github_error)?
         .to_bytes();
-    serde_json::from_slice(&bytes)
-        .map_err(|error| AppError::GitHub(format!("GitHub returned an invalid Issue: {error}")))
+    rest_issue_from_slice(&bytes)
+}
+
+fn rest_issue_from_slice(bytes: &[u8]) -> Result<RestIssue, AppError> {
+    let value: serde_json::Value = serde_json::from_slice(bytes)
+        .map_err(|error| AppError::GitHub(format!("GitHub returned an invalid Issue: {error}")))?;
+    rest_issue_from_value(value)
+}
+
+pub(super) fn rest_issue_from_value(mut value: serde_json::Value) -> Result<RestIssue, AppError> {
+    let state_reason = match value.get("state_reason") {
+        None | Some(serde_json::Value::Null) => None,
+        Some(serde_json::Value::String(reason)) => {
+            Some(GitHubIssueStateReason::new(reason.clone()))
+        }
+        Some(_) => {
+            return Err(AppError::GitHub(
+                "GitHub returned an invalid Issue state reason".to_string(),
+            ))
+        }
+    };
+    let object = value
+        .as_object_mut()
+        .ok_or_else(|| AppError::GitHub("GitHub returned an invalid Issue object".to_string()))?;
+    object.insert("state_reason".to_string(), serde_json::Value::Null);
+    let issue = serde_json::from_value(value)
+        .map_err(|error| AppError::GitHub(format!("GitHub returned an invalid Issue: {error}")))?;
+    Ok(RestIssue {
+        issue,
+        state_reason,
+    })
+}
+
+pub(super) fn issue_from_rest(rest: RestIssue) -> GitHubIssue {
+    let mut issue = issue_from_octocrab(rest.issue);
+    issue.state_reason = rest.state_reason;
+    issue
 }
 
 fn issue_state_transport_error(error: octocrab::Error, conflict_on_missing: bool) -> AppError {
@@ -544,7 +633,10 @@ fn issue_state_transport_error(error: octocrab::Error, conflict_on_missing: bool
         return mapped;
     }
     match status {
-        Some(301 | 409 | 410) => issue_state_conflict(
+        Some(301) => AppError::GitHubIssueMoved(
+            "GitHub reported that the Issue repository location changed".to_string(),
+        ),
+        Some(409 | 410) => issue_state_conflict(
             "the Issue moved or changed before GitHub applied the state operation",
         ),
         Some(404) if conflict_on_missing => {
@@ -620,7 +712,7 @@ struct GraphQlIssueStateNode {
     id: String,
     number: u64,
     state: GraphQlIssueState,
-    state_reason: Option<GraphQlIssueStateReason>,
+    state_reason: Option<String>,
     updated_at: String,
     viewer_can_close: bool,
     viewer_can_reopen: bool,
@@ -641,27 +733,6 @@ impl From<GraphQlIssueState> for GitHubIssueState {
             GraphQlIssueState::Open => Self::Open,
             GraphQlIssueState::Closed => Self::Closed,
         }
-    }
-}
-
-#[derive(Clone, Copy, Deserialize)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-enum GraphQlIssueStateReason {
-    Completed,
-    NotPlanned,
-    Duplicate,
-    Reopened,
-}
-
-impl GraphQlIssueStateReason {
-    fn name(self) -> String {
-        match self {
-            Self::Completed => "completed",
-            Self::NotPlanned => "notPlanned",
-            Self::Duplicate => "duplicate",
-            Self::Reopened => "reopened",
-        }
-        .to_string()
     }
 }
 
@@ -709,10 +780,11 @@ impl GitHubIssueLifecycleClient for super::super::tests::FakeGitHubClient {
             .await?
             .issue;
         issue.state = mutation.desired_state;
-        issue.state_reason = Some(desired_reason_name(mutation)?.to_string());
+        issue.state_reason = Some(desired_reason(mutation)?);
         Ok(issue)
     }
 }
 
 #[cfg(test)]
 mod tests;
+use std::ops::Deref;

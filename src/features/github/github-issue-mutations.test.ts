@@ -326,10 +326,9 @@ describe("GitHub Issue mutations", () => {
       hasPrevious: false,
       hasMore: false,
     });
-    const previouslyClosed = { ...issue, state: "closed" as const, stateReason: "notPlanned" };
     queryClient.setQueryData<GitHubIssuePage>(closedListKey, {
-      issues: [previouslyClosed],
-      totalCount: 1,
+      issues: [],
+      totalCount: 0,
       page: 1,
       hasPrevious: false,
       hasMore: false,
@@ -342,8 +341,8 @@ describe("GitHub Issue mutations", () => {
       hasMore: false,
     });
     queryClient.setQueryData<GitHubIssueInboxPage>(closedInboxKey, {
-      issues: [{ ...summary, issue: previouslyClosed }],
-      totalCount: 1,
+      issues: [],
+      totalCount: 0,
       page: 1,
       hasPrevious: false,
       hasMore: false,

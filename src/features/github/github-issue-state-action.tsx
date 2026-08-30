@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Check, ChevronDown, CircleX, RotateCcw } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -9,6 +8,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useAppTranslation } from "@/hooks/use-app-translation";
 import type { GitHubIssueCloseReason, GitHubIssueState } from "./github-data";
 import type { GitHubIssueStateChoice } from "./github-issue-mutations";
 
@@ -25,7 +26,7 @@ export function GitHubIssueStateAction({
   disabled?: boolean;
   onChange: (choice: GitHubIssueStateChoice) => void;
 }) {
-  const { t } = useTranslation();
+  const { t } = useAppTranslation();
   const [closeReason, setCloseReason] = useState<GitHubIssueCloseReason>("completed");
 
   useEffect(() => {
@@ -43,7 +44,7 @@ export function GitHubIssueStateAction({
         aria-busy={pending || loading}
       >
         {pending || loading ? (
-          <Spinner data-icon="inline-start" />
+          <Spinner data-icon="inline-start" aria-hidden="true" />
         ) : (
           <RotateCcw data-icon="inline-start" />
         )}
@@ -75,7 +76,7 @@ export function GitHubIssueStateAction({
         onClick={() => onChange({ desiredState: "closed", closeReason })}
       >
         {pending || loading ? (
-          <Spinner data-icon="inline-start" />
+          <Spinner data-icon="inline-start" aria-hidden="true" />
         ) : (
           <CircleX data-icon="inline-start" />
         )}
@@ -90,26 +91,41 @@ export function GitHubIssueStateAction({
         )}
       </Button>
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon-sm"
-            className="rounded-l-none"
-            disabled={pending || loading || disabled}
-            aria-label={t("workspace.repositories.chooseIssueCloseReason")}
-          >
-            <ChevronDown />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuItem onSelect={() => setCloseReason("completed")}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                className="rounded-l-none"
+                disabled={pending || loading || disabled}
+                aria-label={t("workspace.repositories.chooseIssueCloseReason")}
+              >
+                <ChevronDown />
+              </Button>
+            </DropdownMenuTrigger>
+          </TooltipTrigger>
+          <TooltipContent>{t("workspace.repositories.chooseIssueCloseReason")}</TooltipContent>
+        </Tooltip>
+        <DropdownMenuContent align="end" className="w-64">
+          <DropdownMenuItem className="items-start" onSelect={() => setCloseReason("completed")}>
             <Check className={closeReason === "completed" ? "opacity-100" : "opacity-0"} />
-            {t("workspace.repositories.closeIssueAsCompleted")}
+            <span className="flex flex-col gap-0.5">
+              <span>{t("workspace.repositories.closeIssueAsCompleted")}</span>
+              <span className="text-muted-foreground text-xs font-normal">
+                {t("workspace.repositories.closeIssueCompletedDescription")}
+              </span>
+            </span>
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => setCloseReason("notPlanned")}>
+          <DropdownMenuItem className="items-start" onSelect={() => setCloseReason("notPlanned")}>
             <Check className={closeReason === "notPlanned" ? "opacity-100" : "opacity-0"} />
-            {t("workspace.repositories.closeIssueAsNotPlanned")}
+            <span className="flex flex-col gap-0.5">
+              <span>{t("workspace.repositories.closeIssueAsNotPlanned")}</span>
+              <span className="text-muted-foreground text-xs font-normal">
+                {t("workspace.repositories.closeIssueNotPlannedDescription")}
+              </span>
+            </span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

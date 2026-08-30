@@ -398,6 +398,18 @@ fn issue_state_reasons_keep_the_known_frontend_vocabulary() {
 }
 
 #[test]
+fn issue_search_items_keep_unknown_future_state_reasons() {
+    let mut value = issue_json(7, false);
+    value["state"] = serde_json::json!("closed");
+    value["state_reason"] = serde_json::json!("future_reason");
+
+    let summary = issue_summary_from_search_value(value).expect("future reason search item");
+
+    assert_eq!(summary.issue.state, GitHubIssueState::Closed);
+    assert_eq!(summary.issue.state_reason.as_deref(), Some("future_reason"));
+}
+
+#[test]
 fn issue_search_is_scoped_to_real_issues_and_selected_filters() {
     let filters = GitHubIssueFilters {
         state: GitHubIssueState::Closed,
