@@ -24,15 +24,46 @@ pub struct GitHubIssueRelationshipsPage {
     pub has_more: bool,
 }
 
+#[derive(Clone, Copy)]
+pub(crate) struct IssueRelationshipsRequest<'a> {
+    owner: &'a str,
+    repository: &'a str,
+    issue_number: u64,
+    page: u32,
+}
+
+impl<'a> IssueRelationshipsRequest<'a> {
+    fn new(
+        owner: &'a str,
+        repository: &'a str,
+        issue_number: u64,
+        page: u32,
+    ) -> Result<Self, AppError> {
+        if issue_number == 0 {
+            return Err(AppError::Validation(
+                "issue number must be greater than zero".to_string(),
+            ));
+        }
+        if page == 0 {
+            return Err(AppError::Validation(
+                "Issue relationship page must be greater than zero".to_string(),
+            ));
+        }
+        Ok(Self {
+            owner,
+            repository,
+            issue_number,
+            page,
+        })
+    }
+}
+
 #[async_trait]
 pub(crate) trait GitHubIssueRelationshipsClient: Send + Sync {
     async fn issue_relationships(
         &self,
         token: &str,
-        owner: &str,
-        repository: &str,
-        issue_number: u64,
-        page: u32,
+        request: IssueRelationshipsRequest<'_>,
     ) -> Result<GitHubIssueRelationshipsPage, AppError>;
 }
 
@@ -44,11 +75,9 @@ impl GitHubService {
         issue_number: u64,
         page: u32,
     ) -> Result<GitHubIssueRelationshipsPage, AppError> {
-        let (issue_number, page) = normalize_request(issue_number, page)?;
+        let request = IssueRelationshipsRequest::new(owner, repository, issue_number, page)?;
         let token = self.load_access_token().await?;
-        self.client
-            .issue_relationships(&token, owner, repository, issue_number, page)
-            .await
+        self.client.issue_relationships(&token, request).await
     }
 }
 
@@ -57,66 +86,43 @@ impl GitHubIssueRelationshipsClient for OctocrabGitHubClient {
     async fn issue_relationships(
         &self,
         token: &str,
-        owner: &str,
-        repository: &str,
-        issue_number: u64,
-        page: u32,
+        request: IssueRelationshipsRequest<'_>,
     ) -> Result<GitHubIssueRelationshipsPage, AppError> {
         let client = authenticated_client(token)?;
-        load_issue_relationships_with_client(&client, owner, repository, issue_number, page).await
+        load_issue_relationships_with_client(&client, request).await
     }
-}
-
-fn normalize_request(issue_number: u64, page: u32) -> Result<(u64, u32), AppError> {
-    if issue_number == 0 {
-        return Err(AppError::Validation(
-            "issue number must be greater than zero".to_string(),
-        ));
-    }
-    if page == 0 {
-        return Err(AppError::Validation(
-            "Issue relationship page must be greater than zero".to_string(),
-        ));
-    }
-    Ok((issue_number, page))
 }
 
 async fn load_issue_relationships_with_client(
     client: &octocrab::Octocrab,
-    owner: &str,
-    repository: &str,
-    issue_number: u64,
-    page: u32,
+    request: IssueRelationshipsRequest<'_>,
 ) -> Result<GitHubIssueRelationshipsPage, AppError> {
-    let parent = load_parent(client, owner, repository, issue_number).await?;
+    let parent = load_parent(client, request).await?;
     if parent
         .as_ref()
-        .is_some_and(|parent| relationship_is_current(parent, owner, repository, issue_number))
+        .is_some_and(|parent| relationship_is_current(parent, request))
     {
         return Err(AppError::GitHub(
             "GitHub returned the current Issue as its own parent".to_string(),
         ));
     }
-    let (sub_issues, has_more) =
-        load_sub_issues(client, owner, repository, issue_number, page).await?;
+    let (sub_issues, has_more) = load_sub_issues(client, request).await?;
 
     Ok(GitHubIssueRelationshipsPage {
         parent,
         sub_issues,
-        page,
-        has_previous: page > 1,
+        page: request.page,
+        has_previous: request.page > 1,
         has_more,
     })
 }
 
 async fn load_parent(
     client: &octocrab::Octocrab,
-    owner: &str,
-    repository: &str,
-    issue_number: u64,
+    request: IssueRelationshipsRequest<'_>,
 ) -> Result<Option<GitHubIssueSummary>, AppError> {
-    let request = api_request(client, parent_route(owner, repository, issue_number))?;
-    let response = client.execute(request).await.map_err(github_error)?;
+    let http_request = api_request(client, parent_route(request))?;
+    let response = client.execute(http_request).await.map_err(github_error)?;
     if response.status() == http::StatusCode::NOT_FOUND {
         return Ok(None);
     }
@@ -129,21 +135,15 @@ async fn load_parent(
         .map_err(|error| {
             AppError::GitHub(format!("GitHub returned invalid Issue parent: {error}"))
         })?;
-    issue_summary_from_rest_value(value, "GitHub's Issue-parent endpoint returned").map(Some)
+    relationship_summary_from_rest_value(value, "Issue parent").map(Some)
 }
 
 async fn load_sub_issues(
     client: &octocrab::Octocrab,
-    owner: &str,
-    repository: &str,
-    issue_number: u64,
-    page: u32,
+    request: IssueRelationshipsRequest<'_>,
 ) -> Result<(Vec<GitHubIssueSummary>, bool), AppError> {
-    let request = api_request(
-        client,
-        sub_issues_route(owner, repository, issue_number, page),
-    )?;
-    let response = client.execute(request).await.map_err(github_error)?;
+    let http_request = api_request(client, sub_issues_route(request))?;
+    let response = client.execute(http_request).await.map_err(github_error)?;
     let status = response.status();
     let response = octocrab::map_github_error(response)
         .await
@@ -164,11 +164,11 @@ async fn load_sub_issues(
     let sub_issues = values
         .iter()
         .cloned()
-        .map(|value| issue_summary_from_rest_value(value, "GitHub's sub-issues endpoint returned"))
+        .map(|value| relationship_summary_from_rest_value(value, "sub-issue"))
         .collect::<Result<Vec<_>, _>>()?;
     let mut issue_ids = HashSet::with_capacity(sub_issues.len());
     for sub_issue in &sub_issues {
-        if relationship_is_current(sub_issue, owner, repository, issue_number) {
+        if relationship_is_current(sub_issue, request) {
             return Err(AppError::GitHub(
                 "GitHub returned the current Issue as its own sub-issue".to_string(),
             ));
@@ -184,13 +184,81 @@ async fn load_sub_issues(
 
 fn relationship_is_current(
     related: &GitHubIssueSummary,
-    owner: &str,
-    repository: &str,
-    issue_number: u64,
+    request: IssueRelationshipsRequest<'_>,
 ) -> bool {
-    related.issue.number == issue_number
-        && related.repository.owner.eq_ignore_ascii_case(owner)
-        && related.repository.name.eq_ignore_ascii_case(repository)
+    related.issue.number == request.issue_number
+        && related.repository.owner.eq_ignore_ascii_case(request.owner)
+        && related
+            .repository
+            .name
+            .eq_ignore_ascii_case(request.repository)
+}
+
+fn relationship_summary_from_rest_value(
+    value: serde_json::Value,
+    source: &str,
+) -> Result<GitHubIssueSummary, AppError> {
+    let api_url = value
+        .get("url")
+        .and_then(serde_json::Value::as_str)
+        .map(str::to_string)
+        .ok_or_else(|| invalid_relationship_identity(source))?;
+    let summary =
+        issue_summary_from_rest_value(value, &format!("GitHub's {source} endpoint returned"))?;
+    validate_relationship_identity(&summary, &api_url, source)?;
+    Ok(summary)
+}
+
+fn validate_relationship_identity(
+    summary: &GitHubIssueSummary,
+    api_url: &str,
+    source: &str,
+) -> Result<(), AppError> {
+    let issue = &summary.issue;
+    if issue.id == 0
+        || issue.number == 0
+        || issue.reaction_subject.id.trim().is_empty()
+        || issue.reaction_subject.id.chars().any(char::is_whitespace)
+        || !issue_url_matches(
+            api_url,
+            "api.github.com",
+            &format!(
+                "/repos/{}/{}/issues/{}",
+                summary.repository.owner, summary.repository.name, issue.number
+            ),
+        )
+        || !issue_url_matches(
+            &issue.url,
+            "github.com",
+            &format!(
+                "/{}/{}/issues/{}",
+                summary.repository.owner, summary.repository.name, issue.number
+            ),
+        )
+    {
+        return Err(invalid_relationship_identity(source));
+    }
+    Ok(())
+}
+
+fn issue_url_matches(value: &str, host: &str, path: &str) -> bool {
+    let Ok(url) = url::Url::parse(value) else {
+        return false;
+    };
+    url.scheme() == "https"
+        && url
+            .host_str()
+            .is_some_and(|value| value.eq_ignore_ascii_case(host))
+        && url.username().is_empty()
+        && url.password().is_none()
+        && url.port().is_none()
+        && url.path().eq_ignore_ascii_case(path)
+        && url.query().is_none()
+        && url.fragment().is_none()
+}
+
+fn invalid_relationship_identity(source: &str) -> AppError {
+    AppError::GitHub(format!("GitHub returned an invalid {source} identity"))
 }
 
 fn api_request(
@@ -234,13 +302,17 @@ fn relationship_error(error: octocrab::Error, status: http::StatusCode) -> AppEr
     }
 }
 
-fn parent_route(owner: &str, repository: &str, issue_number: u64) -> String {
-    format!("/repos/{owner}/{repository}/issues/{issue_number}/parent")
+fn parent_route(request: IssueRelationshipsRequest<'_>) -> String {
+    format!(
+        "/repos/{}/{}/issues/{}/parent",
+        request.owner, request.repository, request.issue_number
+    )
 }
 
-fn sub_issues_route(owner: &str, repository: &str, issue_number: u64, page: u32) -> String {
+fn sub_issues_route(request: IssueRelationshipsRequest<'_>) -> String {
     format!(
-        "/repos/{owner}/{repository}/issues/{issue_number}/sub_issues?per_page={ISSUE_RELATIONSHIP_PAGE_SIZE}&page={page}"
+        "/repos/{}/{}/issues/{}/sub_issues?per_page={ISSUE_RELATIONSHIP_PAGE_SIZE}&page={}",
+        request.owner, request.repository, request.issue_number, request.page
     )
 }
 
@@ -250,21 +322,18 @@ impl GitHubIssueRelationshipsClient for super::tests::FakeGitHubClient {
     async fn issue_relationships(
         &self,
         token: &str,
-        owner: &str,
-        repository: &str,
-        issue_number: u64,
-        page: u32,
+        request: IssueRelationshipsRequest<'_>,
     ) -> Result<GitHubIssueRelationshipsPage, AppError> {
         assert_eq!(token, "github-user-access-token");
         assert_eq!(
-            (owner, repository, issue_number),
+            (request.owner, request.repository, request.issue_number),
             ("octocat", "hello-world", 7)
         );
         Ok(GitHubIssueRelationshipsPage {
             parent: None,
             sub_issues: Vec::new(),
-            page,
-            has_previous: page > 1,
+            page: request.page,
+            has_previous: request.page > 1,
             has_more: false,
         })
     }

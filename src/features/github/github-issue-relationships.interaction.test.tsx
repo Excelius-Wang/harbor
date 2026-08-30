@@ -6,6 +6,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { GitHubIssueSummary } from "./github-data";
+import { githubIssueRelationshipQueryKeys } from "./github-issue-relationship-queries";
 import { GitHubIssueRelationships } from "./github-issue-relationships";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(), isTauri: () => false }));
@@ -54,10 +55,10 @@ function renderRelationships(onNavigate = vi.fn()) {
       <GitHubIssueRelationships repository={repository} issueNumber={7} onNavigate={onNavigate} />
     </QueryClientProvider>
   );
-  return onNavigate;
+  return { onNavigate, queryClient };
 }
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => vi.mocked(invoke).mockReset());
 afterEach(() => cleanup());
 
 describe("GitHub Issue relationships", () => {
@@ -111,7 +112,7 @@ describe("GitHub Issue relationships", () => {
       hasMore: false,
     });
     const user = userEvent.setup();
-    const onNavigate = renderRelationships();
+    const { onNavigate } = renderRelationships();
 
     expect(await screen.findByText("Parent roadmap item")).toBeDefined();
     expect(screen.getByText("Ship the API")).toBeDefined();
@@ -122,7 +123,44 @@ describe("GitHub Issue relationships", () => {
     expect(onNavigate).toHaveBeenNthCalledWith(2, child);
   });
 
-  it("pages sub-issues and offers retry without hiding the Issue body", async () => {
+  it("keeps cached rows visible and offers retry after a permission refresh failure", async () => {
+    vi.mocked(invoke)
+      .mockResolvedValueOnce({
+        parent: null,
+        subIssues: [summary("hello-world", 8, "Cached child")],
+        page: 1,
+        hasPrevious: false,
+        hasMore: false,
+      })
+      .mockRejectedValueOnce({ code: "githubPermission", message: "permission changed" })
+      .mockResolvedValueOnce({
+        parent: null,
+        subIssues: [summary("hello-world", 9, "Refreshed child")],
+        page: 1,
+        hasPrevious: false,
+        hasMore: false,
+      });
+    const user = userEvent.setup();
+    const { queryClient } = renderRelationships();
+
+    expect(await screen.findByText("Cached child")).toBeDefined();
+    await queryClient.invalidateQueries({
+      queryKey: githubIssueRelationshipQueryKeys.root({
+        owner: "octocat",
+        repository: "hello-world",
+        issueNumber: 7,
+      }),
+    });
+
+    expect(
+      await screen.findByText("workspace.repositories.issueRelationshipsPermissionDenied")
+    ).toBeDefined();
+    expect(screen.getByText("Cached child")).toBeDefined();
+    await user.click(screen.getByRole("button", { name: "workspace.repositories.retry" }));
+    expect(await screen.findByText("Refreshed child")).toBeDefined();
+  });
+
+  it("pages sub-issues and offers retry after a page failure", async () => {
     vi.mocked(invoke)
       .mockResolvedValueOnce({
         parent: null,

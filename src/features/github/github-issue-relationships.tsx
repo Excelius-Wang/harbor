@@ -4,6 +4,7 @@ import { CheckCircle2, CircleAlert, CircleDot, GitBranch, RefreshCw } from "luci
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAppTranslation } from "@/hooks/use-app-translation";
 import { parseIpcError } from "@/lib/ipc-error";
@@ -51,6 +52,35 @@ function RelationshipsSkeleton() {
   );
 }
 
+function RelationshipsError({
+  error,
+  onRetry,
+}: {
+  error: ReturnType<typeof parseIpcError> | null;
+  onRetry: () => void;
+}) {
+  const { t } = useAppTranslation();
+  return (
+    <Alert variant="destructive">
+      <CircleAlert />
+      <AlertTitle>
+        {t(
+          error?.code === "githubPermission"
+            ? "workspace.repositories.issueRelationshipsPermissionDenied"
+            : "workspace.repositories.issueRelationshipsLoadFailed"
+        )}
+      </AlertTitle>
+      <AlertDescription>
+        <span>{error?.message}</span>
+        <Button type="button" variant="outline" size="xs" onClick={onRetry}>
+          <RefreshCw data-icon="inline-start" />
+          {t("workspace.repositories.retry")}
+        </Button>
+      </AlertDescription>
+    </Alert>
+  );
+}
+
 function GitHubIssueRelationshipsContent({
   repository,
   issueNumber,
@@ -70,31 +100,12 @@ function GitHubIssueRelationshipsContent({
       page,
     })
   );
-  const error = !result.data && result.error ? parseIpcError(result.error) : null;
+  const error = result.error ? parseIpcError(result.error) : null;
 
   if (result.isPending) return <RelationshipsSkeleton />;
 
-  if (error || !result.data) {
-    return (
-      <Alert variant="destructive">
-        <CircleAlert />
-        <AlertTitle>
-          {t(
-            error?.code === "githubPermission"
-              ? "workspace.repositories.issueRelationshipsPermissionDenied"
-              : "workspace.repositories.issueRelationshipsLoadFailed"
-          )}
-        </AlertTitle>
-        <AlertDescription>
-          <span>{error?.message}</span>
-          <Button type="button" variant="outline" size="xs" onClick={() => void result.refetch()}>
-            <RefreshCw data-icon="inline-start" />
-            {t("workspace.repositories.retry")}
-          </Button>
-        </AlertDescription>
-      </Alert>
-    );
-  }
+  if (!result.data)
+    return <RelationshipsError error={error} onRetry={() => void result.refetch()} />;
 
   const { parent, subIssues, hasPrevious, hasMore } = result.data;
   return (
@@ -109,15 +120,22 @@ function GitHubIssueRelationshipsContent({
         </CardTitle>
       </CardHeader>
       <CardContent className="px-0 py-1">
-        {!parent && subIssues.length === 0 ? (
-          <div className="px-4 py-4">
-            <p className="text-xs font-medium">
-              {t("workspace.repositories.noIssueRelationships")}
-            </p>
-            <p className="text-muted-foreground mt-1 text-[11px]">
-              {t("workspace.repositories.noIssueRelationshipsDescription")}
-            </p>
+        {error ? (
+          <div className="px-3 pt-2">
+            <RelationshipsError error={error} onRetry={() => void result.refetch()} />
           </div>
+        ) : null}
+        {!parent && subIssues.length === 0 ? (
+          <Empty className="min-h-0 gap-2 px-4 py-5 md:p-5">
+            <EmptyHeader className="gap-1">
+              <EmptyTitle className="text-xs">
+                {t("workspace.repositories.noIssueRelationships")}
+              </EmptyTitle>
+              <EmptyDescription className="text-[11px]">
+                {t("workspace.repositories.noIssueRelationshipsDescription")}
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         ) : null}
         {parent ? (
           <section className="border-b px-1.5 py-1.5">

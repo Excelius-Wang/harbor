@@ -28,7 +28,13 @@ moved and permission errors, and rejects self-references and duplicate child ide
 registered Tauri command exposes the read-only page. The frontend adds an independent query-key
 module, loading/empty/error/permission states, sub-issue pagination, and an in-place Issue-detail
 history that supports native cross-repository traversal before returning to the host view. New
-production files remain between 33 and 274 lines; tests are separate.
+production code remains in focused files; tests are separate.
+
+[Draft PR #21](https://github.com/Excelius-Wang/harbor/pull/21) is open and cleanly mergeable. Its
+first independent Standards and Spec reviews of `a2c4210` found six gaps: response
+identity reconciliation, cached-refresh error visibility, shadcn Empty composition, a real
+detail-level failure/retry regression test, repeated Rust request parameters, and stale checkpoint
+delivery state. Fixes for all six are complete and pass the full verification suite.
 
 This slice does not add authentication scope or Issue mutations. Adding, removing, reordering, and
 reparenting sub-issues remain separate work because GitHub's write contract has cross-repository
@@ -47,7 +53,7 @@ refresh tokens, or Keychain contents.
 
 ## Next action
 
-Commit and push the verified slice, then open its Draft PR.
+Request exact-head Standards and Spec re-review after the review-fix commit reaches the Draft PR.
 
 ## Verification
 
@@ -57,7 +63,7 @@ Run `pnpm check`, `cargo test --manifest-path src-tauri/Cargo.toml --lib`,
 diff against `origin/main`, then deliver it through a Draft PR, Ready state, squash merge, `main`
 verification, and remote branch deletion.
 
-Current verification passes 53 frontend files and 271 tests, 405 Rust tests with two intentional
+Current verification passes 54 frontend files and 273 tests, 407 Rust tests with two intentional
 external-service ignores, the production frontend build, rustfmt, and `git diff --check`. Clippy
 passes with exactly the 15 pre-existing warnings and no warning from this slice.
 
