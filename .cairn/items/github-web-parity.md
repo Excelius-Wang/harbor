@@ -21,8 +21,11 @@ diff-position creation, revision/capability-guarded edit and delete, commit-comm
 unplaceable-comment recovery UI, English/Chinese copy, and focused transport and interaction tests.
 Rust production code is split between a 338-line domain/service module and a 631-line transport
 module; tests remain separate. [Draft PR #18](https://github.com/Excelius-Wang/harbor/pull/18) is
-open from the pushed branch at `ccc6fb2`. Focused frontend tests pass 72 cases, commit-comment Rust
-tests pass 15 cases, `pnpm check` passes 45 files and 243 tests, and `cargo check`, rustfmt, and
+open. Initial Standards review reported four findings and Spec review reported five; all are fixed
+at source head `887e511`, including authoritative-refetch write locks, exact Git path preservation,
+terminal-newline diff mapping, repository translation hooks, required tooltips, bounded shared
+types/components, and independent navigation/reaction coverage. `pnpm check` passes 45 files and
+245 tests; focused commit-comment Rust tests pass 16 cases; `cargo check`, rustfmt, and
 `git diff --check` pass.
 
 The original worktree remains on local recovery branch
@@ -37,9 +40,9 @@ refresh tokens, or Keychain contents.
 
 ## Next action
 
-Run full verification and independent Standards and Spec reviews on Draft PR #18's exact head, fix
-all findings, then carry the reviewed head through Ready state, squash merge, merged-`main`
-verification, and remote branch deletion.
+Run full Rust verification and final independent Standards and Spec re-reviews on Draft PR #18's
+exact head, then carry the reviewed head through Ready state, squash merge, merged-`main`
+verification, and remote branch deletion if both reviews have no unresolved findings.
 
 ## Verification
 
