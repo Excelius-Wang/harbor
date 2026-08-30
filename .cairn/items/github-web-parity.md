@@ -21,12 +21,15 @@ diff-position creation, revision/capability-guarded edit and delete, commit-comm
 unplaceable-comment recovery UI, English/Chinese copy, and focused transport and interaction tests.
 Rust production code is split between a 338-line domain/service module and a 631-line transport
 module; tests remain separate. [Draft PR #18](https://github.com/Excelius-Wang/harbor/pull/18) is
-open. Initial Standards review reported four findings and Spec review reported five; all are fixed
-at source head `887e511`, including authoritative-refetch write locks, exact Git path preservation,
-terminal-newline diff mapping, repository translation hooks, required tooltips, bounded shared
-types/components, and independent navigation/reaction coverage. `pnpm check` passes 45 files and
-245 tests; focused commit-comment Rust tests pass 16 cases; `cargo check`, rustfmt, and
-`git diff --check` pass.
+open. Initial Standards review reported four findings and Spec review reported five; all are fixed.
+The first final Standards review had zero findings. Its paired Spec review found one remaining low
+REST-contract test gap, fixed at source head `7b23a44` with shared-header assertions across REST
+verbs and a successful commit-level POST that omits `path` and `position`. The fixes also cover
+authoritative-refetch write locks, exact Git path preservation, terminal-newline diff mapping,
+repository translation hooks, required tooltips, bounded shared types/components, and independent
+navigation/reaction coverage. `pnpm check` passes 45 files and 245 tests; focused commit-comment
+Rust tests pass 17 cases; full Rust library tests pass 378 cases with two intentional ignores;
+`cargo check`, rustfmt, `git diff --check`, and Clippy pass with exactly the 15 pre-existing warnings.
 
 The original worktree remains on local recovery branch
 `checkpoint/github-actions-administration-20260830` at `7e2084f` with only its older Cairn item
