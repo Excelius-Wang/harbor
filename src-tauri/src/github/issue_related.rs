@@ -11,14 +11,14 @@ const GITHUB_API_VERSION: &str = "2026-03-10";
 
 #[derive(Clone, Copy)]
 pub(crate) struct IssueGraphQlRequest<'a> {
-    pub(crate) owner: &'a str,
-    pub(crate) repository: &'a str,
-    pub(crate) issue_number: u64,
-    pub(crate) expected_issue_node_id: &'a str,
+    pub(super) owner: &'a str,
+    pub(super) repository: &'a str,
+    pub(super) issue_number: u64,
+    pub(super) expected_issue_node_id: &'a str,
 }
 
 impl<'a> IssueGraphQlRequest<'a> {
-    pub(crate) fn new(
+    pub(super) fn new(
         owner: &'a str,
         repository: &'a str,
         issue_number: u64,
