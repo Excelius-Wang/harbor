@@ -28,7 +28,10 @@ gaps. Those findings are fixed. A second exact-head review found production retr
 recovery, bounded cache-ordering, and remaining matrix gaps; those are also fixed. Full verification
 now passes 49 frontend files and 264 tests, 398 Rust tests with two intentional external-service
 ignores, cargo check, rustfmt, and Clippy with exactly the 15 existing warnings. The focused diff
-also passes `git diff --check`.
+also passes `git diff --check`. The final review pass found an updated-sort page-two duplicate edge
+and small code-quality issues; the edge now removes and invalidates stale non-first-page copies, and
+the shared state type, error formatter, cache-page reconciler, and lifecycle client seam are cleaned
+up. The same full verification passes after those changes.
 
 The original worktree remains on local recovery branch
 `checkpoint/github-actions-administration-20260830` at `7e2084f` with only its separate Cairn item
@@ -42,9 +45,9 @@ refresh tokens, or Keychain contents.
 
 ## Next action
 
-Commit and push the final verified PR #20 review fixes, then request independent Standards and Spec
-re-reviews on the replacement exact head. If both report no unresolved findings, mark the PR Ready,
-squash merge, verify merged `main`, and delete the feature branch.
+Commit and push the final page-edge and code-quality fixes, then request exact-head Standards and
+Spec re-reviews. If both report no unresolved findings, mark PR #20 Ready, squash merge, verify
+merged `main`, and delete the feature branch.
 
 ## Verification
 

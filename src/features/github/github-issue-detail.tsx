@@ -62,6 +62,18 @@ export function GitHubIssueComposer({
         ? [queryClient.invalidateQueries({ queryKey: githubQueryKeys.repositories })]
         : []),
     ]);
+  const stateErrorMessage = (error: ReturnType<typeof parseIpcError>) => {
+    switch (error.code) {
+      case "githubPermission":
+        return t("workspace.repositories.issueWritePermissionDenied");
+      case "githubIssueStateConflict":
+        return t("workspace.repositories.issueStateChanged");
+      case "githubIssueMoved":
+        return t("workspace.repositories.issueMoved");
+      default:
+        return error.message;
+    }
+  };
   const commentMutation = useMutation({
     mutationFn: (commentBody: string) => createRepositoryIssueComment(target, commentBody),
     onSuccess: (comment) => {
@@ -88,14 +100,7 @@ export function GitHubIssueComposer({
     onError: (error) => {
       const parsed = parseIpcError(error);
       toast.error(t("workspace.repositories.issueStateChangeFailed"), {
-        description:
-          parsed.code === "githubPermission"
-            ? t("workspace.repositories.issueWritePermissionDenied")
-            : parsed.code === "githubIssueStateConflict"
-              ? t("workspace.repositories.issueStateChanged")
-              : parsed.code === "githubIssueMoved"
-                ? t("workspace.repositories.issueMoved")
-                : parsed.message,
+        description: stateErrorMessage(parsed),
       });
       void refreshIssueState(parsed.code === "githubIssueMoved");
     },
@@ -118,15 +123,6 @@ export function GitHubIssueComposer({
       ? t("workspace.repositories.issueWritePermissionDenied")
       : commentError.message
     : null;
-  const stateErrorMessage = stateError
-    ? stateError.code === "githubPermission"
-      ? t("workspace.repositories.issueWritePermissionDenied")
-      : stateError.code === "githubIssueStateConflict"
-        ? t("workspace.repositories.issueStateChanged")
-        : stateError.code === "githubIssueMoved"
-          ? t("workspace.repositories.issueMoved")
-          : stateError.message
-    : null;
   const retryStateRead = () => void refreshIssueState();
   const stateNotice =
     capabilityError || (capabilities && !capabilityMatches) ? (
@@ -145,7 +141,7 @@ export function GitHubIssueComposer({
       <Alert variant="destructive" className="py-2.5 text-xs">
         <CircleAlert />
         <AlertTitle>{t("workspace.repositories.issueStateChangeFailed")}</AlertTitle>
-        <AlertDescription>{stateErrorMessage}</AlertDescription>
+        <AlertDescription>{stateErrorMessage(stateError)}</AlertDescription>
       </Alert>
     ) : capabilities && !viewerCanChange ? (
       <Alert className="py-2.5 text-xs">

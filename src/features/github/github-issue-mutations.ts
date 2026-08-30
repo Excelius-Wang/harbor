@@ -16,6 +16,23 @@ import { githubQueryKeys } from "./github-queries";
 
 const GITHUB_ISSUE_PAGE_SIZE = 30;
 
+function reconcileUpdatedPageItems<T>(
+  items: T[],
+  updatedItem: T,
+  matches: (item: T) => boolean,
+  hasMore: boolean
+) {
+  const remainingItems = items.filter((item) => !matches(item));
+  const orderedItems = [updatedItem, ...remainingItems];
+  return {
+    remainingItems,
+    updatedPage: {
+      issues: orderedItems.slice(0, GITHUB_ISSUE_PAGE_SIZE),
+      hasMore: hasMore || orderedItems.length > GITHUB_ISSUE_PAGE_SIZE,
+    },
+  };
+}
+
 export type GitHubRepositoryIssueMutationTarget = {
   owner: string;
   repository: string;
@@ -260,8 +277,22 @@ function updateRepositoryIssuePages(
       }
       continue;
     }
-    const withoutIssue = page.issues.filter((item) => item.number !== target.issueNumber);
-    const orderedIssues = [issue, ...withoutIssue];
+    const { remainingItems: withoutIssue, updatedPage } = reconcileUpdatedPageItems(
+      page.issues,
+      issue,
+      (item) => item.number === target.issueNumber,
+      page.hasMore
+    );
+    const staleUpdatedPage =
+      cachedState === issue.state && queryKey[9] === "updated" && queryKey[10] !== 1;
+    if (staleUpdatedPage) {
+      queryClient.setQueryData<GitHubIssuePage>(queryKey, {
+        ...page,
+        issues: withoutIssue,
+      });
+      void queryClient.invalidateQueries({ queryKey, exact: true });
+      continue;
+    }
     const moveToFront = queryKey[9] === "updated" && queryKey[10] === 1;
     queryClient.setQueryData<GitHubIssuePage>(
       queryKey,
@@ -274,15 +305,13 @@ function updateRepositoryIssuePages(
         : shouldInsert
           ? {
               ...page,
-              issues: orderedIssues.slice(0, GITHUB_ISSUE_PAGE_SIZE),
+              ...updatedPage,
               totalCount: page.totalCount + 1,
-              hasMore: page.hasMore || orderedIssues.length > GITHUB_ISSUE_PAGE_SIZE,
             }
           : moveToFront
             ? {
                 ...page,
-                issues: orderedIssues.slice(0, GITHUB_ISSUE_PAGE_SIZE),
-                hasMore: page.hasMore || orderedIssues.length > GITHUB_ISSUE_PAGE_SIZE,
+                ...updatedPage,
               }
             : {
                 ...page,
@@ -350,9 +379,25 @@ function updateIssueInboxPages(
       }
       continue;
     }
-    const withoutIssue = page.issues.filter((summary) => !matchesIssueSummary(summary, target));
-    const updatedSummary = template ? update(template) : undefined;
-    const orderedIssues = updatedSummary ? [updatedSummary, ...withoutIssue] : withoutIssue;
+    const baseSummary = matches[0] ?? template;
+    if (!baseSummary) continue;
+    const updatedSummary = update(baseSummary);
+    const { remainingItems: withoutIssue, updatedPage } = reconcileUpdatedPageItems(
+      page.issues,
+      updatedSummary,
+      (summary) => matchesIssueSummary(summary, target),
+      page.hasMore
+    );
+    const staleUpdatedPage =
+      nextState === cachedState && queryKey[5] === "updated" && queryKey[6] !== 1;
+    if (staleUpdatedPage) {
+      queryClient.setQueryData<GitHubIssueInboxPage>(queryKey, {
+        ...page,
+        issues: withoutIssue,
+      });
+      void queryClient.invalidateQueries({ queryKey, exact: true });
+      continue;
+    }
     const moveToFront = queryKey[5] === "updated" && queryKey[6] === 1;
     queryClient.setQueryData<GitHubIssueInboxPage>(
       queryKey,
@@ -362,18 +407,16 @@ function updateIssueInboxPages(
             issues: withoutIssue,
             totalCount: Math.max(0, page.totalCount - matches.length),
           }
-        : shouldInsert && updatedSummary
+        : shouldInsert
           ? {
               ...page,
-              issues: orderedIssues.slice(0, GITHUB_ISSUE_PAGE_SIZE),
+              ...updatedPage,
               totalCount: page.totalCount + 1,
-              hasMore: page.hasMore || orderedIssues.length > GITHUB_ISSUE_PAGE_SIZE,
             }
-          : moveToFront && updatedSummary
+          : moveToFront
             ? {
                 ...page,
-                issues: orderedIssues.slice(0, GITHUB_ISSUE_PAGE_SIZE),
-                hasMore: page.hasMore || orderedIssues.length > GITHUB_ISSUE_PAGE_SIZE,
+                ...updatedPage,
               }
             : {
                 ...page,

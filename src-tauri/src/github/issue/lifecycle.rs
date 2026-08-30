@@ -169,7 +169,7 @@ impl GitHubIssueLifecycleClient for OctocrabGitHubClient {
         repository: &str,
         issue_number: u64,
     ) -> Result<GitHubIssueStateCapabilities, AppError> {
-        let client = authenticated_issue_state_client(token)?;
+        let client = build_issue_state_client(token, None)?;
         issue_state_capabilities_with_client(&client, owner, repository, issue_number).await
     }
 
@@ -184,10 +184,6 @@ impl GitHubIssueLifecycleClient for OctocrabGitHubClient {
         let client = build_issue_state_client(token, None)?;
         update_issue_state_with_client(&client, owner, repository, issue_number, mutation).await
     }
-}
-
-fn authenticated_issue_state_client(token: &str) -> Result<octocrab::Octocrab, AppError> {
-    build_issue_state_client(token, None)
 }
 
 fn build_issue_state_client(

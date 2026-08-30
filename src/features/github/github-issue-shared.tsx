@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/pagination";
 import { cn } from "@/lib/utils";
 import { useAppTranslation } from "@/hooks/use-app-translation";
-import type { GitHubIssueState } from "./github-data";
+import type { GitHubIssueState, GitHubIssueStateReason } from "./github-data";
 import { issueStateLabel } from "./github-issue-state";
 
 export function formatIssueDate(value: string | undefined, locale: string) {
@@ -28,7 +28,7 @@ export function GitHubIssueStateBadge({
   stateReason,
 }: {
   state: GitHubIssueState;
-  stateReason?: string;
+  stateReason?: GitHubIssueStateReason;
 }) {
   const { t } = useAppTranslation();
   const Icon = state === "open" ? CircleDot : CheckCircle2;
