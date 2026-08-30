@@ -341,15 +341,17 @@ describe("GitHub pull request mutations", () => {
       "github_update_repository_pull_request_maintainer_editability",
       {
         ...target,
-        expectedCurrentValue: false,
-        expectedPullRequestId: 3,
-        expectedPullRequestNodeId: "PR_3",
-        expectedAuthorId: 1,
-        expectedHeadRepositoryId: 4,
-        expectedHeadRef: "feature/pr-workspace",
-        expectedHeadSha: "abc1234",
-        expectedWorkflowRisk: "present",
-        requestedValue: true,
+        guard: {
+          expectedCurrentValue: false,
+          expectedPullRequestId: 3,
+          expectedPullRequestNodeId: "PR_3",
+          expectedAuthorId: 1,
+          expectedHeadRepositoryId: 4,
+          expectedHeadRef: "feature/pr-workspace",
+          expectedHeadSha: "abc1234",
+          expectedWorkflowRisk: "present",
+          requestedValue: true,
+        },
       }
     );
   });

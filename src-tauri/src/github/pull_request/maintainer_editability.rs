@@ -54,7 +54,8 @@ pub struct GitHubPullRequestMaintainerEditability {
     pub head_sha: String,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct GitHubPullRequestMaintainerEditabilityGuard {
     pub expected_current_value: bool,
     pub expected_pull_request_id: u64,

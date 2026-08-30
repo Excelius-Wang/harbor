@@ -100,15 +100,17 @@ export function updateRepositoryPullRequestMaintainerEditability(
     "github_update_repository_pull_request_maintainer_editability",
     {
       ...target,
-      expectedCurrentValue: status.currentValue,
-      expectedPullRequestId: status.pullRequestId,
-      expectedPullRequestNodeId: status.pullRequestNodeId,
-      expectedAuthorId: status.authorId,
-      expectedHeadRepositoryId: status.headRepositoryId,
-      expectedHeadRef: status.headRef,
-      expectedHeadSha: status.headSha,
-      expectedWorkflowRisk: status.workflowRisk,
-      requestedValue,
+      guard: {
+        expectedCurrentValue: status.currentValue,
+        expectedPullRequestId: status.pullRequestId,
+        expectedPullRequestNodeId: status.pullRequestNodeId,
+        expectedAuthorId: status.authorId,
+        expectedHeadRepositoryId: status.headRepositoryId,
+        expectedHeadRef: status.headRef,
+        expectedHeadSha: status.headSha,
+        expectedWorkflowRisk: status.workflowRisk,
+        requestedValue,
+      },
     }
   );
 }

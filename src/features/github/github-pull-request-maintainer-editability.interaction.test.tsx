@@ -143,15 +143,17 @@ describe("pull request maintainer editability", () => {
         owner: "octocat",
         repository: "hello-world",
         pullRequestNumber: 12,
-        expectedCurrentValue: false,
-        expectedPullRequestId: 3,
-        expectedPullRequestNodeId: "PR_3",
-        expectedAuthorId: 1,
-        expectedHeadRepositoryId: 4,
-        expectedHeadRef: "feature",
-        expectedHeadSha: "abc1234",
-        expectedWorkflowRisk: "present",
-        requestedValue: true,
+        guard: {
+          expectedCurrentValue: false,
+          expectedPullRequestId: 3,
+          expectedPullRequestNodeId: "PR_3",
+          expectedAuthorId: 1,
+          expectedHeadRepositoryId: 4,
+          expectedHeadRef: "feature",
+          expectedHeadSha: "abc1234",
+          expectedWorkflowRisk: "present",
+          requestedValue: true,
+        },
       }
     );
     expect(
