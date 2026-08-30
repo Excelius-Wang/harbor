@@ -86,6 +86,7 @@ pub use insights::{
     GitHubInsightsTrafficPeriod, GitHubRepositoryInsightsContributors,
     GitHubRepositoryInsightsOverview, GitHubRepositoryInsightsTraffic,
 };
+pub(crate) use issue::GitHubIssueCreateInput;
 #[cfg(test)]
 use issue::GitHubIssueTimelineKind;
 pub use issue::{
@@ -3198,14 +3199,15 @@ mod tests {
             credentials,
             Some(oauth_session("github-user-access-token")),
         );
+        let input = GitHubIssueCreateInput::new(
+            "Keep Issue work in Harbor".to_string(),
+            "Created from the desktop app.".to_string(),
+            Vec::new(),
+            Vec::new(),
+        );
 
         let created = service
-            .create_issue(
-                "octocat",
-                "hello-world",
-                "Keep Issue work in Harbor",
-                "Created from the desktop app.",
-            )
+            .create_issue("octocat", "hello-world", &input)
             .await
             .expect("created issue");
         let edited = service

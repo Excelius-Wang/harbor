@@ -77,16 +77,23 @@ export function issueStateMutationInput(
 
 export type GitHubIssueMetadataValue = GitHubItemMetadataValue;
 
+export type GitHubIssueCreateOptions = {
+  labels: string[];
+  assignees: string[];
+};
+
 export function createRepositoryIssue(
   target: GitHubRepositoryIssueMutationTarget,
   title: string,
-  body: string
+  body: string,
+  options?: GitHubIssueCreateOptions
 ) {
   return invoke<GitHubIssue>("github_create_repository_issue", {
     owner: target.owner,
     repository: target.repository,
     title,
     body,
+    ...(options ? options : {}),
   });
 }
 

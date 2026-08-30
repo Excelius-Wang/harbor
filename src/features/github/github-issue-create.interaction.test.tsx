@@ -51,6 +51,10 @@ beforeAll(() => {
     disconnect() {}
   }
   vi.stubGlobal("ResizeObserver", ResizeObserverMock);
+  HTMLElement.prototype.hasPointerCapture = () => false;
+  HTMLElement.prototype.setPointerCapture = () => {};
+  HTMLElement.prototype.releasePointerCapture = () => {};
+  HTMLElement.prototype.scrollIntoView = () => {};
 });
 
 beforeEach(() => {
@@ -70,6 +74,7 @@ describe("GitHub Issue creation policy", () => {
           url: "https://example.com/support",
         },
       ],
+      templates: [],
       templateChooserUrl: "https://github.com/octocat/hello-world/issues/new/choose",
     });
     const user = userEvent.setup();
@@ -94,6 +99,7 @@ describe("GitHub Issue creation policy", () => {
     vi.mocked(invoke).mockResolvedValueOnce({
       blankIssueAllowed: true,
       contactLinks: [],
+      templates: [],
       templateChooserUrl: "https://github.com/octocat/hello-world/issues/new/choose",
     });
     renderIssueCreate();
@@ -104,12 +110,43 @@ describe("GitHub Issue creation policy", () => {
     expect(screen.queryByText("workspace.repositories.issueTemplatesRequired")).toBeNull();
   });
 
+  it("keeps a native Markdown template available when blank Issues are restricted", async () => {
+    vi.mocked(invoke).mockResolvedValueOnce({
+      blankIssueAllowed: false,
+      contactLinks: [],
+      templates: [
+        {
+          path: ".github/ISSUE_TEMPLATE/bug.md",
+          kind: "markdown",
+          name: "Bug report",
+          about: "Tell us what happened",
+          defaultTitle: "[Bug] ",
+          body: "## What happened?\n",
+          labels: ["bug"],
+          assignees: [],
+          templateUrl: "https://github.com/octocat/hello-world/issues/new?template=bug.md",
+        },
+      ],
+      templateChooserUrl: "https://github.com/octocat/hello-world/issues/new/choose",
+    });
+    renderIssueCreate();
+
+    expect(
+      await screen.findByRole("button", { name: "workspace.repositories.createIssue" })
+    ).toBeDefined();
+    expect(screen.queryByText("workspace.repositories.issueTemplatesRequired")).toBeNull();
+    expect(
+      (screen.getByLabelText("workspace.repositories.issueTitle") as HTMLInputElement).value
+    ).toBe("[Bug] ");
+  });
+
   it("keeps the native form hidden until a failed policy check is retried", async () => {
     vi.mocked(invoke)
       .mockRejectedValueOnce({ code: "githubPermission", message: "policy denied" })
       .mockResolvedValueOnce({
         blankIssueAllowed: true,
         contactLinks: [],
+        templates: [],
         templateChooserUrl: "https://github.com/octocat/hello-world/issues/new/choose",
       });
     const user = userEvent.setup();
@@ -125,5 +162,68 @@ describe("GitHub Issue creation policy", () => {
       await screen.findByRole("button", { name: "workspace.repositories.createIssue" })
     ).toBeDefined();
     expect(invoke).toHaveBeenCalledTimes(2);
+  });
+
+  it("prefills a Markdown template, preserves its metadata for creation, and routes forms to GitHub", async () => {
+    vi.mocked(invoke).mockImplementation((command) => {
+      if (command === "github_get_repository_issue_creation_policy") {
+        return Promise.resolve({
+          blankIssueAllowed: true,
+          contactLinks: [],
+          templates: [
+            {
+              path: ".github/ISSUE_TEMPLATE/bug.yml",
+              kind: "form",
+              name: "Structured bug",
+              about: "Use the required GitHub fields",
+              defaultTitle: "",
+              body: "",
+              labels: [],
+              assignees: [],
+              templateUrl: "https://github.com/octocat/hello-world/issues/new?template=bug.yml",
+            },
+            {
+              path: ".github/ISSUE_TEMPLATE/bug.md",
+              kind: "markdown",
+              name: "Bug report",
+              about: "Tell us what happened",
+              defaultTitle: "[Bug] ",
+              body: "## What happened?\n",
+              labels: ["bug", "triage"],
+              assignees: ["octocat"],
+              templateUrl: "https://github.com/octocat/hello-world/issues/new?template=bug.md",
+            },
+          ],
+          templateChooserUrl: "https://github.com/octocat/hello-world/issues/new/choose",
+        });
+      }
+      return new Promise(() => {});
+    });
+    const user = userEvent.setup();
+    renderIssueCreate();
+
+    await user.click(
+      await screen.findByRole("combobox", { name: "workspace.repositories.issueTemplate" })
+    );
+    await user.click(await screen.findByRole("option", { name: "Bug report" }));
+    expect(
+      (screen.getByLabelText("workspace.repositories.issueTitle") as HTMLInputElement).value
+    ).toBe("[Bug] ");
+    await user.click(screen.getByRole("button", { name: "workspace.repositories.createIssue" }));
+    expect(invoke).toHaveBeenLastCalledWith("github_create_repository_issue", {
+      owner: "octocat",
+      repository: "hello-world",
+      title: "[Bug]",
+      body: "## What happened?\n",
+      labels: ["bug", "triage"],
+      assignees: ["octocat"],
+    });
+
+    await user.click(
+      screen.getByRole("button", { name: /workspace\.repositories\.openIssueTemplate/ })
+    );
+    expect(openExternalUrl).toHaveBeenCalledWith(
+      "https://github.com/octocat/hello-world/issues/new?template=bug.yml"
+    );
   });
 });
