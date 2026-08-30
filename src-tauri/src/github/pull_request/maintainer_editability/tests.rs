@@ -680,13 +680,15 @@ async fn disabling_skips_workflow_scans_but_keeps_identity_and_postflight_guards
 
     assert!(!status.current_value);
     assert_eq!(status.workflow_risk, GitHubPullRequestWorkflowRisk::Unknown);
-    let requests = requests.lock().expect("requests");
-    assert_eq!(requests.len(), 6);
-    assert!(requests[3].starts_with("PATCH /repos/octocat/hello-world/pulls/12 "));
-    assert!(requests[3].contains("\"maintainer_can_modify\":false"));
-    assert!(requests
-        .iter()
-        .all(|request| !request.contains("contents/.github/workflows")));
+    {
+        let requests = requests.lock().expect("requests");
+        assert_eq!(requests.len(), 6);
+        assert!(requests[3].starts_with("PATCH /repos/octocat/hello-world/pulls/12 "));
+        assert!(requests[3].contains("\"maintainer_can_modify\":false"));
+        assert!(requests
+            .iter()
+            .all(|request| !request.contains("contents/.github/workflows")));
+    }
 
     let reenabling = GitHubPullRequestMaintainerEditabilityGuard {
         expected_workflow_risk: status.workflow_risk,
