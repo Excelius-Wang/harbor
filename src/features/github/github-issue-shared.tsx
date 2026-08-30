@@ -22,7 +22,28 @@ export function formatIssueDate(value: string | undefined, locale: string) {
   }).format(new Date(value));
 }
 
-export function GitHubIssueStateBadge({ state }: { state: GitHubIssueState }) {
+function issueStateLabel(state: GitHubIssueState, stateReason?: string) {
+  if (state === "open") return "workspace.repositories.open";
+  switch (stateReason) {
+    case "completed":
+      return "workspace.repositories.issueStateReasons.completed";
+    case "notPlanned":
+    case "not_planned":
+      return "workspace.repositories.issueStateReasons.notPlanned";
+    case "duplicate":
+      return "workspace.repositories.issueStateReasons.duplicate";
+    default:
+      return "workspace.repositories.closed";
+  }
+}
+
+export function GitHubIssueStateBadge({
+  state,
+  stateReason,
+}: {
+  state: GitHubIssueState;
+  stateReason?: string;
+}) {
   const { t } = useTranslation();
   const Icon = state === "open" ? CircleDot : CheckCircle2;
   return (
@@ -36,7 +57,7 @@ export function GitHubIssueStateBadge({ state }: { state: GitHubIssueState }) {
       )}
     >
       <Icon />
-      {t(`workspace.repositories.${state}`)}
+      {t(issueStateLabel(state, stateReason))}
     </Badge>
   );
 }

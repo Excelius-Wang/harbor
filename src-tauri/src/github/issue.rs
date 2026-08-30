@@ -11,6 +11,9 @@ use super::{
 };
 use crate::error::AppError;
 
+mod lifecycle;
+pub use lifecycle::{GitHubIssueStateCapabilities, GitHubIssueStateMutation};
+
 const ISSUE_PAGE_SIZE: u8 = 30;
 const ISSUE_TIMELINE_PAGE_SIZE: u8 = 100;
 
@@ -217,7 +220,9 @@ pub struct GitHubIssueDetailPage {
 }
 
 #[async_trait]
-pub(crate) trait GitHubIssueClient: Send + Sync {
+pub(crate) trait GitHubIssueClient:
+    lifecycle::GitHubIssueLifecycleClient + Send + Sync
+{
     async fn list_issues(
         &self,
         token: &str,
@@ -301,15 +306,6 @@ pub(crate) trait GitHubIssueClient: Send + Sync {
         issue_number: u64,
         body: &str,
     ) -> Result<GitHubIssueTimelineItem, AppError>;
-
-    async fn update_issue_state(
-        &self,
-        token: &str,
-        owner: &str,
-        repository: &str,
-        issue_number: u64,
-        state: GitHubIssueState,
-    ) -> Result<GitHubIssue, AppError>;
 }
 
 impl GitHubService {
@@ -440,19 +436,6 @@ impl GitHubService {
         let token = self.load_access_token().await?;
         self.client
             .create_issue_comment(&token, owner, repository, issue_number, body)
-            .await
-    }
-
-    pub async fn update_issue_state(
-        &self,
-        owner: &str,
-        repository: &str,
-        issue_number: u64,
-        state: GitHubIssueState,
-    ) -> Result<GitHubIssue, AppError> {
-        let token = self.load_access_token().await?;
-        self.client
-            .update_issue_state(&token, owner, repository, issue_number, state)
             .await
     }
 }
@@ -750,42 +733,6 @@ impl GitHubIssueClient for OctocrabGitHubClient {
             AppError::GitHub("GitHub did not return the created issue comment".to_string())
         })
     }
-
-    async fn update_issue_state(
-        &self,
-        token: &str,
-        owner: &str,
-        repository: &str,
-        issue_number: u64,
-        state: GitHubIssueState,
-    ) -> Result<GitHubIssue, AppError> {
-        let client = authenticated_client(token)?;
-        let handler = client.issues(owner, repository);
-        let issue = handler.get(issue_number).await.map_err(github_error)?;
-        ensure_octocrab_issue(&issue)?;
-
-        let current_state = match issue.state {
-            octocrab::models::IssueState::Open => GitHubIssueState::Open,
-            octocrab::models::IssueState::Closed => GitHubIssueState::Closed,
-            _ => GitHubIssueState::Open,
-        };
-        if current_state == state {
-            return Ok(issue_from_octocrab(issue));
-        }
-
-        let update = handler.update(issue_number);
-        let update = match state {
-            GitHubIssueState::Open => update
-                .state(octocrab::models::IssueState::Open)
-                .state_reason(octocrab::models::issues::IssueStateReason::Reopened),
-            GitHubIssueState::Closed => update
-                .state(octocrab::models::IssueState::Closed)
-                .state_reason(octocrab::models::issues::IssueStateReason::Completed),
-        };
-        let issue = update.send().await.map_err(github_error)?;
-
-        Ok(issue_from_octocrab(issue))
-    }
 }
 
 #[derive(Serialize)]
@@ -942,7 +889,10 @@ fn issue_from_octocrab(issue: octocrab::models::issues::Issue) -> GitHubIssue {
         body: issue.body,
         url: issue.html_url.to_string(),
         state,
-        state_reason: issue.state_reason.as_ref().and_then(serialized_enum_name),
+        state_reason: issue
+            .state_reason
+            .as_ref()
+            .map(lifecycle::issue_state_reason_name),
         author: issue.user.login,
         author_avatar_url: Some(issue.user.avatar_url.to_string()),
         author_association: issue

@@ -2,6 +2,7 @@ import type { QueryClient, QueryKey } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
 import type {
   GitHubIssue,
+  GitHubIssueCloseReason,
   GitHubIssueDetailPage,
   GitHubIssueInboxPage,
   GitHubIssuePage,
@@ -20,6 +21,39 @@ export type GitHubRepositoryIssueMutationTarget = {
 export type GitHubIssueMutationTarget = GitHubRepositoryIssueMutationTarget & {
   issueNumber: number;
 };
+
+export type GitHubIssueStateMutationInput = {
+  desiredState: GitHubIssueState;
+  closeReason: GitHubIssueCloseReason | null;
+  expected: {
+    issueId: number;
+    issueNodeId: string;
+    state: GitHubIssueState;
+    stateReason: string | null;
+    updatedAt: string;
+  };
+};
+
+export type GitHubIssueStateChoice = Pick<
+  GitHubIssueStateMutationInput,
+  "desiredState" | "closeReason"
+>;
+
+export function issueStateMutationInput(
+  issue: GitHubIssue,
+  choice: GitHubIssueStateChoice
+): GitHubIssueStateMutationInput {
+  return {
+    ...choice,
+    expected: {
+      issueId: issue.id,
+      issueNodeId: issue.reactionSubject.id,
+      state: issue.state,
+      stateReason: issue.stateReason ?? null,
+      updatedAt: issue.updatedAt,
+    },
+  };
+}
 
 export type GitHubIssueMetadataValue = GitHubItemMetadataValue;
 
@@ -75,13 +109,11 @@ export function createRepositoryIssueComment(target: GitHubIssueMutationTarget, 
 
 export function updateRepositoryIssueState(
   target: GitHubIssueMutationTarget,
-  issueState: GitHubIssueState
+  input: GitHubIssueStateMutationInput
 ) {
   return invoke<GitHubIssue>("github_update_repository_issue_state", {
-    owner: target.owner,
-    repository: target.repository,
-    issueNumber: target.issueNumber,
-    issueState,
+    ...target,
+    mutation: input,
   });
 }
 

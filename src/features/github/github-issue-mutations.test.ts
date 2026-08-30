@@ -12,6 +12,7 @@ import type {
 import {
   createRepositoryIssue,
   createRepositoryIssueComment,
+  issueStateMutationInput,
   syncCreatedIssue,
   syncCreatedIssueComment,
   syncIssueLockedState,
@@ -101,7 +102,13 @@ describe("GitHub Issue mutations", () => {
       milestoneNumber: 3,
     });
     await createRepositoryIssueComment(target, "Fixed in #41.");
-    await updateRepositoryIssueState(target, "closed");
+    await updateRepositoryIssueState(
+      target,
+      issueStateMutationInput(issue, {
+        desiredState: "closed",
+        closeReason: "notPlanned",
+      })
+    );
 
     expect(invoke).toHaveBeenNthCalledWith(1, "github_create_repository_issue", {
       owner: target.owner,
@@ -126,7 +133,17 @@ describe("GitHub Issue mutations", () => {
     });
     expect(invoke).toHaveBeenNthCalledWith(5, "github_update_repository_issue_state", {
       ...target,
-      issueState: "closed",
+      mutation: {
+        desiredState: "closed",
+        closeReason: "notPlanned",
+        expected: {
+          issueId: issue.id,
+          issueNodeId: issue.reactionSubject.id,
+          state: "open",
+          stateReason: null,
+          updatedAt: issue.updatedAt,
+        },
+      },
     });
   });
 

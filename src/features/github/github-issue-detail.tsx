@@ -1,15 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  ArrowLeft,
-  CircleAlert,
-  CircleDot,
-  CircleX,
-  ExternalLink,
-  Pencil,
-  RefreshCw,
-  RotateCcw,
-} from "lucide-react";
+import { ArrowLeft, CircleAlert, CircleDot, ExternalLink, Pencil, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -24,26 +15,32 @@ import {
 } from "@/components/ui/empty";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Spinner } from "@/components/ui/spinner";
 import { parseIpcError } from "@/lib/ipc-error";
 import { openExternalUrl } from "@/lib/window";
 import type { GitHubIssue, GitHubRepositoryContentContext } from "./github-data";
 import { GitHubCommentForm } from "./github-comment-form";
 import { GitHubIssueEditDialog } from "./github-issue-edit-dialog";
 import { GitHubIssueMetadata } from "./github-issue-metadata";
+import { GitHubIssueStateAction } from "./github-issue-state-action";
 import {
   createRepositoryIssueComment,
   invalidateRepositoryIssue,
+  issueStateMutationInput,
   syncCreatedIssueComment,
   syncUpdatedIssue,
   updateRepositoryIssueState,
   type GitHubIssueMutationTarget,
 } from "./github-issue-mutations";
+import {
+  invalidateIssueStateCapabilities,
+  issueStateCapabilitiesMatchIssue,
+  issueStateCapabilitiesQueryOptions,
+} from "./github-issue-state-queries";
 import { formatIssueDate, GitHubIssueStateBadge } from "./github-issue-shared";
 import { GitHubIssueTimeline } from "./github-issue-timeline";
 import { repositoryIssueDetailQueryOptions } from "./github-queries";
 
-function GitHubIssueComposer({
+export function GitHubIssueComposer({
   issue,
   repository,
   target,
@@ -55,6 +52,7 @@ function GitHubIssueComposer({
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [body, setBody] = useState("");
+  const capabilityResult = useQuery(issueStateCapabilitiesQueryOptions(target, issue.updatedAt));
   const commentMutation = useMutation({
     mutationFn: (commentBody: string) => createRepositoryIssueComment(target, commentBody),
     onSuccess: (comment) => {
@@ -65,8 +63,8 @@ function GitHubIssueComposer({
     },
   });
   const stateMutation = useMutation({
-    mutationFn: (issueState: GitHubIssue["state"]) =>
-      updateRepositoryIssueState(target, issueState),
+    mutationFn: (choice: Parameters<typeof issueStateMutationInput>[1]) =>
+      updateRepositoryIssueState(target, issueStateMutationInput(issue, choice)),
     onSuccess: (updatedIssue) => {
       syncUpdatedIssue(queryClient, target, updatedIssue);
       toast.success(
@@ -76,7 +74,10 @@ function GitHubIssueComposer({
             : "workspace.repositories.issueReopened"
         )
       );
-      void invalidateRepositoryIssue(queryClient, target);
+      void Promise.all([
+        invalidateRepositoryIssue(queryClient, target),
+        invalidateIssueStateCapabilities(queryClient, target),
+      ]);
     },
     onError: (error) => {
       const parsed = parseIpcError(error);
@@ -84,19 +85,70 @@ function GitHubIssueComposer({
         description:
           parsed.code === "githubPermission"
             ? t("workspace.repositories.issueWritePermissionDenied")
-            : parsed.message,
+            : parsed.code === "githubIssueStateConflict"
+              ? t("workspace.repositories.issueStateChanged")
+              : parsed.message,
       });
+      void Promise.all([
+        invalidateRepositoryIssue(queryClient, target),
+        invalidateIssueStateCapabilities(queryClient, target),
+      ]);
     },
   });
   const commentError = commentMutation.error ? parseIpcError(commentMutation.error) : null;
   const stateError = stateMutation.error ? parseIpcError(stateMutation.error) : null;
+  const capabilityError = capabilityResult.error ? parseIpcError(capabilityResult.error) : null;
+  const capabilities = capabilityResult.data;
+  const capabilityMatches = capabilities
+    ? issueStateCapabilitiesMatchIssue(capabilities, issue, target)
+    : false;
+  const viewerCanChange = capabilities
+    ? issue.state === "open"
+      ? capabilities.viewerCanClose
+      : capabilities.viewerCanReopen
+    : false;
   const commentErrorMessage = commentError
     ? commentError.code === "githubPermission"
       ? t("workspace.repositories.issueWritePermissionDenied")
       : commentError.message
     : null;
-  const nextState = issue.state === "open" ? "closed" : "open";
-
+  const retryStateRead = () => {
+    void Promise.all([
+      invalidateRepositoryIssue(queryClient, target),
+      invalidateIssueStateCapabilities(queryClient, target),
+    ]);
+  };
+  const stateNotice = stateError ? (
+    <Alert variant="destructive" className="py-2.5 text-xs">
+      <CircleAlert />
+      <AlertTitle>{t("workspace.repositories.issueStateChangeFailed")}</AlertTitle>
+      <AlertDescription>
+        {stateError.code === "githubPermission"
+          ? t("workspace.repositories.issueWritePermissionDenied")
+          : stateError.code === "githubIssueStateConflict"
+            ? t("workspace.repositories.issueStateChanged")
+            : stateError.message}
+      </AlertDescription>
+    </Alert>
+  ) : capabilityError || (capabilities && !capabilityMatches) ? (
+    <Alert variant="destructive" className="py-2.5 text-xs">
+      <CircleAlert />
+      <AlertTitle>{t("workspace.repositories.issueActionsLoadFailed")}</AlertTitle>
+      <AlertDescription className="flex flex-wrap items-center gap-2">
+        <span>{capabilityError?.message ?? t("workspace.repositories.issueStateChanged")}</span>
+        <Button type="button" variant="outline" size="xs" onClick={retryStateRead}>
+          <RefreshCw data-icon="inline-start" />
+          {t("workspace.repositories.retry")}
+        </Button>
+      </AlertDescription>
+    </Alert>
+  ) : capabilities && !viewerCanChange ? (
+    <Alert className="py-2.5 text-xs">
+      <CircleAlert />
+      <AlertTitle>{t("workspace.repositories.issueStateUnavailable")}</AlertTitle>
+      <AlertDescription>{t("workspace.repositories.issueWritePermissionDenied")}</AlertDescription>
+    </Alert>
+  ) : null;
   return (
     <GitHubCommentForm
       repository={repository}
@@ -106,46 +158,17 @@ function GitHubIssueComposer({
       pending={commentMutation.isPending}
       submitDisabled={stateMutation.isPending}
       errorMessage={commentErrorMessage}
-      notice={
-        stateError ? (
-          <Alert variant="destructive" className="py-2.5 text-xs">
-            <CircleAlert />
-            <AlertTitle>{t("workspace.repositories.issueStateChangeFailed")}</AlertTitle>
-            <AlertDescription>
-              {stateError.code === "githubPermission"
-                ? t("workspace.repositories.issueWritePermissionDenied")
-                : stateError.message}
-            </AlertDescription>
-          </Alert>
-        ) : null
-      }
+      notice={stateNotice}
       secondaryAction={
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={stateMutation.isPending || commentMutation.isPending}
-          onClick={() => stateMutation.mutate(nextState)}
-        >
-          {stateMutation.isPending ? (
-            <Spinner data-icon="inline-start" />
-          ) : nextState === "closed" ? (
-            <CircleX data-icon="inline-start" />
-          ) : (
-            <RotateCcw data-icon="inline-start" />
-          )}
-          {stateMutation.isPending
-            ? t(
-                nextState === "closed"
-                  ? "workspace.repositories.closingIssue"
-                  : "workspace.repositories.reopeningIssue"
-              )
-            : t(
-                nextState === "closed"
-                  ? "workspace.repositories.closeIssue"
-                  : "workspace.repositories.reopenIssue"
-              )}
-        </Button>
+        <GitHubIssueStateAction
+          state={issue.state}
+          pending={stateMutation.isPending}
+          loading={capabilityResult.isPending}
+          disabled={
+            commentMutation.isPending || !capabilities || !capabilityMatches || !viewerCanChange
+          }
+          onChange={(choice) => stateMutation.mutate(choice)}
+        />
       }
       onBodyChange={(value) => {
         setBody(value);
@@ -231,7 +254,10 @@ export function GitHubIssueDetail({
                   <span className="text-muted-foreground font-normal">#{detail.issue.number}</span>
                 </h2>
                 <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
-                  <GitHubIssueStateBadge state={detail.issue.state} />
+                  <GitHubIssueStateBadge
+                    state={detail.issue.state}
+                    stateReason={detail.issue.stateReason}
+                  />
                   <span className="text-muted-foreground">
                     {t("workspace.repositories.openedBy", {
                       author: detail.issue.author,

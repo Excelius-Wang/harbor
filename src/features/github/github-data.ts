@@ -1327,6 +1327,18 @@ export type GitHubItemMetadataValue = {
 };
 
 export type GitHubIssueState = "open" | "closed";
+export type GitHubIssueCloseReason = "completed" | "notPlanned";
+export type GitHubIssueStateCapabilities = {
+  repositoryId: string;
+  repositoryFullName: string;
+  issueNodeId: string;
+  number: number;
+  state: GitHubIssueState;
+  stateReason?: string;
+  updatedAt: string;
+  viewerCanClose: boolean;
+  viewerCanReopen: boolean;
+};
 export type GitHubIssueAssignment = "all" | "unassigned";
 export type GitHubIssueSort = "updated" | "created" | "comments";
 export type GitHubIssueInboxScope = "authored" | "assigned" | "mentioned";

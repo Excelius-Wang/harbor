@@ -28,11 +28,11 @@ use crate::{
         GitHubIssueInboxPage, GitHubIssueInboxScope, GitHubIssueLabel, GitHubIssueLabelMutation,
         GitHubIssueLabelPage, GitHubIssueMilestone, GitHubIssueMilestoneMutation,
         GitHubIssueMilestonePage, GitHubIssuePage, GitHubIssueSort, GitHubIssueState,
-        GitHubIssueTimelineItem, GitHubLoginAvailability, GitHubNotificationAction,
-        GitHubNotificationPage, GitHubPackage, GitHubPackagePage, GitHubPackageType,
-        GitHubPackageVersionMutationInput, GitHubPackageVersionMutationResult,
-        GitHubPackageVersionPage, GitHubPackageVersionState, GitHubPackageVisibility,
-        GitHubPagesHealth, GitHubPagesMutation, GitHubPagesWorkspace,
+        GitHubIssueStateCapabilities, GitHubIssueStateMutation, GitHubIssueTimelineItem,
+        GitHubLoginAvailability, GitHubNotificationAction, GitHubNotificationPage, GitHubPackage,
+        GitHubPackagePage, GitHubPackageType, GitHubPackageVersionMutationInput,
+        GitHubPackageVersionMutationResult, GitHubPackageVersionPage, GitHubPackageVersionState,
+        GitHubPackageVisibility, GitHubPagesHealth, GitHubPagesMutation, GitHubPagesWorkspace,
         GitHubPendingPullRequestReview, GitHubProfileActivityPage, GitHubProfileConnectionKind,
         GitHubProjectDetail, GitHubProjectFilters, GitHubProjectItem, GitHubProjectItemAction,
         GitHubProjectItemAddition, GitHubProjectItemFilters, GitHubProjectItemUpdate,
@@ -1801,7 +1801,7 @@ pub async fn github_update_repository_issue_state(
     owner: String,
     repository: String,
     issue_number: u64,
-    issue_state: GitHubIssueState,
+    mutation: GitHubIssueStateMutation,
     state: State<'_, AppState>,
 ) -> Result<GitHubIssue, AppError> {
     let repository = RepositoryRef::new(owner, repository)?;
@@ -1811,7 +1811,25 @@ pub async fn github_update_repository_issue_state(
             repository.owner(),
             repository.name(),
             validate_item_number(issue_number, "issue")?,
-            issue_state,
+            &mutation,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_get_repository_issue_state_capabilities(
+    owner: String,
+    repository: String,
+    issue_number: u64,
+    state: State<'_, AppState>,
+) -> Result<GitHubIssueStateCapabilities, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .issue_state_capabilities(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(issue_number, "issue")?,
         )
         .await
 }

@@ -139,6 +139,7 @@ pub fn run() {
             commands::github_update_repository_issue_metadata,
             commands::github_create_repository_issue_comment,
             commands::github_mutate_repository_issue_comment,
+            commands::github_get_repository_issue_state_capabilities,
             commands::github_update_repository_issue_state,
             commands::github_list_repository_pull_requests,
             commands::github_list_pull_request_inbox,
