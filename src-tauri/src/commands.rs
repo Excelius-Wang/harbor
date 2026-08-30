@@ -27,14 +27,14 @@ use crate::{
         GitHubIssueAssignment, GitHubIssueDependenciesPage, GitHubIssueDetailPage,
         GitHubIssueDuplicateReference, GitHubIssueFilters, GitHubIssueInboxFilters,
         GitHubIssueInboxPage, GitHubIssueInboxScope, GitHubIssueLabel, GitHubIssueLabelMutation,
-        GitHubIssueLabelPage, GitHubIssueMilestone, GitHubIssueMilestoneMutation,
-        GitHubIssueMilestonePage, GitHubIssuePage, GitHubIssueRelationshipsPage, GitHubIssueSort,
-        GitHubIssueState, GitHubIssueStateCapabilities, GitHubIssueStateMutation,
-        GitHubIssueTimelineItem, GitHubLoginAvailability, GitHubNotificationAction,
-        GitHubNotificationPage, GitHubPackage, GitHubPackagePage, GitHubPackageType,
-        GitHubPackageVersionMutationInput, GitHubPackageVersionMutationResult,
-        GitHubPackageVersionPage, GitHubPackageVersionState, GitHubPackageVisibility,
-        GitHubPagesHealth, GitHubPagesMutation, GitHubPagesWorkspace,
+        GitHubIssueLabelPage, GitHubIssueLinkedPullRequestPage, GitHubIssueMilestone,
+        GitHubIssueMilestoneMutation, GitHubIssueMilestonePage, GitHubIssuePage,
+        GitHubIssueRelationshipsPage, GitHubIssueSort, GitHubIssueState,
+        GitHubIssueStateCapabilities, GitHubIssueStateMutation, GitHubIssueTimelineItem,
+        GitHubLoginAvailability, GitHubNotificationAction, GitHubNotificationPage, GitHubPackage,
+        GitHubPackagePage, GitHubPackageType, GitHubPackageVersionMutationInput,
+        GitHubPackageVersionMutationResult, GitHubPackageVersionPage, GitHubPackageVersionState,
+        GitHubPackageVisibility, GitHubPagesHealth, GitHubPagesMutation, GitHubPagesWorkspace,
         GitHubPendingPullRequestReview, GitHubProfileActivityPage, GitHubProfileConnectionKind,
         GitHubProjectDetail, GitHubProjectFilters, GitHubProjectItem, GitHubProjectItemAction,
         GitHubProjectItemAddition, GitHubProjectItemFilters, GitHubProjectItemUpdate,
@@ -1678,6 +1678,30 @@ pub async fn github_get_repository_issue_duplicate(
             repository.name(),
             validate_item_number(issue_number, "issue")?,
             &validate_graphql_node_id(expected_issue_node_id, "issue")?,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_get_repository_issue_linked_pull_requests(
+    owner: String,
+    repository: String,
+    issue_number: u64,
+    expected_issue_node_id: String,
+    after: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<GitHubIssueLinkedPullRequestPage, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    let expected_issue_node_id = validate_graphql_node_id(expected_issue_node_id, "issue")?;
+    let after = validate_graphql_cursor(after)?;
+    state
+        .github
+        .issue_linked_pull_requests(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(issue_number, "issue")?,
+            &expected_issue_node_id,
+            after.as_deref(),
         )
         .await
 }

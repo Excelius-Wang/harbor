@@ -1443,6 +1443,21 @@ export type GitHubIssueDuplicateReference = {
   url: string;
 };
 
+export type GitHubIssueLinkedPullRequestReference = {
+  fullName: string;
+  number: number;
+  title: string;
+  url: string;
+  state: GitHubPullRequestState;
+  draft: boolean;
+  merged: boolean;
+};
+
+export type GitHubIssueLinkedPullRequestPage = {
+  pullRequests: GitHubIssueLinkedPullRequestReference[];
+  nextCursor?: string | null;
+};
+
 export type GitHubIssueTimelineItem = {
   id: string;
   reactionSubject?: GitHubReactionSubjectRef;
