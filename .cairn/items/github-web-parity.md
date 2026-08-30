@@ -9,33 +9,41 @@ controls, and organization-level advanced security remain out of scope.
 
 ## Current state
 
-PRs #1 through #19 are squash-merged. PR #18 delivered commit comments at `3eb1a04`; PR #19
-refreshed the personal GitHub Web gap audit at `a59f9f3`, selected Issue close reasons as the next
-small slice, and recorded the later auth, secret, and repository-administration boundaries. Their
-remote branches are absent.
+PRs #1 through #20 are squash-merged. PR #20 delivered Issue close reasons in merge commit
+`7b1fc68`; its exact reviewed head passed 49 frontend files and 264 tests, 398 Rust tests with two
+intentional external-service ignores, cargo check, rustfmt, `git diff --check`, and independent
+Standards and Spec reviews with zero unresolved findings.
 
-The current slice is in `/private/tmp/harbor-github-issue-close-reasons-20260830` on
-`feat/github-issue-close-reasons-20260830`, based on `origin/main` at `a59f9f3`. [Draft PR
-#20](https://github.com/Excelius-Wang/harbor/pull/20) adds GraphQL close/reopen capabilities,
-Completed and Not planned selection, forward-compatible close-reason display, guarded REST
-preflight/write/postflight verification, destination-cache reconciliation, English/Chinese copy,
-and focused transport and interaction tests. Production code is split into an Issue lifecycle
-module, a small state-control component, and a separate query helper; tests remain separate.
+The current slice is in `/private/tmp/harbor-github-sub-issues-read-20260830` on
+`feat/github-sub-issues-read-20260830`, based on `origin/main` at `7b1fc68`. The user selected the
+read-only Issue hierarchy tracer: show an optional parent and paginated sub-issues, with native
+hierarchy navigation where possible. The confirmed TDD seams are a focused Rust Issue-relationships
+interface and transport, its Tauri command, an independent TanStack Query module, and a focused React
+interaction component. The red-green cycles for all four seams are complete.
 
-The first independent Standards and Spec reviews found checkpoint, translation-hook, tooltip,
-capability-refresh, forward-compatibility, moved-resource, destination-cache, copy, and test-matrix
-gaps. Those findings are fixed. A second exact-head review found production retry, combined-error
-recovery, bounded cache-ordering, and remaining matrix gaps; those are also fixed. Full verification
-now passes 49 frontend files and 264 tests, 398 Rust tests with two intentional external-service
-ignores, cargo check, rustfmt, and Clippy with exactly the 15 existing warnings. The focused diff
-also passes `git diff --check`. The final review pass found an updated-sort page-two duplicate edge
-and small code-quality issues; the edge now removes and invalidates stale non-first-page copies, and
-the shared state type, error formatter, cache-page reconciler, and lifecycle client seam are cleaned
-up. The same full verification passes after those changes.
+The implementation is now complete in focused modules. Rust reads the official parent and
+sub-issues REST routes with the `2026-03-10` API version, preserves unknown state reasons, keeps
+cross-repository coordinates, interprets a missing parent as empty, follows Link pagination, maps
+moved and permission errors, and rejects self-references and duplicate child identities. A
+registered Tauri command exposes the read-only page. The frontend adds an independent query-key
+module, loading/empty/error/permission states, sub-issue pagination, and an in-place Issue-detail
+history that supports native cross-repository traversal before returning to the host view. New
+production code remains in focused files; tests are separate.
 
-Independent Spec review of exact head `7600305` reports zero unresolved findings. Independent
-Standards review confirms every code-quality finding is resolved and reports only that this
-checkpoint's delivery step needs to advance now that both reviews have completed.
+[Draft PR #21](https://github.com/Excelius-Wang/harbor/pull/21) is open and cleanly mergeable. Its
+first independent Standards and Spec reviews of `a2c4210` found six gaps: response
+identity reconciliation, cached-refresh error visibility, shadcn Empty composition, a real
+detail-level failure/retry regression test, repeated Rust request parameters, and stale checkpoint
+delivery state. Fixes for all six are complete and pass the full verification suite.
+
+Independent Spec re-review of exact head `e4dcaa1` reports zero unresolved findings. Independent
+Standards re-review confirms all code findings are resolved and reports only that this checkpoint's
+delivery step must advance now that the reviews are complete.
+
+This slice does not add authentication scope or Issue mutations. Adding, removing, reordering, and
+reparenting sub-issues remain separate work because GitHub's write contract has cross-repository
+ownership rules, `replace_parent` semantics, and secondary-rate-limit implications. GitHub supports
+up to 100 direct children and eight hierarchy levels; child reads remain paginated.
 
 The original worktree remains on local recovery branch
 `checkpoint/github-actions-administration-20260830` at `7e2084f` with only its separate Cairn item
@@ -49,7 +57,7 @@ refresh tokens, or Keychain contents.
 
 ## Next action
 
-Mark PR #20 Ready, confirm the final remote head remains clean and mergeable, squash merge it,
+Mark PR #21 Ready, confirm its final remote head remains clean and mergeable, squash merge it,
 verify merged `main`, and delete the feature branch.
 
 ## Verification
@@ -60,6 +68,10 @@ Run `pnpm check`, `cargo test --manifest-path src-tauri/Cargo.toml --lib`,
 diff against `origin/main`, then deliver it through a Draft PR, Ready state, squash merge, `main`
 verification, and remote branch deletion.
 
+Current verification passes 54 frontend files and 273 tests, 407 Rust tests with two intentional
+external-service ignores, the production frontend build, rustfmt, and `git diff --check`. Clippy
+passes with exactly the 15 pre-existing warnings and no warning from this slice.
+
 Success: the focused PR is squash-merged with no unresolved Standards or Spec findings; remote
-`main` contains the verified Issue-close-reason slice; its remote feature branch is absent; the
-remaining personal GitHub Web gaps are recorded for the next independent slice.
+`main` contains the verified read-only Issue-hierarchy slice; its remote feature branch is absent;
+the excluded write workflow remains clearly recorded as later work.

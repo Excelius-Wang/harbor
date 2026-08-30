@@ -24,6 +24,7 @@ pub(crate) mod download;
 pub(crate) mod gist;
 pub(crate) mod insights;
 pub(crate) mod issue;
+pub(crate) mod issue_relationships;
 pub(crate) mod issue_taxonomy;
 pub(crate) mod item_metadata;
 pub(crate) mod notification;
@@ -90,6 +91,7 @@ pub use issue::{
     GitHubIssuePage, GitHubIssueSort, GitHubIssueState, GitHubIssueStateCapabilities,
     GitHubIssueStateMutation, GitHubIssueTimelineItem,
 };
+pub use issue_relationships::GitHubIssueRelationshipsPage;
 #[cfg(test)]
 use issue_taxonomy::GitHubIssueMilestoneState;
 pub use issue_taxonomy::{GitHubIssueLabelMutation, GitHubIssueMilestoneMutation};
@@ -642,6 +644,7 @@ pub(crate) trait GitHubClient:
     + gist::GitHubGistClient
     + insights::GitHubInsightsClient
     + issue::GitHubIssueClient
+    + issue_relationships::GitHubIssueRelationshipsClient
     + issue_taxonomy::GitHubIssueTaxonomyClient
     + notification::GitHubNotificationClient
     + packages::GitHubPackagesClient
