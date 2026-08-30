@@ -4,8 +4,12 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    authenticated_client, github_error, issue_related::issue_url_matches, GitHubPullRequestState,
-    GitHubService, OctocrabGitHubClient,
+    authenticated_client, github_error,
+    issue_related::{
+        graphql_node_id_is_valid, issue_url_matches, split_repository_full_name,
+        IssueGraphQlRequest,
+    },
+    GitHubPullRequestState, GitHubService, OctocrabGitHubClient,
 };
 use crate::error::AppError;
 
@@ -73,10 +77,7 @@ pub struct GitHubIssueLinkedPullRequestPage {
 
 #[derive(Clone, Copy)]
 pub(crate) struct IssueLinkedPullRequestRequest<'a> {
-    owner: &'a str,
-    repository: &'a str,
-    issue_number: u64,
-    expected_issue_node_id: &'a str,
+    issue: IssueGraphQlRequest<'a>,
     after: Option<&'a str>,
 }
 
@@ -88,26 +89,18 @@ impl<'a> IssueLinkedPullRequestRequest<'a> {
         expected_issue_node_id: &'a str,
         after: Option<&'a str>,
     ) -> Result<Self, AppError> {
-        if issue_number == 0 {
-            return Err(AppError::Validation(
-                "issue number must be greater than zero".to_string(),
-            ));
-        }
-        if !valid_node_id(expected_issue_node_id) {
-            return Err(AppError::Validation(
-                "the expected Issue node ID is invalid".to_string(),
-            ));
-        }
         if after.is_some_and(|cursor| !valid_cursor(cursor)) {
             return Err(AppError::Validation(
                 "GraphQL cursor is invalid".to_string(),
             ));
         }
         Ok(Self {
-            owner,
-            repository,
-            issue_number,
-            expected_issue_node_id,
+            issue: IssueGraphQlRequest::new(
+                owner,
+                repository,
+                issue_number,
+                expected_issue_node_id,
+            )?,
             after,
         })
     }
@@ -170,14 +163,14 @@ async fn load_issue_linked_pull_requests_with_client(
 fn issue_linked_pull_requests_payload(
     request: IssueLinkedPullRequestRequest<'_>,
 ) -> Result<serde_json::Value, AppError> {
-    let number = i32::try_from(request.issue_number).map_err(|_| {
+    let number = i32::try_from(request.issue.issue_number).map_err(|_| {
         AppError::Validation("issue number is too large for GitHub GraphQL".to_string())
     })?;
     Ok(serde_json::json!({
         "query": ISSUE_LINKED_PULL_REQUESTS_QUERY,
         "variables": {
-            "owner": request.owner,
-            "repository": request.repository,
+            "owner": request.issue.owner,
+            "repository": request.issue.repository,
             "number": number,
             "first": LINKED_PULL_REQUEST_PAGE_SIZE,
             "after": request.after,
@@ -192,10 +185,11 @@ fn linked_pull_requests_from_graphql(
     let repository = response.repository.ok_or_else(|| {
         AppError::GitHub("GitHub did not return the Issue repository".to_string())
     })?;
-    if !valid_node_id(&repository.id)
-        || !repository
-            .name_with_owner
-            .eq_ignore_ascii_case(&format!("{}/{}", request.owner, request.repository))
+    if !graphql_node_id_is_valid(&repository.id)
+        || !repository.name_with_owner.eq_ignore_ascii_case(&format!(
+            "{}/{}",
+            request.issue.owner, request.issue.repository
+        ))
     {
         return Err(AppError::GitHub(
             "GitHub returned a different Issue repository".to_string(),
@@ -205,7 +199,9 @@ fn linked_pull_requests_from_graphql(
     let issue = repository
         .issue
         .ok_or_else(|| AppError::GitHub("GitHub did not return the requested Issue".to_string()))?;
-    if issue.id != request.expected_issue_node_id || issue.number != request.issue_number {
+    if issue.id != request.issue.expected_issue_node_id
+        || issue.number != request.issue.issue_number
+    {
         return Err(AppError::GitHub(
             "GitHub returned a different Issue for linked pull requests".to_string(),
         ));
@@ -256,14 +252,14 @@ fn linked_pull_requests_from_graphql(
 fn linked_pull_request_reference(
     pull_request: GraphQlLinkedPullRequest,
 ) -> Result<ValidatedLinkedPullRequest, AppError> {
-    if !valid_node_id(&pull_request.id)
+    if !graphql_node_id_is_valid(&pull_request.id)
         || pull_request.number == 0
         || pull_request.title.trim().is_empty()
-        || !valid_node_id(&pull_request.repository.id)
+        || !graphql_node_id_is_valid(&pull_request.repository.id)
     {
         return Err(invalid_linked_pull_request());
     }
-    let (owner, repository) = split_full_name(&pull_request.repository.name_with_owner)
+    let (owner, repository) = split_repository_full_name(&pull_request.repository.name_with_owner)
         .ok_or_else(invalid_linked_pull_request)?;
     if !issue_url_matches(
         &pull_request.url,
@@ -301,31 +297,8 @@ fn linked_pull_request_reference(
     })
 }
 
-fn valid_node_id(value: &str) -> bool {
-    !value.trim().is_empty()
-        && value.len() <= 512
-        && !value
-            .chars()
-            .any(|character| character.is_whitespace() || character.is_control())
-}
-
 fn valid_cursor(value: &str) -> bool {
     !value.is_empty() && value.len() <= 1_024 && !value.chars().any(char::is_control)
-}
-
-fn split_full_name(value: &str) -> Option<(String, String)> {
-    let (owner, repository) = value.split_once('/')?;
-    if owner.is_empty()
-        || repository.is_empty()
-        || repository.contains('/')
-        || owner
-            .chars()
-            .chain(repository.chars())
-            .any(|character| character.is_whitespace() || character.is_control())
-    {
-        return None;
-    }
-    Some((owner.to_string(), repository.to_string()))
 }
 
 fn invalid_linked_pull_request() -> AppError {
@@ -432,10 +405,14 @@ impl GitHubIssueLinkedPullRequestClient for super::tests::FakeGitHubClient {
     ) -> Result<GitHubIssueLinkedPullRequestPage, AppError> {
         assert_eq!(token, "github-user-access-token");
         assert_eq!(
-            (request.owner, request.repository, request.issue_number),
+            (
+                request.issue.owner,
+                request.issue.repository,
+                request.issue.issue_number,
+            ),
             ("octocat", "hello-world", 7)
         );
-        assert_eq!(request.expected_issue_node_id, "I_7");
+        assert_eq!(request.issue.expected_issue_node_id, "I_7");
         assert_eq!(request.after, None);
         Ok(GitHubIssueLinkedPullRequestPage {
             pull_requests: Vec::new(),
