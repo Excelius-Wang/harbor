@@ -20,9 +20,10 @@ The next focused slice is in the clean worktree
 diff-position creation, revision/capability-guarded edit and delete, commit-comment reactions,
 unplaceable-comment recovery UI, English/Chinese copy, and focused transport and interaction tests.
 Rust production code is split between a 338-line domain/service module and a 631-line transport
-module; tests remain separate. Focused frontend tests pass 72 cases, commit-comment Rust tests pass
-15 cases, `pnpm check` passes 45 files and 243 tests, and `cargo check`, rustfmt, and
-`git diff --check` pass. The branch has not yet been pushed or opened as a Draft PR.
+module; tests remain separate. [Draft PR #18](https://github.com/Excelius-Wang/harbor/pull/18) is
+open from the pushed branch at `ccc6fb2`. Focused frontend tests pass 72 cases, commit-comment Rust
+tests pass 15 cases, `pnpm check` passes 45 files and 243 tests, and `cargo check`, rustfmt, and
+`git diff --check` pass.
 
 The original worktree remains on local recovery branch
 `checkpoint/github-actions-administration-20260830` at `7e2084f` with only its older Cairn item
@@ -36,9 +37,9 @@ refresh tokens, or Keychain contents.
 
 ## Next action
 
-Commit and push the focused commit-comment slice, open its Draft PR, then carry the exact reviewed
-head through full verification, independent Standards and Spec reviews, Ready state, squash merge,
-merged-`main` verification, and remote branch deletion.
+Run full verification and independent Standards and Spec reviews on Draft PR #18's exact head, fix
+all findings, then carry the reviewed head through Ready state, squash merge, merged-`main`
+verification, and remote branch deletion.
 
 ## Verification
 
