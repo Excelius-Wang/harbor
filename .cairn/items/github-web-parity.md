@@ -36,6 +36,10 @@ identity reconciliation, cached-refresh error visibility, shadcn Empty compositi
 detail-level failure/retry regression test, repeated Rust request parameters, and stale checkpoint
 delivery state. Fixes for all six are complete and pass the full verification suite.
 
+Independent Spec re-review of exact head `e4dcaa1` reports zero unresolved findings. Independent
+Standards re-review confirms all code findings are resolved and reports only that this checkpoint's
+delivery step must advance now that the reviews are complete.
+
 This slice does not add authentication scope or Issue mutations. Adding, removing, reordering, and
 reparenting sub-issues remain separate work because GitHub's write contract has cross-repository
 ownership rules, `replace_parent` semantics, and secondary-rate-limit implications. GitHub supports
@@ -53,7 +57,8 @@ refresh tokens, or Keychain contents.
 
 ## Next action
 
-Request exact-head Standards and Spec re-review after the review-fix commit reaches the Draft PR.
+Mark PR #21 Ready, confirm its final remote head remains clean and mergeable, squash merge it,
+verify merged `main`, and delete the feature branch.
 
 ## Verification
 
