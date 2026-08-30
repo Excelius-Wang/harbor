@@ -90,6 +90,16 @@ fn comment_api_json(sha: &str, body: &str, updated_at: &str) -> String {
     .to_string()
 }
 
+fn general_comment_api_json(sha: &str, body: &str) -> String {
+    let mut value: serde_json::Value =
+        serde_json::from_str(&comment_api_json(sha, body, "2026-08-30T01:00:00Z"))
+            .expect("general comment fixture");
+    value["path"] = serde_json::Value::Null;
+    value["position"] = serde_json::Value::Null;
+    value["line"] = serde_json::Value::Null;
+    value.to_string()
+}
+
 fn capability_api_json(sha: &str, updated_at: &str, can_update: bool, can_delete: bool) -> String {
     serde_json::json!({
         "data": {
@@ -136,6 +146,13 @@ struct MockResponse {
     status: &'static str,
     headers: Vec<(&'static str, &'static str)>,
     body: String,
+}
+
+fn assert_rest_request(request: &str, method: &str, route: &str) {
+    assert!(request.starts_with(&format!("{method} {route} HTTP/1.1")));
+    let lowercase = request.to_ascii_lowercase();
+    assert!(lowercase.contains("accept: application/vnd.github+json"));
+    assert!(lowercase.contains("x-github-api-version: 2026-03-10"));
 }
 
 async fn mock_github(
@@ -342,12 +359,11 @@ async fn list_transport_uses_rest_pagination_then_graphql_capabilities() {
     assert!(page.has_more);
     assert_eq!(page.comments[0].id, "CC_42");
     let requests = requests.lock().expect("requests");
-    assert!(requests[0].starts_with(&format!(
-        "GET /repos/octocat/hello-world/commits/{sha}/comments?per_page=100&page=1 HTTP/1.1"
-    )));
-    assert!(requests[0]
-        .to_ascii_lowercase()
-        .contains("x-github-api-version: 2026-03-10"));
+    assert_rest_request(
+        &requests[0],
+        "GET",
+        &format!("/repos/octocat/hello-world/commits/{sha}/comments?per_page=100&page=1"),
+    );
     assert!(requests[1].starts_with("POST /graphql HTTP/1.1"));
     assert!(requests[1].contains("HarborCommitCommentCapabilities"));
 }
@@ -411,14 +427,51 @@ async fn create_transport_sends_position_without_deprecated_line() {
 
     assert_eq!(comment.position, Some(7));
     let request = &requests.lock().expect("requests")[0];
-    assert!(request.starts_with(&format!(
-        "POST /repos/octocat/hello-world/commits/{sha}/comments HTTP/1.1"
-    )));
+    assert_rest_request(
+        request,
+        "POST",
+        &format!("/repos/octocat/hello-world/commits/{sha}/comments"),
+    );
     let body = request.split("\r\n\r\n").nth(1).expect("request body");
     let body: serde_json::Value = serde_json::from_str(body).expect("request JSON");
     assert_eq!(body["path"], "src/main.rs");
     assert_eq!(body["position"], 7);
     assert!(body.get("line").is_none());
+}
+
+#[tokio::test]
+async fn create_transport_omits_placement_for_a_commit_level_comment() {
+    let sha = "a".repeat(40);
+    let (client, requests, server) = mock_github(vec![MockResponse {
+        status: "201 Created",
+        headers: vec![],
+        body: general_comment_api_json(&sha, "Comment on the commit"),
+    }])
+    .await;
+    let mutation = GitHubCommitCommentMutation::Create {
+        body: "Comment on the commit".to_string(),
+        placement: None,
+    };
+
+    let comment =
+        create_commit_comment_with_client(&client, "octocat", "hello-world", &sha, &mutation)
+            .await
+            .expect("created commit-level comment");
+    server.await.expect("mock server");
+
+    assert!(comment.path.is_none());
+    assert!(comment.position.is_none());
+    let request = &requests.lock().expect("requests")[0];
+    assert_rest_request(
+        request,
+        "POST",
+        &format!("/repos/octocat/hello-world/commits/{sha}/comments"),
+    );
+    let body = request.split("\r\n\r\n").nth(1).expect("request body");
+    assert_eq!(
+        serde_json::from_str::<serde_json::Value>(body).expect("request JSON"),
+        serde_json::json!({ "body": "Comment on the commit" })
+    );
 }
 
 #[tokio::test]
@@ -577,9 +630,17 @@ async fn update_transport_preflights_scope_capability_and_revision() {
     assert_eq!(updated.body, "New body");
     assert!(updated.viewer_can_update);
     let requests = requests.lock().expect("requests");
-    assert!(requests[0].starts_with("GET /repos/octocat/hello-world/comments/42 HTTP/1.1"));
+    assert_rest_request(
+        &requests[0],
+        "GET",
+        "/repos/octocat/hello-world/comments/42",
+    );
     assert!(requests[1].starts_with("POST /graphql HTTP/1.1"));
-    assert!(requests[2].starts_with("PATCH /repos/octocat/hello-world/comments/42 HTTP/1.1"));
+    assert_rest_request(
+        &requests[2],
+        "PATCH",
+        "/repos/octocat/hello-world/comments/42",
+    );
     let body = requests[2].split("\r\n\r\n").nth(1).expect("request body");
     assert_eq!(
         serde_json::from_str::<serde_json::Value>(body).expect("request JSON"),
@@ -620,7 +681,16 @@ async fn delete_transport_preflights_before_no_content() {
 
     assert!(deleted.is_none());
     let requests = requests.lock().expect("requests");
-    assert!(requests[2].starts_with("DELETE /repos/octocat/hello-world/comments/42 HTTP/1.1"));
+    assert_rest_request(
+        &requests[0],
+        "GET",
+        "/repos/octocat/hello-world/comments/42",
+    );
+    assert_rest_request(
+        &requests[2],
+        "DELETE",
+        "/repos/octocat/hello-world/comments/42",
+    );
 }
 
 #[tokio::test]
