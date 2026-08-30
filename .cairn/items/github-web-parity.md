@@ -58,16 +58,18 @@ Real shadcn/Radix/cmdk keyboard, focus, retry, and pending-lock interactions are
 initial Standards and Spec finding was fixed; final reviews at head `91d77e9` have no unresolved
 findings, and its tree exactly matches the squash merge.
 
-The focused maintainer-editability slice is implemented on
-`feat/github-pull-request-maintainer-editability` in three logical commits: research `4fc2d5c`,
-guarded Rust/Tauri support `88b56a9`, and the PR-sidebar UI `3150624`. It uses the scoped REST PR
-GET/PATCH route with a boolean-only write, creator/personal-fork/live-head eligibility, full
-preflight and postflight identity guards, exact-head workflow-risk scanning, and focused conflict
-mapping. The UI keeps production and tests in separate bounded files, adds the native checkbox and
-official workflow/secret warning, and synchronizes only the affected PR caches. `pnpm check` passes
-39 files and 219 tests; Rust library tests pass 359 tests with two intentional ignores; `cargo
-check`, rustfmt, and `git diff --check` pass. Clippy reports exactly the 15 pre-existing warnings and
-none in this slice.
+[Draft PR #17](https://github.com/Excelius-Wang/harbor/pull/17) contains the focused
+maintainer-editability slice on `feat/github-pull-request-maintainer-editability`. Research,
+guarded Rust/Tauri support, and the PR-sidebar UI are separate logical commits; later focused fixes
+preserve postflight ambiguity, group IPC guards, and address every initial review finding. The
+slice uses the scoped REST PR GET/PATCH route with a boolean-only write,
+creator/personal-fork/live-head eligibility, full identity guards, exact-head workflow risk for
+enabling, and revocation that is not blocked by the optional workflow scan. The UI keeps production
+and tests in separate bounded files, preserves and locks cached values during refresh, offers retry
+paths, and synchronizes only affected PR caches. Initial Standards review reported two findings and
+Spec review reported five; all are fixed at head `91aec7d`. `pnpm check` passes 39 files and 221
+tests; Rust library tests pass 362 tests with two intentional ignores; `cargo check`, rustfmt, and
+`git diff --check` pass. Clippy reports exactly the 15 pre-existing warnings and none in this slice.
 
 On merged `main`, `pnpm check` passes 38 frontend files and 211 tests. Rust library tests pass 348
 tests with two intentional ignores. `cargo check`, rustfmt, and `git diff --check` pass. Clippy
@@ -83,8 +85,9 @@ refresh tokens, or Keychain contents.
 
 ## Next action
 
-Push the focused branch, open a Draft PR, run independent Standards and Spec reviews against the
-documented contract, fix all findings, then mark Ready and squash-merge after the final head passes.
+Run final independent Standards and Spec re-reviews on the exact current head. If both report no
+unresolved findings, mark PR #17 Ready, squash-merge it, verify merged `main`, and delete the remote
+feature branch.
 
 ## Verification
 
