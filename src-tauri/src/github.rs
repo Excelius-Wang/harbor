@@ -25,6 +25,7 @@ pub(crate) mod gist;
 pub(crate) mod insights;
 pub(crate) mod issue;
 pub(crate) mod issue_dependencies;
+pub(crate) mod issue_duplicate;
 pub(crate) mod issue_related;
 pub(crate) mod issue_relationships;
 pub(crate) mod issue_taxonomy;
@@ -94,6 +95,7 @@ pub use issue::{
     GitHubIssueStateMutation, GitHubIssueTimelineItem,
 };
 pub use issue_dependencies::GitHubIssueDependenciesPage;
+pub use issue_duplicate::GitHubIssueDuplicateReference;
 pub use issue_relationships::GitHubIssueRelationshipsPage;
 #[cfg(test)]
 use issue_taxonomy::GitHubIssueMilestoneState;
@@ -647,6 +649,7 @@ pub(crate) trait GitHubClient:
     + gist::GitHubGistClient
     + insights::GitHubInsightsClient
     + issue::GitHubIssueClient
+    + issue_duplicate::GitHubIssueDuplicateClient
     + issue_dependencies::GitHubIssueDependenciesClient
     + issue_relationships::GitHubIssueRelationshipsClient
     + issue_taxonomy::GitHubIssueTaxonomyClient
@@ -2816,6 +2819,10 @@ mod tests {
             })
             .await
             .expect("issue inbox");
+        let duplicate = service
+            .issue_duplicate("octocat", "hello-world", 7, "I_7")
+            .await
+            .expect("duplicate reference");
         let discussion_categories = service
             .discussion_categories("octocat", "hello-world")
             .await
@@ -2980,6 +2987,7 @@ mod tests {
         assert_eq!(repository_invitations.page, 1);
         assert_eq!(issues.issues[0].number, 7);
         assert_eq!(issue_inbox.issues[0].issue.number, 7);
+        assert_eq!(duplicate, None);
         assert!(discussion_categories.enabled);
         assert_eq!(discussions.discussions[0].number, 42);
         assert_eq!(discussion.comments[0].body, "A focused answer.");

@@ -25,15 +25,16 @@ use crate::{
         GitHubGistPage, GitHubGistRevisionDetail, GitHubGistRevisionPage, GitHubGistSource,
         GitHubGistUpdateInput, GitHubInsightsTrafficPeriod, GitHubIssue, GitHubIssueAssigneePage,
         GitHubIssueAssignment, GitHubIssueDependenciesPage, GitHubIssueDetailPage,
-        GitHubIssueFilters, GitHubIssueInboxFilters, GitHubIssueInboxPage, GitHubIssueInboxScope,
-        GitHubIssueLabel, GitHubIssueLabelMutation, GitHubIssueLabelPage, GitHubIssueMilestone,
-        GitHubIssueMilestoneMutation, GitHubIssueMilestonePage, GitHubIssuePage,
-        GitHubIssueRelationshipsPage, GitHubIssueSort, GitHubIssueState,
-        GitHubIssueStateCapabilities, GitHubIssueStateMutation, GitHubIssueTimelineItem,
-        GitHubLoginAvailability, GitHubNotificationAction, GitHubNotificationPage, GitHubPackage,
-        GitHubPackagePage, GitHubPackageType, GitHubPackageVersionMutationInput,
-        GitHubPackageVersionMutationResult, GitHubPackageVersionPage, GitHubPackageVersionState,
-        GitHubPackageVisibility, GitHubPagesHealth, GitHubPagesMutation, GitHubPagesWorkspace,
+        GitHubIssueDuplicateReference, GitHubIssueFilters, GitHubIssueInboxFilters,
+        GitHubIssueInboxPage, GitHubIssueInboxScope, GitHubIssueLabel, GitHubIssueLabelMutation,
+        GitHubIssueLabelPage, GitHubIssueMilestone, GitHubIssueMilestoneMutation,
+        GitHubIssueMilestonePage, GitHubIssuePage, GitHubIssueRelationshipsPage, GitHubIssueSort,
+        GitHubIssueState, GitHubIssueStateCapabilities, GitHubIssueStateMutation,
+        GitHubIssueTimelineItem, GitHubLoginAvailability, GitHubNotificationAction,
+        GitHubNotificationPage, GitHubPackage, GitHubPackagePage, GitHubPackageType,
+        GitHubPackageVersionMutationInput, GitHubPackageVersionMutationResult,
+        GitHubPackageVersionPage, GitHubPackageVersionState, GitHubPackageVisibility,
+        GitHubPagesHealth, GitHubPagesMutation, GitHubPagesWorkspace,
         GitHubPendingPullRequestReview, GitHubProfileActivityPage, GitHubProfileConnectionKind,
         GitHubProjectDetail, GitHubProjectFilters, GitHubProjectItem, GitHubProjectItemAction,
         GitHubProjectItemAddition, GitHubProjectItemFilters, GitHubProjectItemUpdate,
@@ -1657,6 +1658,26 @@ pub async fn github_get_repository_issue_dependencies(
             repository.name(),
             validate_item_number(issue_number, "issue")?,
             validate_page(page)?,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_get_repository_issue_duplicate(
+    owner: String,
+    repository: String,
+    issue_number: u64,
+    expected_issue_node_id: String,
+    state: State<'_, AppState>,
+) -> Result<Option<GitHubIssueDuplicateReference>, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .issue_duplicate(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(issue_number, "issue")?,
+            &validate_graphql_node_id(expected_issue_node_id, "issue")?,
         )
         .await
 }
