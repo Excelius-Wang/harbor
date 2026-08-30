@@ -6,6 +6,7 @@ import type {
   GitHubPendingPullRequestReview,
   GitHubPullRequest,
   GitHubPullRequestDetailPage,
+  GitHubPullRequestMaintainerEditability,
   GitHubPullRequestPage,
   GitHubPullRequestReview,
   GitHubPullRequestReviewPage,
@@ -28,6 +29,7 @@ import {
   invalidatePullRequestAfterBaseEdit,
   invalidatePullRequestAfterBranchUpdate,
   invalidatePullRequestAfterReviewDismissal,
+  invalidatePullRequestAfterMaintainerEditability,
   removeRepositoryPullRequestReviewers,
   replyToPullRequestReviewThread,
   requestRepositoryPullRequestReviewers,
@@ -39,6 +41,7 @@ import {
   syncCreatedPullRequestReview,
   syncPendingPullRequestReview,
   syncPullRequestLockedState,
+  syncPullRequestMaintainerEditability,
   syncDismissedPullRequestReview,
   syncPullRequestReviewThreadReply,
   syncPullRequestReviewThreadState,
@@ -47,6 +50,7 @@ import {
   unresolvePullRequestReviewThread,
   updateRepositoryPullRequest,
   updateRepositoryPullRequestBase,
+  updateRepositoryPullRequestMaintainerEditability,
   updateRepositoryPullRequestBranch,
   updateRepositoryPullRequestDraftState,
   updateRepositoryPullRequestMetadata,
@@ -90,6 +94,30 @@ const pullRequest: GitHubPullRequest = {
   commits: 1,
   comments: 0,
   reviewComments: 0,
+};
+
+const maintainerEditability: GitHubPullRequestMaintainerEditability = {
+  pullRequest,
+  state: "available",
+  workflowRisk: "present",
+  pullRequestId: 3,
+  pullRequestNodeId: "PR_3",
+  pullRequestNumber: 12,
+  authorId: 1,
+  authorLogin: "octocat",
+  viewerId: 1,
+  currentValue: false,
+  draft: false,
+  merged: false,
+  baseRepositoryId: 2,
+  baseRepository: "octocat/hello-world",
+  headRepositoryId: 4,
+  headRepository: "octocat-fork/hello-world",
+  headRepositoryOwnerType: "User",
+  headRepositoryPrivate: false,
+  headRepositoryFork: true,
+  headRef: "feature/pr-workspace",
+  headSha: "abc1234",
 };
 
 const summary: GitHubPullRequestSummary = {
@@ -299,6 +327,58 @@ describe("GitHub pull request mutations", () => {
       targetBase: "release",
       expectedTargetBaseSha: "target123",
     });
+  });
+
+  it("updates maintainer editability with the complete authoritative snapshot", async () => {
+    vi.mocked(invoke).mockResolvedValueOnce({
+      ...maintainerEditability,
+      currentValue: true,
+    });
+
+    await updateRepositoryPullRequestMaintainerEditability(target, maintainerEditability, true);
+
+    expect(invoke).toHaveBeenCalledWith(
+      "github_update_repository_pull_request_maintainer_editability",
+      {
+        ...target,
+        expectedCurrentValue: false,
+        expectedPullRequestId: 3,
+        expectedPullRequestNodeId: "PR_3",
+        expectedAuthorId: 1,
+        expectedHeadRepositoryId: 4,
+        expectedHeadRef: "feature/pr-workspace",
+        expectedHeadSha: "abc1234",
+        expectedWorkflowRisk: "present",
+        requestedValue: true,
+      }
+    );
+  });
+
+  it("syncs the status and full pull request before invalidating scoped caches", async () => {
+    const queryClient = createQueryClient();
+    const detailKey = githubQueryKeys.pullRequestDetail({ ...target, timelinePage: 1 });
+    const statusKey = githubQueryKeys.pullRequestMaintainerEditability(target);
+    queryClient.setQueryData(detailKey, detailPage());
+    queryClient.setQueryData(statusKey, maintainerEditability);
+    const updated = {
+      ...maintainerEditability,
+      currentValue: true,
+      pullRequest: { ...pullRequest, maintainerCanModify: true },
+    };
+
+    syncPullRequestMaintainerEditability(queryClient, target, updated);
+    await invalidatePullRequestAfterMaintainerEditability(queryClient, target);
+
+    expect(queryClient.getQueryData(statusKey)).toEqual(updated);
+    expect(
+      queryClient.getQueryData<GitHubPullRequestDetailPage>(detailKey)?.pullRequest
+        .maintainerCanModify
+    ).toBe(true);
+    expect(queryClient.getQueryState(detailKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(statusKey)?.isInvalidated).toBe(false);
+
+    await invalidatePullRequestAfterMaintainerEditability(queryClient, target, true);
+    expect(queryClient.getQueryState(statusKey)?.isInvalidated).toBe(true);
   });
 
   it("invalidates every PR-dependent cache after a base edit", async () => {

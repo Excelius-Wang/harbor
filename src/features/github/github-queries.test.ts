@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { GitHubCodeOverview, GitHubFilePreview } from "./github-data";
 import {
+  githubQueryKeys,
   discussionCategoriesQueryOptions,
   developerFeedQueryOptions,
   discoverySearchQueryOptions,
@@ -53,6 +54,7 @@ import {
   pullRequestBranchUpdateStatusQueryOptions,
   pullRequestComparisonQueryOptions,
   pullRequestMergeQueueStatusQueryOptions,
+  pullRequestMaintainerEditabilityQueryOptions,
   repositoryPullRequestDetailQueryOptions,
   repositoryPullRequestReviewTeamsQueryOptions,
   repositoryPullRequestsQueryOptions,
@@ -1362,6 +1364,26 @@ describe("GitHub repository queries", () => {
         .getCurrentResult()
         .data?.pages.flatMap((page) => page.branches.map((branch) => branch.name))
     ).toEqual(["release", "stable"]);
+  });
+
+  it("loads maintainer editability under the pull request cache root", async () => {
+    const client = createTestQueryClient();
+    vi.mocked(invoke).mockResolvedValueOnce({ state: "available", currentValue: false });
+    const target = {
+      owner: "octocat",
+      repository: "hello-world",
+      pullRequestNumber: 12,
+    };
+    const options = pullRequestMaintainerEditabilityQueryOptions(target);
+
+    await client.fetchQuery(options);
+
+    expect(invoke).toHaveBeenCalledWith(
+      "github_get_repository_pull_request_maintainer_editability",
+      target
+    );
+    expect(options.queryKey.slice(0, -1)).toEqual(githubQueryKeys.pullRequestRoot(target));
+    expect(options.queryKey[options.queryKey.length - 1]).toBe("maintainer-editability");
   });
 
   it("checks pull request branch update eligibility in a focused cache", async () => {

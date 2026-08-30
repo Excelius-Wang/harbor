@@ -44,6 +44,7 @@ import { GitHubPullRequestBaseEdit } from "./github-pull-request-base-edit";
 import { GitHubPullRequestCommits } from "./github-pull-request-commits";
 import { GitHubPullRequestFiles } from "./github-pull-request-files";
 import { GitHubPullRequestMergePanel } from "./github-pull-request-merge-panel";
+import { GitHubPullRequestMaintainerEditability } from "./github-pull-request-maintainer-editability";
 import { GitHubPullRequestMetadata } from "./github-pull-request-metadata";
 import { GitHubPullRequestReviewers } from "./github-pull-request-reviewers";
 import { GitHubPullRequestEditDialog } from "./github-pull-request-edit-dialog";
@@ -395,6 +396,10 @@ export function GitHubPullRequestDetail({
                           </span>
                         </p>
                       </div>
+                      <GitHubPullRequestMaintainerEditability
+                        repository={repository}
+                        pullRequest={detail.pullRequest}
+                      />
                       <Separator />
                       <GitHubConversationControls
                         repository={repository}

@@ -13,6 +13,7 @@ import type {
   GitHubPullRequestFileViewedState,
   GitHubPullRequestMergeMethod,
   GitHubPullRequestMergeQueueStatus,
+  GitHubPullRequestMaintainerEditability,
   GitHubPullRequestPage,
   GitHubPullRequestReview,
   GitHubPullRequestReviewPage,
@@ -85,6 +86,31 @@ export function updateRepositoryPullRequestBase(
     ...target,
     ...value,
   });
+}
+
+export function updateRepositoryPullRequestMaintainerEditability(
+  target: GitHubPullRequestMutationTarget,
+  status: GitHubPullRequestMaintainerEditability,
+  requestedValue: boolean
+) {
+  if (status.headRepositoryId == null) {
+    throw new Error("The pull request head repository is unavailable.");
+  }
+  return invoke<GitHubPullRequestMaintainerEditability>(
+    "github_update_repository_pull_request_maintainer_editability",
+    {
+      ...target,
+      expectedCurrentValue: status.currentValue,
+      expectedPullRequestId: status.pullRequestId,
+      expectedPullRequestNodeId: status.pullRequestNodeId,
+      expectedAuthorId: status.authorId,
+      expectedHeadRepositoryId: status.headRepositoryId,
+      expectedHeadRef: status.headRef,
+      expectedHeadSha: status.headSha,
+      expectedWorkflowRisk: status.workflowRisk,
+      requestedValue,
+    }
+  );
 }
 
 export function updateRepositoryPullRequestState(
@@ -472,6 +498,15 @@ export function syncUpdatedPullRequest(
   );
 }
 
+export function syncPullRequestMaintainerEditability(
+  queryClient: QueryClient,
+  target: GitHubPullRequestMutationTarget,
+  status: GitHubPullRequestMaintainerEditability
+) {
+  queryClient.setQueryData(githubQueryKeys.pullRequestMaintainerEditability(target), status);
+  syncUpdatedPullRequest(queryClient, target, status.pullRequest);
+}
+
 export function syncPullRequestLockedState(
   queryClient: QueryClient,
   target: GitHubPullRequestMutationTarget,
@@ -756,6 +791,22 @@ export async function invalidatePullRequestAfterBaseEdit(
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: githubQueryKeys.pullRequestRoot(target) }),
     queryClient.invalidateQueries({ queryKey: githubQueryKeys.checksRoot(target) }),
+    queryClient.invalidateQueries({ queryKey: githubQueryKeys.pullRequestsRoot(target) }),
+    queryClient.invalidateQueries({ queryKey: githubQueryKeys.pullRequestInboxRoot }),
+  ]);
+}
+
+export async function invalidatePullRequestAfterMaintainerEditability(
+  queryClient: QueryClient,
+  target: GitHubPullRequestMutationTarget,
+  conflict = false
+) {
+  await Promise.all([
+    queryClient.invalidateQueries({
+      queryKey: conflict
+        ? githubQueryKeys.pullRequestRoot(target)
+        : githubQueryKeys.pullRequestDetailRoot(target),
+    }),
     queryClient.invalidateQueries({ queryKey: githubQueryKeys.pullRequestsRoot(target) }),
     queryClient.invalidateQueries({ queryKey: githubQueryKeys.pullRequestInboxRoot }),
   ]);

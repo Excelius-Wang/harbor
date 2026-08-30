@@ -1583,6 +1583,7 @@ export type GitHubPullRequest = {
   state: GitHubPullRequestState;
   draft: boolean;
   merged: boolean;
+  maintainerCanModify?: boolean | null;
   mergeable?: boolean | null;
   mergeableState?: string | null;
   author: string;
@@ -1685,6 +1686,40 @@ export type GitHubPullRequestBaseBranchPage = {
   page: number;
   hasPrevious: boolean;
   hasMore: boolean;
+};
+
+export type GitHubPullRequestMaintainerEditabilityState =
+  | "available"
+  | "notAuthor"
+  | "sameRepository"
+  | "organizationFork"
+  | "closed"
+  | "headUnavailable";
+
+export type GitHubPullRequestWorkflowRisk = "present" | "absent" | "unknown";
+
+export type GitHubPullRequestMaintainerEditability = {
+  pullRequest: GitHubPullRequest;
+  state: GitHubPullRequestMaintainerEditabilityState;
+  workflowRisk: GitHubPullRequestWorkflowRisk;
+  pullRequestId: number;
+  pullRequestNodeId: string;
+  pullRequestNumber: number;
+  authorId: number;
+  authorLogin: string;
+  viewerId: number;
+  currentValue: boolean;
+  draft: boolean;
+  merged: boolean;
+  baseRepositoryId: number;
+  baseRepository: string;
+  headRepositoryId?: number | null;
+  headRepository?: string | null;
+  headRepositoryOwnerType?: string | null;
+  headRepositoryPrivate?: boolean | null;
+  headRepositoryFork?: boolean | null;
+  headRef: string;
+  headSha: string;
 };
 
 export type GitHubCommit = {
