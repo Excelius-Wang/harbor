@@ -89,11 +89,11 @@ pub use insights::{
 #[cfg(test)]
 use issue::GitHubIssueTimelineKind;
 pub use issue::{
-    GitHubIssue, GitHubIssueAssigneePage, GitHubIssueAssignment, GitHubIssueDetailPage,
-    GitHubIssueFilters, GitHubIssueInboxFilters, GitHubIssueInboxPage, GitHubIssueInboxScope,
-    GitHubIssueLabel, GitHubIssueLabelPage, GitHubIssueMilestone, GitHubIssueMilestonePage,
-    GitHubIssuePage, GitHubIssueSort, GitHubIssueState, GitHubIssueStateCapabilities,
-    GitHubIssueStateMutation, GitHubIssueTimelineItem,
+    GitHubIssue, GitHubIssueAssigneePage, GitHubIssueAssignment, GitHubIssueCreationPolicy,
+    GitHubIssueDetailPage, GitHubIssueFilters, GitHubIssueInboxFilters, GitHubIssueInboxPage,
+    GitHubIssueInboxScope, GitHubIssueLabel, GitHubIssueLabelPage, GitHubIssueMilestone,
+    GitHubIssueMilestonePage, GitHubIssuePage, GitHubIssueSort, GitHubIssueState,
+    GitHubIssueStateCapabilities, GitHubIssueStateMutation, GitHubIssueTimelineItem,
 };
 pub use issue_dependencies::GitHubIssueDependenciesPage;
 pub use issue_duplicate::GitHubIssueDuplicateReference;
@@ -2830,6 +2830,10 @@ mod tests {
             .issue_linked_pull_requests("octocat", "hello-world", 7, "I_7", None)
             .await
             .expect("linked pull request page");
+        let issue_creation_policy = service
+            .issue_creation_policy("octocat", "hello-world")
+            .await
+            .expect("issue creation policy");
         let discussion_categories = service
             .discussion_categories("octocat", "hello-world")
             .await
@@ -2996,6 +3000,7 @@ mod tests {
         assert_eq!(issue_inbox.issues[0].issue.number, 7);
         assert_eq!(duplicate, None);
         assert!(linked_pull_requests.pull_requests.is_empty());
+        assert!(issue_creation_policy.blank_issue_allowed);
         assert!(discussion_categories.enabled);
         assert_eq!(discussions.discussions[0].number, 42);
         assert_eq!(discussion.comments[0].body, "A focused answer.");

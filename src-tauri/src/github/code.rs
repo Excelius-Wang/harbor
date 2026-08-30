@@ -1354,7 +1354,7 @@ fn is_empty_repository_error(error: &octocrab::Error) -> bool {
     )
 }
 
-fn decode_base64_content(encoded: &str, label: &str) -> Result<Vec<u8>, AppError> {
+pub(super) fn decode_base64_content(encoded: &str, label: &str) -> Result<Vec<u8>, AppError> {
     let compact = encoded
         .bytes()
         .filter(|byte| !byte.is_ascii_whitespace())

@@ -140,6 +140,7 @@ pub fn run() {
             commands::github_get_repository_conversation_controls,
             commands::github_update_repository_conversation_lock,
             commands::github_update_repository_conversation_subscription,
+            commands::github_get_repository_issue_creation_policy,
             commands::github_create_repository_issue,
             commands::github_update_repository_issue,
             commands::github_update_repository_issue_metadata,
