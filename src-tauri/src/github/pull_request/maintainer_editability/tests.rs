@@ -231,6 +231,16 @@ fn pull_request_json(maintainer_can_modify: bool) -> String {
     .to_string()
 }
 
+fn pull_request_with_head_change(
+    maintainer_can_modify: bool,
+    change: impl FnOnce(&mut serde_json::Value),
+) -> String {
+    let mut pull_request: serde_json::Value =
+        serde_json::from_str(&pull_request_json(maintainer_can_modify)).expect("pull request json");
+    change(&mut pull_request);
+    pull_request.to_string()
+}
+
 fn branch_json() -> String {
     serde_json::json!({
         "name": "feature",
@@ -340,6 +350,17 @@ fn only_the_creator_of_an_open_personal_fork_pull_request_is_eligible() {
         (
             MaintainerEditabilityShape {
                 cross_repository: false,
+                head_is_fork: false,
+                head_owner_is_viewer: false,
+                head_owner_is_user: false,
+                head_is_live: false,
+                ..available
+            },
+            GitHubPullRequestMaintainerEditabilityState::HeadUnavailable,
+        ),
+        (
+            MaintainerEditabilityShape {
+                cross_repository: false,
                 ..available
             },
             GitHubPullRequestMaintainerEditabilityState::SameRepository,
@@ -403,16 +424,49 @@ fn mutation_guards_reject_stale_noop_and_ineligible_snapshots() {
     )
     .is_ok());
 
-    let mut stale = guard();
-    stale.expected_head_sha = "changed".to_string();
-    assert!(ensure_preflight(
-        &current,
-        1,
-        GitHubPullRequestMaintainerEditabilityState::Available,
-        GitHubPullRequestWorkflowRisk::Present,
-        &stale
-    )
-    .is_err());
+    for stale in [
+        GitHubPullRequestMaintainerEditabilityGuard {
+            expected_current_value: true,
+            ..guard()
+        },
+        GitHubPullRequestMaintainerEditabilityGuard {
+            expected_pull_request_id: 99,
+            ..guard()
+        },
+        GitHubPullRequestMaintainerEditabilityGuard {
+            expected_pull_request_node_id: "PR_other".to_string(),
+            ..guard()
+        },
+        GitHubPullRequestMaintainerEditabilityGuard {
+            expected_author_id: 99,
+            ..guard()
+        },
+        GitHubPullRequestMaintainerEditabilityGuard {
+            expected_head_repository_id: 99,
+            ..guard()
+        },
+        GitHubPullRequestMaintainerEditabilityGuard {
+            expected_head_ref: "other".to_string(),
+            ..guard()
+        },
+        GitHubPullRequestMaintainerEditabilityGuard {
+            expected_head_sha: "changed".to_string(),
+            ..guard()
+        },
+        GitHubPullRequestMaintainerEditabilityGuard {
+            expected_workflow_risk: GitHubPullRequestWorkflowRisk::Absent,
+            ..guard()
+        },
+    ] {
+        assert!(ensure_preflight(
+            &current,
+            1,
+            GitHubPullRequestMaintainerEditabilityState::Available,
+            GitHubPullRequestWorkflowRisk::Present,
+            &stale
+        )
+        .is_err());
+    }
     let mut noop = guard();
     noop.requested_value = false;
     assert!(ensure_preflight(
@@ -431,6 +485,23 @@ fn mutation_guards_reject_stale_noop_and_ineligible_snapshots() {
         &guard()
     )
     .is_err());
+
+    let mut enabled = current;
+    enabled.current_value = true;
+    let revocation = GitHubPullRequestMaintainerEditabilityGuard {
+        expected_current_value: true,
+        expected_workflow_risk: GitHubPullRequestWorkflowRisk::Absent,
+        requested_value: false,
+        ..guard()
+    };
+    assert!(ensure_preflight(
+        &enabled,
+        1,
+        GitHubPullRequestMaintainerEditabilityState::Available,
+        GitHubPullRequestWorkflowRisk::Present,
+        &revocation
+    )
+    .is_ok());
 }
 
 #[test]
@@ -490,6 +561,47 @@ async fn status_uses_exact_head_sha_and_reports_workflow_risk() {
 }
 
 #[tokio::test]
+async fn status_preserves_deleted_and_private_head_shapes() {
+    let deleted = pull_request_with_head_change(false, |pull_request| {
+        pull_request["head"]["repo"] = serde_json::Value::Null;
+    });
+    let (client, requests, server) =
+        mock_github(vec![ok(viewer_json("contributor", 1)), ok(deleted)]).await;
+    let status =
+        pull_request_maintainer_editability_with_client(&client, "octocat", "hello-world", 12)
+            .await
+            .expect("deleted head status");
+    server.await.expect("mock server");
+    assert_eq!(
+        status.state,
+        GitHubPullRequestMaintainerEditabilityState::HeadUnavailable
+    );
+    assert_eq!(status.head_repository_id, None);
+    assert_eq!(requests.lock().expect("requests").len(), 2);
+
+    let private = pull_request_with_head_change(false, |pull_request| {
+        pull_request["head"]["repo"]["private"] = serde_json::Value::Bool(true);
+    });
+    let (client, _requests, server) = mock_github(vec![
+        ok(viewer_json("contributor", 1)),
+        ok(private),
+        ok(branch_json()),
+        ok(workflows_json()),
+    ])
+    .await;
+    let status =
+        pull_request_maintainer_editability_with_client(&client, "octocat", "hello-world", 12)
+            .await
+            .expect("private fork status");
+    server.await.expect("mock server");
+    assert_eq!(
+        status.state,
+        GitHubPullRequestMaintainerEditabilityState::Available
+    );
+    assert_eq!(status.head_repository_private, Some(true));
+}
+
+#[tokio::test]
 async fn mutation_preflights_patches_only_boolean_and_postflights() {
     let (client, requests, server) = mock_github(vec![
         ok(viewer_json("contributor", 1)),
@@ -523,6 +635,45 @@ async fn mutation_preflights_patches_only_boolean_and_postflights() {
         assert!(!requests[4].contains(unrelated));
     }
     assert!(requests[5].starts_with("GET /repos/octocat/hello-world/pulls/12 "));
+}
+
+#[tokio::test]
+async fn disabling_skips_workflow_scans_but_keeps_identity_and_postflight_guards() {
+    let revocation = GitHubPullRequestMaintainerEditabilityGuard {
+        expected_current_value: true,
+        requested_value: false,
+        ..guard()
+    };
+    let (client, requests, server) = mock_github(vec![
+        ok(viewer_json("contributor", 1)),
+        ok(pull_request_json(true)),
+        ok(branch_json()),
+        ok(pull_request_json(false)),
+        ok(pull_request_json(false)),
+        ok(branch_json()),
+    ])
+    .await;
+
+    let status = update_pull_request_maintainer_editability_with_client(
+        &client,
+        "octocat",
+        "hello-world",
+        12,
+        &revocation,
+    )
+    .await
+    .expect("revoked maintainer editability");
+    server.await.expect("mock server");
+
+    assert!(!status.current_value);
+    assert_eq!(status.workflow_risk, GitHubPullRequestWorkflowRisk::Unknown);
+    let requests = requests.lock().expect("requests");
+    assert_eq!(requests.len(), 6);
+    assert!(requests[3].starts_with("PATCH /repos/octocat/hello-world/pulls/12 "));
+    assert!(requests[3].contains("\"maintainer_can_modify\":false"));
+    assert!(requests
+        .iter()
+        .all(|request| !request.contains("contents/.github/workflows")));
 }
 
 #[tokio::test]
@@ -676,6 +827,47 @@ async fn patch_permission_and_postflight_mismatch_keep_authoritative_error_categ
         conflict,
         AppError::GitHubPullRequestMaintainerEditabilityConflict(_)
     ));
+}
+
+#[tokio::test]
+async fn postflight_shared_errors_become_write_may_have_persisted_conflicts() {
+    for (status, message) in [
+        ("401 Unauthorized", "Bad credentials"),
+        ("403 Forbidden", "Resource not accessible"),
+        ("403 Forbidden", "API rate limit exceeded"),
+    ] {
+        let (client, _requests, server) = mock_github(vec![
+            ok(viewer_json("contributor", 1)),
+            ok(pull_request_json(false)),
+            ok(branch_json()),
+            ok(workflows_json()),
+            ok(pull_request_json(true)),
+            MockResponse {
+                status,
+                body: serde_json::json!({
+                    "message": message,
+                    "documentation_url": "https://docs.github.com/rest/pulls/pulls"
+                })
+                .to_string(),
+            },
+        ])
+        .await;
+        let error = update_pull_request_maintainer_editability_with_client(
+            &client,
+            "octocat",
+            "hello-world",
+            12,
+            &guard(),
+        )
+        .await
+        .expect_err("postflight conflict");
+        server.await.expect("mock server");
+        assert!(matches!(
+            error,
+            AppError::GitHubPullRequestMaintainerEditabilityConflict(message)
+                if message.contains("may have persisted") && message.contains("refresh")
+        ));
+    }
 }
 
 #[tokio::test]

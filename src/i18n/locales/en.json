@@ -1484,6 +1484,7 @@
       "pullRequestMaintainerWorkflowWarning": "This branch contains GitHub Actions workflows. A maintainer could edit a workflow, potentially reveal secret values, and access other branches.",
       "pullRequestMaintainerWorkflowUnknownWarning": "Harbor could not verify whether this branch contains GitHub Actions workflows. A maintainer could edit a workflow, potentially reveal secret values, and access other branches.",
       "updatingPullRequestMaintainerEditability": "Updating maintainer edits…",
+      "refreshingPullRequestMaintainerEditability": "Refreshing maintainer edit settings…",
       "pullRequestMaintainerEditabilityUpdateFailed": "Harbor could not update maintainer edits",
       "pullRequestMaintainerEditabilityPermissionDenied": "Only the pull request author can change this setting, and GitHub requires Pull requests write permission.",
       "pullRequestMaintainerEditabilityConflict": "The pull request or source branch changed on GitHub. Refresh this setting before trying again.",

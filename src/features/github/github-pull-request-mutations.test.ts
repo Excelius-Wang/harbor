@@ -335,7 +335,11 @@ describe("GitHub pull request mutations", () => {
       currentValue: true,
     });
 
-    await updateRepositoryPullRequestMaintainerEditability(target, maintainerEditability, true);
+    await updateRepositoryPullRequestMaintainerEditability(
+      target,
+      { ...maintainerEditability, headRepositoryId: 4 },
+      true
+    );
 
     expect(invoke).toHaveBeenCalledWith(
       "github_update_repository_pull_request_maintainer_editability",

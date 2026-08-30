@@ -1478,6 +1478,7 @@
       "pullRequestMaintainerWorkflowWarning": "这个分支包含 GitHub Actions 工作流。维护者可以修改工作流，可能借此获取密钥值，并访问其他分支。",
       "pullRequestMaintainerWorkflowUnknownWarning": "Harbor 无法确认这个分支是否包含 GitHub Actions 工作流。维护者可以修改工作流，可能借此获取密钥值，并访问其他分支。",
       "updatingPullRequestMaintainerEditability": "正在更新维护者编辑权限…",
+      "refreshingPullRequestMaintainerEditability": "正在刷新维护者编辑设置…",
       "pullRequestMaintainerEditabilityUpdateFailed": "维护者编辑权限没有更新成功",
       "pullRequestMaintainerEditabilityPermissionDenied": "只有拉取请求作者能更改这项设置，而且 GitHub 需要拉取请求写入权限。",
       "pullRequestMaintainerEditabilityConflict": "拉取请求或来源分支在 GitHub 上已有变化，请刷新这项设置后重试。",

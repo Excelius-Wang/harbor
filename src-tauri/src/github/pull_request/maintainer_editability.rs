@@ -211,7 +211,7 @@ async fn pull_request_maintainer_editability_with_client(
     let snapshot =
         pull_request_maintainer_snapshot(&pull_request, owner, repository, pull_request_number)?;
     let (state, workflow_risk) =
-        maintainer_editability_context(client, &snapshot, viewer.id.into_inner()).await?;
+        maintainer_editability_context(client, &snapshot, viewer.id.into_inner(), true).await?;
     Ok(maintainer_editability_from_snapshot(
         pull_request,
         snapshot,
@@ -233,7 +233,8 @@ async fn update_pull_request_maintainer_editability_with_client(
     let before_raw = get_pull_request(client, owner, repository, pull_request_number).await?;
     let before =
         pull_request_maintainer_snapshot(&before_raw, owner, repository, pull_request_number)?;
-    let (state, workflow_risk) = maintainer_editability_context(client, &before, viewer_id).await?;
+    let (state, workflow_risk) =
+        maintainer_editability_context(client, &before, viewer_id, guard.requested_value).await?;
     ensure_preflight(&before, viewer_id, state, workflow_risk, guard)?;
 
     let updated_raw: octocrab::models::pulls::PullRequest = client
@@ -247,12 +248,16 @@ async fn update_pull_request_maintainer_editability_with_client(
         pull_request_maintainer_snapshot(&updated_raw, owner, repository, pull_request_number)?;
     ensure_updated(&before, &updated, viewer_id, guard.requested_value)?;
 
-    let confirmed_raw = get_pull_request(client, owner, repository, pull_request_number).await?;
+    let confirmed_raw = get_pull_request(client, owner, repository, pull_request_number)
+        .await
+        .map_err(postflight_conflict)?;
     let confirmed =
         pull_request_maintainer_snapshot(&confirmed_raw, owner, repository, pull_request_number)?;
     ensure_updated(&before, &confirmed, viewer_id, guard.requested_value)?;
     let (confirmed_state, confirmed_risk) =
-        maintainer_editability_context(client, &confirmed, viewer_id).await?;
+        maintainer_editability_context(client, &confirmed, viewer_id, guard.requested_value)
+            .await
+            .map_err(postflight_conflict)?;
     if confirmed_state != GitHubPullRequestMaintainerEditabilityState::Available {
         return Err(editability_conflict(
             "the pull request is no longer eligible for maintainer edits",
@@ -284,6 +289,7 @@ async fn maintainer_editability_context(
     client: &octocrab::Octocrab,
     snapshot: &PullRequestMaintainerSnapshot,
     viewer_id: u64,
+    inspect_workflows: bool,
 ) -> Result<
     (
         GitHubPullRequestMaintainerEditabilityState,
@@ -315,7 +321,11 @@ async fn maintainer_editability_context(
     if state != GitHubPullRequestMaintainerEditabilityState::Available {
         return Ok((state, GitHubPullRequestWorkflowRisk::Unknown));
     }
-    let risk = head_workflow_risk(client, head, &snapshot.head_sha).await?;
+    let risk = if inspect_workflows {
+        head_workflow_risk(client, head, &snapshot.head_sha).await?
+    } else {
+        GitHubPullRequestWorkflowRisk::Unknown
+    };
     Ok((state, risk))
 }
 
@@ -447,12 +457,12 @@ fn maintainer_editability_state(
         GitHubPullRequestMaintainerEditabilityState::Closed
     } else if !shape.viewer_is_author {
         GitHubPullRequestMaintainerEditabilityState::NotAuthor
+    } else if !shape.head_is_live {
+        GitHubPullRequestMaintainerEditabilityState::HeadUnavailable
     } else if !shape.cross_repository {
         GitHubPullRequestMaintainerEditabilityState::SameRepository
     } else if !shape.head_is_fork || !shape.head_owner_is_viewer || !shape.head_owner_is_user {
         GitHubPullRequestMaintainerEditabilityState::OrganizationFork
-    } else if !shape.head_is_live {
-        GitHubPullRequestMaintainerEditabilityState::HeadUnavailable
     } else {
         GitHubPullRequestMaintainerEditabilityState::Available
     }
@@ -478,7 +488,7 @@ fn ensure_preflight(
         || head.id != guard.expected_head_repository_id
         || snapshot.head_ref != guard.expected_head_ref
         || snapshot.head_sha != guard.expected_head_sha
-        || workflow_risk != guard.expected_workflow_risk
+        || (guard.requested_value && workflow_risk != guard.expected_workflow_risk)
         || snapshot.current_value == guard.requested_value
     {
         return Err(editability_conflict(
@@ -586,6 +596,12 @@ fn incomplete_response() -> AppError {
 
 fn editability_conflict(message: impl Into<String>) -> AppError {
     AppError::GitHubPullRequestMaintainerEditabilityConflict(message.into())
+}
+
+fn postflight_conflict(error: AppError) -> AppError {
+    editability_conflict(format!(
+        "the write may have persisted, but Harbor could not verify it: {error}; refresh before trying again"
+    ))
 }
 
 fn editability_error(error: octocrab::Error) -> AppError {

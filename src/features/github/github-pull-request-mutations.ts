@@ -90,12 +90,9 @@ export function updateRepositoryPullRequestBase(
 
 export function updateRepositoryPullRequestMaintainerEditability(
   target: GitHubPullRequestMutationTarget,
-  status: GitHubPullRequestMaintainerEditability,
+  status: GitHubPullRequestMaintainerEditability & { headRepositoryId: number },
   requestedValue: boolean
 ) {
-  if (status.headRepositoryId == null) {
-    throw new Error("The pull request head repository is unavailable.");
-  }
   return invoke<GitHubPullRequestMaintainerEditability>(
     "github_update_repository_pull_request_maintainer_editability",
     {

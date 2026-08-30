@@ -59,10 +59,15 @@ export function GitHubPullRequestMaintainerEditability({
   });
   const mutation = useMutation({
     mutationFn: (requestedValue: boolean) => {
-      if (!result.data) {
+      const status = result.data;
+      if (!status || status.headRepositoryId == null) {
         throw new Error(t("workspace.repositories.pullRequestMaintainerEditabilityUnavailable"));
       }
-      return updateRepositoryPullRequestMaintainerEditability(target, result.data, requestedValue);
+      return updateRepositoryPullRequestMaintainerEditability(
+        target,
+        { ...status, headRepositoryId: status.headRepositoryId },
+        requestedValue
+      );
     },
     onSuccess: (status) => {
       syncPullRequestMaintainerEditability(queryClient, target, status);
@@ -110,7 +115,7 @@ export function GitHubPullRequestMaintainerEditability({
   }
 
   const status = result.data;
-  if (!status || result.error) {
+  if (!status) {
     const error = parseIpcError(result.error);
     return (
       <>
@@ -157,6 +162,9 @@ export function GitHubPullRequestMaintainerEditability({
     ? `pull-request-${pullRequest.number}-maintainer-editability-warning`
     : undefined;
   const mutationError = mutation.error ? parseIpcError(mutation.error) : null;
+  const refreshError = result.error ? parseIpcError(result.error) : null;
+  const refreshing = result.isFetching;
+  const interactionLocked = mutation.isPending || refreshing || Boolean(refreshError);
   const mutationErrorMessage = mutationError
     ? mutationError.code === "githubPermission"
       ? t("workspace.repositories.pullRequestMaintainerEditabilityPermissionDenied")
@@ -169,7 +177,7 @@ export function GitHubPullRequestMaintainerEditability({
   return (
     <>
       <Separator />
-      <section className="flex flex-col gap-2.5" aria-busy={mutation.isPending}>
+      <section className="flex flex-col gap-2.5" aria-busy={mutation.isPending || refreshing}>
         <p className="text-muted-foreground text-[10px] font-medium tracking-[0.08em] uppercase">
           {t("workspace.repositories.pullRequestMaintainerEditability")}
         </p>
@@ -177,7 +185,7 @@ export function GitHubPullRequestMaintainerEditability({
           <Checkbox
             id={`pull-request-${pullRequest.number}-maintainer-editability`}
             checked={status.currentValue}
-            disabled={mutation.isPending}
+            disabled={interactionLocked}
             aria-describedby={describedBy}
             onCheckedChange={(checked) => {
               if (checked === "indeterminate" || checked === status.currentValue) return;
@@ -216,6 +224,32 @@ export function GitHubPullRequestMaintainerEditability({
             </AlertDescription>
           </Alert>
         ) : null}
+        {refreshing ? (
+          <p role="status" className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
+            <Spinner className="size-3" role="presentation" aria-hidden="true" />
+            {t("workspace.repositories.refreshingPullRequestMaintainerEditability")}
+          </p>
+        ) : null}
+        {refreshError ? (
+          <Alert variant="destructive" className="py-2.5 text-[11px]">
+            <CircleAlert />
+            <AlertTitle>
+              {t("workspace.repositories.pullRequestMaintainerEditabilityLoadFailed")}
+            </AlertTitle>
+            <AlertDescription className="flex flex-col items-start gap-2">
+              <span>{refreshError.message}</span>
+              <Button
+                type="button"
+                variant="outline"
+                size="xs"
+                onClick={() => void result.refetch()}
+              >
+                <RefreshCw data-icon="inline-start" />
+                {t("workspace.repositories.retry")}
+              </Button>
+            </AlertDescription>
+          </Alert>
+        ) : null}
         {mutation.isPending ? (
           <p role="status" className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
             <Spinner className="size-3" role="presentation" aria-hidden="true" />
@@ -242,6 +276,21 @@ export function GitHubPullRequestMaintainerEditability({
                 >
                   <RefreshCw data-icon="inline-start" />
                   {t("workspace.repositories.refreshPullRequestMaintainerEditability")}
+                </Button>
+              ) : mutation.variables !== undefined ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="xs"
+                  disabled={interactionLocked}
+                  onClick={() => {
+                    const requestedValue = mutation.variables;
+                    mutation.reset();
+                    mutation.mutate(requestedValue);
+                  }}
+                >
+                  <RefreshCw data-icon="inline-start" />
+                  {t("workspace.repositories.retry")}
                 </Button>
               ) : null}
             </AlertDescription>

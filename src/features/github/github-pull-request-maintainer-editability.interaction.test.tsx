@@ -12,6 +12,7 @@ import {
   GitHubPullRequestMaintainerEditability as MaintainerEditability,
   shouldShowPullRequestMaintainerEditability,
 } from "./github-pull-request-maintainer-editability";
+import { githubQueryKeys } from "./github-queries";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn() } }));
@@ -197,8 +198,22 @@ describe("pull request maintainer editability", () => {
 
     vi.mocked(invoke)
       .mockResolvedValueOnce(status({ workflowRisk: "absent" }))
-      .mockRejectedValueOnce({ code: "githubPermission", message: "forbidden" });
+      .mockRejectedValueOnce({ code: "githubPermission", message: "forbidden" })
+      .mockResolvedValueOnce(
+        status({
+          workflowRisk: "absent",
+          currentValue: true,
+          pullRequest: { ...pullRequest, maintainerCanModify: true },
+        })
+      );
     const permissionClient = createQueryClient();
+    const filesKey = githubQueryKeys.pullRequestFiles({
+      owner: "octocat",
+      repository: "hello-world",
+      pullRequestNumber: 12,
+      page: 1,
+    });
+    permissionClient.setQueryData(filesKey, { cached: true });
     const user = userEvent.setup();
     const permissionView = renderSetting(permissionClient);
     const checkbox = await screen.findByRole("checkbox", {
@@ -212,8 +227,75 @@ describe("pull request maintainer editability", () => {
       )
     ).toBeDefined();
     expect(checkbox.getAttribute("aria-checked")).toBe("false");
+    expect(permissionClient.getQueryState(filesKey)?.isInvalidated).toBe(false);
+
+    await user.click(screen.getByRole("button", { name: "workspace.repositories.retry" }));
+    await waitFor(() => expect(checkbox.getAttribute("aria-checked")).toBe("true"));
+    expect(invoke).toHaveBeenCalledTimes(4);
     permissionView.unmount();
     permissionClient.clear();
+  });
+
+  it("invalidates the whole pull request root and locks stale data after an ambiguous write", async () => {
+    const pendingRefresh = new Promise(() => undefined);
+    vi.mocked(invoke)
+      .mockResolvedValueOnce(status({ workflowRisk: "absent" }))
+      .mockRejectedValueOnce({ code: "github", message: "transport interrupted" })
+      .mockReturnValueOnce(pendingRefresh);
+    const client = createQueryClient();
+    const filesKey = githubQueryKeys.pullRequestFiles({
+      owner: "octocat",
+      repository: "hello-world",
+      pullRequestNumber: 12,
+      page: 1,
+    });
+    client.setQueryData(filesKey, { cached: true });
+    const user = userEvent.setup();
+    const view = renderSetting(client);
+    const checkbox = await screen.findByRole("checkbox", {
+      name: "workspace.repositories.allowMaintainerEdits",
+    });
+
+    await user.click(checkbox);
+
+    expect(await screen.findByText("transport interrupted")).toBeDefined();
+    await waitFor(() => expect(client.getQueryState(filesKey)?.isInvalidated).toBe(true));
+    expect((checkbox as HTMLButtonElement).disabled).toBe(true);
+    expect(checkbox.closest("section")?.getAttribute("aria-busy")).toBe("true");
+    expect(
+      screen.getByText("workspace.repositories.refreshingPullRequestMaintainerEditability")
+    ).toBeDefined();
+    view.unmount();
+    client.clear();
+  });
+
+  it("preserves and disables cached status when a refresh fails, then retries it", async () => {
+    vi.mocked(invoke)
+      .mockResolvedValueOnce(status({ workflowRisk: "absent" }))
+      .mockRejectedValueOnce(new Error("refresh failed"))
+      .mockResolvedValueOnce(status({ workflowRisk: "absent" }));
+    const client = createQueryClient();
+    const statusKey = githubQueryKeys.pullRequestMaintainerEditability({
+      owner: "octocat",
+      repository: "hello-world",
+      pullRequestNumber: 12,
+    });
+    const user = userEvent.setup();
+    const view = renderSetting(client);
+    const checkbox = await screen.findByRole("checkbox", {
+      name: "workspace.repositories.allowMaintainerEdits",
+    });
+
+    void client.invalidateQueries({ queryKey: statusKey, exact: true });
+
+    expect(await screen.findByText(/refresh failed/)).toBeDefined();
+    expect(screen.getByRole("checkbox")).toBe(checkbox);
+    expect((checkbox as HTMLButtonElement).disabled).toBe(true);
+    await user.click(screen.getByRole("button", { name: "workspace.repositories.retry" }));
+    await waitFor(() => expect((checkbox as HTMLButtonElement).disabled).toBe(false));
+    expect(invoke).toHaveBeenCalledTimes(3);
+    view.unmount();
+    client.clear();
   });
 
   it("keeps the official workflow and secret warning in both locales", () => {
