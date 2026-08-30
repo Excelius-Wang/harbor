@@ -76,9 +76,16 @@ export function GitHubPullRequestMaintainerEditability({
       );
     },
     onError: (error) => {
-      const conflict =
-        parseIpcError(error).code === "githubPullRequestMaintainerEditabilityConflict";
-      void invalidatePullRequestAfterMaintainerEditability(queryClient, target, conflict);
+      const code = parseIpcError(error).code;
+      const stateMayHaveChanged =
+        code === "githubPullRequestMaintainerEditabilityConflict" ||
+        code === "github" ||
+        code === "unknown";
+      void invalidatePullRequestAfterMaintainerEditability(
+        queryClient,
+        target,
+        stateMayHaveChanged
+      );
     },
   });
 
