@@ -19,6 +19,7 @@ vi.mock("@tauri-apps/api/core", () => ({
 
 const repository = { owner: "octocat", repository: "hello-world" };
 const issueRef = { id: "I_kwDOA", kind: "issue" } as const;
+const commitCommentRef = { id: "CC_kwDOA", kind: "commitComment" } as const;
 const issue: GitHubReactionSubject = {
   ...issueRef,
   viewerCanReact: true,
@@ -46,6 +47,7 @@ describe("GitHub reactions", () => {
       id: "I_000",
       kind: "issueComment",
     });
+    expect(normalizeReactionSubjects([commitCommentRef])).toEqual([commitCommentRef]);
   });
 
   it("invokes native reads and desired-state writes with opaque subject references", async () => {

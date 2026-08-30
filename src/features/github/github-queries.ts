@@ -5,6 +5,7 @@ import type {
   GitHubCodeOverview,
   GitHubCodeSearchPage,
   GitHubCommitDetailPage,
+  GitHubCommitCommentPage,
   GitHubCheckPage,
   GitHubCheckSuite,
   GitHubConversationControls,
@@ -641,6 +642,8 @@ export const githubQueryKeys = {
     ["github", "repository", owner, repository, "commits", reference, path, page] as const,
   commitDetail: ({ owner, repository, commitSha }: GitHubCommitDetailTarget) =>
     ["github", "repository", owner, repository, "commit", commitSha] as const,
+  commitComments: ({ owner, repository, commitSha }: GitHubCommitDetailTarget) =>
+    ["github", "repository", owner, repository, "commit", commitSha, "comments"] as const,
   tags: ({ owner, repository, page }: GitHubTagsTarget) =>
     ["github", "repository", owner, repository, "tags", page] as const,
   blame: ({ owner, repository, reference, path }: GitHubContentsTarget) =>
@@ -1533,6 +1536,22 @@ export function repositoryCommitDetailQueryOptions(target: GitHubCommitDetailTar
     initialPageParam: 1,
     getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.page + 1 : undefined),
     staleTime: 30 * GITHUB_QUERY_STALE_TIME,
+  });
+}
+
+export function repositoryCommitCommentsQueryOptions(target: GitHubCommitDetailTarget) {
+  return infiniteQueryOptions({
+    queryKey: githubQueryKeys.commitComments(target),
+    queryFn: ({ pageParam }) =>
+      invoke<GitHubCommitCommentPage>("github_list_repository_commit_comments", {
+        owner: target.owner,
+        repository: target.repository,
+        commitSha: target.commitSha,
+        page: pageParam,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.page + 1 : undefined),
+    staleTime: GITHUB_QUERY_STALE_TIME,
   });
 }
 

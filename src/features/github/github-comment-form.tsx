@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
 import type { GitHubRepositoryContentContext } from "./github-data";
 import { GitHubMarkdownEditor } from "./github-markdown-editor";
 
@@ -17,6 +18,7 @@ export function GitHubCommentForm({
   errorMessage,
   notice,
   secondaryAction,
+  className,
   onBodyChange,
   onSubmit,
 }: {
@@ -29,13 +31,14 @@ export function GitHubCommentForm({
   errorMessage?: string | null;
   notice?: ReactNode;
   secondaryAction?: ReactNode;
+  className?: string;
   onBodyChange: (value: string) => void;
   onSubmit: () => void;
 }) {
   const { t } = useTranslation();
 
   return (
-    <section className="bg-card/30 mt-5 ml-10 overflow-hidden rounded-lg border">
+    <section className={cn("bg-card/30 mt-5 ml-10 overflow-hidden rounded-lg border", className)}>
       <header className="bg-card/40 flex min-h-11 items-center border-b px-3.5 py-2">
         <h3 className="text-foreground/90 text-xs font-medium">
           {t("workspace.repositories.addComment")}
