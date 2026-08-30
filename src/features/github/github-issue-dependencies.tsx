@@ -1,20 +1,20 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { GitBranch, RefreshCw } from "lucide-react";
+import { GitFork, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAppTranslation } from "@/hooks/use-app-translation";
 import { parseIpcError } from "@/lib/ipc-error";
 import type { GitHubIssueSummary, GitHubRepositoryContentContext } from "./github-data";
-import { issueRelationshipsQueryOptions } from "./github-issue-relationship-queries";
+import { issueDependenciesQueryOptions } from "./github-issue-dependency-queries";
 import {
   GitHubIssueRelatedIssueRow,
   GitHubIssueRelationLoadError,
 } from "./github-issue-relation-ui";
 import { GitHubPagination } from "./github-issue-shared";
 
-function RelationshipsSkeleton() {
+function DependenciesSkeleton() {
   return (
     <Card className="gap-3 py-4 shadow-none">
       <CardHeader className="px-4">
@@ -28,7 +28,36 @@ function RelationshipsSkeleton() {
   );
 }
 
-function GitHubIssueRelationshipsContent({
+function DependencySection({
+  title,
+  dependencies,
+  onNavigate,
+}: {
+  title: string;
+  dependencies: GitHubIssueSummary[];
+  onNavigate: (summary: GitHubIssueSummary) => void;
+}) {
+  if (dependencies.length === 0) return null;
+
+  return (
+    <section className="px-1.5 py-1.5">
+      <h3 className="text-muted-foreground px-2.5 pb-1 text-[10px] font-medium uppercase">
+        {title}
+      </h3>
+      <div className="flex flex-col gap-0.5">
+        {dependencies.map((summary) => (
+          <GitHubIssueRelatedIssueRow
+            key={`${summary.repository.fullName}#${summary.issue.number}`}
+            summary={summary}
+            onNavigate={onNavigate}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function GitHubIssueDependenciesContent({
   repository,
   issueNumber,
   onNavigate,
@@ -40,7 +69,7 @@ function GitHubIssueRelationshipsContent({
   const { t } = useAppTranslation();
   const [page, setPage] = useState(1);
   const result = useQuery(
-    issueRelationshipsQueryOptions({
+    issueDependenciesQueryOptions({
       owner: repository.owner,
       repository: repository.name,
       issueNumber,
@@ -49,28 +78,28 @@ function GitHubIssueRelationshipsContent({
   );
   const error = result.error ? parseIpcError(result.error) : null;
 
-  if (result.isPending) return <RelationshipsSkeleton />;
+  if (result.isPending) return <DependenciesSkeleton />;
 
   if (!result.data)
     return (
       <GitHubIssueRelationLoadError
         title={t(
           error?.code === "githubPermission"
-            ? "workspace.repositories.issueRelationshipsPermissionDenied"
-            : "workspace.repositories.issueRelationshipsLoadFailed"
+            ? "workspace.repositories.issueDependenciesPermissionDenied"
+            : "workspace.repositories.issueDependenciesLoadFailed"
         )}
         error={error}
         onRetry={() => void result.refetch()}
       />
     );
 
-  const { parent, subIssues, hasPrevious, hasMore } = result.data;
+  const { blockedBy, blocking, hasPrevious, hasMore } = result.data;
   return (
     <Card className="gap-0 overflow-hidden py-0 shadow-none" aria-busy={result.isFetching}>
       <CardHeader className="border-b px-4 py-3">
         <CardTitle className="flex items-center gap-2 text-xs">
-          <GitBranch className="text-muted-foreground size-3.5" />
-          {t("workspace.repositories.issueRelationships")}
+          <GitFork className="text-muted-foreground size-3.5" />
+          {t("workspace.repositories.issueDependencies")}
           {result.isFetching ? (
             <RefreshCw className="text-muted-foreground size-3 animate-spin" />
           ) : null}
@@ -82,68 +111,54 @@ function GitHubIssueRelationshipsContent({
             <GitHubIssueRelationLoadError
               title={t(
                 error.code === "githubPermission"
-                  ? "workspace.repositories.issueRelationshipsPermissionDenied"
-                  : "workspace.repositories.issueRelationshipsLoadFailed"
+                  ? "workspace.repositories.issueDependenciesPermissionDenied"
+                  : "workspace.repositories.issueDependenciesLoadFailed"
               )}
               error={error}
               onRetry={() => void result.refetch()}
             />
           </div>
         ) : null}
-        {!parent && subIssues.length === 0 ? (
+        {blockedBy.length === 0 && blocking.length === 0 ? (
           <Empty className="min-h-0 gap-2 px-4 py-5 md:p-5">
             <EmptyHeader className="gap-1">
               <EmptyTitle className="text-xs">
-                {t("workspace.repositories.noIssueRelationships")}
+                {t("workspace.repositories.noIssueDependencies")}
               </EmptyTitle>
               <EmptyDescription className="text-[11px]">
-                {t("workspace.repositories.noIssueRelationshipsDescription")}
+                {t("workspace.repositories.noIssueDependenciesDescription")}
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
         ) : null}
-        {parent ? (
-          <section className="border-b px-1.5 py-1.5">
-            <h3 className="text-muted-foreground px-2.5 pb-1 text-[10px] font-medium uppercase">
-              {t("workspace.repositories.parentIssue")}
-            </h3>
-            <GitHubIssueRelatedIssueRow summary={parent} onNavigate={onNavigate} />
-          </section>
-        ) : null}
-        {subIssues.length > 0 ? (
-          <section className="px-1.5 py-1.5">
-            <h3 className="text-muted-foreground px-2.5 pb-1 text-[10px] font-medium uppercase">
-              {t("workspace.repositories.subIssues")}
-            </h3>
-            <div className="flex flex-col gap-0.5">
-              {subIssues.map((summary) => (
-                <GitHubIssueRelatedIssueRow
-                  key={`${summary.repository.fullName}#${summary.issue.number}`}
-                  summary={summary}
-                  onNavigate={onNavigate}
-                />
-              ))}
-            </div>
-          </section>
-        ) : null}
+        <DependencySection
+          title={t("workspace.repositories.blockedByIssues")}
+          dependencies={blockedBy}
+          onNavigate={onNavigate}
+        />
+        <DependencySection
+          title={t("workspace.repositories.blockingIssues")}
+          dependencies={blocking}
+          onNavigate={onNavigate}
+        />
       </CardContent>
       <GitHubPagination
         page={result.data.page}
         hasPrevious={hasPrevious}
         hasMore={hasMore}
         onPageChange={setPage}
-        ariaLabel={t("workspace.repositories.issueRelationshipPagination")}
+        ariaLabel={t("workspace.repositories.issueDependencyPagination")}
       />
     </Card>
   );
 }
 
-export function GitHubIssueRelationships(props: {
+export function GitHubIssueDependencies(props: {
   repository: GitHubRepositoryContentContext;
   issueNumber: number;
   onNavigate: (summary: GitHubIssueSummary) => void;
 }) {
   const { repository, issueNumber } = props;
   const targetKey = `${repository.owner.toLowerCase()}/${repository.name.toLowerCase()}#${issueNumber}`;
-  return <GitHubIssueRelationshipsContent key={targetKey} {...props} />;
+  return <GitHubIssueDependenciesContent key={targetKey} {...props} />;
 }

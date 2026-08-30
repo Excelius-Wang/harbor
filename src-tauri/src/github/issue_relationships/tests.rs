@@ -1,140 +1,19 @@
-use std::sync::{Arc, Mutex};
-
-use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
-    net::TcpListener,
+use super::*;
+use crate::github::issue_related::{
+    test_support::{assert_rest_request, issue_json, mock_github, MockResponse},
+    RelatedIssueRequest,
 };
 
-use super::*;
-
-struct MockResponse {
-    status: &'static str,
-    headers: Vec<(&'static str, &'static str)>,
-    body: String,
-}
-
-fn issue_json(owner: &str, repository: &str, number: u64, state_reason: &str) -> serde_json::Value {
-    serde_json::json!({
-        "id": number,
-        "node_id": format!("I_{owner}_{repository}_{number}"),
-        "url": format!("https://api.github.com/repos/{owner}/{repository}/issues/{number}"),
-        "repository_url": format!("https://api.github.com/repos/{owner}/{repository}"),
-        "labels_url": format!("https://api.github.com/repos/{owner}/{repository}/issues/{number}/labels{{/name}}"),
-        "comments_url": format!("https://api.github.com/repos/{owner}/{repository}/issues/{number}/comments"),
-        "events_url": format!("https://api.github.com/repos/{owner}/{repository}/issues/{number}/events"),
-        "html_url": format!("https://github.com/{owner}/{repository}/issues/{number}"),
-        "number": number,
-        "state": "closed",
-        "state_reason": state_reason,
-        "title": format!("Issue {number}"),
-        "body": "Issue body",
-        "user": {
-            "login": "octocat",
-            "id": 1,
-            "node_id": "U_1",
-            "avatar_url": "https://avatars.githubusercontent.com/u/1?v=4",
-            "gravatar_id": "",
-            "url": "https://api.github.com/users/octocat",
-            "html_url": "https://github.com/octocat",
-            "followers_url": "https://api.github.com/users/octocat/followers",
-            "following_url": "https://api.github.com/users/octocat/following{/other_user}",
-            "gists_url": "https://api.github.com/users/octocat/gists{/gist_id}",
-            "starred_url": "https://api.github.com/users/octocat/starred{/owner}{/repo}",
-            "subscriptions_url": "https://api.github.com/users/octocat/subscriptions",
-            "organizations_url": "https://api.github.com/users/octocat/orgs",
-            "repos_url": "https://api.github.com/users/octocat/repos",
-            "events_url": "https://api.github.com/users/octocat/events{/privacy}",
-            "received_events_url": "https://api.github.com/users/octocat/received_events",
-            "type": "User",
-            "site_admin": false
-        },
-        "labels": [],
-        "assignee": null,
-        "assignees": [],
-        "milestone": null,
-        "locked": false,
-        "comments": 2,
-        "pull_request": null,
-        "closed_at": "2026-08-30T08:01:00Z",
-        "created_at": "2026-08-24T08:00:00Z",
-        "updated_at": "2026-08-30T08:01:00Z"
-    })
-}
-
-async fn mock_github(
-    responses: Vec<MockResponse>,
-) -> (
-    octocrab::Octocrab,
-    Arc<Mutex<Vec<String>>>,
-    tokio::task::JoinHandle<()>,
-) {
-    let listener = TcpListener::bind("127.0.0.1:0").await.expect("mock bind");
-    let address = listener.local_addr().expect("mock address");
-    let requests = Arc::new(Mutex::new(Vec::new()));
-    let captured = Arc::clone(&requests);
-    let server = tokio::spawn(async move {
-        for response in responses {
-            let (mut stream, _) = listener.accept().await.expect("mock accept");
-            let mut buffer = Vec::new();
-            loop {
-                let mut chunk = [0_u8; 1024];
-                let read = stream.read(&mut chunk).await.expect("mock read");
-                if read == 0 {
-                    break;
-                }
-                buffer.extend_from_slice(&chunk[..read]);
-                if buffer.windows(4).any(|window| window == b"\r\n\r\n") {
-                    break;
-                }
-            }
-            captured
-                .lock()
-                .expect("request lock")
-                .push(String::from_utf8(buffer).expect("request utf8"));
-            let headers = response
-                .headers
-                .into_iter()
-                .map(|(name, value)| format!("{name}: {value}\r\n"))
-                .collect::<String>();
-            let payload = format!(
-                "HTTP/1.1 {}\r\nContent-Type: application/json\r\n{}Content-Length: {}\r\nConnection: close\r\n\r\n{}",
-                response.status,
-                headers,
-                response.body.len(),
-                response.body
-            );
-            stream
-                .write_all(payload.as_bytes())
-                .await
-                .expect("mock write");
-        }
-    });
-    let client = octocrab::Octocrab::builder()
-        .base_uri(format!("http://{address}"))
-        .expect("mock base uri")
-        .personal_token("github-user-access-token".to_string())
-        .build()
-        .expect("mock client");
-    (client, requests, server)
-}
-
-fn assert_rest_request(request: &str, route: &str) {
-    assert!(request.starts_with(&format!("GET {route} HTTP/1.1")));
-    let request = request.to_ascii_lowercase();
-    assert!(request.contains("accept: application/vnd.github+json"));
-    assert!(request.contains("x-github-api-version: 2026-03-10"));
-}
-
-fn relationship_request(page: u32) -> IssueRelationshipsRequest<'static> {
-    IssueRelationshipsRequest::new("octocat", "hello-world", 7, page).expect("valid request")
+fn relationship_request(page: u32) -> RelatedIssueRequest<'static> {
+    RelatedIssueRequest::new("octocat", "hello-world", 7, page).expect("valid request")
 }
 
 #[test]
 fn request_requires_an_issue_and_positive_page() {
     let request = relationship_request(2);
     assert_eq!((request.issue_number, request.page), (7, 2));
-    assert!(IssueRelationshipsRequest::new("octocat", "hello-world", 0, 1).is_err());
-    assert!(IssueRelationshipsRequest::new("octocat", "hello-world", 7, 0).is_err());
+    assert!(RelatedIssueRequest::new("octocat", "hello-world", 0, 1).is_err());
+    assert!(RelatedIssueRequest::new("octocat", "hello-world", 7, 0).is_err());
 }
 
 #[test]

@@ -27,6 +27,7 @@ import {
   popIssueDetailLocation,
   pushIssueDetailLocation,
 } from "./github-issue-detail-navigation";
+import { GitHubIssueDependencies } from "./github-issue-dependencies";
 import { GitHubIssueRelationships } from "./github-issue-relationships";
 import { GitHubIssueStateAction } from "./github-issue-state-action";
 import {
@@ -321,11 +322,22 @@ function GitHubIssueDetailScreen({
                     issueNumber: detail.issue.number,
                   }}
                   afterIssue={
-                    <GitHubIssueRelationships
-                      repository={repository}
-                      issueNumber={detail.issue.number}
-                      onNavigate={(summary) => onNavigate(summary.repository, summary.issue.number)}
-                    />
+                    <>
+                      <GitHubIssueRelationships
+                        repository={repository}
+                        issueNumber={detail.issue.number}
+                        onNavigate={(summary) =>
+                          onNavigate(summary.repository, summary.issue.number)
+                        }
+                      />
+                      <GitHubIssueDependencies
+                        repository={repository}
+                        issueNumber={detail.issue.number}
+                        onNavigate={(summary) =>
+                          onNavigate(summary.repository, summary.issue.number)
+                        }
+                      />
+                    </>
                   }
                 />
                 <GitHubIssueComposer
