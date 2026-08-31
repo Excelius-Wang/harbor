@@ -1,5 +1,6 @@
 use super::mutations::{
-    add_issue_sub_issue_with_client, remove_issue_sub_issue_with_client, IssueSubIssueMutation,
+    add_issue_sub_issue_with_client, remove_issue_sub_issue_with_client,
+    reprioritize_issue_sub_issue_with_client, IssueSubIssueMutation, IssueSubIssuePriorityMutation,
 };
 use super::*;
 use crate::github::issue_related::{
@@ -15,9 +16,26 @@ fn sub_issue_mutation() -> IssueSubIssueMutation<'static> {
     IssueSubIssueMutation::new("octocat", "hello-world", 7, 42).expect("valid sub-issue mutation")
 }
 
+fn sub_issue_priority_mutation(
+    placement: GitHubIssueSubIssuePlacement,
+) -> IssueSubIssuePriorityMutation<'static> {
+    IssueSubIssuePriorityMutation::new("octocat", "hello-world", 7, 2, 42, 41, placement)
+        .expect("valid sub-issue priority mutation")
+}
+
 #[test]
 fn sub_issue_mutation_requires_a_nonzero_existing_issue_number() {
     assert!(IssueSubIssueMutation::new("octocat", "hello-world", 7, 0).is_err());
+    assert!(IssueSubIssuePriorityMutation::new(
+        "octocat",
+        "hello-world",
+        7,
+        1,
+        42,
+        42,
+        GitHubIssueSubIssuePlacement::Before,
+    )
+    .is_err());
 }
 
 #[tokio::test]
@@ -190,6 +208,191 @@ async fn transport_reports_an_unconfirmed_sub_issue_removal() {
 
     assert!(error.to_string().contains("could not confirm"), "{error}");
     assert_eq!(requests.lock().expect("requests").len(), 5);
+}
+
+#[tokio::test]
+async fn transport_reprioritizes_two_adjacent_same_repository_sub_issues() {
+    for (placement, preflight_numbers, postflight_numbers, expected_payload) in [
+        (
+            GitHubIssueSubIssuePlacement::Before,
+            [41, 42],
+            [42, 41],
+            serde_json::json!({"sub_issue_id": 42, "before_id": 41}),
+        ),
+        (
+            GitHubIssueSubIssuePlacement::After,
+            [42, 41],
+            [41, 42],
+            serde_json::json!({"sub_issue_id": 42, "after_id": 41}),
+        ),
+    ] {
+        let issue_page = |numbers: [u64; 2]| {
+            numbers.map(|number| issue_json("octocat", "hello-world", number, "completed"))
+        };
+        let (client, requests, server) = mock_github(vec![
+            MockResponse {
+                status: "200 OK",
+                headers: vec![],
+                body: issue_json("octocat", "hello-world", 7, "completed").to_string(),
+            },
+            MockResponse {
+                status: "200 OK",
+                headers: vec![],
+                body: serde_json::to_string(&issue_page(preflight_numbers))
+                    .expect("preflight JSON"),
+            },
+            MockResponse {
+                status: "200 OK",
+                headers: vec![],
+                body: issue_json("octocat", "hello-world", 42, "completed").to_string(),
+            },
+            MockResponse {
+                status: "200 OK",
+                headers: vec![],
+                body: serde_json::to_string(&issue_page(postflight_numbers))
+                    .expect("postflight JSON"),
+            },
+        ])
+        .await;
+
+        reprioritize_issue_sub_issue_with_client(&client, sub_issue_priority_mutation(placement))
+            .await
+            .expect("sub-issue reprioritized");
+        server.await.expect("mock server");
+
+        let requests = requests.lock().expect("requests");
+        assert_rest_request(&requests[0], "/repos/octocat/hello-world/issues/7");
+        assert_rest_request(
+            &requests[1],
+            "/repos/octocat/hello-world/issues/7/sub_issues?per_page=30&page=2",
+        );
+        assert!(requests[2]
+            .starts_with("PATCH /repos/octocat/hello-world/issues/7/sub_issues/priority HTTP/1.1"));
+        let body = requests[2]
+            .split_once("\r\n\r\n")
+            .map(|(_, body)| body)
+            .expect("request body");
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(body).expect("payload JSON"),
+            expected_payload
+        );
+        assert_rest_request(
+            &requests[3],
+            "/repos/octocat/hello-world/issues/7/sub_issues?per_page=30&page=2",
+        );
+    }
+}
+
+#[tokio::test]
+async fn transport_rejects_a_stale_non_adjacent_sub_issue_order_before_writing() {
+    let preflight = vec![
+        issue_json("octocat", "hello-world", 41, "completed"),
+        issue_json("octocat", "hello-world", 40, "completed"),
+        issue_json("octocat", "hello-world", 42, "completed"),
+    ];
+    let (client, requests, server) = mock_github(vec![
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: issue_json("octocat", "hello-world", 7, "completed").to_string(),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: serde_json::to_string(&preflight).expect("preflight JSON"),
+        },
+    ])
+    .await;
+
+    let error = reprioritize_issue_sub_issue_with_client(
+        &client,
+        sub_issue_priority_mutation(GitHubIssueSubIssuePlacement::Before),
+    )
+    .await
+    .expect_err("stale order must prevent a write");
+    server.await.expect("mock server");
+
+    assert!(error.to_string().contains("no longer adjacent"), "{error}");
+    assert_eq!(requests.lock().expect("requests").len(), 2);
+}
+
+#[tokio::test]
+async fn transport_rejects_a_cross_repository_reprioritization_before_writing() {
+    let preflight = vec![
+        issue_json("octocat", "roadmap", 41, "completed"),
+        issue_json("octocat", "hello-world", 42, "completed"),
+    ];
+    let (client, requests, server) = mock_github(vec![
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: issue_json("octocat", "hello-world", 7, "completed").to_string(),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: serde_json::to_string(&preflight).expect("preflight JSON"),
+        },
+    ])
+    .await;
+
+    let error = reprioritize_issue_sub_issue_with_client(
+        &client,
+        sub_issue_priority_mutation(GitHubIssueSubIssuePlacement::Before),
+    )
+    .await
+    .expect_err("cross-repository order must prevent a write");
+    server.await.expect("mock server");
+
+    assert!(
+        error
+            .to_string()
+            .contains("not available in this repository"),
+        "{error}"
+    );
+    assert_eq!(requests.lock().expect("requests").len(), 2);
+}
+
+#[tokio::test]
+async fn transport_reports_an_unconfirmed_sub_issue_reprioritization() {
+    let unchanged = vec![
+        issue_json("octocat", "hello-world", 41, "completed"),
+        issue_json("octocat", "hello-world", 42, "completed"),
+    ];
+    let (client, requests, server) = mock_github(vec![
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: issue_json("octocat", "hello-world", 7, "completed").to_string(),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: serde_json::to_string(&unchanged).expect("preflight JSON"),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: issue_json("octocat", "hello-world", 42, "completed").to_string(),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: serde_json::to_string(&unchanged).expect("postflight JSON"),
+        },
+    ])
+    .await;
+
+    let error = reprioritize_issue_sub_issue_with_client(
+        &client,
+        sub_issue_priority_mutation(GitHubIssueSubIssuePlacement::Before),
+    )
+    .await
+    .expect_err("the new order must be confirmed");
+    server.await.expect("mock server");
+
+    assert!(error.to_string().contains("could not confirm"), "{error}");
+    assert_eq!(requests.lock().expect("requests").len(), 4);
 }
 
 #[tokio::test]

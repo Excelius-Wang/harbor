@@ -31,9 +31,9 @@ use crate::{
         GitHubIssueLinkedPullRequestPage, GitHubIssueMilestone, GitHubIssueMilestoneMutation,
         GitHubIssueMilestonePage, GitHubIssuePage, GitHubIssueRelationshipsPage, GitHubIssueSort,
         GitHubIssueState, GitHubIssueStateCapabilities, GitHubIssueStateMutation,
-        GitHubIssueTimelineItem, GitHubLoginAvailability, GitHubNotificationAction,
-        GitHubNotificationPage, GitHubPackage, GitHubPackagePage, GitHubPackageType,
-        GitHubPackageVersionMutationInput, GitHubPackageVersionMutationResult,
+        GitHubIssueSubIssuePriorityInput, GitHubIssueTimelineItem, GitHubLoginAvailability,
+        GitHubNotificationAction, GitHubNotificationPage, GitHubPackage, GitHubPackagePage,
+        GitHubPackageType, GitHubPackageVersionMutationInput, GitHubPackageVersionMutationResult,
         GitHubPackageVersionPage, GitHubPackageVersionState, GitHubPackageVisibility,
         GitHubPagesHealth, GitHubPagesMutation, GitHubPagesWorkspace,
         GitHubPendingPullRequestReview, GitHubProfileActivityPage, GitHubProfileConnectionKind,
@@ -73,7 +73,7 @@ use crate::{
         GitHubWorkflowArtifactPage, GitHubWorkflowDispatchConfig, GitHubWorkflowDispatchOptions,
         GitHubWorkflowJobLog, GitHubWorkflowJobPage, GitHubWorkflowRun, GitHubWorkflowRunAction,
         GitHubWorkflowRunDeletion, GitHubWorkflowRunFilterOptions, GitHubWorkflowRunFilters,
-        GitHubWorkflowRunPage, GitHubWorkflowRunStatusFilter,
+        GitHubWorkflowRunPage, GitHubWorkflowRunStatusFilter, IssueSubIssuePriorityMutation,
     },
     github_oauth::{GitHubLoginAttempt, GitHubLoopbackListener, GITHUB_AUTH_EVENT},
     repository_context::{RepositoryContextAnswer, RepositoryRef},
@@ -1681,6 +1681,33 @@ pub async fn github_remove_repository_issue_sub_issue(
             validate_item_number(sub_issue_number, "sub-issue")?,
         )
         .await
+}
+
+#[tauri::command]
+pub async fn github_reprioritize_repository_issue_sub_issue(
+    input: GitHubIssueSubIssuePriorityInput,
+    state: State<'_, AppState>,
+) -> Result<(), AppError> {
+    let GitHubIssueSubIssuePriorityInput {
+        owner,
+        repository,
+        issue_number,
+        page,
+        sub_issue_number,
+        relative_issue_number,
+        placement,
+    } = input;
+    let repository = RepositoryRef::new(owner, repository)?;
+    let mutation = IssueSubIssuePriorityMutation::new(
+        repository.owner(),
+        repository.name(),
+        validate_item_number(issue_number, "issue")?,
+        validate_page(page)?,
+        validate_item_number(sub_issue_number, "sub-issue")?,
+        validate_item_number(relative_issue_number, "relative sub-issue")?,
+        placement,
+    )?;
+    state.github.reprioritize_issue_sub_issue(mutation).await
 }
 
 #[tauri::command]

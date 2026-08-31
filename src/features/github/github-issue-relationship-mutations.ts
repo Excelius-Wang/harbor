@@ -40,6 +40,26 @@ export function removeRepositoryIssueSubIssue(
   });
 }
 
+export function reprioritizeRepositoryIssueSubIssue(
+  target: GitHubIssueRelationshipMutationTarget,
+  page: number,
+  subIssueNumber: number,
+  relativeIssueNumber: number,
+  placement: "before" | "after"
+) {
+  return invoke<void>("github_reprioritize_repository_issue_sub_issue", {
+    input: {
+      owner: target.owner,
+      repository: target.repository,
+      issueNumber: target.issueNumber,
+      page,
+      subIssueNumber,
+      relativeIssueNumber,
+      placement,
+    },
+  });
+}
+
 export async function refreshRepositoryIssueRelationships(
   queryClient: QueryClient,
   target: GitHubIssueRelationshipMutationTarget,

@@ -119,6 +119,7 @@ describe("GitHub Issue relationships", () => {
     expect(
       screen.queryByRole("button", { name: "workspace.repositories.removeSubIssue" })
     ).toBeNull();
+    expect(screen.queryByRole("button", { name: /moveSubIssue/ })).toBeNull();
     await user.click(screen.getByRole("button", { name: /Parent roadmap item/ }));
     await user.click(screen.getByRole("button", { name: /Ship the API/ }));
 
@@ -195,6 +196,47 @@ describe("GitHub Issue relationships", () => {
         repository: "hello-world",
         issueNumber: 7,
         subIssueNumber: 42,
+      })
+    );
+  });
+
+  it("moves one same-repository sub-issue after its adjacent sibling", async () => {
+    const first = summary("hello-world", 41, "Move this child");
+    const second = summary("hello-world", 42, "Adjacent child");
+    vi.mocked(invoke).mockImplementation((command) => {
+      if (command === "github_get_repository_issue_relationships") {
+        return Promise.resolve({
+          parent: null,
+          subIssues: [first, second],
+          page: 1,
+          hasPrevious: false,
+          hasMore: false,
+        });
+      }
+      if (command === "github_reprioritize_repository_issue_sub_issue") return Promise.resolve();
+      return Promise.resolve();
+    });
+    const user = userEvent.setup();
+    renderRelationships();
+
+    await screen.findByText("Move this child");
+    await user.click(
+      screen.getByRole("button", {
+        name: "workspace.repositories.moveSubIssueDown 41",
+      })
+    );
+
+    await waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith("github_reprioritize_repository_issue_sub_issue", {
+        input: {
+          owner: "octocat",
+          repository: "hello-world",
+          issueNumber: 7,
+          page: 1,
+          subIssueNumber: 41,
+          relativeIssueNumber: 42,
+          placement: "after",
+        },
       })
     );
   });

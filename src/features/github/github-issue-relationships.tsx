@@ -10,6 +10,7 @@ import type { GitHubIssueSummary, GitHubRepositoryContentContext } from "./githu
 import {
   GitHubIssueAddSubIssueAction,
   GitHubIssueRemoveSubIssueAction,
+  GitHubIssueReorderSubIssueActions,
 } from "./github-issue-relationship-actions";
 import type { GitHubIssueRelationshipMutationTarget } from "./github-issue-relationship-mutations";
 import { issueRelationshipsQueryOptions } from "./github-issue-relationship-queries";
@@ -30,6 +31,16 @@ function RelationshipsSkeleton() {
         <Skeleton className="h-10 w-full" />
       </CardContent>
     </Card>
+  );
+}
+
+function isCurrentRepositoryIssue(
+  summary: GitHubIssueSummary | undefined,
+  repository: GitHubRepositoryContentContext
+) {
+  return (
+    summary?.repository.owner.toLowerCase() === repository.owner.toLowerCase() &&
+    summary.repository.name.toLowerCase() === repository.name.toLowerCase()
   );
 }
 
@@ -129,18 +140,38 @@ function GitHubIssueRelationshipsContent({
               {t("workspace.repositories.subIssues")}
             </h3>
             <div className="flex flex-col gap-0.5">
-              {subIssues.map((summary) => (
-                <div
-                  key={`${summary.repository.fullName}#${summary.issue.number}`}
-                  className="flex items-center gap-1"
-                >
-                  <GitHubIssueRelatedIssueRow summary={summary} onNavigate={onNavigate} />
-                  {summary.repository.owner.toLowerCase() === repository.owner.toLowerCase() &&
-                  summary.repository.name.toLowerCase() === repository.name.toLowerCase() ? (
-                    <GitHubIssueRemoveSubIssueAction target={mutationTarget} subIssue={summary} />
-                  ) : null}
-                </div>
-              ))}
+              {subIssues.map((summary, index) => {
+                const isCurrentRepository = isCurrentRepositoryIssue(summary, repository);
+                const previousSubIssue = isCurrentRepositoryIssue(subIssues[index - 1], repository)
+                  ? subIssues[index - 1]
+                  : undefined;
+                const nextSubIssue = isCurrentRepositoryIssue(subIssues[index + 1], repository)
+                  ? subIssues[index + 1]
+                  : undefined;
+                return (
+                  <div
+                    key={`${summary.repository.fullName}#${summary.issue.number}`}
+                    className="flex items-center gap-1"
+                  >
+                    <GitHubIssueRelatedIssueRow summary={summary} onNavigate={onNavigate} />
+                    {isCurrentRepository ? (
+                      <>
+                        <GitHubIssueReorderSubIssueActions
+                          target={mutationTarget}
+                          page={result.data.page}
+                          subIssue={summary}
+                          previousSubIssue={previousSubIssue}
+                          nextSubIssue={nextSubIssue}
+                        />
+                        <GitHubIssueRemoveSubIssueAction
+                          target={mutationTarget}
+                          subIssue={summary}
+                        />
+                      </>
+                    ) : null}
+                  </div>
+                );
+              })}
             </div>
           </section>
         ) : null}
