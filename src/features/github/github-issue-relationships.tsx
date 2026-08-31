@@ -7,6 +7,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAppTranslation } from "@/hooks/use-app-translation";
 import { parseIpcError } from "@/lib/ipc-error";
 import type { GitHubIssueSummary, GitHubRepositoryContentContext } from "./github-data";
+import { GitHubIssueAddSubIssueAction } from "./github-issue-relationship-actions";
+import type { GitHubIssueRelationshipMutationTarget } from "./github-issue-relationship-mutations";
 import { issueRelationshipsQueryOptions } from "./github-issue-relationship-queries";
 import {
   GitHubIssueRelatedIssueRow,
@@ -48,6 +50,11 @@ function GitHubIssueRelationshipsContent({
     })
   );
   const error = result.error ? parseIpcError(result.error) : null;
+  const mutationTarget: GitHubIssueRelationshipMutationTarget = {
+    owner: repository.owner,
+    repository: repository.name,
+    issueNumber,
+  };
 
   if (result.isPending) return <RelationshipsSkeleton />;
 
@@ -68,13 +75,16 @@ function GitHubIssueRelationshipsContent({
   return (
     <Card className="gap-0 overflow-hidden py-0 shadow-none" aria-busy={result.isFetching}>
       <CardHeader className="border-b px-4 py-3">
-        <CardTitle className="flex items-center gap-2 text-xs">
-          <GitBranch className="text-muted-foreground size-3.5" />
-          {t("workspace.repositories.issueRelationships")}
-          {result.isFetching ? (
-            <RefreshCw className="text-muted-foreground size-3 animate-spin" />
-          ) : null}
-        </CardTitle>
+        <div className="flex items-center justify-between gap-3">
+          <CardTitle className="flex items-center gap-2 text-xs">
+            <GitBranch className="text-muted-foreground size-3.5" />
+            {t("workspace.repositories.issueRelationships")}
+            {result.isFetching ? (
+              <RefreshCw className="text-muted-foreground size-3 animate-spin" />
+            ) : null}
+          </CardTitle>
+          <GitHubIssueAddSubIssueAction target={mutationTarget} />
+        </div>
       </CardHeader>
       <CardContent className="px-0 py-1">
         {error ? (

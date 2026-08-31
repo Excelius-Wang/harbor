@@ -132,6 +132,7 @@ pub fn run() {
             commands::github_mutate_repository_issue_milestone,
             commands::github_get_repository_issue,
             commands::github_get_repository_issue_relationships,
+            commands::github_add_repository_issue_sub_issue,
             commands::github_get_repository_issue_dependencies,
             commands::github_get_repository_issue_duplicate,
             commands::github_get_repository_issue_linked_pull_requests,

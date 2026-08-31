@@ -2,15 +2,18 @@ import { queryOptions } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
 import type { GitHubIssueRelationshipsPage } from "./github-data";
 
-export type GitHubIssueRelationshipsTarget = {
+export type GitHubIssueRelationshipTarget = {
   owner: string;
   repository: string;
   issueNumber: number;
+};
+
+export type GitHubIssueRelationshipsTarget = GitHubIssueRelationshipTarget & {
   page: number;
 };
 
 export const githubIssueRelationshipQueryKeys = {
-  root: (target: Omit<GitHubIssueRelationshipsTarget, "page">) =>
+  root: (target: GitHubIssueRelationshipTarget) =>
     [
       "github",
       "repository",
