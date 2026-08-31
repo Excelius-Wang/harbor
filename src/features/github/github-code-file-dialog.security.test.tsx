@@ -53,7 +53,7 @@ describe("GitHubCodeFileDialog Markdown preview", () => {
           directory=""
           initialPath="README.md"
           initialSha="sha-1"
-          initialContent="[Guide](guide.md)"
+          initialContent="[Guide](guide.md) ![Diagram](diagram.png)"
           onOpenChange={vi.fn()}
           onCommitted={vi.fn()}
         />
@@ -67,6 +67,9 @@ describe("GitHubCodeFileDialog Markdown preview", () => {
 
     expect((await screen.findByRole("link", { name: "Guide" })).getAttribute("href")).toBe(
       "https://github.com/harbor-fixture/repository/blob/main/javascript%3Aalert(document.domain)/guide.md"
+    );
+    expect(screen.getByRole("img", { name: "Diagram" }).getAttribute("src")).toBe(
+      "https://github.com/harbor-fixture/repository/raw/main/javascript%3Aalert(document.domain)/diagram.png"
     );
   });
 });

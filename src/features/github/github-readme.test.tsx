@@ -149,5 +149,23 @@ describe("GitHubReadme", () => {
     expect(trusted.getByRole("img", { name: "Diagram" }).getAttribute("src")).toBe(
       "https://raw.githubusercontent.com/wiki/harbor-fixture/repository/diagram.png"
     );
+    trusted.unmount();
+
+    const trustedGist = render(
+      <GitHubReadme
+        content="[Guide](Guide) ![Diagram](diagram.png)"
+        path="README.md"
+        reference="gist-id"
+        repository={repository}
+        relativeBaseUrl="https://gist.githubusercontent.com/harbor-fixture/gist-id/raw/revision/"
+        onOpenExternal={vi.fn()}
+      />
+    );
+    expect(trustedGist.getByRole("link", { name: "Guide" }).getAttribute("href")).toBe(
+      "https://gist.githubusercontent.com/harbor-fixture/gist-id/raw/revision/Guide"
+    );
+    expect(trustedGist.getByRole("img", { name: "Diagram" }).getAttribute("src")).toBe(
+      "https://gist.githubusercontent.com/harbor-fixture/gist-id/raw/revision/diagram.png"
+    );
   });
 });
