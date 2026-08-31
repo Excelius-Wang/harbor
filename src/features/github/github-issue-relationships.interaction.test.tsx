@@ -116,6 +116,9 @@ describe("GitHub Issue relationships", () => {
 
     expect(await screen.findByText("Parent roadmap item")).toBeDefined();
     expect(screen.getByText("Ship the API")).toBeDefined();
+    expect(
+      screen.queryByRole("button", { name: "workspace.repositories.removeSubIssue" })
+    ).toBeNull();
     await user.click(screen.getByRole("button", { name: /Parent roadmap item/ }));
     await user.click(screen.getByRole("button", { name: /Ship the API/ }));
 
@@ -149,6 +152,45 @@ describe("GitHub Issue relationships", () => {
 
     await waitFor(() =>
       expect(invoke).toHaveBeenCalledWith("github_add_repository_issue_sub_issue", {
+        owner: "octocat",
+        repository: "hello-world",
+        issueNumber: 7,
+        subIssueNumber: 42,
+      })
+    );
+  });
+
+  it("confirms before removing a same-repository sub-issue", async () => {
+    const child = summary("hello-world", 42, "Detach this child");
+    vi.mocked(invoke).mockImplementation((command) => {
+      if (command === "github_get_repository_issue_relationships") {
+        return Promise.resolve({
+          parent: null,
+          subIssues: [child],
+          page: 1,
+          hasPrevious: false,
+          hasMore: false,
+        });
+      }
+      if (command === "github_remove_repository_issue_sub_issue") return Promise.resolve();
+      return Promise.resolve();
+    });
+    const user = userEvent.setup();
+    renderRelationships();
+
+    await screen.findByText("Detach this child");
+    await user.click(screen.getByRole("button", { name: "workspace.repositories.removeSubIssue" }));
+    expect(
+      await screen.findByRole("heading", {
+        name: "workspace.repositories.removeSubIssueConfirm",
+      })
+    ).toBeDefined();
+    await user.click(
+      screen.getByRole("button", { name: "workspace.repositories.removeSubIssueConfirm" })
+    );
+
+    await waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith("github_remove_repository_issue_sub_issue", {
         owner: "octocat",
         repository: "hello-world",
         issueNumber: 7,

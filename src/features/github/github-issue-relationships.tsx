@@ -7,7 +7,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAppTranslation } from "@/hooks/use-app-translation";
 import { parseIpcError } from "@/lib/ipc-error";
 import type { GitHubIssueSummary, GitHubRepositoryContentContext } from "./github-data";
-import { GitHubIssueAddSubIssueAction } from "./github-issue-relationship-actions";
+import {
+  GitHubIssueAddSubIssueAction,
+  GitHubIssueRemoveSubIssueAction,
+} from "./github-issue-relationship-actions";
 import type { GitHubIssueRelationshipMutationTarget } from "./github-issue-relationship-mutations";
 import { issueRelationshipsQueryOptions } from "./github-issue-relationship-queries";
 import {
@@ -127,11 +130,16 @@ function GitHubIssueRelationshipsContent({
             </h3>
             <div className="flex flex-col gap-0.5">
               {subIssues.map((summary) => (
-                <GitHubIssueRelatedIssueRow
+                <div
                   key={`${summary.repository.fullName}#${summary.issue.number}`}
-                  summary={summary}
-                  onNavigate={onNavigate}
-                />
+                  className="flex items-center gap-1"
+                >
+                  <GitHubIssueRelatedIssueRow summary={summary} onNavigate={onNavigate} />
+                  {summary.repository.owner.toLowerCase() === repository.owner.toLowerCase() &&
+                  summary.repository.name.toLowerCase() === repository.name.toLowerCase() ? (
+                    <GitHubIssueRemoveSubIssueAction target={mutationTarget} subIssue={summary} />
+                  ) : null}
+                </div>
               ))}
             </div>
           </section>

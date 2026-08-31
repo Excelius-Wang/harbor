@@ -43,19 +43,7 @@ pub(super) async fn add_issue_sub_issue_with_client(
     client: &octocrab::Octocrab,
     mutation: IssueSubIssueMutation<'_>,
 ) -> Result<(), AppError> {
-    resolve_issue(client, mutation.current, "current Issue").await?;
-    let sub_issue_request = RelatedIssueRequest::new(
-        mutation.current.owner,
-        mutation.current.repository,
-        mutation.sub_issue_number,
-        1,
-    )?;
-    let sub_issue = resolve_issue(client, sub_issue_request, "sub-issue").await?;
-    if summary_is_current(&sub_issue, mutation.current) {
-        return Err(AppError::Validation(
-            "an Issue cannot be its own sub-issue".to_string(),
-        ));
-    }
+    let (_, sub_issue_request, sub_issue) = resolve_mutation_issues(client, mutation).await?;
     if load_parent(client, sub_issue_request).await?.is_some() {
         return Err(AppError::Validation(
             "the selected Issue already has a parent".to_string(),
@@ -72,6 +60,58 @@ pub(super) async fn add_issue_sub_issue_with_client(
         ));
     }
     Ok(())
+}
+
+pub(super) async fn remove_issue_sub_issue_with_client(
+    client: &octocrab::Octocrab,
+    mutation: IssueSubIssueMutation<'_>,
+) -> Result<(), AppError> {
+    let (current_issue, sub_issue_request, sub_issue) =
+        resolve_mutation_issues(client, mutation).await?;
+
+    let parent = load_parent(client, sub_issue_request).await?;
+    if parent.as_ref().is_none_or(|parent| {
+        !summary_is_current(parent, mutation.current) || parent.issue.id != current_issue.issue.id
+    }) {
+        return Err(AppError::Validation(
+            "the selected Issue is not a sub-issue of the current Issue".to_string(),
+        ));
+    }
+
+    execute_remove_sub_issue(client, mutation.current, sub_issue.issue.id).await?;
+    if load_parent(client, sub_issue_request).await?.is_some() {
+        return Err(AppError::GitHub(
+            "GitHub accepted the sub-issue removal, but Harbor could not confirm it".to_string(),
+        ));
+    }
+    Ok(())
+}
+
+async fn resolve_mutation_issues<'a>(
+    client: &octocrab::Octocrab,
+    mutation: IssueSubIssueMutation<'a>,
+) -> Result<
+    (
+        GitHubIssueSummary,
+        RelatedIssueRequest<'a>,
+        GitHubIssueSummary,
+    ),
+    AppError,
+> {
+    let current_issue = resolve_issue(client, mutation.current, "current Issue").await?;
+    let sub_issue_request = RelatedIssueRequest::new(
+        mutation.current.owner,
+        mutation.current.repository,
+        mutation.sub_issue_number,
+        1,
+    )?;
+    let sub_issue = resolve_issue(client, sub_issue_request, "sub-issue").await?;
+    if summary_is_current(&sub_issue, mutation.current) {
+        return Err(AppError::Validation(
+            "an Issue cannot be its own sub-issue".to_string(),
+        ));
+    }
+    Ok((current_issue, sub_issue_request, sub_issue))
 }
 
 async fn resolve_issue(
@@ -133,6 +173,30 @@ async fn execute_add_sub_issue(
     summary_from_rest_value(value, "added sub-issue")
 }
 
+async fn execute_remove_sub_issue(
+    client: &octocrab::Octocrab,
+    current: RelatedIssueRequest<'_>,
+    sub_issue_id: u64,
+) -> Result<(), AppError> {
+    let request = api_request_with_body(
+        client,
+        http::Method::DELETE,
+        remove_sub_issue_route(current),
+        Some(&RemoveSubIssuePayload { sub_issue_id }),
+    )?;
+    let response = client.execute(request).await.map_err(github_error)?;
+    let status = response.status();
+    octocrab::map_github_error(response)
+        .await
+        .map_err(|error| sub_issue_mutation_error(error, status))?;
+    if status != http::StatusCode::OK {
+        return Err(AppError::GitHub(format!(
+            "GitHub returned unexpected status {status} for an Issue sub-issue removal"
+        )));
+    }
+    Ok(())
+}
+
 fn issue_route(request: RelatedIssueRequest<'_>) -> String {
     format!(
         "/repos/{}/{}/issues/{}",
@@ -147,6 +211,13 @@ fn add_sub_issue_route(current: RelatedIssueRequest<'_>) -> String {
     )
 }
 
+fn remove_sub_issue_route(current: RelatedIssueRequest<'_>) -> String {
+    format!(
+        "/repos/{}/{}/issues/{}/sub_issue",
+        current.owner, current.repository, current.issue_number
+    )
+}
+
 fn sub_issue_mutation_error(error: octocrab::Error, status: http::StatusCode) -> AppError {
     let mapped = related_issue_error(error, status);
     if matches!(
@@ -157,7 +228,10 @@ fn sub_issue_mutation_error(error: octocrab::Error, status: http::StatusCode) ->
     ) {
         return mapped;
     }
-    if status == http::StatusCode::UNPROCESSABLE_ENTITY {
+    if matches!(
+        status,
+        http::StatusCode::BAD_REQUEST | http::StatusCode::UNPROCESSABLE_ENTITY
+    ) {
         return AppError::Validation(mapped.to_string());
     }
     mapped
@@ -167,4 +241,9 @@ fn sub_issue_mutation_error(error: octocrab::Error, status: http::StatusCode) ->
 struct AddSubIssuePayload {
     sub_issue_id: u64,
     replace_parent: bool,
+}
+
+#[derive(Serialize)]
+struct RemoveSubIssuePayload {
+    sub_issue_id: u64,
 }

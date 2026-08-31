@@ -28,6 +28,18 @@ export function addRepositoryIssueSubIssue(
   });
 }
 
+export function removeRepositoryIssueSubIssue(
+  target: GitHubIssueRelationshipMutationTarget,
+  subIssueNumber: number
+) {
+  return invoke<void>("github_remove_repository_issue_sub_issue", {
+    owner: target.owner,
+    repository: target.repository,
+    issueNumber: target.issueNumber,
+    subIssueNumber,
+  });
+}
+
 export async function refreshRepositoryIssueRelationships(
   queryClient: QueryClient,
   target: GitHubIssueRelationshipMutationTarget,

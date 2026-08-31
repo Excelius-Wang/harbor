@@ -17,8 +17,8 @@ use crate::error::AppError;
 
 mod mutations;
 
-use mutations::add_issue_sub_issue_with_client;
 pub(crate) use mutations::IssueSubIssueMutation;
+use mutations::{add_issue_sub_issue_with_client, remove_issue_sub_issue_with_client};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -39,6 +39,12 @@ pub(crate) trait GitHubIssueRelationshipsClient: Send + Sync {
     ) -> Result<GitHubIssueRelationshipsPage, AppError>;
 
     async fn add_issue_sub_issue(
+        &self,
+        token: &str,
+        mutation: IssueSubIssueMutation<'_>,
+    ) -> Result<(), AppError>;
+
+    async fn remove_issue_sub_issue(
         &self,
         token: &str,
         mutation: IssueSubIssueMutation<'_>,
@@ -70,6 +76,19 @@ impl GitHubService {
         let token = self.load_access_token().await?;
         self.client.add_issue_sub_issue(&token, mutation).await
     }
+
+    pub async fn remove_issue_sub_issue(
+        &self,
+        owner: &str,
+        repository: &str,
+        issue_number: u64,
+        sub_issue_number: u64,
+    ) -> Result<(), AppError> {
+        let mutation =
+            IssueSubIssueMutation::new(owner, repository, issue_number, sub_issue_number)?;
+        let token = self.load_access_token().await?;
+        self.client.remove_issue_sub_issue(&token, mutation).await
+    }
 }
 
 #[async_trait]
@@ -90,6 +109,15 @@ impl GitHubIssueRelationshipsClient for OctocrabGitHubClient {
     ) -> Result<(), AppError> {
         let client = authenticated_client(token)?;
         add_issue_sub_issue_with_client(&client, mutation).await
+    }
+
+    async fn remove_issue_sub_issue(
+        &self,
+        token: &str,
+        mutation: IssueSubIssueMutation<'_>,
+    ) -> Result<(), AppError> {
+        let client = authenticated_client(token)?;
+        remove_issue_sub_issue_with_client(&client, mutation).await
     }
 }
 
@@ -197,6 +225,24 @@ impl GitHubIssueRelationshipsClient for super::tests::FakeGitHubClient {
     }
 
     async fn add_issue_sub_issue(
+        &self,
+        token: &str,
+        mutation: IssueSubIssueMutation<'_>,
+    ) -> Result<(), AppError> {
+        assert_eq!(token, "github-user-access-token");
+        assert_eq!(
+            (
+                mutation.current.owner,
+                mutation.current.repository,
+                mutation.current.issue_number,
+                mutation.sub_issue_number,
+            ),
+            ("octocat", "hello-world", 7, 42)
+        );
+        Ok(())
+    }
+
+    async fn remove_issue_sub_issue(
         &self,
         token: &str,
         mutation: IssueSubIssueMutation<'_>,
