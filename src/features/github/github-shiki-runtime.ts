@@ -7,62 +7,111 @@ import type {
 } from "./github-syntax-highlighting";
 
 type LanguageModule = { default: LanguageInput };
-type LanguageLoader = () => Promise<LanguageModule>;
 
-const LANGUAGE_LOADER_RECORD = {
-  astro: () => import("@shikijs/langs/astro"),
-  c: () => import("@shikijs/langs/c"),
-  cmake: () => import("@shikijs/langs/cmake"),
-  cpp: () => import("@shikijs/langs/cpp"),
-  csharp: () => import("@shikijs/langs/csharp"),
-  css: () => import("@shikijs/langs/css"),
-  dart: () => import("@shikijs/langs/dart"),
-  dockerfile: () => import("@shikijs/langs/dockerfile"),
-  elixir: () => import("@shikijs/langs/elixir"),
-  erlang: () => import("@shikijs/langs/erlang"),
-  go: () => import("@shikijs/langs/go"),
-  graphql: () => import("@shikijs/langs/graphql"),
-  haskell: () => import("@shikijs/langs/haskell"),
-  hcl: () => import("@shikijs/langs/hcl"),
-  html: () => import("@shikijs/langs/html"),
-  java: () => import("@shikijs/langs/java"),
-  javascript: () => import("@shikijs/langs/javascript"),
-  json: () => import("@shikijs/langs/json"),
-  jsonc: () => import("@shikijs/langs/jsonc"),
-  jsx: () => import("@shikijs/langs/jsx"),
-  kotlin: () => import("@shikijs/langs/kotlin"),
-  less: () => import("@shikijs/langs/less"),
-  lua: () => import("@shikijs/langs/lua"),
-  make: () => import("@shikijs/langs/make"),
-  markdown: () => import("@shikijs/langs/markdown"),
-  mdx: () => import("@shikijs/langs/mdx"),
-  nix: () => import("@shikijs/langs/nix"),
-  perl: () => import("@shikijs/langs/perl"),
-  php: () => import("@shikijs/langs/php"),
-  powershell: () => import("@shikijs/langs/powershell"),
-  proto: () => import("@shikijs/langs/proto"),
-  python: () => import("@shikijs/langs/python"),
-  r: () => import("@shikijs/langs/r"),
-  ruby: () => import("@shikijs/langs/ruby"),
-  rust: () => import("@shikijs/langs/rust"),
-  scala: () => import("@shikijs/langs/scala"),
-  scss: () => import("@shikijs/langs/scss"),
-  shellscript: () => import("@shikijs/langs/shellscript"),
-  solidity: () => import("@shikijs/langs/solidity"),
-  sql: () => import("@shikijs/langs/sql"),
-  svelte: () => import("@shikijs/langs/svelte"),
-  swift: () => import("@shikijs/langs/swift"),
-  toml: () => import("@shikijs/langs/toml"),
-  tsx: () => import("@shikijs/langs/tsx"),
-  typescript: () => import("@shikijs/langs/typescript"),
-  vue: () => import("@shikijs/langs/vue"),
-  xml: () => import("@shikijs/langs/xml"),
-  yaml: () => import("@shikijs/langs/yaml"),
-  zig: () => import("@shikijs/langs/zig"),
-} satisfies Record<SupportedSyntaxLanguage, LanguageLoader>;
-const LANGUAGE_LOADERS = new Map<SupportedSyntaxLanguage, LanguageLoader>(
-  Object.entries(LANGUAGE_LOADER_RECORD) as [SupportedSyntaxLanguage, LanguageLoader][]
-);
+function loadLanguageModule(language: SupportedSyntaxLanguage): Promise<LanguageModule> {
+  switch (language) {
+    case "astro":
+      return import("@shikijs/langs/astro");
+    case "c":
+      return import("@shikijs/langs/c");
+    case "cmake":
+      return import("@shikijs/langs/cmake");
+    case "cpp":
+      return import("@shikijs/langs/cpp");
+    case "csharp":
+      return import("@shikijs/langs/csharp");
+    case "css":
+      return import("@shikijs/langs/css");
+    case "dart":
+      return import("@shikijs/langs/dart");
+    case "dockerfile":
+      return import("@shikijs/langs/dockerfile");
+    case "elixir":
+      return import("@shikijs/langs/elixir");
+    case "erlang":
+      return import("@shikijs/langs/erlang");
+    case "go":
+      return import("@shikijs/langs/go");
+    case "graphql":
+      return import("@shikijs/langs/graphql");
+    case "haskell":
+      return import("@shikijs/langs/haskell");
+    case "hcl":
+      return import("@shikijs/langs/hcl");
+    case "html":
+      return import("@shikijs/langs/html");
+    case "java":
+      return import("@shikijs/langs/java");
+    case "javascript":
+      return import("@shikijs/langs/javascript");
+    case "json":
+      return import("@shikijs/langs/json");
+    case "jsonc":
+      return import("@shikijs/langs/jsonc");
+    case "jsx":
+      return import("@shikijs/langs/jsx");
+    case "kotlin":
+      return import("@shikijs/langs/kotlin");
+    case "less":
+      return import("@shikijs/langs/less");
+    case "lua":
+      return import("@shikijs/langs/lua");
+    case "make":
+      return import("@shikijs/langs/make");
+    case "markdown":
+      return import("@shikijs/langs/markdown");
+    case "mdx":
+      return import("@shikijs/langs/mdx");
+    case "nix":
+      return import("@shikijs/langs/nix");
+    case "perl":
+      return import("@shikijs/langs/perl");
+    case "php":
+      return import("@shikijs/langs/php");
+    case "powershell":
+      return import("@shikijs/langs/powershell");
+    case "proto":
+      return import("@shikijs/langs/proto");
+    case "python":
+      return import("@shikijs/langs/python");
+    case "r":
+      return import("@shikijs/langs/r");
+    case "ruby":
+      return import("@shikijs/langs/ruby");
+    case "rust":
+      return import("@shikijs/langs/rust");
+    case "scala":
+      return import("@shikijs/langs/scala");
+    case "scss":
+      return import("@shikijs/langs/scss");
+    case "shellscript":
+      return import("@shikijs/langs/shellscript");
+    case "solidity":
+      return import("@shikijs/langs/solidity");
+    case "sql":
+      return import("@shikijs/langs/sql");
+    case "svelte":
+      return import("@shikijs/langs/svelte");
+    case "swift":
+      return import("@shikijs/langs/swift");
+    case "toml":
+      return import("@shikijs/langs/toml");
+    case "tsx":
+      return import("@shikijs/langs/tsx");
+    case "typescript":
+      return import("@shikijs/langs/typescript");
+    case "vue":
+      return import("@shikijs/langs/vue");
+    case "xml":
+      return import("@shikijs/langs/xml");
+    case "yaml":
+      return import("@shikijs/langs/yaml");
+    case "zig":
+      return import("@shikijs/langs/zig");
+    default:
+      throw new Error(`Unsupported syntax language: ${language}`);
+  }
+}
 
 let highlighterPromise: Promise<HighlighterCore> | null = null;
 const languageLoads = new Map<SupportedSyntaxLanguage, Promise<void>>();
@@ -84,9 +133,9 @@ function getHighlighter() {
 function loadLanguage(highlighter: HighlighterCore, language: SupportedSyntaxLanguage) {
   let loading = languageLoads.get(language);
   if (!loading) {
-    const loader = LANGUAGE_LOADERS.get(language);
-    if (!loader) throw new Error(`Unsupported syntax language: ${language}`);
-    loading = loader().then((module) => highlighter.loadLanguage(module.default));
+    loading = loadLanguageModule(language).then((module) =>
+      highlighter.loadLanguage(module.default)
+    );
     languageLoads.set(language, loading);
   }
   return loading;
