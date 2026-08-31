@@ -27,6 +27,7 @@ pub(crate) mod issue;
 pub(crate) mod issue_dependencies;
 pub(crate) mod issue_duplicate;
 pub(crate) mod issue_linked_pull_request;
+pub(crate) mod issue_pin;
 pub(crate) mod issue_related;
 pub(crate) mod issue_relationships;
 pub(crate) mod issue_taxonomy;
@@ -100,6 +101,8 @@ pub use issue::{
 pub use issue_dependencies::GitHubIssueDependenciesPage;
 pub use issue_duplicate::GitHubIssueDuplicateReference;
 pub use issue_linked_pull_request::GitHubIssueLinkedPullRequestPage;
+pub(crate) use issue_pin::IssuePinMutation;
+pub use issue_pin::{GitHubIssuePinAction, GitHubPinnedIssuePage};
 pub use issue_relationships::{
     GitHubIssueRelationshipsPage, GitHubIssueSubIssueCreateInput, GitHubIssueSubIssuePriorityInput,
 };
@@ -658,6 +661,7 @@ pub(crate) trait GitHubClient:
     + issue::GitHubIssueClient
     + issue_duplicate::GitHubIssueDuplicateClient
     + issue_linked_pull_request::GitHubIssueLinkedPullRequestClient
+    + issue_pin::GitHubIssuePinClient
     + issue_dependencies::GitHubIssueDependenciesClient
     + issue_relationships::GitHubIssueRelationshipsClient
     + issue_taxonomy::GitHubIssueTaxonomyClient
@@ -2835,6 +2839,10 @@ mod tests {
             .issue_linked_pull_requests("octocat", "hello-world", 7, "I_7", None)
             .await
             .expect("linked pull request page");
+        let pinned_issues = service
+            .pinned_issues("octocat", "hello-world")
+            .await
+            .expect("pinned Issue page");
         let issue_creation_policy = service
             .issue_creation_policy("octocat", "hello-world")
             .await
@@ -3005,6 +3013,7 @@ mod tests {
         assert_eq!(issue_inbox.issues[0].issue.number, 7);
         assert_eq!(duplicate, None);
         assert!(linked_pull_requests.pull_requests.is_empty());
+        assert!(pinned_issues.issues.is_empty());
         assert!(issue_creation_policy.blank_issue_allowed);
         assert!(discussion_categories.enabled);
         assert_eq!(discussions.discussions[0].number, 42);
@@ -3309,6 +3318,19 @@ mod tests {
             )
             .await
             .expect("marked duplicate");
+        let pinned_issues = service
+            .update_issue_pin(
+                IssuePinMutation::new(
+                    "octocat",
+                    "hello-world",
+                    7,
+                    "I_7",
+                    GitHubIssuePinAction::Pin,
+                )
+                .expect("Issue pin mutation"),
+            )
+            .await
+            .expect("pinned Issue");
         let label = service
             .mutate_issue_label(
                 "octocat",
@@ -3359,6 +3381,7 @@ mod tests {
         assert_eq!(issue.state_reason.as_deref(), Some("completed"));
         assert_eq!(unmarked_duplicate.number, 7);
         assert_eq!(marked_duplicate.number, 7);
+        assert_eq!(pinned_issues.issues[0].number, 7);
         assert_eq!(label.name, "needs-triage");
         assert_eq!(label.color, "a1b2c3");
         assert_eq!(milestone.title, "Harbor 1.0");

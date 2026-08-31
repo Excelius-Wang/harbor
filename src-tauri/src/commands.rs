@@ -1626,6 +1626,47 @@ pub async fn github_get_repository_issue(
 }
 
 #[tauri::command]
+pub async fn github_get_repository_pinned_issues(
+    owner: String,
+    repository: String,
+    state: State<'_, AppState>,
+) -> Result<crate::github::GitHubPinnedIssuePage, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .pinned_issues(repository.owner(), repository.name())
+        .await
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitHubIssuePinMutationInput {
+    owner: String,
+    repository: String,
+    issue_number: u64,
+    expected_issue_node_id: String,
+    action: crate::github::GitHubIssuePinAction,
+}
+
+#[tauri::command]
+pub async fn github_update_repository_issue_pin(
+    input: GitHubIssuePinMutationInput,
+    state: State<'_, AppState>,
+) -> Result<crate::github::GitHubPinnedIssuePage, AppError> {
+    let repository = RepositoryRef::new(input.owner, input.repository)?;
+    let issue_number = validate_item_number(input.issue_number, "issue")?;
+    let expected_issue_node_id = validate_graphql_node_id(input.expected_issue_node_id, "issue")?;
+    let mutation = crate::github::IssuePinMutation::new(
+        repository.owner(),
+        repository.name(),
+        issue_number,
+        &expected_issue_node_id,
+        input.action,
+    )?;
+    state.github.update_issue_pin(mutation).await
+}
+
+#[tauri::command]
 pub async fn github_get_repository_issue_relationships(
     owner: String,
     repository: String,
