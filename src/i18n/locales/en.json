@@ -2197,6 +2197,7 @@
       "issueDuplicateLoadFailed": "Harbor could not load the canonical Issue",
       "issueDuplicatePermissionDenied": "Harbor needs Issues read permission to find the canonical Issue",
       "linkedPullRequests": "Linked pull requests",
+      "openLinkedPullRequestOnGitHub": "Open {{repository}} #{{number}} on GitHub",
       "noLinkedPullRequests": "No linked pull requests",
       "noLinkedPullRequestsDescription": "No pull request currently references this Issue.",
       "issueLinkedPullRequestsLoadFailed": "Harbor could not load linked pull requests",

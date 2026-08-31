@@ -61,7 +61,13 @@ async fn transport_loads_a_page_of_current_issues_linked_pull_requests() {
     server.await.expect("mock server");
 
     assert_eq!(page.pull_requests.len(), 1);
-    assert_eq!(page.pull_requests[0].full_name, "octocat/api");
+    assert_eq!(page.pull_requests[0].repository.owner, "octocat");
+    assert_eq!(page.pull_requests[0].repository.name, "api");
+    assert_eq!(page.pull_requests[0].repository.full_name, "octocat/api");
+    assert_eq!(
+        page.pull_requests[0].repository.url,
+        "https://github.com/octocat/api"
+    );
     assert_eq!(page.pull_requests[0].number, 9);
     assert_eq!(page.pull_requests[0].title, "Ship API");
     assert_eq!(page.next_cursor.as_deref(), Some("cursor-2"));

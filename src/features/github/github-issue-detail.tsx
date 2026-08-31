@@ -18,7 +18,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAppTranslation } from "@/hooks/use-app-translation";
 import { parseIpcError } from "@/lib/ipc-error";
 import { openExternalUrl } from "@/lib/window";
-import type { GitHubIssue, GitHubRepositoryContentContext } from "./github-data";
+import type {
+  GitHubIssue,
+  GitHubIssueLinkedPullRequestReference,
+  GitHubRepositoryContentContext,
+} from "./github-data";
 import { GitHubCommentForm } from "./github-comment-form";
 import { GitHubIssueEditDialog } from "./github-issue-edit-dialog";
 import { GitHubIssueMetadata } from "./github-issue-metadata";
@@ -49,6 +53,7 @@ import {
 } from "./github-issue-state-queries";
 import { formatIssueDate, GitHubIssueStateBadge } from "./github-issue-shared";
 import { GitHubIssueTimeline } from "./github-issue-timeline";
+import { GitHubPullRequestDetail } from "./github-pull-request-detail";
 import { githubQueryKeys, repositoryIssueDetailQueryOptions } from "./github-queries";
 
 export function GitHubIssueComposer({
@@ -209,12 +214,14 @@ function GitHubIssueDetailScreen({
   onBack,
   backLabel,
   onNavigate,
+  onNavigatePullRequest,
 }: {
   repository: GitHubRepositoryContentContext;
   issueNumber: number;
   onBack: () => void;
   backLabel?: string;
   onNavigate: (repository: GitHubRepositoryContentContext, issueNumber: number) => void;
+  onNavigatePullRequest: (pullRequest: GitHubIssueLinkedPullRequestReference) => void;
 }) {
   const { t, i18n } = useTranslation();
   const [timelinePage, setTimelinePage] = useState(1);
@@ -342,7 +349,11 @@ function GitHubIssueDetailScreen({
                           )
                         }
                       />
-                      <GitHubIssueLinkedPullRequests repository={repository} issue={detail.issue} />
+                      <GitHubIssueLinkedPullRequests
+                        repository={repository}
+                        issue={detail.issue}
+                        onNavigate={onNavigatePullRequest}
+                      />
                       <GitHubIssueRelationships
                         repository={repository}
                         issueNumber={detail.issue.number}
@@ -402,9 +413,15 @@ export function GitHubIssueDetail({
   const root = issueDetailLocation(repository, issueNumber);
   const rootKey = `${repository.owner.toLowerCase()}/${repository.name.toLowerCase()}#${issueNumber}`;
   const [navigation, setNavigation] = useState({ rootKey, history: [root] });
+  const [pullRequestNavigation, setPullRequestNavigation] = useState<{
+    sourceKey: string;
+    pullRequest: GitHubIssueLinkedPullRequestReference;
+  } | null>(null);
   const history = navigation.rootKey === rootKey ? navigation.history : [root];
   const current = history[history.length - 1] ?? root;
   const currentKey = `${current.repository.owner.toLowerCase()}/${current.repository.name.toLowerCase()}#${current.issueNumber}`;
+  const selectedPullRequest =
+    pullRequestNavigation?.sourceKey === currentKey ? pullRequestNavigation.pullRequest : null;
 
   const navigate = (nextRepository: GitHubRepositoryContentContext, nextIssueNumber: number) => {
     const next = issueDetailLocation(nextRepository, nextIssueNumber);
@@ -427,6 +444,18 @@ export function GitHubIssueDetail({
     }));
   };
 
+  if (selectedPullRequest) {
+    return (
+      <GitHubPullRequestDetail
+        key={`${selectedPullRequest.repository.fullName.toLowerCase()}#${selectedPullRequest.number}`}
+        repository={selectedPullRequest.repository}
+        pullRequestNumber={selectedPullRequest.number}
+        onBack={() => setPullRequestNavigation(null)}
+        backLabel={t("workspace.repositories.backToPreviousIssue")}
+      />
+    );
+  }
+
   return (
     <GitHubIssueDetailScreen
       key={currentKey}
@@ -435,6 +464,9 @@ export function GitHubIssueDetail({
       onBack={goBack}
       backLabel={history.length > 1 ? t("workspace.repositories.backToPreviousIssue") : backLabel}
       onNavigate={navigate}
+      onNavigatePullRequest={(pullRequest) =>
+        setPullRequestNavigation({ sourceKey: currentKey, pullRequest })
+      }
     />
   );
 }

@@ -48,6 +48,70 @@ vi.mock("./github-issue-relationships", () => ({
     </button>
   ),
 }));
+vi.mock("./github-issue-linked-pull-requests", () => ({
+  GitHubIssueLinkedPullRequests: ({
+    onNavigate,
+  }: {
+    onNavigate: (pullRequest: {
+      repository: {
+        owner: string;
+        name: string;
+        fullName: string;
+        url: string;
+      };
+      number: number;
+      title: string;
+      url: string;
+      state: "open";
+      draft: false;
+      merged: false;
+    }) => void;
+  }) => (
+    <button
+      type="button"
+      onClick={() =>
+        onNavigate({
+          repository: {
+            owner: "octocat",
+            name: "api",
+            fullName: "octocat/api",
+            url: "https://github.com/octocat/api",
+          },
+          number: 9,
+          title: "Ship API",
+          url: "https://github.com/octocat/api/pull/9",
+          state: "open",
+          draft: false,
+          merged: false,
+        })
+      }
+    >
+      Open linked PR natively
+    </button>
+  ),
+}));
+vi.mock("./github-pull-request-detail", () => ({
+  GitHubPullRequestDetail: ({
+    repository,
+    pullRequestNumber,
+    onBack,
+    backLabel,
+  }: {
+    repository: { fullName: string };
+    pullRequestNumber: number;
+    onBack: () => void;
+    backLabel: string;
+  }) => (
+    <section>
+      <p>
+        {repository.fullName} #{pullRequestNumber}
+      </p>
+      <button type="button" onClick={onBack}>
+        {backLabel}
+      </button>
+    </section>
+  ),
+}));
 vi.mock("./github-issue-metadata", () => ({ GitHubIssueMetadata: () => null }));
 vi.mock("./github-issue-edit-dialog", () => ({ GitHubIssueEditDialog: () => null }));
 vi.mock("./github-comment-form", () => ({ GitHubCommentForm: () => null }));
@@ -156,5 +220,32 @@ describe("GitHub Issue detail relationship navigation", () => {
     expect(onBack).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "Return to host" }));
     expect(onBack).toHaveBeenCalledOnce();
+  });
+
+  it("opens a cross-repository linked pull request in place and returns to the Issue", async () => {
+    const onBack = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
+        <GitHubIssueDetail
+          repository={repository}
+          issueNumber={7}
+          onBack={onBack}
+          backLabel="Return to host"
+        />
+      </QueryClientProvider>
+    );
+
+    expect(await screen.findByText("Root issue detail")).toBeDefined();
+    await user.click(screen.getByRole("button", { name: "Open linked PR natively" }));
+    expect(await screen.findByText("octocat/api #9")).toBeDefined();
+
+    await user.click(
+      screen.getByRole("button", { name: "workspace.repositories.backToPreviousIssue" })
+    );
+    expect(await screen.findByText("Root issue detail")).toBeDefined();
+    expect(onBack).not.toHaveBeenCalled();
   });
 });

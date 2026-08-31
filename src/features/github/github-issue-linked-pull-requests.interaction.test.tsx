@@ -41,7 +41,12 @@ const issue: GitHubIssue = {
 const firstPage = {
   pullRequests: [
     {
-      fullName: "octocat/api",
+      repository: {
+        owner: "octocat",
+        name: "api",
+        fullName: "octocat/api",
+        url: "https://github.com/octocat/api",
+      },
       number: 9,
       title: "Ship API",
       url: "https://github.com/octocat/api/pull/9",
@@ -53,12 +58,16 @@ const firstPage = {
   nextCursor: "cursor-2",
 };
 
-function renderLinkedPullRequests() {
+function renderLinkedPullRequests(onNavigate = vi.fn()) {
   return render(
     <QueryClientProvider
       client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
     >
-      <GitHubIssueLinkedPullRequests repository={repository} issue={issue} />
+      <GitHubIssueLinkedPullRequests
+        repository={repository}
+        issue={issue}
+        onNavigate={onNavigate}
+      />
     </QueryClientProvider>
   );
 }
@@ -84,14 +93,23 @@ describe("GitHub Issue linked pull requests", () => {
     expect(await screen.findByText("workspace.repositories.noLinkedPullRequests")).toBeDefined();
   });
 
-  it("shows linked pull requests and opens their canonical GitHub URL", async () => {
+  it("opens a linked pull request natively and keeps its canonical GitHub URL independent", async () => {
     vi.mocked(invoke).mockResolvedValueOnce(firstPage);
+    const onNavigate = vi.fn();
     const user = userEvent.setup();
-    renderLinkedPullRequests();
+    renderLinkedPullRequests(onNavigate);
 
     await user.click(await screen.findByRole("button", { name: /Ship API/ }));
 
+    expect(onNavigate).toHaveBeenCalledWith(firstPage.pullRequests[0]);
+    expect(openExternalUrl).not.toHaveBeenCalled();
+    await user.click(
+      screen.getByRole("button", {
+        name: "workspace.repositories.openLinkedPullRequestOnGitHub",
+      })
+    );
     expect(openExternalUrl).toHaveBeenCalledWith("https://github.com/octocat/api/pull/9");
+    expect(onNavigate).toHaveBeenCalledOnce();
     expect(invoke).toHaveBeenCalledWith("github_get_repository_issue_linked_pull_requests", {
       owner: "octocat",
       repository: "hello-world",

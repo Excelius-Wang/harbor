@@ -1472,7 +1472,7 @@ export type GitHubIssueDuplicateReference = {
 };
 
 export type GitHubIssueLinkedPullRequestReference = {
-  fullName: string;
+  repository: GitHubPullRequestRepository;
   number: number;
   title: string;
   url: string;
