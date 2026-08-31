@@ -3295,7 +3295,18 @@ mod tests {
             .await
             .expect("unmarked duplicate");
         let marked_duplicate = service
-            .mark_issue_duplicate("octocat", "hello-world", 7, 9, "I_7")
+            .mark_issue_duplicate(
+                issue_duplicate::IssueDuplicateMarkMutation::new(
+                    "octocat",
+                    "hello-world",
+                    7,
+                    "octocat",
+                    "api",
+                    9,
+                    "I_7",
+                )
+                .expect("duplicate mark mutation"),
+            )
             .await
             .expect("marked duplicate");
         let label = service

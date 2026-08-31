@@ -15,34 +15,25 @@ export type GitHubIssueDependencyReference = {
 };
 
 export function parseGitHubIssueUrl(value: string): GitHubIssueDependencyReference | null {
-  try {
-    const url = new URL(value.trim());
-    if (
-      url.protocol !== "https:" ||
-      url.hostname.toLowerCase() !== "github.com" ||
-      url.port ||
-      url.username ||
-      url.password ||
-      url.search ||
-      url.hash
-    ) {
-      return null;
-    }
-    const [owner, repository, kind, issueNumber] = url.pathname.split("/").filter(Boolean);
-    if (
-      !owner ||
-      !repository ||
-      kind !== "issues" ||
-      !issueNumber ||
-      !/^[1-9]\d*$/.test(issueNumber) ||
-      !Number.isSafeInteger(Number(issueNumber))
-    ) {
-      return null;
-    }
-    return { owner, repository, issueNumber: Number(issueNumber) };
-  } catch {
+  const match =
+    /^https:\/\/github\.com\/([a-z0-9_.-]{1,100})\/([a-z0-9_.-]{1,100})\/issues\/([1-9]\d*)$/i.exec(
+      value.trim()
+    );
+  if (!match) return null;
+  const [, owner, repository, issueNumber] = match;
+  if (
+    !owner ||
+    owner === "." ||
+    owner === ".." ||
+    !repository ||
+    repository === "." ||
+    repository === ".." ||
+    !issueNumber ||
+    !Number.isSafeInteger(Number(issueNumber))
+  ) {
     return null;
   }
+  return { owner, repository, issueNumber: Number(issueNumber) };
 }
 
 export function addRepositoryIssueDependency(

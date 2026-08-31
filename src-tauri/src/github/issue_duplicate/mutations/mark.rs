@@ -13,12 +13,14 @@ use crate::{
 
 const MARK_DUPLICATE_PREFLIGHT_QUERY: &str = r#"
 query HarborMarkIssueDuplicatePreflight(
-  $owner: String!
-  $repository: String!
+  $sourceOwner: String!
+  $sourceRepository: String!
   $sourceNumber: Int!
+  $canonicalOwner: String!
+  $canonicalRepository: String!
   $canonicalNumber: Int!
 ) {
-  repository(owner: $owner, name: $repository) {
+  sourceRepository: repository(owner: $sourceOwner, name: $sourceRepository) {
     id
     nameWithOwner
     source: issue(number: $sourceNumber) {
@@ -29,6 +31,10 @@ query HarborMarkIssueDuplicatePreflight(
       duplicateOf { id }
       viewerCanClose
     }
+  }
+  canonicalRepository: repository(owner: $canonicalOwner, name: $canonicalRepository) {
+    id
+    nameWithOwner
     canonical: issue(number: $canonicalNumber) {
       id
       number
@@ -70,6 +76,8 @@ mutation HarborMarkIssueDuplicate($sourceId: ID!, $canonicalId: ID!) {
 #[derive(Clone, Copy)]
 pub(crate) struct IssueDuplicateMarkMutation<'a> {
     pub(crate) request: IssueGraphQlRequest<'a>,
+    pub(crate) canonical_owner: &'a str,
+    pub(crate) canonical_repository: &'a str,
     pub(crate) canonical_issue_number: u64,
 }
 
@@ -78,18 +86,26 @@ impl<'a> IssueDuplicateMarkMutation<'a> {
         owner: &'a str,
         repository: &'a str,
         issue_number: u64,
+        canonical_owner: &'a str,
+        canonical_repository: &'a str,
         canonical_issue_number: u64,
         expected_issue_node_id: &'a str,
     ) -> Result<Self, AppError> {
         let request =
             IssueGraphQlRequest::new(owner, repository, issue_number, expected_issue_node_id)?;
-        if canonical_issue_number == 0 || canonical_issue_number == issue_number {
+        if canonical_issue_number == 0
+            || (canonical_issue_number == issue_number
+                && canonical_owner.eq_ignore_ascii_case(owner)
+                && canonical_repository.eq_ignore_ascii_case(repository))
+        {
             return Err(AppError::Validation(
-                "the canonical Issue must be a different positive Issue number".to_string(),
+                "the canonical Issue must be a different positive Issue".to_string(),
             ));
         }
         Ok(Self {
             request,
+            canonical_owner,
+            canonical_repository,
             canonical_issue_number,
         })
     }
@@ -145,9 +161,11 @@ async fn load_mark_preflight(
     let payload = serde_json::json!({
         "query": MARK_DUPLICATE_PREFLIGHT_QUERY,
         "variables": {
-            "owner": mutation.request.owner,
-            "repository": mutation.request.repository,
+            "sourceOwner": mutation.request.owner,
+            "sourceRepository": mutation.request.repository,
             "sourceNumber": source_number,
+            "canonicalOwner": mutation.canonical_owner,
+            "canonicalRepository": mutation.canonical_repository,
             "canonicalNumber": canonical_number,
         }
     });
@@ -166,20 +184,21 @@ fn mark_preflight_from_graphql(
     response: MarkDuplicatePreflightResponse,
     mutation: IssueDuplicateMarkMutation<'_>,
 ) -> Result<MarkDuplicatePreflight, AppError> {
-    let repository = response.repository.ok_or_else(|| {
-        AppError::GitHub("GitHub did not return the duplicate Issue repository".to_string())
+    let source_repository = response.source_repository.ok_or_else(|| {
+        AppError::GitHub("GitHub did not return the source Issue repository".to_string())
     })?;
-    let expected_full_name = format!("{}/{}", mutation.request.owner, mutation.request.repository);
-    if !graphql_node_id_is_valid(&repository.id)
-        || !repository
+    let expected_source_full_name =
+        format!("{}/{}", mutation.request.owner, mutation.request.repository);
+    if !graphql_node_id_is_valid(&source_repository.id)
+        || !source_repository
             .name_with_owner
-            .eq_ignore_ascii_case(&expected_full_name)
+            .eq_ignore_ascii_case(&expected_source_full_name)
     {
         return Err(AppError::GitHub(
-            "GitHub returned a different duplicate Issue repository".to_string(),
+            "GitHub returned a different source Issue repository".to_string(),
         ));
     }
-    let source = repository
+    let source = source_repository
         .source
         .ok_or_else(|| AppError::GitHub("GitHub did not return the current Issue".to_string()))?;
     if source.id != mutation.request.expected_issue_node_id
@@ -205,7 +224,26 @@ fn mark_preflight_from_graphql(
         ));
     }
 
-    let canonical = repository.canonical.ok_or_else(|| {
+    let canonical_repository = response.canonical_repository.ok_or_else(|| {
+        AppError::GitHubIssueStateConflict(
+            "the selected canonical Issue repository is no longer available".to_string(),
+        )
+    })?;
+    let expected_canonical_full_name = format!(
+        "{}/{}",
+        mutation.canonical_owner, mutation.canonical_repository
+    );
+    if !graphql_node_id_is_valid(&canonical_repository.id)
+        || !canonical_repository
+            .name_with_owner
+            .eq_ignore_ascii_case(&expected_canonical_full_name)
+    {
+        return Err(AppError::GitHubIssueStateConflict(
+            "the selected canonical Issue repository identity changed; refresh before trying again"
+                .to_string(),
+        ));
+    }
+    let canonical = canonical_repository.canonical.ok_or_else(|| {
         AppError::GitHubIssueStateConflict(
             "the selected canonical Issue is no longer available".to_string(),
         )
@@ -216,18 +254,18 @@ fn mark_preflight_from_graphql(
         || canonical.title.trim().is_empty()
         || canonical.state_reason.as_deref() == Some("DUPLICATE")
         || canonical.duplicate_of.is_some()
-        || canonical.repository.id != repository.id
+        || canonical.repository.id != canonical_repository.id
         || !canonical
             .repository
             .name_with_owner
-            .eq_ignore_ascii_case(&repository.name_with_owner)
+            .eq_ignore_ascii_case(&canonical_repository.name_with_owner)
         || !issue_url_matches(
             &canonical.url,
             "github.com",
             &format!(
                 "/{}/{}/issues/{}",
-                mutation.request.owner,
-                mutation.request.repository,
+                mutation.canonical_owner,
+                mutation.canonical_repository,
                 mutation.canonical_issue_number
             ),
         )
@@ -238,10 +276,12 @@ fn mark_preflight_from_graphql(
         ));
     }
     Ok(MarkDuplicatePreflight {
-        repository_id: repository.id,
-        repository_full_name: repository.name_with_owner,
+        repository_id: source_repository.id,
+        repository_full_name: source_repository.name_with_owner,
         source_id: source.id,
         canonical_id: canonical.id,
+        canonical_repository_full_name: canonical_repository.name_with_owner,
+        canonical_issue_number: canonical.number,
     })
 }
 
@@ -304,10 +344,14 @@ fn ensure_marked_snapshot(
             .repository_full_name
             .eq_ignore_ascii_case(&preflight.repository_full_name)
         || !snapshot.is_marked_duplicate()
-        || snapshot
-            .canonical
-            .as_ref()
-            .is_none_or(|canonical| canonical.node_id != preflight.canonical_id)
+        || snapshot.canonical.as_ref().is_none_or(|canonical| {
+            canonical.node_id != preflight.canonical_id
+                || canonical.reference.issue_number != preflight.canonical_issue_number
+                || !canonical
+                    .reference
+                    .full_name
+                    .eq_ignore_ascii_case(&preflight.canonical_repository_full_name)
+        })
     {
         return Err(write_may_have_persisted(
             "the GraphQL postflight did not match the requested duplicate state",
@@ -321,19 +365,30 @@ struct MarkDuplicatePreflight {
     repository_full_name: String,
     source_id: String,
     canonical_id: String,
-}
-
-#[derive(Deserialize)]
-struct MarkDuplicatePreflightResponse {
-    repository: Option<MarkDuplicateRepository>,
+    canonical_repository_full_name: String,
+    canonical_issue_number: u64,
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct MarkDuplicateRepository {
+struct MarkDuplicatePreflightResponse {
+    source_repository: Option<MarkDuplicateSourceRepository>,
+    canonical_repository: Option<MarkDuplicateCanonicalRepository>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct MarkDuplicateSourceRepository {
     id: String,
     name_with_owner: String,
     source: Option<MarkDuplicateSource>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct MarkDuplicateCanonicalRepository {
+    id: String,
+    name_with_owner: String,
     canonical: Option<MarkDuplicateCanonical>,
 }
 
@@ -357,12 +412,12 @@ struct MarkDuplicateCanonical {
     url: String,
     state_reason: Option<String>,
     duplicate_of: Option<GraphQlNode>,
-    repository: MarkDuplicateCanonicalRepository,
+    repository: MarkDuplicateCanonicalIssueRepository,
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct MarkDuplicateCanonicalRepository {
+struct MarkDuplicateCanonicalIssueRepository {
     id: String,
     name_with_owner: String,
 }

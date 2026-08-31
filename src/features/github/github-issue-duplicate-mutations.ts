@@ -7,7 +7,34 @@ import {
 } from "./github-issue-duplicate-queries";
 import { invalidateRepositoryIssue } from "./github-issue-mutations";
 import { invalidateIssueStateCapabilities } from "./github-issue-state-queries";
+import { parseGitHubIssueUrl } from "./github-issue-dependency-mutations";
+import { parseGitHubIssueNumber } from "./github-issue-relationship-mutations";
 import { githubQueryKeys } from "./github-queries";
+
+export type GitHubCanonicalIssueReference = {
+  owner: string;
+  repository: string;
+  issueNumber: number;
+};
+
+export function parseCanonicalIssueReference(
+  value: string,
+  source: { owner: string; repository: string; issueNumber: number }
+): GitHubCanonicalIssueReference | null {
+  const sameRepositoryNumber = parseGitHubIssueNumber(value);
+  const reference = sameRepositoryNumber
+    ? { owner: source.owner, repository: source.repository, issueNumber: sameRepositoryNumber }
+    : parseGitHubIssueUrl(value);
+  if (
+    !reference ||
+    (reference.issueNumber === source.issueNumber &&
+      reference.owner.toLowerCase() === source.owner.toLowerCase() &&
+      reference.repository.toLowerCase() === source.repository.toLowerCase())
+  ) {
+    return null;
+  }
+  return reference;
+}
 
 export function unmarkRepositoryIssueDuplicate(target: GitHubIssueDuplicateTarget) {
   return invoke<GitHubIssue>("github_unmark_repository_issue_duplicate", target);
@@ -15,11 +42,15 @@ export function unmarkRepositoryIssueDuplicate(target: GitHubIssueDuplicateTarge
 
 export function markRepositoryIssueDuplicate(
   target: GitHubIssueDuplicateTarget,
-  canonicalIssueNumber: number
+  canonical: GitHubCanonicalIssueReference
 ) {
   return invoke<GitHubIssue>("github_mark_repository_issue_duplicate", {
-    ...target,
-    canonicalIssueNumber,
+    input: {
+      ...target,
+      canonicalOwner: canonical.owner,
+      canonicalRepository: canonical.repository,
+      canonicalIssueNumber: canonical.issueNumber,
+    },
   });
 }
 

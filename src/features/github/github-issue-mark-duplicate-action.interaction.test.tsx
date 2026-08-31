@@ -53,6 +53,14 @@ const candidate: GitHubIssueDetailPage = {
   timelineHasMore: false,
 };
 
+const crossRepositoryCandidate: GitHubIssueDetailPage = {
+  ...candidate,
+  issue: {
+    ...candidate.issue,
+    url: "https://github.com/octocat/api/issues/9",
+  },
+};
+
 function capabilities(viewerCanClose: boolean) {
   return {
     repositoryId: "R_1",
@@ -116,7 +124,7 @@ describe("GitHub Issue mark duplicate action", () => {
     await user.click(
       await screen.findByRole("button", { name: "workspace.repositories.markIssueDuplicate" })
     );
-    await user.type(screen.getByLabelText("workspace.repositories.canonicalIssueNumber"), "9");
+    await user.type(screen.getByLabelText("workspace.repositories.canonicalIssueReference"), "9");
     await user.click(
       screen.getByRole("button", { name: "workspace.repositories.reviewDuplicateTarget" })
     );
@@ -135,11 +143,68 @@ describe("GitHub Issue mark duplicate action", () => {
 
     await waitFor(() =>
       expect(invoke).toHaveBeenCalledWith("github_mark_repository_issue_duplicate", {
-        owner: "octocat",
-        repository: "hello-world",
-        issueNumber: 7,
-        canonicalIssueNumber: 9,
-        expectedIssueNodeId: "I_7",
+        input: {
+          owner: "octocat",
+          repository: "hello-world",
+          issueNumber: 7,
+          canonicalOwner: "octocat",
+          canonicalRepository: "hello-world",
+          canonicalIssueNumber: 9,
+          expectedIssueNodeId: "I_7",
+        },
+      })
+    );
+  });
+
+  it("previews and marks an Issue from another repository by its exact GitHub URL", async () => {
+    vi.mocked(invoke).mockImplementation((command) => {
+      if (command === "github_get_repository_issue_state_capabilities") {
+        return Promise.resolve(capabilities(true));
+      }
+      if (command === "github_get_repository_issue") {
+        return Promise.resolve(crossRepositoryCandidate);
+      }
+      if (command === "github_mark_repository_issue_duplicate") {
+        return Promise.resolve({ ...issue, state: "closed", stateReason: "duplicate" });
+      }
+      return Promise.resolve();
+    });
+    const user = userEvent.setup();
+    renderAction();
+
+    await user.click(
+      await screen.findByRole("button", { name: "workspace.repositories.markIssueDuplicate" })
+    );
+    await user.type(
+      screen.getByLabelText("workspace.repositories.canonicalIssueReference"),
+      "https://github.com/octocat/api/issues/9"
+    );
+    await user.click(
+      screen.getByRole("button", { name: "workspace.repositories.reviewDuplicateTarget" })
+    );
+
+    expect(await screen.findByText("Canonical Issue")).toBeDefined();
+    expect(invoke).toHaveBeenCalledWith("github_get_repository_issue", {
+      owner: "octocat",
+      repository: "api",
+      issueNumber: 9,
+      timelinePage: 1,
+    });
+
+    await user.click(
+      screen.getByRole("button", { name: "workspace.repositories.markIssueDuplicateConfirm" })
+    );
+    await waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith("github_mark_repository_issue_duplicate", {
+        input: {
+          owner: "octocat",
+          repository: "hello-world",
+          issueNumber: 7,
+          canonicalOwner: "octocat",
+          canonicalRepository: "api",
+          canonicalIssueNumber: 9,
+          expectedIssueNodeId: "I_7",
+        },
       })
     );
   });
@@ -180,7 +245,7 @@ describe("GitHub Issue mark duplicate action", () => {
     await user.click(
       await screen.findByRole("button", { name: "workspace.repositories.markIssueDuplicate" })
     );
-    await user.type(screen.getByLabelText("workspace.repositories.canonicalIssueNumber"), "9");
+    await user.type(screen.getByLabelText("workspace.repositories.canonicalIssueReference"), "9");
     await user.click(
       screen.getByRole("button", { name: "workspace.repositories.reviewDuplicateTarget" })
     );
@@ -214,7 +279,7 @@ describe("GitHub Issue mark duplicate action", () => {
     await user.click(
       await screen.findByRole("button", { name: "workspace.repositories.markIssueDuplicate" })
     );
-    await user.type(screen.getByLabelText("workspace.repositories.canonicalIssueNumber"), "9");
+    await user.type(screen.getByLabelText("workspace.repositories.canonicalIssueReference"), "9");
     await user.click(
       screen.getByRole("button", { name: "workspace.repositories.reviewDuplicateTarget" })
     );
