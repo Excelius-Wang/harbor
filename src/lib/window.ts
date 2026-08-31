@@ -3,20 +3,11 @@ import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { emit, once } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { isSafeExternalUrl } from "./url-policy";
 
 const createWindowLoading: Record<string, boolean> = {};
 const destroyTimers: Record<string, number> = {};
 const destroyVersions: Record<string, number> = {};
-const SAFE_EXTERNAL_PROTOCOLS = new Set(["http:", "https:", "mailto:", "tel:"]);
-
-function isSafeExternalUrl(value: string) {
-  try {
-    const url = new URL(value);
-    return SAFE_EXTERNAL_PROTOCOLS.has(url.protocol) && !url.username && !url.password;
-  } catch {
-    return false;
-  }
-}
 
 export async function openExternalUrl(url: string) {
   if (!isSafeExternalUrl(url)) return;

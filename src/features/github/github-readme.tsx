@@ -6,6 +6,7 @@ import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 import parseStyle from "style-to-object";
 import { visit } from "unist-util-visit";
+import { normalizeSafeHttpBaseUrl } from "@/lib/url-policy";
 import type { GitHubRepositoryContentContext } from "./github-data";
 
 type GitHubReadmeProps = {
@@ -24,7 +25,6 @@ type GitHubReadmeProps = {
 
 const MAX_IMAGE_DIMENSION = 4096;
 const PIXEL_DIMENSION = /^([1-9]\d*)px$/i;
-const SAFE_BASE_PROTOCOLS = new Set(["http:", "https:"]);
 
 function normalizeImageDimension(value: unknown) {
   const dimension =
@@ -65,20 +65,6 @@ function rehypePreserveSafeImageDimensions() {
 
 function isAbsoluteUrl(destination: string) {
   return /^[a-z][a-z\d+.-]*:/i.test(destination);
-}
-
-function normalizeSafeBaseUrl(value: string | undefined) {
-  if (!value) return undefined;
-
-  try {
-    const url = new URL(value);
-    if (!SAFE_BASE_PROTOCOLS.has(url.protocol) || url.username || url.password) return undefined;
-    url.hash = "";
-    url.search = "";
-    return url.toString().replace(/\/+$/, "");
-  } catch {
-    return undefined;
-  }
 }
 
 function resolveRelativePath(destination: string, readmePath: string) {
@@ -124,10 +110,10 @@ export function resolveReadmeDestination({
   if (destination.startsWith("/")) return `https://github.com${destination}`;
 
   const resolvedPath = resolveRelativePath(destination, path);
-  const configuredBaseUrl = normalizeSafeBaseUrl(
+  const configuredBaseUrl = normalizeSafeHttpBaseUrl(
     kind === "image" ? (relativeImageBaseUrl ?? relativeBaseUrl) : relativeBaseUrl
   );
-  if (configuredBaseUrl) return `${configuredBaseUrl.replace(/\/+$/, "")}/${resolvedPath}`;
+  if (configuredBaseUrl) return `${configuredBaseUrl}/${resolvedPath}`;
   const route = kind === "image" ? "raw" : "blob";
   return `${repository.url}/${route}/${encodeURIComponent(reference)}/${resolvedPath}`;
 }
