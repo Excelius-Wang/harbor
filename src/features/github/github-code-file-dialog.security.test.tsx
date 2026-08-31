@@ -26,7 +26,8 @@ const repository: GitHubRepository = {
   isArchived: false,
 };
 
-beforeAll(() => {
+beforeAll(async () => {
+  await import("./github-readme");
   class ResizeObserverMock implements ResizeObserver {
     observe() {}
     unobserve() {}
