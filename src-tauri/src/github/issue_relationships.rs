@@ -15,8 +15,11 @@ use super::{
 };
 use crate::error::AppError;
 
+mod creation;
 mod mutations;
 
+use creation::create_issue_sub_issue_with_client;
+pub(crate) use creation::IssueSubIssueCreateMutation;
 use mutations::{
     add_issue_sub_issue_with_client, remove_issue_sub_issue_with_client,
     reprioritize_issue_sub_issue_with_client,
@@ -42,6 +45,16 @@ pub struct GitHubIssueSubIssuePriorityInput {
     pub(crate) placement: GitHubIssueSubIssuePlacement,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitHubIssueSubIssueCreateInput {
+    pub(crate) owner: String,
+    pub(crate) repository: String,
+    pub(crate) issue_number: u64,
+    pub(crate) title: String,
+    pub(crate) body: String,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GitHubIssueRelationshipsPage {
@@ -65,6 +78,12 @@ pub(crate) trait GitHubIssueRelationshipsClient: Send + Sync {
         token: &str,
         mutation: IssueSubIssueMutation<'_>,
     ) -> Result<(), AppError>;
+
+    async fn create_issue_sub_issue(
+        &self,
+        token: &str,
+        mutation: IssueSubIssueCreateMutation<'_>,
+    ) -> Result<GitHubIssueSummary, AppError>;
 
     async fn remove_issue_sub_issue(
         &self,
@@ -103,6 +122,14 @@ impl GitHubService {
             IssueSubIssueMutation::new(owner, repository, issue_number, sub_issue_number)?;
         let token = self.load_access_token().await?;
         self.client.add_issue_sub_issue(&token, mutation).await
+    }
+
+    pub async fn create_issue_sub_issue(
+        &self,
+        mutation: IssueSubIssueCreateMutation<'_>,
+    ) -> Result<GitHubIssueSummary, AppError> {
+        let token = self.load_access_token().await?;
+        self.client.create_issue_sub_issue(&token, mutation).await
     }
 
     pub async fn remove_issue_sub_issue(
@@ -147,6 +174,15 @@ impl GitHubIssueRelationshipsClient for OctocrabGitHubClient {
     ) -> Result<(), AppError> {
         let client = authenticated_client(token)?;
         add_issue_sub_issue_with_client(&client, mutation).await
+    }
+
+    async fn create_issue_sub_issue(
+        &self,
+        token: &str,
+        mutation: IssueSubIssueCreateMutation<'_>,
+    ) -> Result<GitHubIssueSummary, AppError> {
+        let client = authenticated_client(token)?;
+        create_issue_sub_issue_with_client(&client, mutation).await
     }
 
     async fn remove_issue_sub_issue(
@@ -287,6 +323,59 @@ impl GitHubIssueRelationshipsClient for super::tests::FakeGitHubClient {
             ("octocat", "hello-world", 7, 42)
         );
         Ok(())
+    }
+
+    async fn create_issue_sub_issue(
+        &self,
+        token: &str,
+        mutation: IssueSubIssueCreateMutation<'_>,
+    ) -> Result<GitHubIssueSummary, AppError> {
+        assert_eq!(token, "github-user-access-token");
+        assert_eq!(
+            (
+                mutation.current.owner,
+                mutation.current.repository,
+                mutation.current.issue_number,
+                mutation.title,
+                mutation.body,
+            ),
+            (
+                "octocat",
+                "hello-world",
+                7,
+                "Child work",
+                "Track the child work here.",
+            )
+        );
+        let mut issue = crate::github::issue::GitHubIssueClient::issue_detail(
+            self,
+            token,
+            mutation.current.owner,
+            mutation.current.repository,
+            mutation.current.issue_number,
+            1,
+        )
+        .await?
+        .issue;
+        issue.id = 42;
+        issue.reaction_subject.id = "I_octocat_hello-world_42".to_string();
+        issue.number = 42;
+        issue.title = mutation.title.to_string();
+        issue.body = Some(mutation.body.to_string());
+        issue.url = "https://github.com/octocat/hello-world/issues/42".to_string();
+        Ok(GitHubIssueSummary {
+            issue,
+            repository: crate::github::issue::GitHubIssueRepository {
+                owner: mutation.current.owner.to_string(),
+                name: mutation.current.repository.to_string(),
+                full_name: format!("{}/{}", mutation.current.owner, mutation.current.repository),
+                url: format!(
+                    "https://github.com/{}/{}",
+                    mutation.current.owner, mutation.current.repository
+                ),
+                default_branch: "main".to_string(),
+            },
+        })
     }
 
     async fn remove_issue_sub_issue(

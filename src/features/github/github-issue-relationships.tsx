@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAppTranslation } from "@/hooks/use-app-translation";
 import { parseIpcError } from "@/lib/ipc-error";
 import type { GitHubIssueSummary, GitHubRepositoryContentContext } from "./github-data";
+import { GitHubIssueCreateSubIssueAction } from "./github-issue-create-subissue-action";
 import {
   GitHubIssueAddSubIssueAction,
   GitHubIssueRemoveSubIssueAction,
@@ -97,7 +98,10 @@ function GitHubIssueRelationshipsContent({
               <RefreshCw className="text-muted-foreground size-3 animate-spin" />
             ) : null}
           </CardTitle>
-          <GitHubIssueAddSubIssueAction target={mutationTarget} />
+          <div className="flex items-center gap-1.5">
+            <GitHubIssueCreateSubIssueAction repository={repository} target={mutationTarget} />
+            <GitHubIssueAddSubIssueAction target={mutationTarget} />
+          </div>
         </div>
       </CardHeader>
       <CardContent className="px-0 py-1">

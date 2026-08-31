@@ -1,5 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
+import type { GitHubIssueSummary } from "./github-data";
 import { githubQueryKeys } from "./github-queries";
 import {
   githubIssueRelationshipQueryKeys,
@@ -25,6 +26,22 @@ export function addRepositoryIssueSubIssue(
     repository: target.repository,
     issueNumber: target.issueNumber,
     subIssueNumber,
+  });
+}
+
+export function createRepositoryIssueSubIssue(
+  target: GitHubIssueRelationshipMutationTarget,
+  title: string,
+  body: string
+) {
+  return invoke<GitHubIssueSummary>("github_create_repository_issue_sub_issue", {
+    input: {
+      owner: target.owner,
+      repository: target.repository,
+      issueNumber: target.issueNumber,
+      title,
+      body,
+    },
   });
 }
 
