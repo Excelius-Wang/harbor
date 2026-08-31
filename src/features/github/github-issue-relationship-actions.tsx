@@ -1,7 +1,17 @@
 import { useId, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { Link2Off, Plus } from "lucide-react";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -21,8 +31,10 @@ import {
   addRepositoryIssueSubIssue,
   parseGitHubIssueNumber,
   refreshRepositoryIssueRelationships,
+  removeRepositoryIssueSubIssue,
   type GitHubIssueRelationshipMutationTarget,
 } from "./github-issue-relationship-mutations";
+import type { GitHubIssueSummary } from "./github-data";
 
 function relationshipErrorTitle(code: string) {
   if (code === "githubPermission")
@@ -139,5 +151,80 @@ export function GitHubIssueAddSubIssueAction({
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+export function GitHubIssueRemoveSubIssueAction({
+  target,
+  subIssue,
+}: {
+  target: GitHubIssueRelationshipMutationTarget;
+  subIssue: GitHubIssueSummary;
+}) {
+  const { t } = useAppTranslation();
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const subIssueNumber = subIssue.issue.number;
+  const mutation = useMutation({
+    mutationFn: () => removeRepositoryIssueSubIssue(target, subIssueNumber),
+    onSuccess: () => {
+      setOpen(false);
+      toast.success(t("workspace.repositories.subIssueRemoved"));
+    },
+    onError: (error) => {
+      const parsed = parseIpcError(error);
+      toast.error(t(relationshipErrorTitle(parsed.code)), { description: parsed.message });
+    },
+    onSettled: () => {
+      void refreshRepositoryIssueRelationships(queryClient, target, subIssueNumber);
+    },
+  });
+  const subIssueLabel = `${subIssue.repository.fullName} #${subIssueNumber}`;
+
+  return (
+    <AlertDialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!mutation.isPending) setOpen(nextOpen);
+      }}
+    >
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-xs"
+        aria-label={t("workspace.repositories.removeSubIssue")}
+        disabled={mutation.isPending}
+        onClick={() => setOpen(true)}
+      >
+        <Link2Off />
+      </Button>
+      <AlertDialogContent size="sm">
+        <AlertDialogHeader>
+          <AlertDialogTitle>{t("workspace.repositories.removeSubIssueConfirm")}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {t("workspace.repositories.removeSubIssueDescription", { issue: subIssueLabel })}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={mutation.isPending}>{t("common.cancel")}</AlertDialogCancel>
+          <AlertDialogAction
+            variant="destructive"
+            disabled={mutation.isPending}
+            onClick={() => mutation.mutate()}
+          >
+            {mutation.isPending ? (
+              <Spinner data-icon="inline-start" />
+            ) : (
+              <Link2Off data-icon="inline-start" />
+            )}
+            {t(
+              mutation.isPending
+                ? "workspace.repositories.removingSubIssue"
+                : "workspace.repositories.removeSubIssueConfirm"
+            )}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

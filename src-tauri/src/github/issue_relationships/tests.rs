@@ -1,4 +1,6 @@
-use super::mutations::{add_issue_sub_issue_with_client, IssueSubIssueMutation};
+use super::mutations::{
+    add_issue_sub_issue_with_client, remove_issue_sub_issue_with_client, IssueSubIssueMutation,
+};
 use super::*;
 use crate::github::issue_related::{
     test_support::{assert_rest_request, issue_json, mock_github, MockResponse},
@@ -63,6 +65,131 @@ async fn transport_adds_an_unparented_same_repository_issue_without_replacing_a_
         serde_json::from_str::<serde_json::Value>(body).expect("payload JSON"),
         serde_json::json!({"sub_issue_id": 42, "replace_parent": false})
     );
+}
+
+#[tokio::test]
+async fn transport_removes_a_verified_same_repository_sub_issue() {
+    let mutation = sub_issue_mutation();
+    let (client, requests, server) = mock_github(vec![
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: issue_json("octocat", "hello-world", 7, "completed").to_string(),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: issue_json("octocat", "hello-world", 42, "completed").to_string(),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: issue_json("octocat", "hello-world", 7, "completed").to_string(),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: issue_json("octocat", "hello-world", 42, "completed").to_string(),
+        },
+        MockResponse {
+            status: "404 Not Found",
+            headers: vec![],
+            body: serde_json::json!({"message": "Not Found"}).to_string(),
+        },
+    ])
+    .await;
+
+    remove_issue_sub_issue_with_client(&client, mutation)
+        .await
+        .expect("sub-issue removed");
+    server.await.expect("mock server");
+
+    let requests = requests.lock().expect("requests");
+    assert_rest_request(&requests[0], "/repos/octocat/hello-world/issues/7");
+    assert_rest_request(&requests[1], "/repos/octocat/hello-world/issues/42");
+    assert_rest_request(&requests[2], "/repos/octocat/hello-world/issues/42/parent");
+    assert!(
+        requests[3].starts_with("DELETE /repos/octocat/hello-world/issues/7/sub_issue HTTP/1.1")
+    );
+    let body = requests[3]
+        .split_once("\r\n\r\n")
+        .map(|(_, body)| body)
+        .expect("request body");
+    assert_eq!(
+        serde_json::from_str::<serde_json::Value>(body).expect("payload JSON"),
+        serde_json::json!({"sub_issue_id": 42})
+    );
+    assert_rest_request(&requests[4], "/repos/octocat/hello-world/issues/42/parent");
+}
+
+#[tokio::test]
+async fn transport_rejects_removing_an_issue_from_a_different_parent() {
+    let (client, requests, server) = mock_github(vec![
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: issue_json("octocat", "hello-world", 7, "completed").to_string(),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: issue_json("octocat", "hello-world", 42, "completed").to_string(),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: issue_json("octocat", "hello-world", 8, "completed").to_string(),
+        },
+    ])
+    .await;
+
+    let error = remove_issue_sub_issue_with_client(&client, sub_issue_mutation())
+        .await
+        .expect_err("another parent's child cannot be removed");
+    server.await.expect("mock server");
+
+    assert!(error.to_string().contains("not a sub-issue"), "{error}");
+    assert_eq!(requests.lock().expect("requests").len(), 3);
+}
+
+#[tokio::test]
+async fn transport_reports_an_unconfirmed_sub_issue_removal() {
+    let (client, requests, server) = mock_github(vec![
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: issue_json("octocat", "hello-world", 7, "completed").to_string(),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: issue_json("octocat", "hello-world", 42, "completed").to_string(),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: issue_json("octocat", "hello-world", 7, "completed").to_string(),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: issue_json("octocat", "hello-world", 42, "completed").to_string(),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: issue_json("octocat", "hello-world", 7, "completed").to_string(),
+        },
+    ])
+    .await;
+
+    let error = remove_issue_sub_issue_with_client(&client, sub_issue_mutation())
+        .await
+        .expect_err("the write must be confirmed");
+    server.await.expect("mock server");
+
+    assert!(error.to_string().contains("could not confirm"), "{error}");
+    assert_eq!(requests.lock().expect("requests").len(), 5);
 }
 
 #[tokio::test]

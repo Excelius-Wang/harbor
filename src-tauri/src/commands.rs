@@ -1664,6 +1664,26 @@ pub async fn github_add_repository_issue_sub_issue(
 }
 
 #[tauri::command]
+pub async fn github_remove_repository_issue_sub_issue(
+    owner: String,
+    repository: String,
+    issue_number: u64,
+    sub_issue_number: u64,
+    state: State<'_, AppState>,
+) -> Result<(), AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .remove_issue_sub_issue(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(issue_number, "issue")?,
+            validate_item_number(sub_issue_number, "sub-issue")?,
+        )
+        .await
+}
+
+#[tauri::command]
 pub async fn github_get_repository_issue_dependencies(
     owner: String,
     repository: String,
