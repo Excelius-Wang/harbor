@@ -108,8 +108,10 @@ function loadLanguageModule(language: SupportedSyntaxLanguage): Promise<Language
       return import("@shikijs/langs/yaml");
     case "zig":
       return import("@shikijs/langs/zig");
-    default:
-      throw new Error(`Unsupported syntax language: ${language}`);
+    default: {
+      const unsupportedLanguage: never = language;
+      throw new Error(`Unsupported syntax language: ${unsupportedLanguage}`);
+    }
   }
 }
 
