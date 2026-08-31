@@ -12,7 +12,8 @@ use crate::error::AppError;
 
 mod mark;
 
-pub(super) use mark::{mark_issue_duplicate_with_client, IssueDuplicateMarkMutation};
+pub(super) use mark::mark_issue_duplicate_with_client;
+pub(crate) use mark::IssueDuplicateMarkMutation;
 
 const UNMARK_DUPLICATE_MUTATION: &str = r#"
 mutation HarborUnmarkIssueDuplicate($duplicateId: ID!, $canonicalId: ID!) {

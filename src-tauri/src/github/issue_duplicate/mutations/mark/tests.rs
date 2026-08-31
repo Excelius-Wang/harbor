@@ -7,14 +7,89 @@ use crate::{
 };
 
 fn mutation(canonical_issue_number: u64) -> IssueDuplicateMarkMutation<'static> {
-    IssueDuplicateMarkMutation::new("octocat", "hello-world", 7, canonical_issue_number, "I_7")
-        .expect("valid duplicate mutation")
+    IssueDuplicateMarkMutation::new(
+        "octocat",
+        "hello-world",
+        7,
+        "octocat",
+        "hello-world",
+        canonical_issue_number,
+        "I_7",
+    )
+    .expect("valid duplicate mutation")
+}
+
+fn cross_repository_mutation() -> IssueDuplicateMarkMutation<'static> {
+    IssueDuplicateMarkMutation::new("octocat", "hello-world", 7, "octocat", "api", 9, "I_7")
+        .expect("valid cross-repository duplicate mutation")
+}
+
+fn cross_repository_preflight_response() -> String {
+    serde_json::json!({
+        "data": {
+            "sourceRepository": {
+                "id": "R_1",
+                "nameWithOwner": "octocat/hello-world",
+                "source": {
+                    "id": "I_7",
+                    "number": 7,
+                    "state": "OPEN",
+                    "stateReason": null,
+                    "duplicateOf": null,
+                    "viewerCanClose": true
+                }
+            },
+            "canonicalRepository": {
+                "id": "R_9",
+                "nameWithOwner": "octocat/api",
+                "canonical": {
+                    "id": "I_9",
+                    "number": 9,
+                    "title": "Canonical Issue",
+                    "url": "https://github.com/octocat/api/issues/9",
+                    "stateReason": null,
+                    "duplicateOf": null,
+                    "repository": {
+                        "id": "R_9",
+                        "nameWithOwner": "octocat/api"
+                    }
+                }
+            }
+        }
+    })
+    .to_string()
+}
+
+fn cross_repository_postflight_response() -> String {
+    serde_json::json!({
+        "data": {
+            "repository": {
+                "id": "R_1",
+                "nameWithOwner": "octocat/hello-world",
+                "viewerPermission": "WRITE",
+                "issue": {
+                    "id": "I_7",
+                    "number": 7,
+                    "state": "CLOSED",
+                    "stateReason": "DUPLICATE",
+                    "duplicateOf": {
+                        "id": "I_9",
+                        "number": 9,
+                        "title": "Canonical Issue",
+                        "url": "https://github.com/octocat/api/issues/9",
+                        "repository": { "nameWithOwner": "octocat/api" }
+                    }
+                }
+            }
+        }
+    })
+    .to_string()
 }
 
 fn preflight_response(source_state: &str, viewer_can_close: bool, canonical_id: &str) -> String {
     serde_json::json!({
         "data": {
-            "repository": {
+            "sourceRepository": {
                 "id": "R_1",
                 "nameWithOwner": "octocat/hello-world",
                 "source": {
@@ -24,7 +99,11 @@ fn preflight_response(source_state: &str, viewer_can_close: bool, canonical_id: 
                     "stateReason": null,
                     "duplicateOf": null,
                     "viewerCanClose": viewer_can_close
-                },
+                }
+            },
+            "canonicalRepository": {
+                "id": "R_1",
+                "nameWithOwner": "octocat/hello-world",
                 "canonical": {
                     "id": canonical_id,
                     "number": 9,
@@ -106,11 +185,121 @@ fn graphql_payload(request: &str) -> serde_json::Value {
 
 #[test]
 fn mutation_rejects_the_current_issue_as_its_own_canonical_issue() {
-    let error = IssueDuplicateMarkMutation::new("octocat", "hello-world", 7, 7, "I_7")
-        .err()
-        .expect("self duplicate");
+    let error = IssueDuplicateMarkMutation::new(
+        "octocat",
+        "hello-world",
+        7,
+        "OCTOCAT",
+        "HELLO-WORLD",
+        7,
+        "I_7",
+    )
+    .err()
+    .expect("self duplicate");
 
     assert!(matches!(error, AppError::Validation(_)));
+}
+
+#[test]
+fn mutation_accepts_the_same_issue_number_in_another_repository() {
+    IssueDuplicateMarkMutation::new("octocat", "hello-world", 7, "octocat", "api", 7, "I_7")
+        .expect("same number in another repository is a different Issue");
+}
+
+#[tokio::test]
+async fn transport_marks_an_authoritative_cross_repository_issue_as_duplicate() {
+    let (client, requests, server) = mock_github(vec![
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: cross_repository_preflight_response(),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: mutation_response("I_7", "I_9"),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: cross_repository_postflight_response(),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: rest_issue(),
+        },
+    ])
+    .await;
+
+    let issue = mark_issue_duplicate_with_client(&client, cross_repository_mutation())
+        .await
+        .expect("cross-repository duplicate marked");
+    server.await.expect("mock server");
+
+    assert_eq!(issue.state_reason.as_deref(), Some("duplicate"));
+    let requests = requests.lock().expect("requests");
+    assert_eq!(requests.len(), 4);
+    let preflight = graphql_payload(&requests[0]);
+    assert_eq!(preflight["variables"]["sourceOwner"], "octocat");
+    assert_eq!(preflight["variables"]["sourceRepository"], "hello-world");
+    assert_eq!(preflight["variables"]["canonicalOwner"], "octocat");
+    assert_eq!(preflight["variables"]["canonicalRepository"], "api");
+    assert!(preflight["query"]
+        .as_str()
+        .expect("preflight query")
+        .contains("canonicalRepository: repository"));
+}
+
+#[tokio::test]
+async fn transport_rejects_a_different_cross_repository_canonical_before_writing() {
+    let (client, requests, server) = mock_github(vec![MockResponse {
+        status: "200 OK",
+        headers: vec![],
+        body: cross_repository_preflight_response().replace("octocat/api", "octocat/other"),
+    }])
+    .await;
+
+    let error = mark_issue_duplicate_with_client(&client, cross_repository_mutation())
+        .await
+        .expect_err("canonical repository must match the requested target");
+    server.await.expect("mock server");
+
+    assert!(matches!(error, AppError::GitHubIssueStateConflict(_)));
+    assert_eq!(requests.lock().expect("requests").len(), 1);
+}
+
+#[tokio::test]
+async fn transport_rejects_a_changed_cross_repository_canonical_after_writing() {
+    let (client, requests, server) = mock_github(vec![
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: cross_repository_preflight_response(),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: mutation_response("I_7", "I_9"),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: cross_repository_postflight_response().replace("octocat/api", "octocat/other"),
+        },
+    ])
+    .await;
+
+    let error = mark_issue_duplicate_with_client(&client, cross_repository_mutation())
+        .await
+        .expect_err("postflight canonical repository must remain exact");
+    server.await.expect("mock server");
+
+    assert!(matches!(
+        error,
+        AppError::GitHubIssueStateConflict(message) if message.contains("may have persisted")
+    ));
+    assert_eq!(requests.lock().expect("requests").len(), 3);
 }
 
 #[tokio::test]
@@ -225,7 +414,8 @@ async fn transport_rejects_a_mismatched_canonical_identity_before_writing() {
 async fn transport_rejects_a_canonical_issue_that_is_itself_a_duplicate() {
     let mut response: serde_json::Value =
         serde_json::from_str(&preflight_response("OPEN", true, "I_9")).expect("preflight response");
-    response["data"]["repository"]["canonical"]["stateReason"] = serde_json::json!("DUPLICATE");
+    response["data"]["canonicalRepository"]["canonical"]["stateReason"] =
+        serde_json::json!("DUPLICATE");
     let (client, requests, server) = mock_github(vec![MockResponse {
         status: "200 OK",
         headers: vec![],

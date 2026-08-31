@@ -21,10 +21,10 @@ import { parseIpcError } from "@/lib/ipc-error";
 import type { GitHubIssue, GitHubRepositoryContentContext } from "./github-data";
 import {
   markRepositoryIssueDuplicate,
+  parseCanonicalIssueReference,
   refreshRepositoryIssueDuplicate,
 } from "./github-issue-duplicate-mutations";
 import { syncUpdatedIssue } from "./github-issue-mutations";
-import { parseGitHubIssueNumber } from "./github-issue-relationship-mutations";
 import { normalizeIssueStateReason } from "./github-issue-state";
 import {
   issueStateCapabilitiesMatchIssue,
@@ -66,22 +66,22 @@ export function GitHubIssueMarkDuplicateAction({
     ...issueStateCapabilitiesQueryOptions(issueTarget, issue.updatedAt),
     enabled: eligibleIssue,
   });
-  const canonicalIssueNumber = parseGitHubIssueNumber(value);
-  const invalidCanonical =
-    value.trim().length > 0 && (!canonicalIssueNumber || canonicalIssueNumber === issue.number);
+  const canonicalIssue = parseCanonicalIssueReference(value, issueTarget);
+  const invalidCanonical = value.trim().length > 0 && !canonicalIssue;
   const candidate = useMutation({
-    mutationFn: (issueNumber: number) =>
+    mutationFn: (canonical: NonNullable<typeof canonicalIssue>) =>
       queryClient.fetchQuery(
         repositoryIssueDetailQueryOptions({
-          owner: repository.owner,
-          repository: repository.name,
-          issueNumber,
+          owner: canonical.owner,
+          repository: canonical.repository,
+          issueNumber: canonical.issueNumber,
           timelinePage: 1,
         })
       ),
   });
   const mutation = useMutation({
-    mutationFn: (issueNumber: number) => markRepositoryIssueDuplicate(mutationTarget, issueNumber),
+    mutationFn: (canonical: NonNullable<typeof canonicalIssue>) =>
+      markRepositoryIssueDuplicate(mutationTarget, canonical),
     onSuccess: (updatedIssue) => {
       syncUpdatedIssue(queryClient, issueTarget, updatedIssue);
       setOpen(false);
@@ -93,13 +93,9 @@ export function GitHubIssueMarkDuplicateAction({
       const parsed = parseIpcError(error);
       toast.error(t(markDuplicateErrorTitle(parsed.code)), { description: parsed.message });
     },
-    onSettled: (_data, _error, issueNumber) => {
-      if (!issueNumber) return;
-      void refreshRepositoryIssueDuplicate(queryClient, mutationTarget, {
-        owner: repository.owner,
-        repository: repository.name,
-        issueNumber,
-      });
+    onSettled: (_data, _error, canonical) => {
+      if (!canonical) return;
+      void refreshRepositoryIssueDuplicate(queryClient, mutationTarget, canonical);
     },
   });
   const capabilities = capabilityResult.data;
@@ -121,8 +117,14 @@ export function GitHubIssueMarkDuplicateAction({
 
   if (!canMark) return null;
 
-  const previewIssue =
-    candidate.data && candidate.variables === canonicalIssueNumber ? candidate.data.issue : null;
+  const candidateMatches =
+    candidate.variables &&
+    canonicalIssue &&
+    candidate.variables.issueNumber === canonicalIssue.issueNumber &&
+    candidate.variables.owner.toLowerCase() === canonicalIssue.owner.toLowerCase() &&
+    candidate.variables.repository.toLowerCase() === canonicalIssue.repository.toLowerCase();
+  const reviewedCanonical = candidateMatches ? candidate.variables : null;
+  const previewIssue = candidate.data && reviewedCanonical ? candidate.data.issue : null;
   const candidateIsDuplicate = normalizeIssueStateReason(previewIssue?.stateReason) === "duplicate";
   const candidateIssue = previewIssue && !candidateIsDuplicate ? previewIssue : null;
   const candidateError = candidate.error ? parseIpcError(candidate.error) : null;
@@ -144,7 +146,7 @@ export function GitHubIssueMarkDuplicateAction({
           className="flex flex-col gap-6"
           onSubmit={(event) => {
             event.preventDefault();
-            if (candidateIssue && canonicalIssueNumber) mutation.mutate(canonicalIssueNumber);
+            if (candidateIssue && reviewedCanonical) mutation.mutate(reviewedCanonical);
           }}
         >
           <DialogHeader>
@@ -156,17 +158,16 @@ export function GitHubIssueMarkDuplicateAction({
           <FieldGroup>
             <Field data-invalid={invalidCanonical || undefined}>
               <FieldLabel htmlFor={issueNumberId}>
-                {t("workspace.repositories.canonicalIssueNumber")}
+                {t("workspace.repositories.canonicalIssueReference")}
               </FieldLabel>
               <div className="flex gap-2">
                 <Input
                   id={issueNumberId}
-                  inputMode="numeric"
                   autoComplete="off"
                   value={value}
                   aria-invalid={invalidCanonical || undefined}
                   disabled={busy}
-                  placeholder="42"
+                  placeholder="42 or https://github.com/owner/repository/issues/42"
                   onChange={(event) => {
                     setValue(event.target.value);
                     candidate.reset();
@@ -175,9 +176,9 @@ export function GitHubIssueMarkDuplicateAction({
                 <Button
                   type="button"
                   variant="outline"
-                  disabled={!canonicalIssueNumber || invalidCanonical || busy}
+                  disabled={!canonicalIssue || invalidCanonical || busy}
                   onClick={() => {
-                    if (canonicalIssueNumber) candidate.mutate(canonicalIssueNumber);
+                    if (canonicalIssue) candidate.mutate(canonicalIssue);
                   }}
                 >
                   {candidate.isPending ? (
@@ -194,8 +195,8 @@ export function GitHubIssueMarkDuplicateAction({
               </div>
               <FieldDescription>
                 {invalidCanonical
-                  ? t("workspace.repositories.invalidCanonicalIssueNumber")
-                  : t("workspace.repositories.canonicalIssueNumberDescription")}
+                  ? t("workspace.repositories.invalidCanonicalIssueReference")
+                  : t("workspace.repositories.canonicalIssueReferenceDescription")}
               </FieldDescription>
             </Field>
             {candidateError ? (
@@ -218,13 +219,13 @@ export function GitHubIssueMarkDuplicateAction({
                 </AlertDescription>
               </Alert>
             ) : null}
-            {candidateIssue ? (
+            {candidateIssue && reviewedCanonical ? (
               <Alert>
                 <Copy />
                 <AlertTitle>{candidateIssue.title}</AlertTitle>
                 <AlertDescription>
                   {t("workspace.repositories.markIssueDuplicateConfirmDescription", {
-                    issue: `#${candidateIssue.number}`,
+                    issue: `${reviewedCanonical.owner}/${reviewedCanonical.repository} #${candidateIssue.number}`,
                   })}
                 </AlertDescription>
               </Alert>
@@ -238,7 +239,7 @@ export function GitHubIssueMarkDuplicateAction({
             </DialogClose>
             <Button
               type="submit"
-              disabled={!candidateIssue || !canonicalIssueNumber || mutation.isPending}
+              disabled={!candidateIssue || !reviewedCanonical || mutation.isPending}
             >
               {mutation.isPending ? (
                 <Spinner data-icon="inline-start" />

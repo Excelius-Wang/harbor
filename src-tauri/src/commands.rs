@@ -1797,26 +1797,40 @@ pub async fn github_unmark_repository_issue_duplicate(
         .await
 }
 
-#[tauri::command]
-pub async fn github_mark_repository_issue_duplicate(
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitHubIssueDuplicateMarkInput {
     owner: String,
     repository: String,
     issue_number: u64,
+    canonical_owner: String,
+    canonical_repository: String,
     canonical_issue_number: u64,
     expected_issue_node_id: String,
+}
+
+#[tauri::command]
+pub async fn github_mark_repository_issue_duplicate(
+    input: GitHubIssueDuplicateMarkInput,
     state: State<'_, AppState>,
 ) -> Result<GitHubIssue, AppError> {
-    let repository = RepositoryRef::new(owner, repository)?;
-    state
-        .github
-        .mark_issue_duplicate(
-            repository.owner(),
-            repository.name(),
-            validate_item_number(issue_number, "issue")?,
-            validate_item_number(canonical_issue_number, "canonical issue")?,
-            &validate_graphql_node_id(expected_issue_node_id, "issue")?,
-        )
-        .await
+    let repository = RepositoryRef::new(input.owner, input.repository)?;
+    let canonical_repository =
+        RepositoryRef::new(input.canonical_owner, input.canonical_repository)?;
+    let issue_number = validate_item_number(input.issue_number, "issue")?;
+    let canonical_issue_number =
+        validate_item_number(input.canonical_issue_number, "canonical issue")?;
+    let expected_issue_node_id = validate_graphql_node_id(input.expected_issue_node_id, "issue")?;
+    let mutation = crate::github::issue_duplicate::IssueDuplicateMarkMutation::new(
+        repository.owner(),
+        repository.name(),
+        issue_number,
+        canonical_repository.owner(),
+        canonical_repository.name(),
+        canonical_issue_number,
+        &expected_issue_node_id,
+    )?;
+    state.github.mark_issue_duplicate(mutation).await
 }
 
 #[tauri::command]

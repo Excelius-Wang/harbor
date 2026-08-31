@@ -14,9 +14,9 @@ use crate::error::AppError;
 
 mod mutations;
 
+pub(crate) use mutations::IssueDuplicateMarkMutation;
 use mutations::{
-    mark_issue_duplicate_with_client, unmark_issue_duplicate_with_client,
-    IssueDuplicateMarkMutation, IssueDuplicateMutation,
+    mark_issue_duplicate_with_client, unmark_issue_duplicate_with_client, IssueDuplicateMutation,
 };
 
 const ISSUE_DUPLICATE_QUERY: &str = r#"
@@ -107,19 +107,8 @@ impl GitHubService {
 
     pub async fn mark_issue_duplicate(
         &self,
-        owner: &str,
-        repository: &str,
-        issue_number: u64,
-        canonical_issue_number: u64,
-        expected_issue_node_id: &str,
+        mutation: IssueDuplicateMarkMutation<'_>,
     ) -> Result<GitHubIssue, AppError> {
-        let mutation = IssueDuplicateMarkMutation::new(
-            owner,
-            repository,
-            issue_number,
-            canonical_issue_number,
-            expected_issue_node_id,
-        )?;
         let token = self.load_access_token().await?;
         self.client.mark_issue_duplicate(&token, mutation).await
     }
@@ -417,10 +406,12 @@ impl GitHubIssueDuplicateClient for super::tests::FakeGitHubClient {
                 mutation.request.owner,
                 mutation.request.repository,
                 mutation.request.issue_number,
+                mutation.canonical_owner,
+                mutation.canonical_repository,
                 mutation.canonical_issue_number,
                 mutation.request.expected_issue_node_id,
             ),
-            ("octocat", "hello-world", 7, 9, "I_7")
+            ("octocat", "hello-world", 7, "octocat", "api", 9, "I_7",)
         );
         Ok(crate::github::issue::GitHubIssueClient::issue_detail(
             self,

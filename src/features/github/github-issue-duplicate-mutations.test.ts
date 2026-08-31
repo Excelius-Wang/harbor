@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { GitHubIssueDuplicateReference } from "./github-data";
 import {
   markRepositoryIssueDuplicate,
+  parseCanonicalIssueReference,
   refreshRepositoryIssueDuplicate,
   unmarkRepositoryIssueDuplicate,
 } from "./github-issue-duplicate-mutations";
@@ -40,13 +41,51 @@ describe("GitHub Issue duplicate mutations", () => {
       .mockResolvedValueOnce({ number: target.issueNumber });
 
     await unmarkRepositoryIssueDuplicate(target);
-    await markRepositoryIssueDuplicate(target, 9);
+    await markRepositoryIssueDuplicate(target, {
+      owner: "octocat",
+      repository: "api",
+      issueNumber: 9,
+    });
 
     expect(invoke).toHaveBeenNthCalledWith(1, "github_unmark_repository_issue_duplicate", target);
     expect(invoke).toHaveBeenNthCalledWith(2, "github_mark_repository_issue_duplicate", {
-      ...target,
-      canonicalIssueNumber: 9,
+      input: {
+        ...target,
+        canonicalOwner: "octocat",
+        canonicalRepository: "api",
+        canonicalIssueNumber: 9,
+      },
     });
+  });
+
+  it("accepts same-repository numbers and exact cross-repository Issue URLs", () => {
+    expect(parseCanonicalIssueReference("9", target)).toEqual({
+      owner: "octocat",
+      repository: "hello-world",
+      issueNumber: 9,
+    });
+    expect(parseCanonicalIssueReference("https://github.com/octocat/api/issues/9", target)).toEqual(
+      { owner: "octocat", repository: "api", issueNumber: 9 }
+    );
+    expect(parseCanonicalIssueReference("https://github.com/octocat/api/issues/7", target)).toEqual(
+      { owner: "octocat", repository: "api", issueNumber: 7 }
+    );
+    expect(parseCanonicalIssueReference("7", target)).toBeNull();
+    expect(
+      parseCanonicalIssueReference("https://github.com/OCTOCAT/HELLO-WORLD/issues/7", target)
+    ).toBeNull();
+    expect(
+      parseCanonicalIssueReference("https://example.com/octocat/api/issues/9", target)
+    ).toBeNull();
+    expect(
+      parseCanonicalIssueReference("https://github.com/octocat/api/pull/9", target)
+    ).toBeNull();
+    expect(
+      parseCanonicalIssueReference("https://github.com/octocat/api/issues/9?redirected=1", target)
+    ).toBeNull();
+    expect(
+      parseCanonicalIssueReference("https://github.com/octocat/api/issues/9/extra", target)
+    ).toBeNull();
   });
 
   it("refreshes source, duplicate, state, list, inbox, and canonical Issue caches", async () => {

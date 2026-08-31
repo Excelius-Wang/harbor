@@ -28,7 +28,9 @@ export function parseGitHubIssueUrl(value: string): GitHubIssueDependencyReferen
     ) {
       return null;
     }
-    const [owner, repository, kind, issueNumber] = url.pathname.split("/").filter(Boolean);
+    const segments = url.pathname.split("/").filter(Boolean);
+    if (segments.length !== 4) return null;
+    const [owner, repository, kind, issueNumber] = segments;
     if (
       !owner ||
       !repository ||
