@@ -28,17 +28,10 @@ export function parseGitHubIssueUrl(value: string): GitHubIssueDependencyReferen
     ) {
       return null;
     }
-    const segments = url.pathname.split("/").filter(Boolean);
-    if (segments.length !== 4) return null;
-    const [owner, repository, kind, issueNumber] = segments;
-    if (
-      !owner ||
-      !repository ||
-      kind !== "issues" ||
-      !issueNumber ||
-      !/^[1-9]\d*$/.test(issueNumber) ||
-      !Number.isSafeInteger(Number(issueNumber))
-    ) {
+    const path = /^\/([^/]+)\/([^/]+)\/issues\/([1-9]\d*)$/.exec(url.pathname);
+    if (!path) return null;
+    const [, owner, repository, issueNumber] = path;
+    if (!owner || !repository || !issueNumber || !Number.isSafeInteger(Number(issueNumber))) {
       return null;
     }
     return { owner, repository, issueNumber: Number(issueNumber) };

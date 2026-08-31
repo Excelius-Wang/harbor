@@ -86,6 +86,12 @@ describe("GitHub Issue duplicate mutations", () => {
     expect(
       parseCanonicalIssueReference("https://github.com/octocat/api/issues/9/extra", target)
     ).toBeNull();
+    expect(
+      parseCanonicalIssueReference("https://github.com//octocat/api/issues/9", target)
+    ).toBeNull();
+    expect(
+      parseCanonicalIssueReference("https://github.com/octocat/api/issues/9/", target)
+    ).toBeNull();
   });
 
   it("refreshes source, duplicate, state, list, inbox, and canonical Issue caches", async () => {
