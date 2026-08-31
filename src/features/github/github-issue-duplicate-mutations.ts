@@ -1,6 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
-import type { GitHubIssue, GitHubIssueDuplicateReference } from "./github-data";
+import type { GitHubIssue } from "./github-data";
 import {
   githubIssueDuplicateQueryKeys,
   type GitHubIssueDuplicateTarget,
@@ -13,10 +13,20 @@ export function unmarkRepositoryIssueDuplicate(target: GitHubIssueDuplicateTarge
   return invoke<GitHubIssue>("github_unmark_repository_issue_duplicate", target);
 }
 
+export function markRepositoryIssueDuplicate(
+  target: GitHubIssueDuplicateTarget,
+  canonicalIssueNumber: number
+) {
+  return invoke<GitHubIssue>("github_mark_repository_issue_duplicate", {
+    ...target,
+    canonicalIssueNumber,
+  });
+}
+
 export async function refreshRepositoryIssueDuplicate(
   queryClient: QueryClient,
   target: GitHubIssueDuplicateTarget,
-  canonical: GitHubIssueDuplicateReference
+  canonical: { owner: string; repository: string; issueNumber: number }
 ) {
   await Promise.all([
     invalidateRepositoryIssue(queryClient, target),
