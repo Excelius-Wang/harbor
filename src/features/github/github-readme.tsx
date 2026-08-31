@@ -6,6 +6,7 @@ import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 import parseStyle from "style-to-object";
 import { visit } from "unist-util-visit";
+import { normalizeSafeHttpBaseUrl } from "@/lib/url-policy";
 import type { GitHubRepositoryContentContext } from "./github-data";
 
 type GitHubReadmeProps = {
@@ -109,9 +110,10 @@ export function resolveReadmeDestination({
   if (destination.startsWith("/")) return `https://github.com${destination}`;
 
   const resolvedPath = resolveRelativePath(destination, path);
-  const configuredBaseUrl =
-    kind === "image" ? (relativeImageBaseUrl ?? relativeBaseUrl) : relativeBaseUrl;
-  if (configuredBaseUrl) return `${configuredBaseUrl.replace(/\/+$/, "")}/${resolvedPath}`;
+  const configuredBaseUrl = normalizeSafeHttpBaseUrl(
+    kind === "image" ? (relativeImageBaseUrl ?? relativeBaseUrl) : relativeBaseUrl
+  );
+  if (configuredBaseUrl) return `${configuredBaseUrl}/${resolvedPath}`;
   const route = kind === "image" ? "raw" : "blob";
   return `${repository.url}/${route}/${encodeURIComponent(reference)}/${resolvedPath}`;
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { CircleAlert, GitCommitHorizontal } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -27,10 +27,6 @@ import { GitHubMarkdownEditor } from "./github-markdown-editor";
 
 function normalizePath(path: string) {
   return path.trim().replace(/^\/+|\/+$/g, "");
-}
-
-function directoryForPath(path: string) {
-  return path.split("/").slice(0, -1).join("/");
 }
 
 function isMarkdownPath(path: string) {
@@ -102,7 +98,6 @@ export function GitHubCodeFileDialog({
     !editing || normalizedPath !== initialPath || content !== (initialContent ?? "");
   const error = mutation.error ? parseIpcError(mutation.error) : null;
   const markdown = isMarkdownPath(normalizedPath);
-  const relativeBaseUrl = useMemo(() => directoryForPath(normalizedPath), [normalizedPath]);
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !mutation.isPending && onOpenChange(nextOpen)}>
@@ -189,9 +184,9 @@ export function GitHubCodeFileDialog({
                   id="github-code-file-content"
                   name="content"
                   value={content}
+                  path={normalizedPath}
                   repository={repository}
                   reference={branch}
-                  relativeBaseUrl={relativeBaseUrl}
                   placeholder={t("workspace.repositories.repositoryFileContentPlaceholder")}
                   disabled={mutation.isPending}
                   minHeightClassName="min-h-72"

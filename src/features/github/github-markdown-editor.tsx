@@ -13,6 +13,7 @@ export function GitHubMarkdownEditor({
   id,
   name,
   value,
+  path = "",
   repository,
   reference,
   relativeBaseUrl,
@@ -29,6 +30,7 @@ export function GitHubMarkdownEditor({
   id: string;
   name: string;
   value: string;
+  path?: string;
   repository: GitHubRepositoryContentContext;
   reference: string;
   relativeBaseUrl?: string;
@@ -93,7 +95,7 @@ export function GitHubMarkdownEditor({
             <Suspense fallback={<Skeleton className="h-20 w-full" />}>
               <GitHubReadme
                 content={value}
-                path=""
+                path={path}
                 reference={reference}
                 repository={repository}
                 relativeBaseUrl={relativeBaseUrl}
