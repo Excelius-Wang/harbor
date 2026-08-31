@@ -26,6 +26,20 @@ import {
   type GitHubIssueRelationshipMutationTarget,
 } from "./github-issue-relationship-mutations";
 
+function creationErrorTitle(code: string) {
+  if (code === "githubPermission")
+    return "workspace.repositories.issueRelationshipWritePermissionDenied";
+  if (code === "githubRateLimited") return "workspace.repositories.githubRateLimited";
+  return "workspace.repositories.createSubIssueFailed";
+}
+
+function creationPolicyErrorTitle(code: string) {
+  if (code === "githubPermission")
+    return "workspace.repositories.issueCreationPolicyPermissionDenied";
+  if (code === "githubRateLimited") return "workspace.repositories.githubRateLimited";
+  return "workspace.repositories.issueCreationPolicyLoadFailed";
+}
+
 export function GitHubIssueCreateSubIssueAction({
   repository,
   target,
@@ -102,13 +116,7 @@ export function GitHubIssueCreateSubIssueAction({
         ) : !policyResult.data ? (
           <Alert variant="destructive">
             <CircleAlert />
-            <AlertTitle>
-              {t(
-                policyError?.code === "githubPermission"
-                  ? "workspace.repositories.issueCreationPolicyPermissionDenied"
-                  : "workspace.repositories.issueCreationPolicyLoadFailed"
-              )}
-            </AlertTitle>
+            <AlertTitle>{t(creationPolicyErrorTitle(policyError?.code ?? "github"))}</AlertTitle>
             <AlertDescription className="flex flex-wrap items-center gap-3">
               <span className="min-w-0 flex-1">{policyError?.message}</span>
               <Button
@@ -146,11 +154,7 @@ export function GitHubIssueCreateSubIssueAction({
             submitLabel={t("workspace.repositories.createSubIssueConfirm")}
             pendingLabel={t("workspace.repositories.creatingSubIssue")}
             pending={mutation.isPending}
-            errorTitle={t(
-              mutationError?.code === "githubPermission"
-                ? "workspace.repositories.issueRelationshipWritePermissionDenied"
-                : "workspace.repositories.createSubIssueFailed"
-            )}
+            errorTitle={t(creationErrorTitle(mutationError?.code ?? "github"))}
             errorMessage={mutationError?.message}
             onChange={() => {
               if (mutation.isError) mutation.reset();

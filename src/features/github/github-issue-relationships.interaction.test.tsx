@@ -260,6 +260,31 @@ describe("GitHub Issue relationships", () => {
     );
   });
 
+  it("labels a sub-issue creation policy rate limit explicitly", async () => {
+    vi.mocked(invoke).mockImplementation((command) => {
+      if (command === "github_get_repository_issue_relationships") {
+        return Promise.resolve({
+          parent: null,
+          subIssues: [],
+          page: 1,
+          hasPrevious: false,
+          hasMore: false,
+        });
+      }
+      if (command === "github_get_repository_issue_creation_policy") {
+        return Promise.reject({ code: "githubRateLimited", message: "slow down" });
+      }
+      return Promise.resolve();
+    });
+    const user = userEvent.setup();
+    renderRelationships();
+
+    await screen.findByText("workspace.repositories.noIssueRelationships");
+    await user.click(screen.getByRole("button", { name: "workspace.repositories.createSubIssue" }));
+
+    expect(await screen.findByText("workspace.repositories.githubRateLimited")).toBeDefined();
+  });
+
   it("preserves the new sub-issue title after a failed write", async () => {
     vi.mocked(invoke).mockImplementation((command) => {
       if (command === "github_get_repository_issue_relationships") {
@@ -297,6 +322,46 @@ describe("GitHub Issue relationships", () => {
 
     expect(await screen.findByText("write failed")).toBeDefined();
     expect((title as HTMLInputElement).value).toBe("Keep this child title");
+  });
+
+  it("labels a new sub-issue write rate limit explicitly", async () => {
+    vi.mocked(invoke).mockImplementation((command) => {
+      if (command === "github_get_repository_issue_relationships") {
+        return Promise.resolve({
+          parent: null,
+          subIssues: [],
+          page: 1,
+          hasPrevious: false,
+          hasMore: false,
+        });
+      }
+      if (command === "github_get_repository_issue_creation_policy") {
+        return Promise.resolve({
+          blankIssueAllowed: true,
+          contactLinks: [],
+          templates: [],
+          templateChooserUrl: "https://github.com/octocat/hello-world/issues/new/choose",
+        });
+      }
+      if (command === "github_create_repository_issue_sub_issue") {
+        return Promise.reject({ code: "githubRateLimited", message: "slow down" });
+      }
+      return Promise.resolve();
+    });
+    const user = userEvent.setup();
+    renderRelationships();
+
+    await screen.findByText("workspace.repositories.noIssueRelationships");
+    await user.click(screen.getByRole("button", { name: "workspace.repositories.createSubIssue" }));
+    await user.type(
+      await screen.findByLabelText("workspace.repositories.issueTitle"),
+      "Rate-limited child"
+    );
+    await user.click(
+      screen.getByRole("button", { name: "workspace.repositories.createSubIssueConfirm" })
+    );
+
+    expect(await screen.findByText("workspace.repositories.githubRateLimited")).toBeDefined();
   });
 
   it("confirms before removing a same-repository sub-issue", async () => {
