@@ -10,7 +10,7 @@ use super::{
             summary_is_current, RelatedIssueRequest,
         },
     },
-    load_parent,
+    load_parent, load_sub_issues, GitHubIssueSubIssuePlacement,
 };
 use crate::error::AppError;
 
@@ -35,6 +35,43 @@ impl<'a> IssueSubIssueMutation<'a> {
         Ok(Self {
             current: RelatedIssueRequest::new(owner, repository, issue_number, 1)?,
             sub_issue_number,
+        })
+    }
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct IssueSubIssuePriorityMutation<'a> {
+    pub(super) current: RelatedIssueRequest<'a>,
+    pub(super) sub_issue_number: u64,
+    pub(super) relative_issue_number: u64,
+    pub(super) placement: GitHubIssueSubIssuePlacement,
+}
+
+impl<'a> IssueSubIssuePriorityMutation<'a> {
+    pub(crate) fn new(
+        owner: &'a str,
+        repository: &'a str,
+        issue_number: u64,
+        page: u32,
+        sub_issue_number: u64,
+        relative_issue_number: u64,
+        placement: GitHubIssueSubIssuePlacement,
+    ) -> Result<Self, AppError> {
+        if sub_issue_number == 0 || relative_issue_number == 0 {
+            return Err(AppError::Validation(
+                "sub-issue numbers must be greater than zero".to_string(),
+            ));
+        }
+        if sub_issue_number == relative_issue_number {
+            return Err(AppError::Validation(
+                "a sub-issue cannot be positioned relative to itself".to_string(),
+            ));
+        }
+        Ok(Self {
+            current: RelatedIssueRequest::new(owner, repository, issue_number, page)?,
+            sub_issue_number,
+            relative_issue_number,
+            placement,
         })
     }
 }
@@ -85,6 +122,118 @@ pub(super) async fn remove_issue_sub_issue_with_client(
         ));
     }
     Ok(())
+}
+
+pub(super) async fn reprioritize_issue_sub_issue_with_client(
+    client: &octocrab::Octocrab,
+    mutation: IssueSubIssuePriorityMutation<'_>,
+) -> Result<(), AppError> {
+    resolve_issue(client, mutation.current, "current Issue").await?;
+    let (sub_issues, _) = load_sub_issues(client, mutation.current).await?;
+    let (sub_issue_index, relative_issue_index) = priority_indices(&sub_issues, mutation)
+        .ok_or_else(|| {
+            AppError::Validation(
+                "the selected sub-issues are not available in this repository page".to_string(),
+            )
+        })?;
+    if !priority_order_matches(
+        sub_issue_index,
+        relative_issue_index,
+        mutation.placement,
+        false,
+    ) {
+        return Err(AppError::Validation(
+            "the selected sub-issues are no longer adjacent in the requested order".to_string(),
+        ));
+    }
+    let sub_issue = &sub_issues[sub_issue_index];
+    let relative_issue = &sub_issues[relative_issue_index];
+
+    let updated_sub_issue = execute_reprioritize_sub_issue(
+        client,
+        mutation.current,
+        sub_issue.issue.id,
+        relative_issue.issue.id,
+        mutation.placement,
+    )
+    .await?;
+    if !summary_matches_repository_issue(
+        &updated_sub_issue,
+        mutation.current,
+        mutation.sub_issue_number,
+    ) || updated_sub_issue.issue.id != sub_issue.issue.id
+    {
+        return Err(AppError::GitHub(
+            "GitHub returned a reprioritized sub-issue with an unexpected identity".to_string(),
+        ));
+    }
+
+    let (sub_issues, _) = load_sub_issues(client, mutation.current).await?;
+    let confirmed = priority_indices(&sub_issues, mutation).is_some_and(
+        |(sub_issue_index, relative_issue_index)| {
+            priority_order_matches(
+                sub_issue_index,
+                relative_issue_index,
+                mutation.placement,
+                true,
+            )
+        },
+    );
+    if !confirmed {
+        return Err(AppError::GitHub(
+            "GitHub accepted the sub-issue reprioritization, but Harbor could not confirm it"
+                .to_string(),
+        ));
+    }
+    Ok(())
+}
+
+fn priority_indices(
+    sub_issues: &[GitHubIssueSummary],
+    mutation: IssueSubIssuePriorityMutation<'_>,
+) -> Option<(usize, usize)> {
+    let sub_issue_index = sub_issues.iter().position(|summary| {
+        summary_matches_repository_issue(summary, mutation.current, mutation.sub_issue_number)
+    })?;
+    let relative_issue_index = sub_issues.iter().position(|summary| {
+        summary_matches_repository_issue(summary, mutation.current, mutation.relative_issue_number)
+    })?;
+    Some((sub_issue_index, relative_issue_index))
+}
+
+fn summary_matches_repository_issue(
+    summary: &GitHubIssueSummary,
+    current: RelatedIssueRequest<'_>,
+    issue_number: u64,
+) -> bool {
+    summary.issue.number == issue_number
+        && summary.repository.owner.eq_ignore_ascii_case(current.owner)
+        && summary
+            .repository
+            .name
+            .eq_ignore_ascii_case(current.repository)
+}
+
+fn priority_order_matches(
+    sub_issue_index: usize,
+    relative_issue_index: usize,
+    placement: GitHubIssueSubIssuePlacement,
+    after_write: bool,
+) -> bool {
+    match (placement, after_write) {
+        (GitHubIssueSubIssuePlacement::Before, false) => {
+            relative_issue_index.checked_add(1) == Some(sub_issue_index)
+        }
+        (GitHubIssueSubIssuePlacement::Before, true) => {
+            sub_issue_index.checked_add(1) == Some(relative_issue_index)
+        }
+        (GitHubIssueSubIssuePlacement::After, false) => {
+            sub_issue_index.checked_add(1) == Some(relative_issue_index)
+        }
+        (GitHubIssueSubIssuePlacement::After, true) => {
+            relative_issue_index.checked_add(1) == Some(sub_issue_index)
+        }
+    }
 }
 
 async fn resolve_mutation_issues<'a>(
@@ -197,6 +346,47 @@ async fn execute_remove_sub_issue(
     Ok(())
 }
 
+async fn execute_reprioritize_sub_issue(
+    client: &octocrab::Octocrab,
+    current: RelatedIssueRequest<'_>,
+    sub_issue_id: u64,
+    relative_issue_id: u64,
+    placement: GitHubIssueSubIssuePlacement,
+) -> Result<GitHubIssueSummary, AppError> {
+    let (before_id, after_id) = match placement {
+        GitHubIssueSubIssuePlacement::Before => (Some(relative_issue_id), None),
+        GitHubIssueSubIssuePlacement::After => (None, Some(relative_issue_id)),
+    };
+    let request = api_request_with_body(
+        client,
+        http::Method::PATCH,
+        reprioritize_sub_issue_route(current),
+        Some(&ReprioritizeSubIssuePayload {
+            sub_issue_id,
+            before_id,
+            after_id,
+        }),
+    )?;
+    let response = client.execute(request).await.map_err(github_error)?;
+    let status = response.status();
+    let response = octocrab::map_github_error(response)
+        .await
+        .map_err(|error| sub_issue_mutation_error(error, status))?;
+    if status != http::StatusCode::OK {
+        return Err(AppError::GitHub(format!(
+            "GitHub returned unexpected status {status} for an Issue sub-issue reprioritization"
+        )));
+    }
+    let value = serde_json::Value::from_response(response)
+        .await
+        .map_err(|error| {
+            AppError::GitHub(format!(
+                "GitHub returned an invalid reprioritized sub-issue: {error}"
+            ))
+        })?;
+    summary_from_rest_value(value, "reprioritized sub-issue")
+}
+
 fn issue_route(request: RelatedIssueRequest<'_>) -> String {
     format!(
         "/repos/{}/{}/issues/{}",
@@ -214,6 +404,13 @@ fn add_sub_issue_route(current: RelatedIssueRequest<'_>) -> String {
 fn remove_sub_issue_route(current: RelatedIssueRequest<'_>) -> String {
     format!(
         "/repos/{}/{}/issues/{}/sub_issue",
+        current.owner, current.repository, current.issue_number
+    )
+}
+
+fn reprioritize_sub_issue_route(current: RelatedIssueRequest<'_>) -> String {
+    format!(
+        "/repos/{}/{}/issues/{}/sub_issues/priority",
         current.owner, current.repository, current.issue_number
     )
 }
@@ -246,4 +443,13 @@ struct AddSubIssuePayload {
 #[derive(Serialize)]
 struct RemoveSubIssuePayload {
     sub_issue_id: u64,
+}
+
+#[derive(Serialize)]
+struct ReprioritizeSubIssuePayload {
+    sub_issue_id: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    before_id: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    after_id: Option<u64>,
 }

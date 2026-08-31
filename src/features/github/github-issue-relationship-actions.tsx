@@ -1,6 +1,6 @@
 import { useId, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link2Off, Plus } from "lucide-react";
+import { ArrowDown, ArrowUp, Link2Off, Plus } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -32,6 +32,7 @@ import {
   parseGitHubIssueNumber,
   refreshRepositoryIssueRelationships,
   removeRepositoryIssueSubIssue,
+  reprioritizeRepositoryIssueSubIssue,
   type GitHubIssueRelationshipMutationTarget,
 } from "./github-issue-relationship-mutations";
 import type { GitHubIssueSummary } from "./github-data";
@@ -226,5 +227,98 @@ export function GitHubIssueRemoveSubIssueAction({
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+  );
+}
+
+export function GitHubIssueReorderSubIssueActions({
+  target,
+  page,
+  subIssue,
+  previousSubIssue,
+  nextSubIssue,
+}: {
+  target: GitHubIssueRelationshipMutationTarget;
+  page: number;
+  subIssue: GitHubIssueSummary;
+  previousSubIssue?: GitHubIssueSummary;
+  nextSubIssue?: GitHubIssueSummary;
+}) {
+  const { t } = useAppTranslation();
+  const queryClient = useQueryClient();
+  const subIssueNumber = subIssue.issue.number;
+  const mutation = useMutation({
+    mutationFn: ({
+      relativeIssueNumber,
+      placement,
+    }: {
+      relativeIssueNumber: number;
+      placement: "before" | "after";
+    }) =>
+      reprioritizeRepositoryIssueSubIssue(
+        target,
+        page,
+        subIssueNumber,
+        relativeIssueNumber,
+        placement
+      ),
+    onSuccess: () => {
+      toast.success(t("workspace.repositories.subIssueMoved"));
+    },
+    onError: (error) => {
+      const parsed = parseIpcError(error);
+      toast.error(t(relationshipErrorTitle(parsed.code)), { description: parsed.message });
+    },
+    onSettled: () => {
+      void refreshRepositoryIssueRelationships(queryClient, target, subIssueNumber);
+    },
+  });
+
+  if (!previousSubIssue && !nextSubIssue) return null;
+
+  return (
+    <div className="flex shrink-0 items-center">
+      {previousSubIssue ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          aria-label={`${t("workspace.repositories.moveSubIssueUp")} ${subIssueNumber}`}
+          disabled={mutation.isPending}
+          onClick={() =>
+            mutation.mutate({
+              relativeIssueNumber: previousSubIssue.issue.number,
+              placement: "before",
+            })
+          }
+        >
+          {mutation.isPending && mutation.variables?.placement === "before" ? (
+            <Spinner />
+          ) : (
+            <ArrowUp />
+          )}
+        </Button>
+      ) : null}
+      {nextSubIssue ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          aria-label={`${t("workspace.repositories.moveSubIssueDown")} ${subIssueNumber}`}
+          disabled={mutation.isPending}
+          onClick={() =>
+            mutation.mutate({
+              relativeIssueNumber: nextSubIssue.issue.number,
+              placement: "after",
+            })
+          }
+        >
+          {mutation.isPending && mutation.variables?.placement === "after" ? (
+            <Spinner />
+          ) : (
+            <ArrowDown />
+          )}
+        </Button>
+      ) : null}
+    </div>
   );
 }

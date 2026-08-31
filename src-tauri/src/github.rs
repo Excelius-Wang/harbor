@@ -99,7 +99,8 @@ pub use issue::{
 pub use issue_dependencies::GitHubIssueDependenciesPage;
 pub use issue_duplicate::GitHubIssueDuplicateReference;
 pub use issue_linked_pull_request::GitHubIssueLinkedPullRequestPage;
-pub use issue_relationships::GitHubIssueRelationshipsPage;
+pub(crate) use issue_relationships::IssueSubIssuePriorityMutation;
+pub use issue_relationships::{GitHubIssueRelationshipsPage, GitHubIssueSubIssuePriorityInput};
 #[cfg(test)]
 use issue_taxonomy::GitHubIssueMilestoneState;
 pub use issue_taxonomy::{GitHubIssueLabelMutation, GitHubIssueMilestoneMutation};

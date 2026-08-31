@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use async_trait::async_trait;
 use octocrab::FromResponse;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use super::{
     authenticated_client, github_error,
@@ -17,8 +17,30 @@ use crate::error::AppError;
 
 mod mutations;
 
-pub(crate) use mutations::IssueSubIssueMutation;
-use mutations::{add_issue_sub_issue_with_client, remove_issue_sub_issue_with_client};
+use mutations::{
+    add_issue_sub_issue_with_client, remove_issue_sub_issue_with_client,
+    reprioritize_issue_sub_issue_with_client,
+};
+pub(crate) use mutations::{IssueSubIssueMutation, IssueSubIssuePriorityMutation};
+
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) enum GitHubIssueSubIssuePlacement {
+    Before,
+    After,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitHubIssueSubIssuePriorityInput {
+    pub(crate) owner: String,
+    pub(crate) repository: String,
+    pub(crate) issue_number: u64,
+    pub(crate) page: u32,
+    pub(crate) sub_issue_number: u64,
+    pub(crate) relative_issue_number: u64,
+    pub(crate) placement: GitHubIssueSubIssuePlacement,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -48,6 +70,12 @@ pub(crate) trait GitHubIssueRelationshipsClient: Send + Sync {
         &self,
         token: &str,
         mutation: IssueSubIssueMutation<'_>,
+    ) -> Result<(), AppError>;
+
+    async fn reprioritize_issue_sub_issue(
+        &self,
+        token: &str,
+        mutation: IssueSubIssuePriorityMutation<'_>,
     ) -> Result<(), AppError>;
 }
 
@@ -89,6 +117,16 @@ impl GitHubService {
         let token = self.load_access_token().await?;
         self.client.remove_issue_sub_issue(&token, mutation).await
     }
+
+    pub async fn reprioritize_issue_sub_issue(
+        &self,
+        mutation: IssueSubIssuePriorityMutation<'_>,
+    ) -> Result<(), AppError> {
+        let token = self.load_access_token().await?;
+        self.client
+            .reprioritize_issue_sub_issue(&token, mutation)
+            .await
+    }
 }
 
 #[async_trait]
@@ -118,6 +156,15 @@ impl GitHubIssueRelationshipsClient for OctocrabGitHubClient {
     ) -> Result<(), AppError> {
         let client = authenticated_client(token)?;
         remove_issue_sub_issue_with_client(&client, mutation).await
+    }
+
+    async fn reprioritize_issue_sub_issue(
+        &self,
+        token: &str,
+        mutation: IssueSubIssuePriorityMutation<'_>,
+    ) -> Result<(), AppError> {
+        let client = authenticated_client(token)?;
+        reprioritize_issue_sub_issue_with_client(&client, mutation).await
     }
 }
 
@@ -256,6 +303,35 @@ impl GitHubIssueRelationshipsClient for super::tests::FakeGitHubClient {
                 mutation.sub_issue_number,
             ),
             ("octocat", "hello-world", 7, 42)
+        );
+        Ok(())
+    }
+
+    async fn reprioritize_issue_sub_issue(
+        &self,
+        token: &str,
+        mutation: IssueSubIssuePriorityMutation<'_>,
+    ) -> Result<(), AppError> {
+        assert_eq!(token, "github-user-access-token");
+        assert_eq!(
+            (
+                mutation.current.owner,
+                mutation.current.repository,
+                mutation.current.issue_number,
+                mutation.current.page,
+                mutation.sub_issue_number,
+                mutation.relative_issue_number,
+                mutation.placement,
+            ),
+            (
+                "octocat",
+                "hello-world",
+                7,
+                2,
+                42,
+                41,
+                GitHubIssueSubIssuePlacement::Before,
+            )
         );
         Ok(())
     }
