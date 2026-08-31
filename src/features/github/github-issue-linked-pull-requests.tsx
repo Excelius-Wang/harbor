@@ -34,35 +34,54 @@ function LinkedPullRequestsSkeleton() {
 
 function LinkedPullRequestRow({
   pullRequest,
+  onNavigate,
 }: {
   pullRequest: GitHubIssueLinkedPullRequestReference;
+  onNavigate: (pullRequest: GitHubIssueLinkedPullRequestReference) => void;
 }) {
+  const { t } = useAppTranslation();
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      className="h-auto w-full min-w-0 justify-start gap-2 rounded-md px-2.5 py-2 text-left"
-      onClick={() => void openExternalUrl(pullRequest.url)}
-    >
-      <GitPullRequest data-icon="inline-start" className="text-muted-foreground" />
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-xs font-medium">{pullRequest.title}</span>
-        <span className="text-muted-foreground block truncate text-[10px] font-normal">
-          {pullRequest.fullName} #{pullRequest.number}
+    <div className="hover:bg-accent/30 flex min-w-0 items-center rounded-md">
+      <Button
+        type="button"
+        variant="ghost"
+        className="h-auto min-w-0 flex-1 justify-start gap-2 rounded-md px-2.5 py-2 text-left"
+        onClick={() => onNavigate(pullRequest)}
+      >
+        <GitPullRequest data-icon="inline-start" className="text-muted-foreground" />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-xs font-medium">{pullRequest.title}</span>
+          <span className="text-muted-foreground block truncate text-[10px] font-normal">
+            {pullRequest.repository.fullName} #{pullRequest.number}
+          </span>
         </span>
-      </span>
-      <GitHubPullRequestStateBadge pullRequest={pullRequest} />
-      <ExternalLink data-icon="inline-end" className="text-muted-foreground" />
-    </Button>
+        <GitHubPullRequestStateBadge pullRequest={pullRequest} />
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-xs"
+        className="mr-1 shrink-0"
+        aria-label={t("workspace.repositories.openLinkedPullRequestOnGitHub", {
+          repository: pullRequest.repository.fullName,
+          number: pullRequest.number,
+        })}
+        onClick={() => void openExternalUrl(pullRequest.url)}
+      >
+        <ExternalLink />
+      </Button>
+    </div>
   );
 }
 
 function GitHubIssueLinkedPullRequestsContent({
   repository,
   issue,
+  onNavigate,
 }: {
   repository: GitHubRepositoryContentContext;
   issue: GitHubIssue;
+  onNavigate: (pullRequest: GitHubIssueLinkedPullRequestReference) => void;
 }) {
   const { t } = useAppTranslation();
   const [cursors, setCursors] = useState<(string | null)[]>([null]);
@@ -131,7 +150,11 @@ function GitHubIssueLinkedPullRequestsContent({
         ) : (
           <div className="flex flex-col gap-0.5">
             {pullRequests.map((pullRequest) => (
-              <LinkedPullRequestRow key={pullRequest.url} pullRequest={pullRequest} />
+              <LinkedPullRequestRow
+                key={pullRequest.url}
+                pullRequest={pullRequest}
+                onNavigate={onNavigate}
+              />
             ))}
           </div>
         )}
@@ -150,6 +173,7 @@ function GitHubIssueLinkedPullRequestsContent({
 export function GitHubIssueLinkedPullRequests(props: {
   repository: GitHubRepositoryContentContext;
   issue: GitHubIssue;
+  onNavigate: (pullRequest: GitHubIssueLinkedPullRequestReference) => void;
 }) {
   const { repository, issue } = props;
   if (!issue.reactionSubject.id.trim()) return null;

@@ -2190,6 +2190,7 @@
       "issueDuplicateLoadFailed": "Harbor 暂时无法读取这个重复 Issue 对应的原始 Issue",
       "issueDuplicatePermissionDenied": "Harbor 需要 Issues 读取权限，才能找到原始 Issue",
       "linkedPullRequests": "关联的 Pull Request",
+      "openLinkedPullRequestOnGitHub": "在 GitHub 打开 {{repository}} #{{number}}",
       "noLinkedPullRequests": "没有关联的 Pull Request",
       "noLinkedPullRequestsDescription": "目前没有 Pull Request 引用了这个 Issue。",
       "issueLinkedPullRequestsLoadFailed": "Harbor 暂时无法读取关联的 Pull Request",

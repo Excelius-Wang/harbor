@@ -9,7 +9,7 @@ use super::{
         graphql_node_id_is_valid, issue_url_matches, split_repository_full_name,
         IssueGraphQlRequest,
     },
-    GitHubPullRequestState, GitHubService, OctocrabGitHubClient,
+    GitHubPullRequestRepository, GitHubPullRequestState, GitHubService, OctocrabGitHubClient,
 };
 use crate::error::AppError;
 
@@ -59,7 +59,7 @@ query HarborIssueLinkedPullRequests(
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GitHubIssueLinkedPullRequestReference {
-    pub full_name: String,
+    pub repository: GitHubPullRequestRepository,
     pub number: u64,
     pub title: String,
     pub url: String,
@@ -287,7 +287,12 @@ fn linked_pull_request_reference(
 
     Ok(ValidatedLinkedPullRequest {
         id: pull_request.id,
-        full_name: pull_request.repository.name_with_owner,
+        repository: GitHubPullRequestRepository {
+            url: format!("https://github.com/{owner}/{repository}"),
+            owner,
+            name: repository,
+            full_name: pull_request.repository.name_with_owner,
+        },
         number: pull_request.number,
         title: pull_request.title,
         url: pull_request.url,
@@ -307,7 +312,7 @@ fn invalid_linked_pull_request() -> AppError {
 
 struct ValidatedLinkedPullRequest {
     id: String,
-    full_name: String,
+    repository: GitHubPullRequestRepository,
     number: u64,
     title: String,
     url: String,
@@ -319,7 +324,7 @@ struct ValidatedLinkedPullRequest {
 impl ValidatedLinkedPullRequest {
     fn into_public(self) -> GitHubIssueLinkedPullRequestReference {
         GitHubIssueLinkedPullRequestReference {
-            full_name: self.full_name,
+            repository: self.repository,
             number: self.number,
             title: self.title,
             url: self.url,
