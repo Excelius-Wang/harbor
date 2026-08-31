@@ -59,4 +59,14 @@ describe("GitHub syntax highlighting", () => {
       })
     ).resolves.toBeNull();
   });
+
+  it("rejects an unsupported worker language before looking up a loader", async () => {
+    await expect(
+      highlightWithShiki({
+        source: "fixture",
+        language: "toString" as never,
+        colorMode: "dark",
+      })
+    ).rejects.toThrow("Unsupported syntax language: toString");
+  });
 });

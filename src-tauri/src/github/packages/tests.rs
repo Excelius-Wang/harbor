@@ -147,10 +147,6 @@ async fn live_harbor_oauth_lists_personal_packages() {
         .expect("Harbor OAuth should list personal Packages");
 
     assert_eq!(page.page, 1);
-    println!(
-        "live package probe succeeded: {} packages",
-        page.packages.len()
-    );
 }
 
 #[async_trait]

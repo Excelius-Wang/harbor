@@ -7,8 +7,20 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 const createWindowLoading: Record<string, boolean> = {};
 const destroyTimers: Record<string, number> = {};
 const destroyVersions: Record<string, number> = {};
+const SAFE_EXTERNAL_PROTOCOLS = new Set(["http:", "https:", "mailto:", "tel:"]);
+
+function isSafeExternalUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return SAFE_EXTERNAL_PROTOCOLS.has(url.protocol) && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}
 
 export async function openExternalUrl(url: string) {
+  if (!isSafeExternalUrl(url)) return;
+
   if (isTauri()) {
     await openUrl(url);
     return;

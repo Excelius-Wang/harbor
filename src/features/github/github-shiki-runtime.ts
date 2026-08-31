@@ -9,7 +9,7 @@ import type {
 type LanguageModule = { default: LanguageInput };
 type LanguageLoader = () => Promise<LanguageModule>;
 
-const LANGUAGE_LOADERS: Record<SupportedSyntaxLanguage, LanguageLoader> = {
+const LANGUAGE_LOADER_RECORD = {
   astro: () => import("@shikijs/langs/astro"),
   c: () => import("@shikijs/langs/c"),
   cmake: () => import("@shikijs/langs/cmake"),
@@ -59,7 +59,10 @@ const LANGUAGE_LOADERS: Record<SupportedSyntaxLanguage, LanguageLoader> = {
   xml: () => import("@shikijs/langs/xml"),
   yaml: () => import("@shikijs/langs/yaml"),
   zig: () => import("@shikijs/langs/zig"),
-};
+} satisfies Record<SupportedSyntaxLanguage, LanguageLoader>;
+const LANGUAGE_LOADERS = new Map<SupportedSyntaxLanguage, LanguageLoader>(
+  Object.entries(LANGUAGE_LOADER_RECORD) as [SupportedSyntaxLanguage, LanguageLoader][]
+);
 
 let highlighterPromise: Promise<HighlighterCore> | null = null;
 const languageLoads = new Map<SupportedSyntaxLanguage, Promise<void>>();
@@ -81,9 +84,9 @@ function getHighlighter() {
 function loadLanguage(highlighter: HighlighterCore, language: SupportedSyntaxLanguage) {
   let loading = languageLoads.get(language);
   if (!loading) {
-    loading = LANGUAGE_LOADERS[language]().then((module) =>
-      highlighter.loadLanguage(module.default)
-    );
+    const loader = LANGUAGE_LOADERS.get(language);
+    if (!loader) throw new Error(`Unsupported syntax language: ${language}`);
+    loading = loader().then((module) => highlighter.loadLanguage(module.default));
     languageLoads.set(language, loading);
   }
   return loading;
