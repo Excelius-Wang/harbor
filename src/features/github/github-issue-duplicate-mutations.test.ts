@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { GitHubIssueDuplicateReference } from "./github-data";
 import {
+  markRepositoryIssueDuplicate,
   refreshRepositoryIssueDuplicate,
   unmarkRepositoryIssueDuplicate,
 } from "./github-issue-duplicate-mutations";
@@ -34,11 +35,18 @@ describe("GitHub Issue duplicate mutations", () => {
   beforeEach(() => vi.mocked(invoke).mockReset());
 
   it("invokes the focused Tauri command with the authoritative source identity", async () => {
-    vi.mocked(invoke).mockResolvedValueOnce({ number: target.issueNumber });
+    vi.mocked(invoke)
+      .mockResolvedValueOnce({ number: target.issueNumber })
+      .mockResolvedValueOnce({ number: target.issueNumber });
 
     await unmarkRepositoryIssueDuplicate(target);
+    await markRepositoryIssueDuplicate(target, 9);
 
-    expect(invoke).toHaveBeenCalledWith("github_unmark_repository_issue_duplicate", target);
+    expect(invoke).toHaveBeenNthCalledWith(1, "github_unmark_repository_issue_duplicate", target);
+    expect(invoke).toHaveBeenNthCalledWith(2, "github_mark_repository_issue_duplicate", {
+      ...target,
+      canonicalIssueNumber: 9,
+    });
   });
 
   it("refreshes source, duplicate, state, list, inbox, and canonical Issue caches", async () => {

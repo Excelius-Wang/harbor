@@ -30,6 +30,7 @@ import {
 import { GitHubIssueDependencies } from "./github-issue-dependencies";
 import { GitHubIssueDuplicate } from "./github-issue-duplicate";
 import { GitHubIssueLinkedPullRequests } from "./github-issue-linked-pull-requests";
+import { GitHubIssueMarkDuplicateAction } from "./github-issue-mark-duplicate-action";
 import { GitHubIssueRelationships } from "./github-issue-relationships";
 import { GitHubIssueStateAction } from "./github-issue-state-action";
 import {
@@ -292,6 +293,7 @@ function GitHubIssueDetailScreen({
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
+                <GitHubIssueMarkDuplicateAction repository={repository} issue={detail.issue} />
                 <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
                   <Pencil data-icon="inline-start" />
                   {t("workspace.repositories.editIssue")}

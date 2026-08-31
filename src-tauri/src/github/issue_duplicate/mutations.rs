@@ -10,6 +10,10 @@ use super::{
 };
 use crate::error::AppError;
 
+mod mark;
+
+pub(super) use mark::{mark_issue_duplicate_with_client, IssueDuplicateMarkMutation};
+
 const UNMARK_DUPLICATE_MUTATION: &str = r#"
 mutation HarborUnmarkIssueDuplicate($duplicateId: ID!, $canonicalId: ID!) {
   unmarkIssueAsDuplicate(input: {
@@ -212,7 +216,7 @@ fn ensure_unmarked_snapshot(
     Ok(())
 }
 
-fn write_may_have_persisted(message: &str) -> AppError {
+pub(super) fn write_may_have_persisted(message: &str) -> AppError {
     AppError::GitHubIssueStateConflict(format!(
         "{message}; the duplicate update may have persisted"
     ))
@@ -222,7 +226,7 @@ fn unmark_write_error(error: octocrab::Error) -> AppError {
     post_write_error(github_error(error))
 }
 
-fn post_write_error(error: AppError) -> AppError {
+pub(super) fn post_write_error(error: AppError) -> AppError {
     match error {
         error @ (AppError::GitHubPermission(_) | AppError::GitHubRateLimited(_)) => error,
         error => write_may_have_persisted(&error.to_string()),
