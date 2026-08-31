@@ -94,13 +94,16 @@ pub use issue::{
     GitHubIssueDetailPage, GitHubIssueFilters, GitHubIssueInboxFilters, GitHubIssueInboxPage,
     GitHubIssueInboxScope, GitHubIssueLabel, GitHubIssueLabelPage, GitHubIssueMilestone,
     GitHubIssueMilestonePage, GitHubIssuePage, GitHubIssueSort, GitHubIssueState,
-    GitHubIssueStateCapabilities, GitHubIssueStateMutation, GitHubIssueTimelineItem,
+    GitHubIssueStateCapabilities, GitHubIssueStateMutation, GitHubIssueSummary,
+    GitHubIssueTimelineItem,
 };
 pub use issue_dependencies::GitHubIssueDependenciesPage;
 pub use issue_duplicate::GitHubIssueDuplicateReference;
 pub use issue_linked_pull_request::GitHubIssueLinkedPullRequestPage;
-pub(crate) use issue_relationships::IssueSubIssuePriorityMutation;
-pub use issue_relationships::{GitHubIssueRelationshipsPage, GitHubIssueSubIssuePriorityInput};
+pub use issue_relationships::{
+    GitHubIssueRelationshipsPage, GitHubIssueSubIssueCreateInput, GitHubIssueSubIssuePriorityInput,
+};
+pub(crate) use issue_relationships::{IssueSubIssueCreateMutation, IssueSubIssuePriorityMutation};
 #[cfg(test)]
 use issue_taxonomy::GitHubIssueMilestoneState;
 pub use issue_taxonomy::{GitHubIssueLabelMutation, GitHubIssueMilestoneMutation};
@@ -3211,6 +3214,19 @@ mod tests {
             .create_issue("octocat", "hello-world", &input)
             .await
             .expect("created issue");
+        let created_sub_issue = service
+            .create_issue_sub_issue(
+                IssueSubIssueCreateMutation::new(
+                    "octocat",
+                    "hello-world",
+                    7,
+                    "Child work",
+                    "Track the child work here.",
+                )
+                .expect("sub-issue input"),
+            )
+            .await
+            .expect("created sub-issue");
         let edited = service
             .update_issue_content(
                 "octocat",
@@ -3305,6 +3321,8 @@ mod tests {
 
         assert_eq!(created.number, 9);
         assert_eq!(created.title, "Keep Issue work in Harbor");
+        assert_eq!(created_sub_issue.issue.number, 42);
+        assert_eq!(created_sub_issue.issue.title, "Child work");
         assert_eq!(edited.title, "Updated Issue title");
         assert_eq!(edited.body.as_deref(), Some("Updated **Markdown** body."));
         assert_eq!(assignees.assignees[0].login, "hubot");

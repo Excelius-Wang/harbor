@@ -31,9 +31,10 @@ use crate::{
         GitHubIssueLinkedPullRequestPage, GitHubIssueMilestone, GitHubIssueMilestoneMutation,
         GitHubIssueMilestonePage, GitHubIssuePage, GitHubIssueRelationshipsPage, GitHubIssueSort,
         GitHubIssueState, GitHubIssueStateCapabilities, GitHubIssueStateMutation,
-        GitHubIssueSubIssuePriorityInput, GitHubIssueTimelineItem, GitHubLoginAvailability,
-        GitHubNotificationAction, GitHubNotificationPage, GitHubPackage, GitHubPackagePage,
-        GitHubPackageType, GitHubPackageVersionMutationInput, GitHubPackageVersionMutationResult,
+        GitHubIssueSubIssueCreateInput, GitHubIssueSubIssuePriorityInput, GitHubIssueSummary,
+        GitHubIssueTimelineItem, GitHubLoginAvailability, GitHubNotificationAction,
+        GitHubNotificationPage, GitHubPackage, GitHubPackagePage, GitHubPackageType,
+        GitHubPackageVersionMutationInput, GitHubPackageVersionMutationResult,
         GitHubPackageVersionPage, GitHubPackageVersionState, GitHubPackageVisibility,
         GitHubPagesHealth, GitHubPagesMutation, GitHubPagesWorkspace,
         GitHubPendingPullRequestReview, GitHubProfileActivityPage, GitHubProfileConnectionKind,
@@ -73,7 +74,8 @@ use crate::{
         GitHubWorkflowArtifactPage, GitHubWorkflowDispatchConfig, GitHubWorkflowDispatchOptions,
         GitHubWorkflowJobLog, GitHubWorkflowJobPage, GitHubWorkflowRun, GitHubWorkflowRunAction,
         GitHubWorkflowRunDeletion, GitHubWorkflowRunFilterOptions, GitHubWorkflowRunFilters,
-        GitHubWorkflowRunPage, GitHubWorkflowRunStatusFilter, IssueSubIssuePriorityMutation,
+        GitHubWorkflowRunPage, GitHubWorkflowRunStatusFilter, IssueSubIssueCreateMutation,
+        IssueSubIssuePriorityMutation,
     },
     github_oauth::{GitHubLoginAttempt, GitHubLoopbackListener, GITHUB_AUTH_EVENT},
     repository_context::{RepositoryContextAnswer, RepositoryRef},
@@ -1661,6 +1663,31 @@ pub async fn github_add_repository_issue_sub_issue(
             validate_item_number(sub_issue_number, "sub-issue")?,
         )
         .await
+}
+
+#[tauri::command]
+pub async fn github_create_repository_issue_sub_issue(
+    input: GitHubIssueSubIssueCreateInput,
+    state: State<'_, AppState>,
+) -> Result<GitHubIssueSummary, AppError> {
+    let GitHubIssueSubIssueCreateInput {
+        owner,
+        repository,
+        issue_number,
+        title,
+        body,
+    } = input;
+    let repository = RepositoryRef::new(owner, repository)?;
+    let title = validate_issue_title(title)?;
+    let body = validate_issue_body(body)?;
+    let mutation = IssueSubIssueCreateMutation::new(
+        repository.owner(),
+        repository.name(),
+        validate_item_number(issue_number, "issue")?,
+        &title,
+        &body,
+    )?;
+    state.github.create_issue_sub_issue(mutation).await
 }
 
 #[tauri::command]

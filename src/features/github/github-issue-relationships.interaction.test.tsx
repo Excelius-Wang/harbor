@@ -161,6 +161,209 @@ describe("GitHub Issue relationships", () => {
     );
   });
 
+  it("creates one blank Issue directly as a sub-issue and refreshes both identities", async () => {
+    const child = summary("hello-world", 42, "Child work");
+    vi.mocked(invoke).mockImplementation((command) => {
+      if (command === "github_get_repository_issue_relationships") {
+        return Promise.resolve({
+          parent: null,
+          subIssues: [],
+          page: 1,
+          hasPrevious: false,
+          hasMore: false,
+        });
+      }
+      if (command === "github_get_repository_issue_creation_policy") {
+        return Promise.resolve({
+          blankIssueAllowed: true,
+          contactLinks: [],
+          templates: [],
+          templateChooserUrl: "https://github.com/octocat/hello-world/issues/new/choose",
+        });
+      }
+      if (command === "github_create_repository_issue_sub_issue") return Promise.resolve(child);
+      return Promise.resolve();
+    });
+    const user = userEvent.setup();
+    const { queryClient } = renderRelationships();
+    const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
+
+    await screen.findByText("workspace.repositories.noIssueRelationships");
+    await user.click(screen.getByRole("button", { name: "workspace.repositories.createSubIssue" }));
+    await user.type(
+      await screen.findByLabelText("workspace.repositories.issueTitle"),
+      "Child work"
+    );
+    await user.click(
+      screen.getByRole("button", { name: "workspace.repositories.createSubIssueConfirm" })
+    );
+
+    await waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith("github_create_repository_issue_sub_issue", {
+        input: {
+          owner: "octocat",
+          repository: "hello-world",
+          issueNumber: 7,
+          title: "Child work",
+          body: "",
+        },
+      })
+    );
+    await waitFor(() =>
+      expect(invalidateQueries).toHaveBeenCalledWith({
+        queryKey: githubIssueRelationshipQueryKeys.root({
+          owner: "octocat",
+          repository: "hello-world",
+          issueNumber: 42,
+        }),
+        refetchType: "active",
+      })
+    );
+  });
+
+  it("keeps native sub-issue creation hidden when the repository requires templates", async () => {
+    vi.mocked(invoke).mockImplementation((command) => {
+      if (command === "github_get_repository_issue_relationships") {
+        return Promise.resolve({
+          parent: null,
+          subIssues: [],
+          page: 1,
+          hasPrevious: false,
+          hasMore: false,
+        });
+      }
+      if (command === "github_get_repository_issue_creation_policy") {
+        return Promise.resolve({
+          blankIssueAllowed: false,
+          contactLinks: [],
+          templates: [],
+          templateChooserUrl: "https://github.com/octocat/hello-world/issues/new/choose",
+        });
+      }
+      return Promise.resolve();
+    });
+    const user = userEvent.setup();
+    renderRelationships();
+
+    await screen.findByText("workspace.repositories.noIssueRelationships");
+    await user.click(screen.getByRole("button", { name: "workspace.repositories.createSubIssue" }));
+
+    expect(
+      await screen.findByText("workspace.repositories.subIssueCreationRestricted")
+    ).toBeDefined();
+    expect(
+      screen.queryByRole("button", { name: "workspace.repositories.createSubIssueConfirm" })
+    ).toBeNull();
+    expect(invoke).not.toHaveBeenCalledWith(
+      "github_create_repository_issue_sub_issue",
+      expect.anything()
+    );
+  });
+
+  it("labels a sub-issue creation policy rate limit explicitly", async () => {
+    vi.mocked(invoke).mockImplementation((command) => {
+      if (command === "github_get_repository_issue_relationships") {
+        return Promise.resolve({
+          parent: null,
+          subIssues: [],
+          page: 1,
+          hasPrevious: false,
+          hasMore: false,
+        });
+      }
+      if (command === "github_get_repository_issue_creation_policy") {
+        return Promise.reject({ code: "githubRateLimited", message: "slow down" });
+      }
+      return Promise.resolve();
+    });
+    const user = userEvent.setup();
+    renderRelationships();
+
+    await screen.findByText("workspace.repositories.noIssueRelationships");
+    await user.click(screen.getByRole("button", { name: "workspace.repositories.createSubIssue" }));
+
+    expect(await screen.findByText("workspace.repositories.githubRateLimited")).toBeDefined();
+  });
+
+  it("preserves the new sub-issue title after a failed write", async () => {
+    vi.mocked(invoke).mockImplementation((command) => {
+      if (command === "github_get_repository_issue_relationships") {
+        return Promise.resolve({
+          parent: null,
+          subIssues: [],
+          page: 1,
+          hasPrevious: false,
+          hasMore: false,
+        });
+      }
+      if (command === "github_get_repository_issue_creation_policy") {
+        return Promise.resolve({
+          blankIssueAllowed: true,
+          contactLinks: [],
+          templates: [],
+          templateChooserUrl: "https://github.com/octocat/hello-world/issues/new/choose",
+        });
+      }
+      if (command === "github_create_repository_issue_sub_issue") {
+        return Promise.reject({ code: "github", message: "write failed" });
+      }
+      return Promise.resolve();
+    });
+    const user = userEvent.setup();
+    renderRelationships();
+
+    await screen.findByText("workspace.repositories.noIssueRelationships");
+    await user.click(screen.getByRole("button", { name: "workspace.repositories.createSubIssue" }));
+    const title = await screen.findByLabelText("workspace.repositories.issueTitle");
+    await user.type(title, "Keep this child title");
+    await user.click(
+      screen.getByRole("button", { name: "workspace.repositories.createSubIssueConfirm" })
+    );
+
+    expect(await screen.findByText("write failed")).toBeDefined();
+    expect((title as HTMLInputElement).value).toBe("Keep this child title");
+  });
+
+  it("labels a new sub-issue write rate limit explicitly", async () => {
+    vi.mocked(invoke).mockImplementation((command) => {
+      if (command === "github_get_repository_issue_relationships") {
+        return Promise.resolve({
+          parent: null,
+          subIssues: [],
+          page: 1,
+          hasPrevious: false,
+          hasMore: false,
+        });
+      }
+      if (command === "github_get_repository_issue_creation_policy") {
+        return Promise.resolve({
+          blankIssueAllowed: true,
+          contactLinks: [],
+          templates: [],
+          templateChooserUrl: "https://github.com/octocat/hello-world/issues/new/choose",
+        });
+      }
+      if (command === "github_create_repository_issue_sub_issue") {
+        return Promise.reject({ code: "githubRateLimited", message: "slow down" });
+      }
+      return Promise.resolve();
+    });
+    const user = userEvent.setup();
+    renderRelationships();
+
+    await screen.findByText("workspace.repositories.noIssueRelationships");
+    await user.click(screen.getByRole("button", { name: "workspace.repositories.createSubIssue" }));
+    await user.type(
+      await screen.findByLabelText("workspace.repositories.issueTitle"),
+      "Rate-limited child"
+    );
+    await user.click(
+      screen.getByRole("button", { name: "workspace.repositories.createSubIssueConfirm" })
+    );
+
+    expect(await screen.findByText("workspace.repositories.githubRateLimited")).toBeDefined();
+  });
+
   it("confirms before removing a same-repository sub-issue", async () => {
     const child = summary("hello-world", 42, "Detach this child");
     vi.mocked(invoke).mockImplementation((command) => {

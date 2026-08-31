@@ -263,7 +263,7 @@ async fn resolve_mutation_issues<'a>(
     Ok((current_issue, sub_issue_request, sub_issue))
 }
 
-async fn resolve_issue(
+pub(super) async fn resolve_issue(
     client: &octocrab::Octocrab,
     request: RelatedIssueRequest<'_>,
     source: &str,
