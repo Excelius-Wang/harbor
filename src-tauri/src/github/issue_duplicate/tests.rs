@@ -54,6 +54,8 @@ async fn transport_loads_the_current_issues_canonical_duplicate_reference() {
     let request = requests.lock().expect("requests");
     assert!(request[0].starts_with("POST /graphql HTTP/1.1"));
     assert!(request[0].contains("duplicateOf"));
+    assert!(request[0].contains("stateReason"));
+    assert!(!request[0].contains("enableDuplicate"));
 }
 
 #[tokio::test]

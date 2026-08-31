@@ -26,7 +26,7 @@ query HarborIssueDuplicate($owner: String!, $repository: String!, $number: Int!)
       id
       number
       state
-      stateReason(enableDuplicate: true)
+      stateReason
       duplicateOf {
         id
         number

@@ -110,9 +110,10 @@ async fn transport_unmarks_the_authoritative_duplicate_in_one_mutation() {
     assert_eq!(requests.len(), 4);
     assert!(requests[0].starts_with("POST /graphql HTTP/1.1"));
     let mutation = graphql_payload(&requests[1]);
-    assert!(mutation["query"]
-        .as_str()
-        .is_some_and(|query| query.contains("unmarkIssueAsDuplicate")));
+    let mutation_query = mutation["query"].as_str().expect("mutation query");
+    assert!(mutation_query.contains("unmarkIssueAsDuplicate"));
+    assert!(mutation_query.contains("stateReason"));
+    assert!(!mutation_query.contains("enableDuplicate"));
     assert_eq!(
         mutation["variables"],
         serde_json::json!({
@@ -300,4 +301,78 @@ async fn transport_reports_an_unconfirmed_unmark_after_the_write() {
 
     assert!(error.to_string().contains("may have persisted"), "{error}");
     assert_eq!(requests.lock().expect("requests").len(), 3);
+}
+
+#[tokio::test]
+async fn graphql_postflight_preserves_an_explicit_rate_limit() {
+    let (client, requests, server) = mock_github(vec![
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: duplicate_response("DUPLICATE", "WRITE", true),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: mutation_response("I_7", "COMPLETED"),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: serde_json::json!({
+                "data": null,
+                "errors": [{
+                    "message": "You have exceeded a secondary rate limit",
+                    "locations": null,
+                    "path": ["repository"],
+                    "extensions": null
+                }]
+            })
+            .to_string(),
+        },
+    ])
+    .await;
+
+    let error = unmark_issue_duplicate_with_client(&client, mutation())
+        .await
+        .expect_err("GraphQL postflight rate limit");
+    server.await.expect("mock server");
+
+    assert!(matches!(error, AppError::GitHubRateLimited(_)), "{error:?}");
+    assert_eq!(requests.lock().expect("requests").len(), 3);
+}
+
+#[tokio::test]
+async fn rest_postflight_preserves_an_explicit_permission_error() {
+    let (client, requests, server) = mock_github(vec![
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: duplicate_response("DUPLICATE", "WRITE", true),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: mutation_response("I_7", "COMPLETED"),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: duplicate_response("COMPLETED", "WRITE", false),
+        },
+        MockResponse {
+            status: "403 Forbidden",
+            headers: vec![],
+            body: serde_json::json!({"message": "Resource not accessible"}).to_string(),
+        },
+    ])
+    .await;
+
+    let error = unmark_issue_duplicate_with_client(&client, mutation())
+        .await
+        .expect_err("REST postflight permission error");
+    server.await.expect("mock server");
+
+    assert!(matches!(error, AppError::GitHubPermission(_)), "{error:?}");
+    assert_eq!(requests.lock().expect("requests").len(), 4);
 }

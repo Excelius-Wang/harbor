@@ -23,7 +23,7 @@ query HarborIssueState($owner: String!, $repository: String!, $number: Int!) {
       id
       number
       state
-      stateReason(enableDuplicate: true)
+      stateReason
       updatedAt
       viewerCanClose
       viewerCanReopen

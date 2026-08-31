@@ -22,7 +22,7 @@ mutation HarborUnmarkIssueDuplicate($duplicateId: ID!, $canonicalId: ID!) {
         id
         number
         state
-        stateReason(enableDuplicate: true)
+        stateReason
         duplicateOf { id }
         repository {
           id
@@ -68,7 +68,7 @@ pub(super) async fn unmark_issue_duplicate_with_client(
 
     let postflight = load_issue_duplicate_snapshot_with_client(client, mutation.request)
         .await
-        .map_err(|error| write_may_have_persisted(&error.to_string()))?;
+        .map_err(post_write_error)?;
     ensure_unmarked_snapshot(
         &postflight,
         mutation.request,
@@ -83,7 +83,7 @@ pub(super) async fn unmark_issue_duplicate_with_client(
         mutation.request.issue_number,
     )
     .await
-    .map_err(|error| write_may_have_persisted(&error.to_string()))?;
+    .map_err(post_write_error)?;
     if issue.number != mutation.request.issue_number
         || issue.reaction_subject.id != mutation.request.expected_issue_node_id
         || !issue_url_matches(
@@ -219,7 +219,11 @@ fn write_may_have_persisted(message: &str) -> AppError {
 }
 
 fn unmark_write_error(error: octocrab::Error) -> AppError {
-    match github_error(error) {
+    post_write_error(github_error(error))
+}
+
+fn post_write_error(error: AppError) -> AppError {
+    match error {
         error @ (AppError::GitHubPermission(_) | AppError::GitHubRateLimited(_)) => error,
         error => write_may_have_persisted(&error.to_string()),
     }
