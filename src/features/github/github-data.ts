@@ -1427,6 +1427,25 @@ export type GitHubIssuePage = {
   hasMore: boolean;
 };
 
+export type GitHubIssuePinAction = "pin" | "unpin";
+
+export type GitHubPinnedIssue = {
+  nodeId: string;
+  number: number;
+  title: string;
+  url: string;
+  state: GitHubIssueState;
+  stateReason?: GitHubIssueStateReason;
+  pinnedBy: string;
+};
+
+export type GitHubPinnedIssuePage = {
+  repositoryId: string;
+  repositoryFullName: string;
+  viewerCanManage: boolean;
+  issues: GitHubPinnedIssue[];
+};
+
 export type GitHubIssueRepository = GitHubRepositoryContentContext & {
   fullName: string;
 };

@@ -44,6 +44,7 @@ import { GitHubIssueCreate } from "./github-issue-create";
 import { GitHubIssueDetail } from "./github-issue-detail";
 import { GitHubIssueRow } from "./github-issue-row";
 import { GitHubIssuePagination } from "./github-issue-shared";
+import { GitHubPinnedIssues } from "./github-pinned-issues";
 import {
   repositoryIssueDetailQueryOptions,
   repositoryIssueLabelsQueryOptions,
@@ -309,6 +310,10 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
         </Alert>
       ) : null}
       <ScrollArea className="min-h-0 flex-1">
+        <GitHubPinnedIssues
+          repository={repository}
+          onSelect={(issueNumber) => setSelectedIssueNumber(issueNumber)}
+        />
         {issuesResult.isPending ? (
           <IssueSkeletons />
         ) : error ? (
