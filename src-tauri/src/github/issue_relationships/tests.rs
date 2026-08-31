@@ -1,3 +1,4 @@
+use super::mutations::{add_issue_sub_issue_with_client, IssueSubIssueMutation};
 use super::*;
 use crate::github::issue_related::{
     test_support::{assert_rest_request, issue_json, mock_github, MockResponse},
@@ -6,6 +7,122 @@ use crate::github::issue_related::{
 
 fn relationship_request(page: u32) -> RelatedIssueRequest<'static> {
     RelatedIssueRequest::new("octocat", "hello-world", 7, page).expect("valid request")
+}
+
+fn sub_issue_mutation() -> IssueSubIssueMutation<'static> {
+    IssueSubIssueMutation::new("octocat", "hello-world", 7, 42).expect("valid sub-issue mutation")
+}
+
+#[test]
+fn sub_issue_mutation_requires_a_nonzero_existing_issue_number() {
+    assert!(IssueSubIssueMutation::new("octocat", "hello-world", 7, 0).is_err());
+}
+
+#[tokio::test]
+async fn transport_adds_an_unparented_same_repository_issue_without_replacing_a_parent() {
+    let mutation = sub_issue_mutation();
+    let (client, requests, server) = mock_github(vec![
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: issue_json("octocat", "hello-world", 7, "completed").to_string(),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: issue_json("octocat", "hello-world", 42, "completed").to_string(),
+        },
+        MockResponse {
+            status: "404 Not Found",
+            headers: vec![],
+            body: serde_json::json!({"message": "Not Found"}).to_string(),
+        },
+        MockResponse {
+            status: "201 Created",
+            headers: vec![],
+            body: issue_json("octocat", "hello-world", 42, "completed").to_string(),
+        },
+    ])
+    .await;
+
+    add_issue_sub_issue_with_client(&client, mutation)
+        .await
+        .expect("sub-issue added");
+    server.await.expect("mock server");
+
+    let requests = requests.lock().expect("requests");
+    assert_rest_request(&requests[0], "/repos/octocat/hello-world/issues/7");
+    assert_rest_request(&requests[1], "/repos/octocat/hello-world/issues/42");
+    assert_rest_request(&requests[2], "/repos/octocat/hello-world/issues/42/parent");
+    assert!(requests[3].starts_with("POST /repos/octocat/hello-world/issues/7/sub_issues HTTP/1.1"));
+    let body = requests[3]
+        .split_once("\r\n\r\n")
+        .map(|(_, body)| body)
+        .expect("request body");
+    assert_eq!(
+        serde_json::from_str::<serde_json::Value>(body).expect("payload JSON"),
+        serde_json::json!({"sub_issue_id": 42, "replace_parent": false})
+    );
+}
+
+#[tokio::test]
+async fn transport_rejects_a_sub_issue_that_already_has_a_parent_before_writing() {
+    let (client, requests, server) = mock_github(vec![
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: issue_json("octocat", "hello-world", 7, "completed").to_string(),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: issue_json("octocat", "hello-world", 42, "completed").to_string(),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: issue_json("octocat", "roadmap", 3, "completed").to_string(),
+        },
+    ])
+    .await;
+
+    let error = add_issue_sub_issue_with_client(&client, sub_issue_mutation())
+        .await
+        .expect_err("existing parent must prevent a write");
+    server.await.expect("mock server");
+
+    assert!(
+        error.to_string().contains("already has a parent"),
+        "{error}"
+    );
+    assert_eq!(requests.lock().expect("requests").len(), 3);
+}
+
+#[tokio::test]
+async fn transport_rejects_a_pull_request_before_writing_a_sub_issue_relationship() {
+    let mut pull_request = issue_json("octocat", "hello-world", 42, "completed");
+    pull_request["pull_request"] = serde_json::json!({"url": "https://api.github.com/pulls/42"});
+    let (client, requests, server) = mock_github(vec![
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: issue_json("octocat", "hello-world", 7, "completed").to_string(),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: pull_request.to_string(),
+        },
+    ])
+    .await;
+
+    let error = add_issue_sub_issue_with_client(&client, sub_issue_mutation())
+        .await
+        .expect_err("pull requests cannot become sub-issues");
+    server.await.expect("mock server");
+
+    assert!(error.to_string().contains("Issue"), "{error}");
+    assert_eq!(requests.lock().expect("requests").len(), 2);
 }
 
 #[test]

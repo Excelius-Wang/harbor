@@ -15,6 +15,11 @@ use super::{
 };
 use crate::error::AppError;
 
+mod mutations;
+
+use mutations::add_issue_sub_issue_with_client;
+pub(crate) use mutations::IssueSubIssueMutation;
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GitHubIssueRelationshipsPage {
@@ -32,6 +37,12 @@ pub(crate) trait GitHubIssueRelationshipsClient: Send + Sync {
         token: &str,
         request: RelatedIssueRequest<'_>,
     ) -> Result<GitHubIssueRelationshipsPage, AppError>;
+
+    async fn add_issue_sub_issue(
+        &self,
+        token: &str,
+        mutation: IssueSubIssueMutation<'_>,
+    ) -> Result<(), AppError>;
 }
 
 impl GitHubService {
@@ -46,6 +57,19 @@ impl GitHubService {
         let token = self.load_access_token().await?;
         self.client.issue_relationships(&token, request).await
     }
+
+    pub async fn add_issue_sub_issue(
+        &self,
+        owner: &str,
+        repository: &str,
+        issue_number: u64,
+        sub_issue_number: u64,
+    ) -> Result<(), AppError> {
+        let mutation =
+            IssueSubIssueMutation::new(owner, repository, issue_number, sub_issue_number)?;
+        let token = self.load_access_token().await?;
+        self.client.add_issue_sub_issue(&token, mutation).await
+    }
 }
 
 #[async_trait]
@@ -57,6 +81,15 @@ impl GitHubIssueRelationshipsClient for OctocrabGitHubClient {
     ) -> Result<GitHubIssueRelationshipsPage, AppError> {
         let client = authenticated_client(token)?;
         load_issue_relationships_with_client(&client, request).await
+    }
+
+    async fn add_issue_sub_issue(
+        &self,
+        token: &str,
+        mutation: IssueSubIssueMutation<'_>,
+    ) -> Result<(), AppError> {
+        let client = authenticated_client(token)?;
+        add_issue_sub_issue_with_client(&client, mutation).await
     }
 }
 
@@ -84,7 +117,7 @@ async fn load_issue_relationships_with_client(
     })
 }
 
-async fn load_parent(
+pub(super) async fn load_parent(
     client: &octocrab::Octocrab,
     request: RelatedIssueRequest<'_>,
 ) -> Result<Option<GitHubIssueSummary>, AppError> {
@@ -161,6 +194,24 @@ impl GitHubIssueRelationshipsClient for super::tests::FakeGitHubClient {
             has_previous: request.page > 1,
             has_more: false,
         })
+    }
+
+    async fn add_issue_sub_issue(
+        &self,
+        token: &str,
+        mutation: IssueSubIssueMutation<'_>,
+    ) -> Result<(), AppError> {
+        assert_eq!(token, "github-user-access-token");
+        assert_eq!(
+            (
+                mutation.current.owner,
+                mutation.current.repository,
+                mutation.current.issue_number,
+                mutation.sub_issue_number,
+            ),
+            ("octocat", "hello-world", 7, 42)
+        );
+        Ok(())
     }
 }
 

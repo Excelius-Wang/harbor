@@ -123,6 +123,40 @@ describe("GitHub Issue relationships", () => {
     expect(onNavigate).toHaveBeenNthCalledWith(2, child);
   });
 
+  it("adds one existing Issue from the same repository as a sub-issue", async () => {
+    vi.mocked(invoke).mockImplementation((command) => {
+      if (command === "github_get_repository_issue_relationships") {
+        return Promise.resolve({
+          parent: null,
+          subIssues: [],
+          page: 1,
+          hasPrevious: false,
+          hasMore: false,
+        });
+      }
+      if (command === "github_add_repository_issue_sub_issue") return Promise.resolve();
+      return Promise.resolve();
+    });
+    const user = userEvent.setup();
+    renderRelationships();
+
+    await screen.findByText("workspace.repositories.noIssueRelationships");
+    await user.click(screen.getByRole("button", { name: "workspace.repositories.addSubIssue" }));
+    await user.type(screen.getByLabelText("workspace.repositories.subIssueNumber"), "42");
+    await user.click(
+      screen.getByRole("button", { name: "workspace.repositories.addSubIssueConfirm" })
+    );
+
+    await waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith("github_add_repository_issue_sub_issue", {
+        owner: "octocat",
+        repository: "hello-world",
+        issueNumber: 7,
+        subIssueNumber: 42,
+      })
+    );
+  });
+
   it("keeps cached rows visible and offers retry after a permission refresh failure", async () => {
     vi.mocked(invoke)
       .mockResolvedValueOnce({
