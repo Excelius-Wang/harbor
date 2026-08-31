@@ -637,7 +637,8 @@ async fn public_capabilities_preserve_duplicate_and_viewer_permissions() {
     assert_eq!(request["variables"]["owner"], "octocat");
     assert_eq!(request["variables"]["repository"], "hello-world");
     let query = request["query"].as_str().expect("capability query");
-    assert!(query.contains("stateReason(enableDuplicate: true)"));
+    assert!(query.contains("stateReason"));
+    assert!(!query.contains("enableDuplicate"));
     assert!(query.contains("viewerCanClose"));
     assert!(query.contains("viewerCanReopen"));
     assert!(query.contains("viewerCanUpdate"));

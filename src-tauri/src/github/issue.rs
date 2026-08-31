@@ -20,6 +20,16 @@ pub use lifecycle::{
     GitHubIssueStateCapabilities, GitHubIssueStateMutation, GitHubIssueStateReason,
 };
 
+pub(crate) async fn load_issue_postflight_with_client(
+    client: &octocrab::Octocrab,
+    owner: &str,
+    repository: &str,
+    issue_number: u64,
+) -> Result<GitHubIssue, AppError> {
+    let issue = lifecycle::load_rest_issue(client, owner, repository, issue_number, true).await?;
+    Ok(lifecycle::issue_from_rest(issue))
+}
+
 const ISSUE_PAGE_SIZE: u8 = 30;
 const ISSUE_TIMELINE_PAGE_SIZE: u8 = 100;
 

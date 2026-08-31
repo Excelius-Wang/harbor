@@ -7,6 +7,7 @@ fn duplicate_response(source_id: &str, state_reason: Option<&str>) -> String {
             "repository": {
                 "id": "R_1",
                 "nameWithOwner": "octocat/hello-world",
+                "viewerPermission": "WRITE",
                 "issue": {
                     "id": source_id,
                     "number": 7,
@@ -49,9 +50,33 @@ async fn transport_loads_the_current_issues_canonical_duplicate_reference() {
     assert_eq!(duplicate.repository, "api");
     assert_eq!(duplicate.issue_number, 9);
     assert_eq!(duplicate.title, "Canonical Issue");
+    assert!(duplicate.viewer_can_unmark);
     let request = requests.lock().expect("requests");
     assert!(request[0].starts_with("POST /graphql HTTP/1.1"));
     assert!(request[0].contains("duplicateOf"));
+    assert!(request[0].contains("stateReason"));
+    assert!(!request[0].contains("enableDuplicate"));
+}
+
+#[tokio::test]
+async fn transport_exposes_a_read_only_duplicate_without_write_controls() {
+    let (client, _requests, server) = mock_github(vec![MockResponse {
+        status: "200 OK",
+        headers: vec![],
+        body: duplicate_response("I_7", Some("DUPLICATE")).replace(
+            "\"viewerPermission\":\"WRITE\"",
+            "\"viewerPermission\":\"READ\"",
+        ),
+    }])
+    .await;
+
+    let duplicate = load_issue_duplicate_with_client(&client, duplicate_request())
+        .await
+        .expect("duplicate reference")
+        .expect("canonical duplicate");
+    server.await.expect("mock server");
+
+    assert!(!duplicate.viewer_can_unmark);
 }
 
 #[tokio::test]
