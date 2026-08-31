@@ -1778,6 +1778,26 @@ pub async fn github_get_repository_issue_duplicate(
 }
 
 #[tauri::command]
+pub async fn github_unmark_repository_issue_duplicate(
+    owner: String,
+    repository: String,
+    issue_number: u64,
+    expected_issue_node_id: String,
+    state: State<'_, AppState>,
+) -> Result<GitHubIssue, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .unmark_issue_duplicate(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(issue_number, "issue")?,
+            &validate_graphql_node_id(expected_issue_node_id, "issue")?,
+        )
+        .await
+}
+
+#[tauri::command]
 pub async fn github_get_repository_issue_linked_pull_requests(
     owner: String,
     repository: String,

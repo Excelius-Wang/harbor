@@ -3290,6 +3290,10 @@ mod tests {
             .update_issue_state("octocat", "hello-world", 7, &state_mutation)
             .await
             .expect("closed issue");
+        let unmarked_duplicate = service
+            .unmark_issue_duplicate("octocat", "hello-world", 7, "I_7")
+            .await
+            .expect("unmarked duplicate");
         let label = service
             .mutate_issue_label(
                 "octocat",
@@ -3338,6 +3342,7 @@ mod tests {
         );
         assert_eq!(issue.state, GitHubIssueState::Closed);
         assert_eq!(issue.state_reason.as_deref(), Some("completed"));
+        assert_eq!(unmarked_duplicate.number, 7);
         assert_eq!(label.name, "needs-triage");
         assert_eq!(label.color, "a1b2c3");
         assert_eq!(milestone.title, "Harbor 1.0");

@@ -1468,6 +1468,7 @@ export type GitHubIssueDuplicateReference = {
   issueNumber: number;
   title: string;
   url: string;
+  viewerCanUnmark: boolean;
 };
 
 export type GitHubIssueLinkedPullRequestReference = {

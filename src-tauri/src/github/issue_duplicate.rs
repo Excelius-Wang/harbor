@@ -2,7 +2,8 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    authenticated_client, github_error,
+    github_error,
+    issue::GitHubIssue,
     issue_related::{
         graphql_node_id_is_valid, issue_url_matches, split_repository_full_name,
         IssueGraphQlRequest,
@@ -11,11 +12,16 @@ use super::{
 };
 use crate::error::AppError;
 
+mod mutations;
+
+use mutations::{unmark_issue_duplicate_with_client, IssueDuplicateMutation};
+
 const ISSUE_DUPLICATE_QUERY: &str = r#"
 query HarborIssueDuplicate($owner: String!, $repository: String!, $number: Int!) {
   repository(owner: $owner, name: $repository) {
     id
     nameWithOwner
+    viewerPermission
     issue(number: $number) {
       id
       number
@@ -45,6 +51,7 @@ pub struct GitHubIssueDuplicateReference {
     pub issue_number: u64,
     pub title: String,
     pub url: String,
+    pub viewer_can_unmark: bool,
 }
 
 #[async_trait]
@@ -54,6 +61,12 @@ pub(crate) trait GitHubIssueDuplicateClient: Send + Sync {
         token: &str,
         request: IssueGraphQlRequest<'_>,
     ) -> Result<Option<GitHubIssueDuplicateReference>, AppError>;
+
+    async fn unmark_issue_duplicate(
+        &self,
+        token: &str,
+        mutation: IssueDuplicateMutation<'_>,
+    ) -> Result<GitHubIssue, AppError>;
 }
 
 impl GitHubService {
@@ -69,6 +82,19 @@ impl GitHubService {
         let token = self.load_access_token().await?;
         self.client.issue_duplicate(&token, request).await
     }
+
+    pub async fn unmark_issue_duplicate(
+        &self,
+        owner: &str,
+        repository: &str,
+        issue_number: u64,
+        expected_issue_node_id: &str,
+    ) -> Result<GitHubIssue, AppError> {
+        let mutation =
+            IssueDuplicateMutation::new(owner, repository, issue_number, expected_issue_node_id)?;
+        let token = self.load_access_token().await?;
+        self.client.unmark_issue_duplicate(&token, mutation).await
+    }
 }
 
 #[async_trait]
@@ -78,18 +104,43 @@ impl GitHubIssueDuplicateClient for OctocrabGitHubClient {
         token: &str,
         request: IssueGraphQlRequest<'_>,
     ) -> Result<Option<GitHubIssueDuplicateReference>, AppError> {
-        let client = authenticated_client(token)?;
+        let client = issue_duplicate_client(token)?;
         load_issue_duplicate_with_client(&client, request).await
     }
+
+    async fn unmark_issue_duplicate(
+        &self,
+        token: &str,
+        mutation: IssueDuplicateMutation<'_>,
+    ) -> Result<GitHubIssue, AppError> {
+        let client = issue_duplicate_client(token)?;
+        unmark_issue_duplicate_with_client(&client, mutation).await
+    }
+}
+
+fn issue_duplicate_client(token: &str) -> Result<octocrab::Octocrab, AppError> {
+    octocrab::Octocrab::builder()
+        .add_retry_config(octocrab::service::middleware::retry::RetryConfig::None)
+        .personal_token(token.to_string())
+        .build()
+        .map_err(|error| AppError::GitHub(error.to_string()))
 }
 
 async fn load_issue_duplicate_with_client(
     client: &octocrab::Octocrab,
     request: IssueGraphQlRequest<'_>,
 ) -> Result<Option<GitHubIssueDuplicateReference>, AppError> {
+    let snapshot = load_issue_duplicate_snapshot_with_client(client, request).await?;
+    duplicate_from_snapshot(snapshot)
+}
+
+pub(super) async fn load_issue_duplicate_snapshot_with_client(
+    client: &octocrab::Octocrab,
+    request: IssueGraphQlRequest<'_>,
+) -> Result<IssueDuplicateSnapshot, AppError> {
     let payload = issue_duplicate_payload(request)?;
     let response: IssueDuplicateQuery = client.graphql(&payload).await.map_err(github_error)?;
-    duplicate_from_graphql(response, request)
+    duplicate_snapshot_from_graphql(response, request)
 }
 
 fn issue_duplicate_payload(
@@ -108,14 +159,14 @@ fn issue_duplicate_payload(
     }))
 }
 
-fn duplicate_from_graphql(
+fn duplicate_snapshot_from_graphql(
     response: IssueDuplicateQuery,
     request: IssueGraphQlRequest<'_>,
-) -> Result<Option<GitHubIssueDuplicateReference>, AppError> {
+) -> Result<IssueDuplicateSnapshot, AppError> {
     let repository_node = response.repository.ok_or_else(|| {
         AppError::GitHub("GitHub did not return the Issue repository".to_string())
     })?;
-    if repository_node.id.trim().is_empty()
+    if !graphql_node_id_is_valid(&repository_node.id)
         || !repository_node
             .name_with_owner
             .eq_ignore_ascii_case(&format!("{}/{}", request.owner, request.repository))
@@ -133,25 +184,74 @@ fn duplicate_from_graphql(
             "GitHub returned a different Issue for the duplicate reference".to_string(),
         ));
     }
-    if issue.state != "CLOSED" || issue.state_reason.as_deref() != Some("DUPLICATE") {
+    let viewer_can_unmark =
+        repository_viewer_can_write(repository_node.viewer_permission.as_deref());
+    let canonical = issue
+        .duplicate_of
+        .map(|duplicate| {
+            let node_id = duplicate.id.clone();
+            canonical_reference(duplicate, request.expected_issue_node_id, viewer_can_unmark)
+                .map(|reference| CanonicalDuplicate { node_id, reference })
+                .map_err(|message| {
+                    AppError::GitHub(format!(
+                        "GitHub returned an invalid duplicate Issue: {message}"
+                    ))
+                })
+        })
+        .transpose()?;
+    Ok(IssueDuplicateSnapshot {
+        repository_id: repository_node.id,
+        repository_full_name: repository_node.name_with_owner,
+        viewer_permission: repository_node.viewer_permission,
+        issue_node_id: issue.id,
+        issue_number: issue.number,
+        state: issue.state,
+        state_reason: issue.state_reason,
+        canonical,
+    })
+}
+
+fn duplicate_from_snapshot(
+    snapshot: IssueDuplicateSnapshot,
+) -> Result<Option<GitHubIssueDuplicateReference>, AppError> {
+    if !snapshot.is_marked_duplicate() {
         return Ok(None);
     }
-
-    let duplicate = issue.duplicate_of.ok_or_else(|| {
-        AppError::GitHub("GitHub did not return the canonical duplicate Issue".to_string())
-    })?;
-    canonical_reference(duplicate, request.expected_issue_node_id)
+    snapshot
+        .canonical
+        .map(|canonical| canonical.reference)
         .map(Some)
-        .map_err(|message| {
-            AppError::GitHub(format!(
-                "GitHub returned an invalid duplicate Issue: {message}"
-            ))
+        .ok_or_else(|| {
+            AppError::GitHub("GitHub did not return the canonical duplicate Issue".to_string())
         })
+}
+
+pub(super) struct IssueDuplicateSnapshot {
+    pub(super) repository_id: String,
+    pub(super) repository_full_name: String,
+    pub(super) viewer_permission: Option<String>,
+    pub(super) issue_node_id: String,
+    pub(super) issue_number: u64,
+    pub(super) state: String,
+    pub(super) state_reason: Option<String>,
+    pub(super) canonical: Option<CanonicalDuplicate>,
+}
+
+impl IssueDuplicateSnapshot {
+    pub(super) fn is_marked_duplicate(&self) -> bool {
+        self.state == "CLOSED" && self.state_reason.as_deref() == Some("DUPLICATE")
+    }
+}
+
+pub(super) struct CanonicalDuplicate {
+    pub(super) node_id: String,
+    pub(super) reference: GitHubIssueDuplicateReference,
 }
 
 fn canonical_reference(
     issue: GraphQlDuplicateIssue,
     source_issue_node_id: &str,
+    viewer_can_unmark: bool,
 ) -> Result<GitHubIssueDuplicateReference, &'static str> {
     if !graphql_node_id_is_valid(&issue.id) || issue.id == source_issue_node_id {
         return Err("the canonical Issue identity is invalid");
@@ -177,7 +277,12 @@ fn canonical_reference(
         issue_number: issue.number,
         title: issue.title,
         url: issue.url,
+        viewer_can_unmark,
     })
+}
+
+fn repository_viewer_can_write(permission: Option<&str>) -> bool {
+    matches!(permission, Some("WRITE" | "MAINTAIN" | "ADMIN"))
 }
 
 #[derive(Deserialize)]
@@ -190,6 +295,7 @@ struct IssueDuplicateQuery {
 struct GraphQlDuplicateRepository {
     id: String,
     name_with_owner: String,
+    viewer_permission: Option<String>,
     issue: Option<GraphQlDuplicateSourceIssue>,
 }
 
@@ -234,6 +340,33 @@ impl GitHubIssueDuplicateClient for super::tests::FakeGitHubClient {
         );
         assert_eq!(request.expected_issue_node_id, "I_7");
         Ok(None)
+    }
+
+    async fn unmark_issue_duplicate(
+        &self,
+        token: &str,
+        mutation: IssueDuplicateMutation<'_>,
+    ) -> Result<GitHubIssue, AppError> {
+        assert_eq!(token, "github-user-access-token");
+        assert_eq!(
+            (
+                mutation.request.owner,
+                mutation.request.repository,
+                mutation.request.issue_number,
+                mutation.request.expected_issue_node_id,
+            ),
+            ("octocat", "hello-world", 7, "I_7")
+        );
+        Ok(crate::github::issue::GitHubIssueClient::issue_detail(
+            self,
+            token,
+            mutation.request.owner,
+            mutation.request.repository,
+            mutation.request.issue_number,
+            1,
+        )
+        .await?
+        .issue)
     }
 }
 
