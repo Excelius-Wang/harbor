@@ -101,6 +101,7 @@ export function GitHubIssueTransferAction({
     onError: (error, nextTarget) => {
       const parsed = parseIpcError(error);
       toast.error(t(transferErrorTitle(parsed.code)), { description: parsed.message });
+      void refreshIssueTransferCaches(queryClient, nextTarget);
       candidate.mutate(nextTarget);
     },
   });

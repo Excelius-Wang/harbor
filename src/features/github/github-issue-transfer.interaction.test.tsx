@@ -205,6 +205,57 @@ describe("GitHub Issue transfer action", () => {
     await waitFor(() => expect(invoke).toHaveBeenCalledTimes(3));
   });
 
+  it("refreshes source and target caches when transfer outcome is ambiguous", async () => {
+    vi.mocked(invoke)
+      .mockResolvedValueOnce(status)
+      .mockRejectedValueOnce({
+        code: "githubIssueTransferConflict",
+        message: "the Issue transfer may have persisted",
+      })
+      .mockResolvedValueOnce(status);
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const sourceDetail = githubQueryKeys.issueRoot({
+      owner: "octocat",
+      repository: "hello-world",
+      issueNumber: 7,
+    });
+    const targetIssues = githubQueryKeys.issuesRoot({
+      owner: "octocat",
+      repository: "destination",
+    });
+    queryClient.setQueryData(sourceDetail, { issue });
+    queryClient.setQueryData(targetIssues, {
+      issues: [],
+      totalCount: 0,
+      page: 1,
+      hasPrevious: false,
+      hasMore: false,
+    });
+    const user = userEvent.setup();
+    renderAction(vi.fn(), queryClient);
+
+    await user.click(screen.getByRole("button", { name: "workspace.repositories.transferIssue" }));
+    await user.type(screen.getByRole("textbox"), "octocat/destination");
+    await user.click(
+      screen.getByRole("button", { name: "workspace.repositories.checkTransferTarget" })
+    );
+    await screen.findByText("workspace.repositories.transferIssueConfirmDescription");
+    await user.click(
+      screen.getByRole("button", { name: "workspace.repositories.confirmTransferIssue" })
+    );
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        "workspace.repositories.issueTransferMayHavePersisted",
+        { description: "the Issue transfer may have persisted" }
+      )
+    );
+    await waitFor(() => {
+      expect(queryClient.getQueryState(sourceDetail)?.isInvalidated).toBe(true);
+      expect(queryClient.getQueryState(targetIssues)?.isInvalidated).toBe(true);
+    });
+  });
+
   it("removes the source Issue from list and pinned caches after transfer", () => {
     const queryClient = new QueryClient();
     const listKey = githubQueryKeys.issues({

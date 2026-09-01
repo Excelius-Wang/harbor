@@ -231,7 +231,7 @@ function githubIssueUrlMatches(value: string, fullName: string, issueNumber: num
 export async function refreshIssueTransferCaches(
   queryClient: QueryClient,
   target: GitHubIssueTransferTarget,
-  transfer: GitHubIssueTransfer
+  transfer?: GitHubIssueTransfer
 ) {
   const source = {
     owner: target.sourceOwner,
@@ -241,15 +241,19 @@ export async function refreshIssueTransferCaches(
   const destination = {
     owner: target.targetOwner,
     repository: target.targetRepository,
-    issueNumber: transfer.targetIssueNumber,
   };
+  const destinationIssue = transfer
+    ? { ...destination, issueNumber: transfer.targetIssueNumber }
+    : null;
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: githubQueryKeys.issueRoot(source) }),
     queryClient.invalidateQueries({ queryKey: githubQueryKeys.issuesRoot(source) }),
-    queryClient.invalidateQueries({ queryKey: githubQueryKeys.issueRoot(destination) }),
     queryClient.invalidateQueries({ queryKey: githubQueryKeys.issuesRoot(destination) }),
     queryClient.invalidateQueries({ queryKey: githubQueryKeys.issueInboxRoot }),
     queryClient.invalidateQueries({ queryKey: githubIssuePinQueryKeys.root(source) }),
     queryClient.invalidateQueries({ queryKey: githubIssuePinQueryKeys.root(destination) }),
+    ...(destinationIssue
+      ? [queryClient.invalidateQueries({ queryKey: githubQueryKeys.issueRoot(destinationIssue) })]
+      : []),
   ]);
 }
