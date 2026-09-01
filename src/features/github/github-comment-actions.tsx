@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Pin, PinOff, Trash2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,6 +36,9 @@ export type GitHubMutableComment = {
   updatedAt: string;
   viewerCanUpdate: boolean;
   viewerCanDelete: boolean;
+  isPinned?: boolean;
+  viewerCanPin?: boolean;
+  viewerCanUnpin?: boolean;
 };
 
 export function GitHubCommentActions<TComment>({
@@ -88,7 +91,12 @@ export function GitHubCommentActions<TComment>({
     if (!editOpen) setDraft(comment.body);
   }, [comment.body, editOpen]);
 
-  if ((!comment.viewerCanUpdate && !comment.viewerCanDelete) || !comment.updatedAt) return null;
+  const canPin =
+    comment.isPinned !== undefined &&
+    ((comment.isPinned && comment.viewerCanUnpin) || (!comment.isPinned && comment.viewerCanPin));
+  if ((!comment.viewerCanUpdate && !comment.viewerCanDelete && !canPin) || !comment.updatedAt) {
+    return null;
+  }
 
   const error = mutation.error ? parseIpcError(mutation.error) : null;
   const errorMessage = error
@@ -110,6 +118,12 @@ export function GitHubCommentActions<TComment>({
     action: "delete",
     commentId: comment.id,
     expectedUpdatedAt: comment.updatedAt,
+  };
+  const pinMutation: GitHubCommentMutation = {
+    action: comment.isPinned ? "unpin" : "pin",
+    commentId: comment.id,
+    expectedUpdatedAt: comment.updatedAt,
+    expectedPinned: Boolean(comment.isPinned),
   };
 
   return (
@@ -154,6 +168,48 @@ export function GitHubCommentActions<TComment>({
           </TooltipTrigger>
           <TooltipContent>{t("workspace.repositories.deleteComment")}</TooltipContent>
         </Tooltip>
+      ) : null}
+      {comment.isPinned !== undefined &&
+      ((comment.isPinned && comment.viewerCanUnpin) ||
+        (!comment.isPinned && comment.viewerCanPin)) ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              aria-label={t(
+                comment.isPinned
+                  ? "workspace.repositories.unpinComment"
+                  : "workspace.repositories.pinComment"
+              )}
+              aria-busy={mutation.isPending}
+              disabled={mutation.isPending || disabled}
+              onClick={() => mutation.mutate(pinMutation)}
+            >
+              {mutation.isPending ? (
+                <Spinner aria-hidden="true" />
+              ) : comment.isPinned ? (
+                <PinOff />
+              ) : (
+                <Pin />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {t(
+              comment.isPinned
+                ? "workspace.repositories.unpinComment"
+                : "workspace.repositories.pinComment"
+            )}
+          </TooltipContent>
+        </Tooltip>
+      ) : null}
+
+      {mutation.error && !editOpen && !deleteOpen ? (
+        <Alert variant="destructive" role="alert" className="max-w-sm">
+          <AlertDescription>{errorMessage}</AlertDescription>
+        </Alert>
       ) : null}
 
       <Dialog

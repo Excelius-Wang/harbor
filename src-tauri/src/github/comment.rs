@@ -15,16 +15,9 @@ use super::{
     GitHubService, OctocrabGitHubClient,
 };
 
-const COMMENT_NODES_QUERY: &str = r#"
-query HarborCommentNodes($owner: String!, $repository: String!, $ids: [ID!]!) {
-  repository(owner: $owner, name: $repository) { id }
-  nodes(ids: $ids) {
-    __typename
-    ...HarborIssueCommentFields
-    ...HarborPullRequestReviewCommentFields
-  }
-}
-
+macro_rules! issue_comment_fields_fragment {
+    () => {
+        r#"
 fragment HarborIssueCommentFields on IssueComment {
   id
   body
@@ -32,14 +25,31 @@ fragment HarborIssueCommentFields on IssueComment {
   createdAt
   updatedAt
   authorAssociation
+  isPinned
   isMinimized
   minimizedReason
   viewerCanUpdate
   viewerCanDelete
+  viewerCanPin
+  viewerCanUnpin
   repository { id }
   issue { number }
   pullRequest { number }
   author { login avatarUrl }
+}
+"#
+    };
+}
+
+const COMMENT_NODES_QUERY: &str = concat!(
+    r#"
+query HarborCommentNodes($owner: String!, $repository: String!, $ids: [ID!]!) {
+  repository(owner: $owner, name: $repository) { id }
+  nodes(ids: $ids) {
+    __typename
+    ...HarborIssueCommentFields
+    ...HarborPullRequestReviewCommentFields
+  }
 }
 
 fragment HarborPullRequestReviewCommentFields on PullRequestReviewComment {
@@ -60,9 +70,12 @@ fragment HarborPullRequestReviewCommentFields on PullRequestReviewComment {
   pullRequest { number }
   author { login avatarUrl }
 }
-"#;
+"#,
+    issue_comment_fields_fragment!()
+);
 
-const UPDATE_ISSUE_COMMENT_MUTATION: &str = r#"
+const UPDATE_ISSUE_COMMENT_MUTATION: &str = concat!(
+    r#"
 mutation HarborUpdateIssueComment(
   $id: ID!
   $body: String!
@@ -77,24 +90,9 @@ mutation HarborUpdateIssueComment(
     issueComment { ...HarborIssueCommentFields }
   }
 }
-
-fragment HarborIssueCommentFields on IssueComment {
-  id
-  body
-  url
-  createdAt
-  updatedAt
-  authorAssociation
-  isMinimized
-  minimizedReason
-  viewerCanUpdate
-  viewerCanDelete
-  repository { id }
-  issue { number }
-  pullRequest { number }
-  author { login avatarUrl }
-}
-"#;
+"#,
+    issue_comment_fields_fragment!()
+);
 
 const DELETE_ISSUE_COMMENT_MUTATION: &str = r#"
 mutation HarborDeleteIssueComment($id: ID!, $clientMutationId: String!) {
@@ -103,6 +101,30 @@ mutation HarborDeleteIssueComment($id: ID!, $clientMutationId: String!) {
   }
 }
 "#;
+
+const PIN_ISSUE_COMMENT_MUTATION: &str = concat!(
+    r#"
+mutation HarborPinIssueComment($id: ID!, $clientMutationId: String!) {
+  pinIssueComment(input: { issueCommentId: $id, clientMutationId: $clientMutationId }) {
+    clientMutationId
+    issueComment { ...HarborIssueCommentFields }
+  }
+}
+"#,
+    issue_comment_fields_fragment!()
+);
+
+const UNPIN_ISSUE_COMMENT_MUTATION: &str = concat!(
+    r#"
+mutation HarborUnpinIssueComment($id: ID!, $clientMutationId: String!) {
+  unpinIssueComment(input: { issueCommentId: $id, clientMutationId: $clientMutationId }) {
+    clientMutationId
+    issueComment { ...HarborIssueCommentFields }
+  }
+}
+"#,
+    issue_comment_fields_fragment!()
+);
 
 const UPDATE_REVIEW_COMMENT_MUTATION: &str = r#"
 mutation HarborUpdatePullRequestReviewComment(
@@ -168,12 +190,25 @@ pub enum GitHubCommentMutation {
         comment_id: String,
         expected_updated_at: String,
     },
+    Pin {
+        comment_id: String,
+        expected_updated_at: String,
+        expected_pinned: bool,
+    },
+    Unpin {
+        comment_id: String,
+        expected_updated_at: String,
+        expected_pinned: bool,
+    },
 }
 
 impl GitHubCommentMutation {
     pub(crate) fn comment_id(&self) -> &str {
         match self {
-            Self::Update { comment_id, .. } | Self::Delete { comment_id, .. } => comment_id,
+            Self::Update { comment_id, .. }
+            | Self::Delete { comment_id, .. }
+            | Self::Pin { comment_id, .. }
+            | Self::Unpin { comment_id, .. } => comment_id,
         }
     }
 
@@ -186,7 +221,27 @@ impl GitHubCommentMutation {
             | Self::Delete {
                 expected_updated_at,
                 ..
+            }
+            | Self::Pin {
+                expected_updated_at,
+                ..
+            }
+            | Self::Unpin {
+                expected_updated_at,
+                ..
             } => expected_updated_at,
+        }
+    }
+
+    fn expected_pinned(&self) -> Option<bool> {
+        match self {
+            Self::Pin {
+                expected_pinned, ..
+            }
+            | Self::Unpin {
+                expected_pinned, ..
+            } => Some(*expected_pinned),
+            Self::Update { .. } | Self::Delete { .. } => None,
         }
     }
 }
@@ -315,7 +370,20 @@ impl GitHubCommentClient for OctocrabGitHubClient {
             &current.updated_at,
             current.viewer_can_update,
             current.viewer_can_delete,
+            current.is_pinned.unwrap_or(false),
+            current.viewer_can_pin,
+            current.viewer_can_unpin,
         )?;
+
+        if matches!(
+            mutation,
+            GitHubCommentMutation::Pin { .. } | GitHubCommentMutation::Unpin { .. }
+        ) && kind != GitHubConversationCommentKind::Issue
+        {
+            return Err(AppError::Validation(
+                "Issue comment pinning is only available on Issues".to_string(),
+            ));
+        }
 
         match mutation {
             GitHubCommentMutation::Update { body, .. } if current.body == *body => {
@@ -371,6 +439,54 @@ impl GitHubCommentClient for OctocrabGitHubClient {
                 )?;
                 Ok(None)
             }
+            GitHubCommentMutation::Pin { .. } | GitHubCommentMutation::Unpin { .. } => {
+                let client = issue_comment_client(token)?;
+                let client_mutation_id =
+                    mutation_identity(if matches!(mutation, GitHubCommentMutation::Pin { .. }) {
+                        "pin-issue-comment"
+                    } else {
+                        "unpin-issue-comment"
+                    });
+                let payload = serde_json::json!({
+                    "query": if matches!(mutation, GitHubCommentMutation::Pin { .. }) {
+                        PIN_ISSUE_COMMENT_MUTATION
+                    } else {
+                        UNPIN_ISSUE_COMMENT_MUTATION
+                    },
+                    "variables": {
+                        "id": current.id,
+                        "clientMutationId": client_mutation_id,
+                    }
+                });
+                let response: PinIssueCommentMutation =
+                    client.graphql(&payload).await.map_err(github_error)?;
+                let payload = if matches!(mutation, GitHubCommentMutation::Pin { .. }) {
+                    response.pin_issue_comment.ok_or_else(|| {
+                        AppError::GitHub("GitHub did not return the comment pin".into())
+                    })?
+                } else {
+                    response.unpin_issue_comment.ok_or_else(|| {
+                        AppError::GitHub("GitHub did not return the comment unpin".into())
+                    })?
+                };
+                ensure_mutation_identity(
+                    payload.client_mutation_id.as_deref(),
+                    &client_mutation_id,
+                )?;
+                let pinned = payload.issue_comment.ok_or_else(|| {
+                    AppError::GitHub("GitHub did not return the pinned comment".into())
+                })?;
+                let pinned = validate_issue_comment_node(pinned, &repository_id, number, kind)?;
+                let expected_pinned = matches!(mutation, GitHubCommentMutation::Pin { .. });
+                if pinned.id != mutation.comment_id()
+                    || pinned.is_pinned.unwrap_or(false) != expected_pinned
+                {
+                    return Err(AppError::GitHub(
+                        "GitHub returned an unexpected comment pin state".to_string(),
+                    ));
+                }
+                Ok(Some(issue_timeline_item_from_graphql(pinned)))
+            }
         }
     }
 
@@ -415,6 +531,9 @@ impl GitHubCommentClient for OctocrabGitHubClient {
             &current.updated_at,
             current.viewer_can_update,
             current.viewer_can_delete,
+            false,
+            false,
+            false,
         )?;
 
         match mutation {
@@ -472,8 +591,36 @@ impl GitHubCommentClient for OctocrabGitHubClient {
                 )?;
                 Ok(None)
             }
+            GitHubCommentMutation::Pin { .. } | GitHubCommentMutation::Unpin { .. } => {
+                Err(AppError::Validation(
+                    "Issue comment pinning is not available for review comments".to_string(),
+                ))
+            }
         }
     }
+}
+
+fn issue_comment_client(token: &str) -> Result<octocrab::Octocrab, AppError> {
+    issue_comment_client_with_base(token, None)
+}
+
+fn issue_comment_client_with_base(
+    token: &str,
+    base_uri: Option<&str>,
+) -> Result<octocrab::Octocrab, AppError> {
+    let builder = octocrab::Octocrab::builder()
+        .add_retry_config(octocrab::service::middleware::retry::RetryConfig::None);
+    let builder = if let Some(base_uri) = base_uri {
+        builder
+            .base_uri(base_uri)
+            .map_err(|error| AppError::GitHub(error.to_string()))?
+    } else {
+        builder
+    };
+    builder
+        .personal_token(token.to_string())
+        .build()
+        .map_err(|error| AppError::GitHub(error.to_string()))
 }
 
 pub(crate) async fn enrich_issue_timeline_comments(
@@ -581,10 +728,15 @@ fn ensure_mutation_allowed(
     current_updated_at: &str,
     viewer_can_update: bool,
     viewer_can_delete: bool,
+    current_is_pinned: bool,
+    viewer_can_pin: bool,
+    viewer_can_unpin: bool,
 ) -> Result<(), AppError> {
     let allowed = match mutation {
         GitHubCommentMutation::Update { .. } => viewer_can_update,
         GitHubCommentMutation::Delete { .. } => viewer_can_delete,
+        GitHubCommentMutation::Pin { .. } => viewer_can_pin,
+        GitHubCommentMutation::Unpin { .. } => viewer_can_unpin,
     };
     if !allowed {
         return Err(AppError::GitHubPermission(
@@ -595,6 +747,14 @@ fn ensure_mutation_allowed(
         return Err(AppError::GitHubCommentConflict(
             "the comment changed after it was loaded".to_string(),
         ));
+    }
+    if let Some(expected_pinned) = mutation.expected_pinned() {
+        let requested_pinned = matches!(mutation, GitHubCommentMutation::Pin { .. });
+        if expected_pinned != current_is_pinned || requested_pinned == current_is_pinned {
+            return Err(AppError::GitHubCommentConflict(
+                "the comment pin state changed after it was loaded".to_string(),
+            ));
+        }
     }
     Ok(())
 }
@@ -650,6 +810,9 @@ fn issue_timeline_item_from_graphql(node: IssueCommentNode) -> GitHubIssueTimeli
         updated_at: Some(node.updated_at),
         viewer_can_update: node.viewer_can_update,
         viewer_can_delete: node.viewer_can_delete,
+        is_pinned: node.is_pinned.unwrap_or(false),
+        viewer_can_pin: node.viewer_can_pin,
+        viewer_can_unpin: node.viewer_can_unpin,
         is_minimized: node.is_minimized,
         minimized_reason: node.minimized_reason,
         label: None,
@@ -723,10 +886,13 @@ struct IssueCommentNode {
     created_at: String,
     updated_at: String,
     author_association: Option<String>,
+    is_pinned: Option<bool>,
     is_minimized: bool,
     minimized_reason: Option<String>,
     viewer_can_update: bool,
     viewer_can_delete: bool,
+    viewer_can_pin: bool,
+    viewer_can_unpin: bool,
     repository: CommentRepository,
     issue: CommentParent,
     pull_request: Option<CommentParent>,
@@ -783,6 +949,20 @@ struct UpdateIssueCommentPayload {
 #[serde(rename_all = "camelCase")]
 struct DeleteIssueCommentMutation {
     delete_issue_comment: Option<CommentDeletionPayload>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PinIssueCommentMutation {
+    pin_issue_comment: Option<PinIssueCommentPayload>,
+    unpin_issue_comment: Option<PinIssueCommentPayload>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PinIssueCommentPayload {
+    client_mutation_id: Option<String>,
+    issue_comment: Option<IssueCommentNode>,
 }
 
 #[derive(Deserialize)]

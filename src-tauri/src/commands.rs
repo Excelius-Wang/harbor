@@ -4930,6 +4930,38 @@ fn validate_comment_mutation(
             comment_id: validate_graphql_node_id(comment_id, "comment")?,
             expected_updated_at: validate_comment_updated_at(expected_updated_at)?,
         }),
+        GitHubCommentMutation::Pin {
+            comment_id,
+            expected_updated_at,
+            expected_pinned,
+        } => {
+            if expected_pinned {
+                return Err(AppError::Validation(
+                    "pin mutation must start from an unpinned comment".to_string(),
+                ));
+            }
+            Ok(GitHubCommentMutation::Pin {
+                comment_id: validate_graphql_node_id(comment_id, "comment")?,
+                expected_updated_at: validate_comment_updated_at(expected_updated_at)?,
+                expected_pinned,
+            })
+        }
+        GitHubCommentMutation::Unpin {
+            comment_id,
+            expected_updated_at,
+            expected_pinned,
+        } => {
+            if !expected_pinned {
+                return Err(AppError::Validation(
+                    "unpin mutation must start from a pinned comment".to_string(),
+                ));
+            }
+            Ok(GitHubCommentMutation::Unpin {
+                comment_id: validate_graphql_node_id(comment_id, "comment")?,
+                expected_updated_at: validate_comment_updated_at(expected_updated_at)?,
+                expected_pinned,
+            })
+        }
     }
 }
 
@@ -5503,6 +5535,32 @@ mod tests {
         assert!(validate_comment_mutation(GitHubCommentMutation::Delete {
             comment_id: "bad node".to_string(),
             expected_updated_at: "not-a-revision".to_string(),
+        })
+        .is_err());
+        let pin = validate_comment_mutation(GitHubCommentMutation::Pin {
+            comment_id: "  IC_kwDOexample  ".to_string(),
+            expected_updated_at: " 2026-08-29T08:01:00Z ".to_string(),
+            expected_pinned: false,
+        })
+        .expect("comment pin");
+        assert!(matches!(
+            pin,
+            GitHubCommentMutation::Pin {
+                comment_id,
+                expected_updated_at,
+                expected_pinned: false,
+            } if comment_id == "IC_kwDOexample" && expected_updated_at == "2026-08-29T08:01:00Z"
+        ));
+        assert!(validate_comment_mutation(GitHubCommentMutation::Pin {
+            comment_id: "IC_kwDOexample".to_string(),
+            expected_updated_at: "2026-08-29T08:01:00Z".to_string(),
+            expected_pinned: true,
+        })
+        .is_err());
+        assert!(validate_comment_mutation(GitHubCommentMutation::Unpin {
+            comment_id: "IC_kwDOexample".to_string(),
+            expected_updated_at: "2026-08-29T08:01:00Z".to_string(),
+            expected_pinned: false,
         })
         .is_err());
     }
