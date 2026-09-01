@@ -68,6 +68,8 @@ fn mutation_create(name: Option<&'static str>) -> IssueLinkedBranchCreateMutatio
         request: request(None),
         expected_default_branch_oid: DEFAULT_OID,
         branch_name: name,
+        destination_owner: None,
+        destination_repository: None,
     }
 }
 
@@ -81,11 +83,21 @@ fn mutation_delete() -> IssueLinkedBranchDeleteMutation<'static> {
 }
 
 fn branch(id: &str, name: &str, oid: &str) -> serde_json::Value {
+    branch_in(id, name, oid, "R_1", "octocat/hello-world")
+}
+
+fn branch_in(
+    id: &str,
+    name: &str,
+    oid: &str,
+    repository_id: &str,
+    repository_full_name: &str,
+) -> serde_json::Value {
     serde_json::json!({
         "id": id,
         "ref": {
             "name": name,
-            "repository": { "id": "R_1", "nameWithOwner": "octocat/hello-world" },
+            "repository": { "id": repository_id, "nameWithOwner": repository_full_name },
             "target": { "oid": oid }
         }
     })
@@ -120,6 +132,23 @@ fn page_response(permission: &str, branches: &[serde_json::Value], has_next: boo
     .to_string()
 }
 
+fn destination_response(permission: &str, oid: &str) -> String {
+    serde_json::json!({
+        "data": {
+            "repository": {
+                "id": "R_2",
+                "nameWithOwner": "octocat/other",
+                "viewerPermission": permission,
+                "defaultBranchRef": {
+                    "name": "trunk",
+                    "target": { "oid": oid }
+                }
+            }
+        }
+    })
+    .to_string()
+}
+
 fn page(
     has_next: bool,
     viewer_can_create: bool,
@@ -133,8 +162,19 @@ fn page(
         default_branch: "main".to_string(),
         default_branch_oid: DEFAULT_OID.to_string(),
         viewer_can_create,
+        viewer_can_read: true,
         branches,
         next_cursor: has_next.then(|| "CURSOR_1".to_string()),
+    }
+}
+
+fn source_destination() -> IssueLinkedBranchDestination {
+    IssueLinkedBranchDestination {
+        id: "R_1".to_string(),
+        full_name: "octocat/hello-world".to_string(),
+        default_branch: "main".to_string(),
+        default_branch_oid: DEFAULT_OID.to_string(),
+        viewer_can_create: true,
     }
 }
 
@@ -144,30 +184,56 @@ fn linked_branch_contract_uses_official_queries_and_mutations() {
     assert!(LINKED_BRANCH_QUERY.contains("defaultBranchRef"));
     assert!(CREATE_LINKED_BRANCH_MUTATION.contains("createLinkedBranch"));
     assert!(CREATE_LINKED_BRANCH_MUTATION.contains("... on Commit { oid }"));
+    assert!(CREATE_LINKED_BRANCH_MUTATION.contains("repositoryId"));
     assert!(DELETE_LINKED_BRANCH_MUTATION.contains("deleteLinkedBranch"));
+}
+
+#[test]
+fn destination_repository_contract_requires_a_default_revision_and_write_access() {
+    let destination = IssueLinkedBranchDestination {
+        id: "R_2".to_string(),
+        full_name: "octocat/other".to_string(),
+        default_branch: "trunk".to_string(),
+        default_branch_oid: BRANCH_OID.to_string(),
+        viewer_can_create: true,
+    };
+    assert_eq!(destination.full_name, "octocat/other");
+    assert_eq!(destination.default_branch_oid, BRANCH_OID);
+    assert!(destination.viewer_can_create);
 }
 
 #[test]
 fn create_preflight_requires_identity_default_revision_and_write_permission() {
     let mutation = mutation_create(Some("issue-7"));
-    assert!(ensure_create_preflight(&page(false, true, Vec::new()), mutation).is_ok());
+    let destination = source_destination();
+    assert!(
+        ensure_create_preflight(&page(false, true, Vec::new()), &destination, mutation).is_ok()
+    );
 
     let mut stale = page(false, true, Vec::new());
     stale.issue_node_id = "I_other".to_string();
     assert!(matches!(
-        ensure_create_preflight(&stale, mutation),
+        ensure_create_preflight(&stale, &destination, mutation),
         Err(AppError::GitHubIssueStateConflict(_))
     ));
 
     let mut changed_default = page(false, true, Vec::new());
     changed_default.default_branch_oid = BRANCH_OID.to_string();
     assert!(matches!(
-        ensure_create_preflight(&changed_default, mutation),
+        ensure_create_preflight(&changed_default, &destination, mutation),
         Err(AppError::GitHubIssueStateConflict(_))
     ));
 
+    let denied_destination = IssueLinkedBranchDestination {
+        viewer_can_create: false,
+        ..destination.clone()
+    };
     assert!(matches!(
-        ensure_create_preflight(&page(false, false, Vec::new()), mutation),
+        ensure_create_preflight(
+            &page(false, true, Vec::new()),
+            &denied_destination,
+            mutation
+        ),
         Err(AppError::GitHubPermission(_))
     ));
 }
@@ -205,7 +271,7 @@ fn create_postflight_requires_the_authoritative_branch_repository_id() {
     };
     let page = page(false, true, vec![returned.clone()]);
     assert!(matches!(
-        ensure_create_postflight(&page, &returned, mutation),
+        ensure_create_postflight(&page, &returned, &source_destination(), mutation),
         Err(AppError::GitHub(_))
     ));
 }
@@ -295,6 +361,96 @@ async fn transport_creates_linked_branch_with_postflight_confirmation() {
 }
 
 #[tokio::test]
+async fn transport_creates_a_linked_branch_in_an_authorized_destination_repository() {
+    let (client, requests, server) = mock_github(vec![
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: page_response("READ", &[], false),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: destination_response("WRITE", BRANCH_OID),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: serde_json::json!({
+                "data": { "createLinkedBranch": {
+                    "issue": { "id": "I_7", "number": 7, "repository": { "id": "R_1", "nameWithOwner": "octocat/hello-world" } },
+                    "linkedBranch": branch_in("LB_2", "issue-7", BRANCH_OID, "R_2", "octocat/other")
+                }}
+            }).to_string(),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: page_response(
+                "READ",
+                &[branch_in(
+                    "LB_2",
+                    "issue-7",
+                    BRANCH_OID,
+                    "R_2",
+                    "octocat/other",
+                )],
+                false,
+            ),
+        },
+    ])
+    .await;
+
+    let mutation = IssueLinkedBranchCreateMutation {
+        request: request(None),
+        expected_default_branch_oid: DEFAULT_OID,
+        branch_name: Some("issue-7"),
+        destination_owner: Some("octocat"),
+        destination_repository: Some("other"),
+    };
+    let page = create_issue_linked_branch_with_client(&client, mutation)
+        .await
+        .expect("created linked branch in destination");
+    assert_eq!(page.branches[0].repository_id, "R_2");
+    server.await.expect("mock server");
+    let requests = requests.lock().expect("requests");
+    assert_eq!(requests.len(), 4);
+    assert!(requests[2].contains("repositoryId"));
+    assert!(requests[2].contains("R_2"));
+}
+
+#[tokio::test]
+async fn transport_rejects_an_unwritable_destination_before_mutating() {
+    let (client, requests, server) = mock_github(vec![
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: page_response("READ", &[], false),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: destination_response("READ", BRANCH_OID),
+        },
+    ])
+    .await;
+    let mutation = IssueLinkedBranchCreateMutation {
+        request: request(None),
+        expected_default_branch_oid: DEFAULT_OID,
+        branch_name: Some("issue-7"),
+        destination_owner: Some("octocat"),
+        destination_repository: Some("other"),
+    };
+
+    let error = create_issue_linked_branch_with_client(&client, mutation)
+        .await
+        .expect_err("read-only destination must stop before mutation");
+    server.await.expect("mock server");
+    assert!(matches!(error, AppError::GitHubPermission(_)));
+    assert_eq!(requests.lock().expect("requests").len(), 2);
+}
+
+#[tokio::test]
 async fn transport_rejects_a_created_branch_from_a_different_repository() {
     let (client, _requests, server) = mock_github(vec![MockResponse {
         status: "200 OK",
@@ -320,6 +476,7 @@ async fn transport_rejects_a_created_branch_from_a_different_repository() {
         &client,
         mutation_create(Some("issue-7")),
         &page(false, true, Vec::new()),
+        &source_destination(),
     )
     .await
     .expect_err("cross-repository branch must be rejected");

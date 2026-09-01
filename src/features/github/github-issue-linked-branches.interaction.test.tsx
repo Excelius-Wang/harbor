@@ -7,6 +7,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { GitHubIssueLinkedBranchPage } from "./github-data";
 import { GitHubIssueLinkedBranches } from "./github-issue-linked-branches";
+import { githubQueryKeys } from "./github-queries";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(), isTauri: () => false }));
 vi.mock("react-i18next", () => ({
@@ -46,19 +47,20 @@ function page(branches: GitHubIssueLinkedBranchPage["branches"] = [], viewerCanC
     defaultBranch: "main",
     defaultBranchOid: "0123456789abcdef0123456789abcdef01234567",
     viewerCanCreate,
+    viewerCanRead: true,
     branches,
     nextCursor: null,
   } satisfies GitHubIssueLinkedBranchPage;
 }
 
 function renderAction() {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
-    <QueryClientProvider
-      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-    >
+    <QueryClientProvider client={queryClient}>
       <GitHubIssueLinkedBranches repository={repository} issue={issue} />
     </QueryClientProvider>
   );
+  return queryClient;
 }
 
 beforeEach(() => {
@@ -108,12 +110,13 @@ describe("GitHub Issue linked branches", () => {
         expectedIssueNodeId: "I_7",
         expectedDefaultBranchOid: "0123456789abcdef0123456789abcdef01234567",
         branchName: "issue-7",
+        branchRepository: null,
       })
     );
   });
 
   it("hides branch writes when GitHub denies repository write permission", async () => {
-    vi.mocked(invoke).mockResolvedValue(page([], false));
+    vi.mocked(invoke).mockResolvedValue({ ...page([], false), viewerCanRead: false });
     renderAction();
     await waitFor(() =>
       expect(invoke).toHaveBeenCalledWith("github_get_repository_issue_linked_branches", {
@@ -139,6 +142,48 @@ describe("GitHub Issue linked branches", () => {
       0
     );
     expect(screen.queryByText("secondary rate limit")).toBeNull();
+  });
+
+  it("passes an explicit destination repository for a linked branch", async () => {
+    vi.mocked(invoke).mockImplementation((command) => {
+      if (command === "github_get_repository_issue_linked_branches") return Promise.resolve(page());
+      if (command === "github_create_repository_issue_linked_branch")
+        return Promise.resolve(page());
+      return Promise.resolve();
+    });
+    const user = userEvent.setup();
+    const queryClient = renderAction();
+    const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
+    await user.click(
+      await screen.findByRole("button", { name: "workspace.repositories.createLinkedBranch" })
+    );
+    await user.type(screen.getByLabelText("workspace.repositories.linkedBranchName"), "issue-7");
+    await user.clear(screen.getByLabelText("workspace.repositories.linkedBranchRepository"));
+    await user.type(
+      screen.getByLabelText("workspace.repositories.linkedBranchRepository"),
+      "octocat/other"
+    );
+    const createButtons = screen.getAllByRole("button", {
+      name: "workspace.repositories.createLinkedBranch",
+    });
+    await user.click(createButtons[createButtons.length - 1]);
+    await waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith("github_create_repository_issue_linked_branch", {
+        owner: "octocat",
+        repository: "hello-world",
+        issueNumber: 7,
+        expectedIssueNodeId: "I_7",
+        expectedDefaultBranchOid: "0123456789abcdef0123456789abcdef01234567",
+        branchName: "issue-7",
+        branchRepository: "octocat/other",
+      })
+    );
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: githubQueryKeys.codeRoot({ owner: "octocat", repository: "hello-world" }),
+    });
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: githubQueryKeys.codeRoot({ owner: "octocat", repository: "other" }),
+    });
   });
 
   it("unlinks a branch without deleting it", async () => {

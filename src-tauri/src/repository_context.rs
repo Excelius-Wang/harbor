@@ -29,6 +29,18 @@ impl RepositoryRef {
         Ok(Self { owner, name })
     }
 
+    pub fn from_full_name(full_name: String) -> Result<Self, AppError> {
+        let mut parts = full_name.trim().split('/');
+        let owner = parts.next().unwrap_or_default().to_string();
+        let name = parts.next().unwrap_or_default().to_string();
+        if parts.next().is_some() {
+            return Err(AppError::Validation(
+                "repository must use one owner/name pair".to_string(),
+            ));
+        }
+        Self::new(owner, name)
+    }
+
     pub fn full_name(&self) -> String {
         format!("{}/{}", self.owner, self.name)
     }
@@ -224,6 +236,17 @@ mod tests {
         assert!(RepositoryRef::new("owner/name".into(), "repo".into()).is_err());
         assert!(RepositoryRef::new("owner".into(), "../repo".into()).is_err());
         assert!(RepositoryRef::new("".into(), "repo".into()).is_err());
+    }
+
+    #[test]
+    fn repository_ref_parses_one_full_name() {
+        assert_eq!(
+            RepositoryRef::from_full_name(" zed-industries/zed ".into())
+                .expect("valid full name")
+                .full_name(),
+            "zed-industries/zed"
+        );
+        assert!(RepositoryRef::from_full_name("owner/repo/extra".into()).is_err());
     }
 
     #[test]

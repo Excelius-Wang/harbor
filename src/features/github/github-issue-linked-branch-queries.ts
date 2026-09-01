@@ -33,12 +33,14 @@ export function issueLinkedBranchQueryOptions(target: GitHubIssueLinkedBranchTar
 export function createRepositoryIssueLinkedBranch(
   target: GitHubIssueLinkedBranchMutationTarget,
   expectedDefaultBranchOid: string,
-  branchName: string | null
+  branchName: string | null,
+  branchRepository: string | null
 ) {
   return invoke<GitHubIssueLinkedBranchPage>("github_create_repository_issue_linked_branch", {
     ...target,
     expectedDefaultBranchOid,
     branchName,
+    branchRepository,
   });
 }
 

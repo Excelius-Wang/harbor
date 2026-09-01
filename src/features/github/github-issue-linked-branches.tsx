@@ -16,7 +16,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
-import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -44,6 +44,7 @@ import {
 import { invalidateRepositoryIssue } from "./github-issue-mutations";
 import { GitHubIssueRelationLoadError } from "./github-issue-relation-ui";
 import { GitHubPagination } from "./github-issue-shared";
+import { githubQueryKeys } from "./github-queries";
 
 function LinkedBranchesSkeleton() {
   return (
@@ -108,6 +109,14 @@ function LinkedBranchRow({
   );
 }
 
+function repositoryTargetFromFullName(fullName: string) {
+  const parts = fullName.split("/");
+  if (parts.length !== 2) return null;
+  const owner = parts[0]?.trim();
+  const repository = parts[1]?.trim();
+  return owner && repository ? { owner, repository } : null;
+}
+
 export function GitHubIssueLinkedBranches({
   repository,
   issue,
@@ -120,6 +129,14 @@ export function GitHubIssueLinkedBranches({
   const [cursors, setCursors] = useState<(string | null)[]>([null]);
   const [createOpen, setCreateOpen] = useState(false);
   const [branchName, setBranchName] = useState("");
+  const currentRepository = `${repository.owner}/${repository.name}`;
+  const [branchRepository, setBranchRepository] = useState(currentRepository);
+  const destinationRepository = branchRepository.trim() || currentRepository;
+  const hasExplicitDestination =
+    destinationRepository.toLowerCase() !== currentRepository.toLowerCase();
+  const destinationTarget = hasExplicitDestination
+    ? repositoryTargetFromFullName(destinationRepository)
+    : null;
   const [submitted, setSubmitted] = useState(false);
   const [unlinkCandidate, setUnlinkCandidate] = useState<GitHubIssueLinkedBranch | null>(null);
   const target = branchTarget(repository, issue);
@@ -131,18 +148,33 @@ export function GitHubIssueLinkedBranches({
     Promise.all([
       invalidateIssueLinkedBranches(queryClient, target),
       invalidateRepositoryIssue(queryClient, target),
+      queryClient.invalidateQueries({
+        queryKey: githubQueryKeys.codeRoot({
+          owner: repository.owner,
+          repository: repository.name,
+        }),
+      }),
+      ...(destinationTarget
+        ? [
+            queryClient.invalidateQueries({
+              queryKey: githubQueryKeys.codeRoot(destinationTarget),
+            }),
+          ]
+        : []),
     ]);
   const createMutation = useMutation({
     mutationFn: () =>
       createRepositoryIssueLinkedBranch(
         target,
         result.data?.defaultBranchOid ?? "",
-        branchName.trim() || null
+        branchName.trim() || null,
+        hasExplicitDestination ? destinationRepository : null
       ),
     onSuccess: (page) => {
       syncIssueLinkedBranches(queryClient, target, page);
       setCreateOpen(false);
       setBranchName("");
+      setBranchRepository(currentRepository);
       setSubmitted(false);
       setCursors([null]);
       toast.success(t("workspace.repositories.linkedBranchCreated"));
@@ -167,7 +199,11 @@ export function GitHubIssueLinkedBranches({
       ? parseIpcError(deleteMutation.error)
       : null;
   const branchExists = Boolean(
-    result.data?.branches.some((branch) => branch.name === branchName.trim())
+    result.data?.branches.some(
+      (branch) =>
+        branch.name === branchName.trim() &&
+        branch.repositoryFullName.toLowerCase() === destinationRepository.toLowerCase()
+    )
   );
   const branchInvalid = submitted && branchExists;
   const mutationErrorMessage = (mutation: ReturnType<typeof parseIpcError>) =>
@@ -220,7 +256,7 @@ export function GitHubIssueLinkedBranches({
                 <RefreshCw className="text-muted-foreground size-3 animate-spin" />
               ) : null}
             </CardTitle>
-            {page.viewerCanCreate ? (
+            {page.viewerCanCreate || page.viewerCanRead ? (
               <Button
                 type="button"
                 variant="outline"
@@ -228,6 +264,7 @@ export function GitHubIssueLinkedBranches({
                 onClick={() => {
                   createMutation.reset();
                   setBranchName("");
+                  setBranchRepository(currentRepository);
                   setSubmitted(false);
                   setCreateOpen(true);
                 }}
@@ -297,7 +334,9 @@ export function GitHubIssueLinkedBranches({
             </DialogTitle>
             <DialogDescription>
               {t("workspace.repositories.createLinkedBranchDescription", {
-                base: `${page.defaultBranch} (${page.defaultBranchOid.slice(0, 7)})`,
+                base: !hasExplicitDestination
+                  ? `${currentRepository} (${page.defaultBranch}, ${page.defaultBranchOid.slice(0, 7)})`
+                  : destinationRepository,
               })}
             </DialogDescription>
           </DialogHeader>
@@ -310,28 +349,47 @@ export function GitHubIssueLinkedBranches({
               createMutation.mutate();
             }}
           >
-            <Field data-invalid={branchInvalid} data-disabled={createMutation.isPending}>
-              <FieldLabel htmlFor="github-issue-linked-branch-name">
-                {t("workspace.repositories.linkedBranchName")}
-              </FieldLabel>
-              <Input
-                id="github-issue-linked-branch-name"
-                value={branchName}
-                autoFocus
-                autoComplete="off"
-                spellCheck={false}
-                aria-invalid={branchInvalid}
-                disabled={createMutation.isPending}
-                placeholder={t("workspace.repositories.linkedBranchNamePlaceholder")}
-                onChange={(event) => setBranchName(event.target.value)}
-              />
-              <FieldDescription>
-                {t("workspace.repositories.linkedBranchNameDescription")}
-              </FieldDescription>
-              <FieldError>
-                {branchInvalid ? t("workspace.repositories.branchAlreadyExists") : null}
-              </FieldError>
-            </Field>
+            <FieldGroup>
+              <Field data-invalid={branchInvalid} data-disabled={createMutation.isPending}>
+                <FieldLabel htmlFor="github-issue-linked-branch-name">
+                  {t("workspace.repositories.linkedBranchName")}
+                </FieldLabel>
+                <Input
+                  id="github-issue-linked-branch-name"
+                  value={branchName}
+                  autoFocus
+                  autoComplete="off"
+                  spellCheck={false}
+                  aria-invalid={branchInvalid}
+                  disabled={createMutation.isPending}
+                  placeholder={t("workspace.repositories.linkedBranchNamePlaceholder")}
+                  onChange={(event) => setBranchName(event.target.value)}
+                />
+                <FieldDescription>
+                  {t("workspace.repositories.linkedBranchNameDescription")}
+                </FieldDescription>
+                <FieldError>
+                  {branchInvalid ? t("workspace.repositories.branchAlreadyExists") : null}
+                </FieldError>
+              </Field>
+              <Field data-disabled={createMutation.isPending}>
+                <FieldLabel htmlFor="github-issue-linked-branch-repository">
+                  {t("workspace.repositories.linkedBranchRepository")}
+                </FieldLabel>
+                <Input
+                  id="github-issue-linked-branch-repository"
+                  value={branchRepository}
+                  autoComplete="off"
+                  spellCheck={false}
+                  disabled={createMutation.isPending}
+                  placeholder={currentRepository}
+                  onChange={(event) => setBranchRepository(event.target.value)}
+                />
+                <FieldDescription>
+                  {t("workspace.repositories.linkedBranchRepositoryDescription")}
+                </FieldDescription>
+              </Field>
+            </FieldGroup>
             {mutationError ? (
               <Alert variant="destructive" className="mt-4">
                 <CircleAlert />
