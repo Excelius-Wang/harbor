@@ -2264,7 +2264,6 @@
       "creatingLinkedBranch": "Creating branch…",
       "linkedBranchCreated": "Branch linked to Issue",
       "linkedBranchCreateFailed": "Harbor could not create the linked branch",
-      "linkedBranchDestinationPermissionDenied": "Harbor needs write permission in the destination repository",
       "unlinkLinkedBranch": "Unlink branch",
       "unlinkLinkedBranchTitle": "Unlink {{branch}}?",
       "unlinkLinkedBranchDescription": "The branch will remain in the repository, but it will no longer appear under this Issue's Development section.",

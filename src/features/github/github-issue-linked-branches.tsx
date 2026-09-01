@@ -44,6 +44,7 @@ import {
 import { invalidateRepositoryIssue } from "./github-issue-mutations";
 import { GitHubIssueRelationLoadError } from "./github-issue-relation-ui";
 import { GitHubPagination } from "./github-issue-shared";
+import { githubQueryKeys } from "./github-queries";
 
 function LinkedBranchesSkeleton() {
   return (
@@ -108,6 +109,14 @@ function LinkedBranchRow({
   );
 }
 
+function repositoryTargetFromFullName(fullName: string) {
+  const parts = fullName.split("/");
+  if (parts.length !== 2) return null;
+  const owner = parts[0]?.trim();
+  const repository = parts[1]?.trim();
+  return owner && repository ? { owner, repository } : null;
+}
+
 export function GitHubIssueLinkedBranches({
   repository,
   issue,
@@ -125,6 +134,9 @@ export function GitHubIssueLinkedBranches({
   const destinationRepository = branchRepository.trim() || currentRepository;
   const hasExplicitDestination =
     destinationRepository.toLowerCase() !== currentRepository.toLowerCase();
+  const destinationTarget = hasExplicitDestination
+    ? repositoryTargetFromFullName(destinationRepository)
+    : null;
   const [submitted, setSubmitted] = useState(false);
   const [unlinkCandidate, setUnlinkCandidate] = useState<GitHubIssueLinkedBranch | null>(null);
   const target = branchTarget(repository, issue);
@@ -136,6 +148,19 @@ export function GitHubIssueLinkedBranches({
     Promise.all([
       invalidateIssueLinkedBranches(queryClient, target),
       invalidateRepositoryIssue(queryClient, target),
+      queryClient.invalidateQueries({
+        queryKey: githubQueryKeys.codeRoot({
+          owner: repository.owner,
+          repository: repository.name,
+        }),
+      }),
+      ...(destinationTarget
+        ? [
+            queryClient.invalidateQueries({
+              queryKey: githubQueryKeys.codeRoot(destinationTarget),
+            }),
+          ]
+        : []),
     ]);
   const createMutation = useMutation({
     mutationFn: () =>
@@ -187,10 +212,6 @@ export function GitHubIssueLinkedBranches({
       : mutation.code === "githubRateLimited"
         ? t("workspace.repositories.githubRateLimited")
         : mutation.message;
-  const createMutationErrorMessage = (mutation: ReturnType<typeof parseIpcError>) =>
-    mutation.code === "githubPermission"
-      ? t("workspace.repositories.linkedBranchDestinationPermissionDenied")
-      : mutationErrorMessage(mutation);
   const relationErrorTitle = (relationError: ReturnType<typeof parseIpcError> | null) =>
     relationError?.code === "githubPermission"
       ? t("workspace.repositories.issueLinkedBranchesPermissionDenied")
@@ -373,7 +394,7 @@ export function GitHubIssueLinkedBranches({
               <Alert variant="destructive" className="mt-4">
                 <CircleAlert />
                 <AlertTitle>{t("workspace.repositories.linkedBranchCreateFailed")}</AlertTitle>
-                <AlertDescription>{createMutationErrorMessage(mutationError)}</AlertDescription>
+                <AlertDescription>{mutationErrorMessage(mutationError)}</AlertDescription>
               </Alert>
             ) : null}
           </form>

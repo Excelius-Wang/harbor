@@ -2257,7 +2257,6 @@
       "creatingLinkedBranch": "正在新建分支…",
       "linkedBranchCreated": "分支已关联到 Issue",
       "linkedBranchCreateFailed": "Harbor 暂时无法新建关联分支",
-      "linkedBranchDestinationPermissionDenied": "Harbor 需要目标仓库的写入权限",
       "unlinkLinkedBranch": "取消关联分支",
       "unlinkLinkedBranchTitle": "要取消关联 {{branch}} 吗？",
       "unlinkLinkedBranchDescription": "分支仍会保留在仓库中，但不会再显示在这个 Issue 的 Development 区域。",
