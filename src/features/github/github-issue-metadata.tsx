@@ -42,6 +42,7 @@ import {
   type GitHubIssueMutationTarget,
 } from "./github-issue-mutations";
 import { GitHubIssueLabelBadge } from "./github-issue-shared";
+import { GitHubIssueTypeAction } from "./github-issue-type-action";
 import {
   repositoryIssueAssigneesQueryOptions,
   repositoryIssueLabelsQueryOptions,
@@ -584,6 +585,8 @@ export function GitHubIssueMetadata({
           void invalidateRepositoryIssue(queryClient, target);
         }}
       />
+      <Separator />
+      <GitHubIssueTypeAction repository={repository} issue={issue} />
       <Separator />
       <GitHubConversationControls
         repository={repository}

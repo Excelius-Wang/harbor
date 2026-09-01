@@ -33,10 +33,11 @@ use crate::{
         GitHubIssueRelationshipsPage, GitHubIssueSort, GitHubIssueState,
         GitHubIssueStateCapabilities, GitHubIssueStateMutation, GitHubIssueSubIssueCreateInput,
         GitHubIssueSubIssuePriorityInput, GitHubIssueSummary, GitHubIssueTimelineItem,
-        GitHubLoginAvailability, GitHubNotificationAction, GitHubNotificationPage, GitHubPackage,
-        GitHubPackagePage, GitHubPackageType, GitHubPackageVersionMutationInput,
-        GitHubPackageVersionMutationResult, GitHubPackageVersionPage, GitHubPackageVersionState,
-        GitHubPackageVisibility, GitHubPagesHealth, GitHubPagesMutation, GitHubPagesWorkspace,
+        GitHubIssueTypeStatus, GitHubLoginAvailability, GitHubNotificationAction,
+        GitHubNotificationPage, GitHubPackage, GitHubPackagePage, GitHubPackageType,
+        GitHubPackageVersionMutationInput, GitHubPackageVersionMutationResult,
+        GitHubPackageVersionPage, GitHubPackageVersionState, GitHubPackageVisibility,
+        GitHubPagesHealth, GitHubPagesMutation, GitHubPagesWorkspace,
         GitHubPendingPullRequestReview, GitHubProfileActivityPage, GitHubProfileConnectionKind,
         GitHubProjectDetail, GitHubProjectFilters, GitHubProjectItem, GitHubProjectItemAction,
         GitHubProjectItemAddition, GitHubProjectItemFilters, GitHubProjectItemUpdate,
@@ -75,7 +76,7 @@ use crate::{
         GitHubWorkflowJobLog, GitHubWorkflowJobPage, GitHubWorkflowRun, GitHubWorkflowRunAction,
         GitHubWorkflowRunDeletion, GitHubWorkflowRunFilterOptions, GitHubWorkflowRunFilters,
         GitHubWorkflowRunPage, GitHubWorkflowRunStatusFilter, IssueCloneMutation,
-        IssueSubIssueCreateMutation, IssueSubIssuePriorityMutation,
+        IssueSubIssueCreateMutation, IssueSubIssuePriorityMutation, IssueTypeMutation,
     },
     github_oauth::{GitHubLoginAttempt, GitHubLoopbackListener, GITHUB_AUTH_EVENT},
     repository_context::{RepositoryContextAnswer, RepositoryRef},
@@ -2243,6 +2244,54 @@ pub async fn github_update_repository_issue_metadata(
             milestone_number,
         )
         .await
+}
+
+#[tauri::command]
+pub async fn github_get_repository_issue_type_status(
+    owner: String,
+    repository: String,
+    issue_number: u64,
+    state: State<'_, AppState>,
+) -> Result<GitHubIssueTypeStatus, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .issue_type_status(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(issue_number, "issue")?,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_update_repository_issue_type(
+    owner: String,
+    repository: String,
+    issue_number: u64,
+    expected_issue_node_id: String,
+    expected_issue_type_node_id: Option<String>,
+    issue_type_node_id: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<GitHubIssueTypeStatus, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    let issue_number = validate_item_number(issue_number, "issue")?;
+    let expected_issue_node_id = validate_graphql_node_id(expected_issue_node_id, "Issue")?;
+    let expected_issue_type_node_id = expected_issue_type_node_id
+        .map(|value| validate_graphql_node_id(value, "Issue type"))
+        .transpose()?;
+    let issue_type_node_id = issue_type_node_id
+        .map(|value| validate_graphql_node_id(value, "Issue type"))
+        .transpose()?;
+    let mutation = IssueTypeMutation {
+        owner: repository.owner(),
+        repository: repository.name(),
+        issue_number,
+        expected_issue_node_id: &expected_issue_node_id,
+        expected_issue_type_node_id: expected_issue_type_node_id.as_deref(),
+        issue_type_node_id: issue_type_node_id.as_deref(),
+    };
+    state.github.update_issue_type(mutation).await
 }
 
 #[tauri::command]

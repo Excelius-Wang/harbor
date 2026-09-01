@@ -34,6 +34,7 @@ pub(crate) mod issue_related;
 pub(crate) mod issue_relationships;
 pub(crate) mod issue_taxonomy;
 pub(crate) mod issue_transfer;
+pub(crate) mod issue_type;
 pub(crate) mod item_metadata;
 pub(crate) mod notification;
 pub(crate) mod packages;
@@ -119,6 +120,8 @@ use issue_taxonomy::GitHubIssueMilestoneState;
 pub use issue_taxonomy::{GitHubIssueLabelMutation, GitHubIssueMilestoneMutation};
 pub(crate) use issue_transfer::IssueTransferMutation;
 pub use issue_transfer::{GitHubIssueTransfer, GitHubIssueTransferStatus};
+pub use issue_type::GitHubIssueTypeStatus;
+pub(crate) use issue_type::IssueTypeMutation;
 pub use notification::{GitHubNotificationAction, GitHubNotificationPage};
 #[cfg(test)]
 use packages::GitHubPackageVersionAction;
@@ -676,6 +679,7 @@ pub(crate) trait GitHubClient:
     + issue_dependencies::GitHubIssueDependenciesClient
     + issue_relationships::GitHubIssueRelationshipsClient
     + issue_taxonomy::GitHubIssueTaxonomyClient
+    + issue_type::GitHubIssueTypeClient
     + notification::GitHubNotificationClient
     + packages::GitHubPackagesClient
     + pending_review::GitHubPendingReviewClient

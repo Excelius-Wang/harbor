@@ -158,6 +158,8 @@ pub fn run() {
             commands::github_clone_repository_issue,
             commands::github_update_repository_issue,
             commands::github_update_repository_issue_metadata,
+            commands::github_get_repository_issue_type_status,
+            commands::github_update_repository_issue_type,
             commands::github_create_repository_issue_comment,
             commands::github_mutate_repository_issue_comment,
             commands::github_get_repository_issue_state_capabilities,
