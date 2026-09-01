@@ -2037,6 +2037,10 @@ export type GitHubCommitComment = {
   updatedAt: string;
   viewerCanUpdate: boolean;
   viewerCanDelete: boolean;
+  isMinimized: boolean;
+  minimizedReason: string | null;
+  viewerCanMinimize: boolean;
+  viewerCanUnminimize: boolean;
 };
 
 export type GitHubCommitCommentPage = {
@@ -2069,6 +2073,15 @@ export type GitHubCommitCommentMutation =
     } & GitHubCommitCommentGuard)
   | ({
       action: "delete";
+    } & GitHubCommitCommentGuard)
+  | ({
+      action: "minimize";
+      expectedMinimized: boolean;
+      classifier: GitHubCommentMinimizeClassifier;
+    } & GitHubCommitCommentGuard)
+  | ({
+      action: "unminimize";
+      expectedMinimized: boolean;
     } & GitHubCommitCommentGuard);
 
 export type GitHubPullRequestCommit = GitHubCommit;

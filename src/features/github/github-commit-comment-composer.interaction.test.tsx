@@ -43,6 +43,10 @@ function createdComment(): GitHubCommitComment {
     updatedAt: "2026-08-30T01:00:00Z",
     viewerCanUpdate: false,
     viewerCanDelete: false,
+    isMinimized: false,
+    minimizedReason: null,
+    viewerCanMinimize: false,
+    viewerCanUnminimize: false,
   };
 }
 

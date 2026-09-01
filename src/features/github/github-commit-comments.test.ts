@@ -26,6 +26,10 @@ function comment(databaseId: number, body = "Body"): GitHubCommitComment {
     updatedAt: "2026-08-30T01:00:00Z",
     viewerCanUpdate: true,
     viewerCanDelete: true,
+    isMinimized: false,
+    minimizedReason: null,
+    viewerCanMinimize: true,
+    viewerCanUnminimize: false,
   };
 }
 

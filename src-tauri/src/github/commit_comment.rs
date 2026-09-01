@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
+use super::comment::GitHubCommentMinimizeClassifier;
 use super::{authenticated_client, GitHubService, OctocrabGitHubClient};
 use crate::error::AppError;
 
@@ -30,6 +31,10 @@ pub struct GitHubCommitComment {
     pub updated_at: String,
     pub viewer_can_update: bool,
     pub viewer_can_delete: bool,
+    pub is_minimized: bool,
+    pub minimized_reason: Option<String>,
+    pub viewer_can_minimize: bool,
+    pub viewer_can_unminimize: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -75,6 +80,17 @@ pub enum GitHubCommitCommentMutation {
     Delete {
         #[serde(flatten)]
         guard: GitHubCommitCommentGuard,
+    },
+    Minimize {
+        #[serde(flatten)]
+        guard: GitHubCommitCommentGuard,
+        expected_minimized: bool,
+        classifier: GitHubCommentMinimizeClassifier,
+    },
+    Unminimize {
+        #[serde(flatten)]
+        guard: GitHubCommitCommentGuard,
+        expected_minimized: bool,
     },
 }
 
@@ -155,11 +171,25 @@ impl GitHubCommitCommentClient for OctocrabGitHubClient {
         mutation: &GitHubCommitCommentMutation,
     ) -> Result<Option<GitHubCommitComment>, AppError> {
         let client = authenticated_client(token)?;
-        transport::mutate_commit_comment_with_client(
-            &client, owner, repository, commit_sha, mutation,
+        let write_client = no_retry_authenticated_client(token)?;
+        transport::mutate_commit_comment_with_clients(
+            &client,
+            &write_client,
+            owner,
+            repository,
+            commit_sha,
+            mutation,
         )
         .await
     }
+}
+
+fn no_retry_authenticated_client(token: &str) -> Result<octocrab::Octocrab, AppError> {
+    octocrab::Octocrab::builder()
+        .add_retry_config(octocrab::service::middleware::retry::RetryConfig::None)
+        .personal_token(token.to_string())
+        .build()
+        .map_err(|error| AppError::GitHub(error.to_string()))
 }
 
 fn normalize_commit_comment_sha(value: &str) -> Result<String, AppError> {
@@ -199,6 +229,22 @@ fn normalize_commit_comment_mutation(
         }
         GitHubCommitCommentMutation::Delete { guard } => Ok(GitHubCommitCommentMutation::Delete {
             guard: normalize_comment_guard(guard)?,
+        }),
+        GitHubCommitCommentMutation::Minimize {
+            guard,
+            expected_minimized,
+            classifier,
+        } => Ok(GitHubCommitCommentMutation::Minimize {
+            guard: normalize_comment_guard(guard)?,
+            expected_minimized,
+            classifier,
+        }),
+        GitHubCommitCommentMutation::Unminimize {
+            guard,
+            expected_minimized,
+        } => Ok(GitHubCommitCommentMutation::Unminimize {
+            guard: normalize_comment_guard(guard)?,
+            expected_minimized,
         }),
     }
 }
@@ -327,6 +373,10 @@ impl GitHubCommitCommentClient for super::tests::FakeGitHubClient {
             updated_at: "2026-08-30T01:00:00Z".to_string(),
             viewer_can_update: true,
             viewer_can_delete: true,
+            is_minimized: false,
+            minimized_reason: None,
+            viewer_can_minimize: true,
+            viewer_can_unminimize: false,
         }))
     }
 }

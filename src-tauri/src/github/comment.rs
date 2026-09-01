@@ -788,13 +788,13 @@ pub(crate) async fn run_minimize_mutation(
     ensure_mutation_identity(response.client_mutation_id.as_deref(), &client_mutation_id)
 }
 
-fn minimize_postflight_error(error: AppError) -> AppError {
+pub(crate) fn minimize_postflight_error(error: AppError) -> AppError {
     AppError::GitHub(format!(
         "the comment minimize write may have persisted, but Harbor could not refresh it: {error}"
     ))
 }
 
-fn ensure_minimized_result(
+pub(crate) fn ensure_minimized_result(
     is_minimized: bool,
     minimized_reason: Option<&str>,
     mutation: &GitHubCommentMutation,

@@ -1,11 +1,12 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ExternalLink, UserRound } from "lucide-react";
+import { ChevronDown, ExternalLink, UserRound } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAppTranslation } from "@/hooks/use-app-translation";
@@ -43,29 +44,41 @@ export function GitHubCommitCommentCard({
   const { t, i18n } = useTranslation();
   const { t: appT } = useAppTranslation();
   const queryClient = useQueryClient();
+  const [commentOpen, setCommentOpen] = useState(!comment.isMinimized);
+  useEffect(() => setCommentOpen(!comment.isMinimized), [comment.isMinimized]);
   const author = comment.author?.login ?? t("workspace.repositories.unknownActor");
   const mutateComment = (mutation: GitHubCommentMutation) => {
-    if (mutation.action !== "update" && mutation.action !== "delete") {
-      return Promise.reject(new Error("pinning commit comments is unsupported"));
-    }
     const guard = {
       commentId: comment.databaseId,
       commentNodeId: comment.id,
       expectedUpdatedAt: mutation.expectedUpdatedAt,
     };
-    return mutateRepositoryCommitComment(
-      target,
-      mutation.action === "update"
-        ? {
-            action: "update",
-            ...guard,
-            body: mutation.body,
-          }
-        : {
-            action: "delete",
-            ...guard,
-          }
-    );
+    if (mutation.action === "update") {
+      return mutateRepositoryCommitComment(target, {
+        action: "update",
+        ...guard,
+        body: mutation.body,
+      });
+    }
+    if (mutation.action === "delete") {
+      return mutateRepositoryCommitComment(target, { action: "delete", ...guard });
+    }
+    if (mutation.action === "minimize") {
+      return mutateRepositoryCommitComment(target, {
+        action: "minimize",
+        ...guard,
+        expectedMinimized: mutation.expectedMinimized,
+        classifier: mutation.classifier,
+      });
+    }
+    if (mutation.action === "unminimize") {
+      return mutateRepositoryCommitComment(target, {
+        action: "unminimize",
+        ...guard,
+        expectedMinimized: mutation.expectedMinimized,
+      });
+    }
+    return Promise.reject(new Error("pinning commit comments is unsupported"));
   };
 
   return (
@@ -98,6 +111,9 @@ export function GitHubCommitCommentCard({
               updatedAt: comment.updatedAt,
               viewerCanUpdate: comment.viewerCanUpdate,
               viewerCanDelete: comment.viewerCanDelete,
+              isMinimized: comment.isMinimized,
+              viewerCanMinimize: comment.viewerCanMinimize,
+              viewerCanUnminimize: comment.viewerCanUnminimize,
             }}
             repository={repository}
             reference={target.commitSha}
@@ -109,9 +125,22 @@ export function GitHubCommitCommentCard({
             onConflict={() => invalidateRepositoryCommitComments(queryClient, target)}
             onUncertainError={() => invalidateRepositoryCommitComments(queryClient, target)}
             onSuccess={(result, mutation) => {
-              if (mutation.action === "update" && result) {
-                syncRepositoryCommitComment(queryClient, target, result, "update");
-                toast.success(appT("workspace.repositories.commentUpdated"));
+              if (
+                (mutation.action === "update" ||
+                  mutation.action === "minimize" ||
+                  mutation.action === "unminimize") &&
+                result
+              ) {
+                syncRepositoryCommitComment(queryClient, target, result, mutation.action);
+                toast.success(
+                  appT(
+                    mutation.action === "update"
+                      ? "workspace.repositories.commentUpdated"
+                      : mutation.action === "minimize"
+                        ? "workspace.repositories.commentMinimizedSuccess"
+                        : "workspace.repositories.commentUnminimizedSuccess"
+                  )
+                );
               } else if (mutation.action === "delete") {
                 syncRepositoryCommitComment(queryClient, target, comment, "delete");
                 toast.success(appT("workspace.repositories.commentDeleted"));
@@ -147,19 +176,35 @@ export function GitHubCommitCommentCard({
           </Badge>
         </div>
       ) : null}
-      <div className={compact ? "px-3 py-3" : "px-4 py-4"}>
-        <div className="harbor-markdown text-[12px]">
-          <Suspense fallback={<Skeleton className="h-14 w-full" />}>
-            <GitHubReadme
-              content={comment.body}
-              path=""
-              reference={target.commitSha}
-              repository={repository}
-              onOpenExternal={(url) => void openExternalUrl(url)}
-            />
-          </Suspense>
-        </div>
-      </div>
+      <Collapsible open={commentOpen} onOpenChange={setCommentOpen}>
+        {comment.isMinimized ? (
+          <CollapsibleTrigger asChild>
+            <Button type="button" variant="ghost" size="sm" className="m-2">
+              <ChevronDown data-icon="inline-start" />
+              {comment.minimizedReason
+                ? t("workspace.repositories.commentMinimizedReason", {
+                    reason: comment.minimizedReason,
+                  })
+                : t("workspace.repositories.commentMinimized")}
+            </Button>
+          </CollapsibleTrigger>
+        ) : null}
+        <CollapsibleContent>
+          <div className={compact ? "px-3 py-3" : "px-4 py-4"}>
+            <div className="harbor-markdown text-[12px]">
+              <Suspense fallback={<Skeleton className="h-14 w-full" />}>
+                <GitHubReadme
+                  content={comment.body}
+                  path=""
+                  reference={target.commitSha}
+                  repository={repository}
+                  onOpenExternal={(url) => void openExternalUrl(url)}
+                />
+              </Suspense>
+            </div>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
       <footer className="flex min-h-10 items-center border-t px-3 py-1.5">
         <GitHubReactionBar subject={{ id: comment.id, kind: "commitComment" }} />
       </footer>
