@@ -34,6 +34,7 @@ import {
 import { GitHubIssueDependencies } from "./github-issue-dependencies";
 import { GitHubIssueDeleteAction } from "./github-issue-delete-action";
 import { GitHubIssueDuplicate } from "./github-issue-duplicate";
+import { GitHubIssueCloneAction } from "./github-issue-clone-action";
 import { GitHubIssueLinkedPullRequests } from "./github-issue-linked-pull-requests";
 import { GitHubIssueMarkDuplicateAction } from "./github-issue-mark-duplicate-action";
 import { GitHubIssuePinAction } from "./github-issue-pin-action";
@@ -326,6 +327,11 @@ function GitHubIssueDetailScreen({
                       target.issueNumber
                     )
                   }
+                />
+                <GitHubIssueCloneAction
+                  repository={repository}
+                  issue={detail.issue}
+                  onCloned={(clone) => onNavigate(repository, clone.targetIssueNumber)}
                 />
                 <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
                   <Pencil data-icon="inline-start" />

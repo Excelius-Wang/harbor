@@ -1419,6 +1419,28 @@ export type GitHubIssueCreationPolicy = {
   templateChooserUrl: string;
 };
 
+export type GitHubIssueCloneStatus = {
+  repositoryId: string;
+  repositoryFullName: string;
+  issueNodeId: string;
+  issueNumber: number;
+  title: string;
+  body?: string;
+  sourceOpen: boolean;
+  destinationAllowsBlankIssues: boolean;
+  viewerCanClone: boolean;
+};
+
+export type GitHubIssueClone = {
+  repositoryId: string;
+  repositoryFullName: string;
+  sourceIssueNodeId: string;
+  sourceIssueNumber: number;
+  targetIssueNodeId: string;
+  targetIssueNumber: number;
+  targetIssueUrl: string;
+};
+
 export type GitHubIssuePage = {
   issues: GitHubIssue[];
   totalCount: number;
