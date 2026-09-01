@@ -241,6 +241,7 @@ pub struct GitHubIssueDetailPage {
 #[async_trait]
 pub(crate) trait GitHubIssueClient:
     content::GitHubIssueContentClient
+    + super::issue_clone::GitHubIssueCloneClient
     + creation_policy::GitHubIssueCreationPolicyClient
     + lifecycle::GitHubIssueLifecycleClient
     + Send

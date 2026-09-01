@@ -24,19 +24,19 @@ use crate::{
         GitHubGistCommentPage, GitHubGistCreateInput, GitHubGistFileInput, GitHubGistFileMutation,
         GitHubGistPage, GitHubGistRevisionDetail, GitHubGistRevisionPage, GitHubGistSource,
         GitHubGistUpdateInput, GitHubInsightsTrafficPeriod, GitHubIssue, GitHubIssueAssigneePage,
-        GitHubIssueAssignment, GitHubIssueCreateInput, GitHubIssueCreationPolicy,
-        GitHubIssueDependenciesPage, GitHubIssueDetailPage, GitHubIssueDuplicateReference,
-        GitHubIssueFilters, GitHubIssueInboxFilters, GitHubIssueInboxPage, GitHubIssueInboxScope,
-        GitHubIssueLabel, GitHubIssueLabelMutation, GitHubIssueLabelPage,
-        GitHubIssueLinkedPullRequestPage, GitHubIssueMilestone, GitHubIssueMilestoneMutation,
-        GitHubIssueMilestonePage, GitHubIssuePage, GitHubIssueRelationshipsPage, GitHubIssueSort,
-        GitHubIssueState, GitHubIssueStateCapabilities, GitHubIssueStateMutation,
-        GitHubIssueSubIssueCreateInput, GitHubIssueSubIssuePriorityInput, GitHubIssueSummary,
-        GitHubIssueTimelineItem, GitHubLoginAvailability, GitHubNotificationAction,
-        GitHubNotificationPage, GitHubPackage, GitHubPackagePage, GitHubPackageType,
-        GitHubPackageVersionMutationInput, GitHubPackageVersionMutationResult,
-        GitHubPackageVersionPage, GitHubPackageVersionState, GitHubPackageVisibility,
-        GitHubPagesHealth, GitHubPagesMutation, GitHubPagesWorkspace,
+        GitHubIssueAssignment, GitHubIssueClone, GitHubIssueCloneStatus, GitHubIssueCreateInput,
+        GitHubIssueCreationPolicy, GitHubIssueDependenciesPage, GitHubIssueDetailPage,
+        GitHubIssueDuplicateReference, GitHubIssueFilters, GitHubIssueInboxFilters,
+        GitHubIssueInboxPage, GitHubIssueInboxScope, GitHubIssueLabel, GitHubIssueLabelMutation,
+        GitHubIssueLabelPage, GitHubIssueLinkedPullRequestPage, GitHubIssueMilestone,
+        GitHubIssueMilestoneMutation, GitHubIssueMilestonePage, GitHubIssuePage,
+        GitHubIssueRelationshipsPage, GitHubIssueSort, GitHubIssueState,
+        GitHubIssueStateCapabilities, GitHubIssueStateMutation, GitHubIssueSubIssueCreateInput,
+        GitHubIssueSubIssuePriorityInput, GitHubIssueSummary, GitHubIssueTimelineItem,
+        GitHubLoginAvailability, GitHubNotificationAction, GitHubNotificationPage, GitHubPackage,
+        GitHubPackagePage, GitHubPackageType, GitHubPackageVersionMutationInput,
+        GitHubPackageVersionMutationResult, GitHubPackageVersionPage, GitHubPackageVersionState,
+        GitHubPackageVisibility, GitHubPagesHealth, GitHubPagesMutation, GitHubPagesWorkspace,
         GitHubPendingPullRequestReview, GitHubProfileActivityPage, GitHubProfileConnectionKind,
         GitHubProjectDetail, GitHubProjectFilters, GitHubProjectItem, GitHubProjectItemAction,
         GitHubProjectItemAddition, GitHubProjectItemFilters, GitHubProjectItemUpdate,
@@ -74,8 +74,8 @@ use crate::{
         GitHubWorkflowArtifactPage, GitHubWorkflowDispatchConfig, GitHubWorkflowDispatchOptions,
         GitHubWorkflowJobLog, GitHubWorkflowJobPage, GitHubWorkflowRun, GitHubWorkflowRunAction,
         GitHubWorkflowRunDeletion, GitHubWorkflowRunFilterOptions, GitHubWorkflowRunFilters,
-        GitHubWorkflowRunPage, GitHubWorkflowRunStatusFilter, IssueSubIssueCreateMutation,
-        IssueSubIssuePriorityMutation,
+        GitHubWorkflowRunPage, GitHubWorkflowRunStatusFilter, IssueCloneMutation,
+        IssueSubIssueCreateMutation, IssueSubIssuePriorityMutation,
     },
     github_oauth::{GitHubLoginAttempt, GitHubLoopbackListener, GITHUB_AUTH_EVENT},
     repository_context::{RepositoryContextAnswer, RepositoryRef},
@@ -2146,6 +2146,50 @@ pub async fn github_create_repository_issue(
         .github
         .create_issue(repository.owner(), repository.name(), &input)
         .await
+}
+
+#[tauri::command]
+pub async fn github_get_repository_issue_clone_status(
+    owner: String,
+    repository: String,
+    issue_number: u64,
+    state: State<'_, AppState>,
+) -> Result<GitHubIssueCloneStatus, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .issue_clone_status(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(issue_number, "issue")?,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_clone_repository_issue(
+    owner: String,
+    repository: String,
+    issue_number: u64,
+    expected_issue_node_id: String,
+    title: String,
+    body: String,
+    state: State<'_, AppState>,
+) -> Result<GitHubIssueClone, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    let issue_number = validate_item_number(issue_number, "issue")?;
+    let expected_issue_node_id = validate_graphql_node_id(expected_issue_node_id, "Issue")?;
+    let title = validate_issue_title(title)?;
+    let body = validate_issue_body(body)?;
+    let mutation = IssueCloneMutation {
+        owner: repository.owner(),
+        repository: repository.name(),
+        issue_number,
+        expected_issue_node_id: &expected_issue_node_id,
+        title: &title,
+        body: &body,
+    };
+    state.github.clone_issue(mutation).await
 }
 
 #[tauri::command]

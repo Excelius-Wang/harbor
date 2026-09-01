@@ -24,6 +24,7 @@ pub(crate) mod download;
 pub(crate) mod gist;
 pub(crate) mod insights;
 pub(crate) mod issue;
+pub(crate) mod issue_clone;
 pub(crate) mod issue_delete;
 pub(crate) mod issue_dependencies;
 pub(crate) mod issue_duplicate;
@@ -100,6 +101,8 @@ pub use issue::{
     GitHubIssueStateCapabilities, GitHubIssueStateMutation, GitHubIssueSummary,
     GitHubIssueTimelineItem,
 };
+pub(crate) use issue_clone::IssueCloneMutation;
+pub use issue_clone::{GitHubIssueClone, GitHubIssueCloneStatus};
 pub(crate) use issue_delete::IssueDeleteMutation;
 pub use issue_delete::{GitHubIssueDeleteStatus, GitHubIssueDeletion};
 pub use issue_dependencies::GitHubIssueDependenciesPage;

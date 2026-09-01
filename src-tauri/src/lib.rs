@@ -154,6 +154,8 @@ pub fn run() {
             commands::github_update_repository_conversation_subscription,
             commands::github_get_repository_issue_creation_policy,
             commands::github_create_repository_issue,
+            commands::github_get_repository_issue_clone_status,
+            commands::github_clone_repository_issue,
             commands::github_update_repository_issue,
             commands::github_update_repository_issue_metadata,
             commands::github_create_repository_issue_comment,
