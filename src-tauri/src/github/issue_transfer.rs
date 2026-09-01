@@ -382,6 +382,7 @@ fn ensure_transfer_response(
 ) -> Result<(), AppError> {
     let expected_target = format!("{}/{}", mutation.target_owner, mutation.target_repository);
     if !graphql_node_id_is_valid(&issue.id)
+        || issue.id != mutation.request.expected_issue_node_id
         || issue.number == 0
         || issue.state != "OPEN"
         || issue.repository.id != status.target_repository_id
