@@ -169,7 +169,7 @@ async fn transport_rejects_a_stale_issue_node_before_writing() {
         .expect_err("stale Issue identity");
     server.await.expect("mock server");
 
-    assert!(matches!(error, AppError::GitHubIssueDeletionConflict(_)));
+    assert!(matches!(error, AppError::GitHubIssueStateConflict(_)));
     assert_eq!(requests.lock().expect("requests").len(), 1);
 }
 

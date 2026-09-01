@@ -30,6 +30,9 @@ import {
 function deleteErrorTitle(code: string) {
   if (code === "githubPermission") return "workspace.repositories.issueDeletePermissionDenied";
   if (code === "githubRateLimited") return "workspace.repositories.githubRateLimited";
+  if (code === "githubIssueStateConflict") {
+    return "workspace.repositories.issueDeleteStatusChanged";
+  }
   if (code === "githubIssueDeletionConflict") {
     return "workspace.repositories.issueDeleteMayHavePersisted";
   }

@@ -2200,6 +2200,7 @@
       "issueDeleted": "已删除 Issue",
       "issueDeleteStatusUnavailable": "重新读取删除权限",
       "issueDeletePermissionDenied": "删除此 Issue 需要仓库管理员权限",
+      "issueDeleteStatusChanged": "Issue 在删除前发生了变化，请重新读取后再试",
       "issueDeleteMayHavePersisted": "GitHub 可能已经删除此 Issue",
       "issueDeleteFailed": "Harbor 暂时无法删除 Issue",
       "reviewDuplicateTarget": "查看 Issue",

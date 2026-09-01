@@ -123,6 +123,7 @@ export async function refreshIssueDeletionCaches(
   target: GitHubIssueDeleteTarget
 ) {
   await Promise.all([
+    queryClient.invalidateQueries({ queryKey: githubQueryKeys.issueRoot(target) }),
     queryClient.invalidateQueries({ queryKey: githubQueryKeys.issuesRoot(target) }),
     queryClient.invalidateQueries({ queryKey: githubQueryKeys.issueInboxRoot }),
     queryClient.invalidateQueries({ queryKey: githubIssuePinQueryKeys.root(target) }),

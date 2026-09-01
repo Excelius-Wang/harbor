@@ -2207,6 +2207,7 @@
       "issueDeleted": "Issue deleted",
       "issueDeleteStatusUnavailable": "Reload delete permission",
       "issueDeletePermissionDenied": "Repository admin permission is required to delete this Issue",
+      "issueDeleteStatusChanged": "The Issue changed before deletion; reload and try again",
       "issueDeleteMayHavePersisted": "GitHub may have deleted this Issue",
       "issueDeleteFailed": "Harbor could not delete the Issue",
       "reviewDuplicateTarget": "Review Issue",

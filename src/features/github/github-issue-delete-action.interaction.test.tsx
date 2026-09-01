@@ -226,4 +226,38 @@ describe("GitHub Issue delete action", () => {
     await waitFor(() => expect(invoke).toHaveBeenCalledTimes(3));
     expect(onDeleted).not.toHaveBeenCalled();
   });
+
+  it("refreshes the open detail after an ambiguous deletion", async () => {
+    vi.mocked(invoke)
+      .mockResolvedValueOnce(status)
+      .mockRejectedValueOnce({
+        code: "githubIssueDeletionConflict",
+        message: "the Issue deletion may have persisted",
+      })
+      .mockResolvedValueOnce(status);
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const detailKey = githubQueryKeys.issueRoot({
+      owner: "octocat",
+      repository: "hello-world",
+      issueNumber: 7,
+    });
+    queryClient.setQueryData(detailKey, { issue });
+    const user = userEvent.setup();
+    renderAction(vi.fn(), queryClient);
+
+    await user.click(
+      await screen.findByRole("button", { name: "workspace.repositories.deleteIssue" })
+    );
+    await user.click(
+      screen.getByRole("button", { name: "workspace.repositories.confirmDeleteIssue" })
+    );
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        "workspace.repositories.issueDeleteMayHavePersisted",
+        { description: "the Issue deletion may have persisted" }
+      )
+    );
+    await waitFor(() => expect(queryClient.getQueryState(detailKey)?.isInvalidated).toBe(true));
+  });
 });

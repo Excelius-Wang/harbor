@@ -227,7 +227,7 @@ fn ensure_delete_preflight(
     if status.issue_node_id != mutation.request.expected_issue_node_id
         || status.number != mutation.request.issue_number
     {
-        return Err(AppError::GitHubIssueDeletionConflict(
+        return Err(AppError::GitHubIssueStateConflict(
             "the selected Issue identity changed; refresh before trying again".to_string(),
         ));
     }
