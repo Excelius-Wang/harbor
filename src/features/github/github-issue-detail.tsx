@@ -35,6 +35,7 @@ import { GitHubIssueDependencies } from "./github-issue-dependencies";
 import { GitHubIssueDeleteAction } from "./github-issue-delete-action";
 import { GitHubIssueDuplicate } from "./github-issue-duplicate";
 import { GitHubIssueCloneAction } from "./github-issue-clone-action";
+import { GitHubIssueConvertDiscussionAction } from "./github-issue-convert-discussion-action";
 import { GitHubIssueLinkedPullRequests } from "./github-issue-linked-pull-requests";
 import { GitHubIssueLinkedBranches } from "./github-issue-linked-branches";
 import { GitHubIssueMarkDuplicateAction } from "./github-issue-mark-duplicate-action";
@@ -307,6 +308,9 @@ function GitHubIssueDetailScreen({
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
+                {detail.issue.state === "open" ? (
+                  <GitHubIssueConvertDiscussionAction issueUrl={detail.issue.url} />
+                ) : null}
                 <GitHubIssuePinAction repository={repository} issue={detail.issue} />
                 <GitHubIssueMarkDuplicateAction repository={repository} issue={detail.issue} />
                 <GitHubIssueDeleteAction
