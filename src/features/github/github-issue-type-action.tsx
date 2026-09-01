@@ -29,6 +29,12 @@ function issueTypeErrorMessage(code: string) {
   return undefined;
 }
 
+function issueTypeLoadErrorTitle(code: string) {
+  if (code === "githubPermission") return "workspace.repositories.issuePermissionDenied";
+  if (code === "githubRateLimited") return "workspace.repositories.githubRateLimited";
+  return "workspace.repositories.issueTypeLoadFailed";
+}
+
 export function GitHubIssueTypeAction({
   repository,
   issue,
@@ -78,7 +84,7 @@ export function GitHubIssueTypeAction({
     return (
       <Alert variant="destructive" className="py-2.5 text-xs">
         <CircleAlert />
-        <AlertTitle>{t("workspace.repositories.issueTypeLoadFailed")}</AlertTitle>
+        <AlertTitle>{t(issueTypeLoadErrorTitle(error?.code ?? ""))}</AlertTitle>
         <AlertDescription className="flex flex-col items-start gap-2">
           <span>{error?.message}</span>
           <Button type="button" variant="outline" size="xs" onClick={() => void result.refetch()}>

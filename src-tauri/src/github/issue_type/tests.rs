@@ -179,7 +179,11 @@ fn issue_type_postflight_requires_the_selected_type_to_persist() {
     ));
 }
 
-fn graphql_status_response(issue_type_id: &str, issue_type_name: &str) -> String {
+fn graphql_status_response(
+    issue_type_id: &str,
+    issue_type_name: &str,
+    viewer_can_type: Option<bool>,
+) -> String {
     serde_json::json!({
         "data": {
             "repository": {
@@ -188,7 +192,7 @@ fn graphql_status_response(issue_type_id: &str, issue_type_name: &str) -> String
                 "issue": {
                     "id": "I_7",
                     "number": 7,
-                    "viewerCanType": true,
+                    "viewerCanType": viewer_can_type,
                     "issueType": {
                         "id": issue_type_id,
                         "name": issue_type_name,
@@ -249,7 +253,7 @@ async fn transport_updates_type_and_confirms_the_postflight_state() {
         MockResponse {
             status: "200 OK",
             headers: vec![],
-            body: graphql_status_response("IT_bug", "Bug"),
+            body: graphql_status_response("IT_bug", "Bug", Some(true)),
         },
         MockResponse {
             status: "200 OK",
@@ -264,7 +268,7 @@ async fn transport_updates_type_and_confirms_the_postflight_state() {
         MockResponse {
             status: "200 OK",
             headers: vec![],
-            body: graphql_status_response("IT_task", "Task"),
+            body: graphql_status_response("IT_task", "Task", Some(true)),
         },
         MockResponse {
             status: "200 OK",
@@ -300,6 +304,28 @@ async fn transport_updates_type_and_confirms_the_postflight_state() {
     assert!(requests[2].contains("HarborUpdateIssueType"));
     assert!(requests[3].contains("HarborIssueTypeStatus"));
     assert_rest_request(&requests[4], "/repos/octocat/hello-world/issue-types");
+}
+
+#[tokio::test]
+async fn nullable_issue_type_capability_fails_closed() {
+    let (client, _requests, server) = mock_github(vec![
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: graphql_status_response("IT_bug", "Bug", None),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: issue_types_response(),
+        },
+    ])
+    .await;
+    let status = load_issue_type_status_with_client(&client, "octocat", "hello-world", 7)
+        .await
+        .expect("issue type status");
+    assert!(!status.viewer_can_type);
+    server.await.expect("mock server");
 }
 
 #[tokio::test]
