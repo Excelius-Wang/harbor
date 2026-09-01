@@ -1626,6 +1626,50 @@ pub async fn github_get_repository_issue(
 }
 
 #[tauri::command]
+pub async fn github_get_repository_issue_delete_status(
+    owner: String,
+    repository: String,
+    issue_number: u64,
+    state: State<'_, AppState>,
+) -> Result<crate::github::GitHubIssueDeleteStatus, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .issue_delete_status(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(issue_number, "issue")?,
+        )
+        .await
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitHubIssueDeleteInput {
+    owner: String,
+    repository: String,
+    issue_number: u64,
+    expected_issue_node_id: String,
+}
+
+#[tauri::command]
+pub async fn github_delete_repository_issue(
+    input: GitHubIssueDeleteInput,
+    state: State<'_, AppState>,
+) -> Result<crate::github::GitHubIssueDeletion, AppError> {
+    let repository = RepositoryRef::new(input.owner, input.repository)?;
+    let issue_number = validate_item_number(input.issue_number, "issue")?;
+    let expected_issue_node_id = validate_graphql_node_id(input.expected_issue_node_id, "issue")?;
+    let mutation = crate::github::IssueDeleteMutation::new(
+        repository.owner(),
+        repository.name(),
+        issue_number,
+        &expected_issue_node_id,
+    )?;
+    state.github.delete_issue(mutation).await
+}
+
+#[tauri::command]
 pub async fn github_get_repository_pinned_issues(
     owner: String,
     repository: String,

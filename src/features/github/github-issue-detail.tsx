@@ -32,6 +32,7 @@ import {
   pushIssueDetailLocation,
 } from "./github-issue-detail-navigation";
 import { GitHubIssueDependencies } from "./github-issue-dependencies";
+import { GitHubIssueDeleteAction } from "./github-issue-delete-action";
 import { GitHubIssueDuplicate } from "./github-issue-duplicate";
 import { GitHubIssueLinkedPullRequests } from "./github-issue-linked-pull-requests";
 import { GitHubIssueMarkDuplicateAction } from "./github-issue-mark-duplicate-action";
@@ -303,6 +304,11 @@ function GitHubIssueDetailScreen({
               <div className="flex flex-wrap items-center gap-2">
                 <GitHubIssuePinAction repository={repository} issue={detail.issue} />
                 <GitHubIssueMarkDuplicateAction repository={repository} issue={detail.issue} />
+                <GitHubIssueDeleteAction
+                  repository={repository}
+                  issue={detail.issue}
+                  onDeleted={onBack}
+                />
                 <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
                   <Pencil data-icon="inline-start" />
                   {t("workspace.repositories.editIssue")}

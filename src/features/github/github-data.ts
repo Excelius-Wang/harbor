@@ -1446,6 +1446,21 @@ export type GitHubPinnedIssuePage = {
   issues: GitHubPinnedIssue[];
 };
 
+export type GitHubIssueDeleteStatus = {
+  repositoryId: string;
+  repositoryFullName: string;
+  issueNodeId: string;
+  number: number;
+  viewerCanDelete: boolean;
+};
+
+export type GitHubIssueDeletion = {
+  repositoryId: string;
+  repositoryFullName: string;
+  issueNodeId: string;
+  number: number;
+};
+
 export type GitHubIssueRepository = GitHubRepositoryContentContext & {
   fullName: string;
 };
