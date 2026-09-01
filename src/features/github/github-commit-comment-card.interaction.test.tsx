@@ -52,6 +52,10 @@ function comment(body = "Old body"): GitHubCommitComment {
     updatedAt: body === "Old body" ? "2026-08-30T01:01:00Z" : "2026-08-30T01:02:00Z",
     viewerCanUpdate: true,
     viewerCanDelete: true,
+    isMinimized: false,
+    minimizedReason: null,
+    viewerCanMinimize: true,
+    viewerCanUnminimize: false,
   };
 }
 
@@ -155,6 +159,44 @@ describe("GitHub commit comment card", () => {
         pages: Array<{ comments: GitHubCommitComment[] }>;
       }>(githubQueryKeys.commitComments(target))?.pages[0].comments[0].body
     ).toBe("New body");
+  });
+
+  it("minimizes a commit comment with its numeric and Node ID guards", async () => {
+    vi.mocked(invoke).mockResolvedValueOnce({
+      ...comment(),
+      isMinimized: true,
+      minimizedReason: "off-topic",
+      viewerCanMinimize: false,
+      viewerCanUnminimize: true,
+    });
+    const client = createQueryClient();
+    const user = userEvent.setup();
+    renderCard(client);
+
+    await user.click(
+      screen.getByRole("button", { name: "workspace.repositories.minimizeComment" })
+    );
+    await user.click(
+      screen.getByRole("button", { name: "workspace.repositories.confirmMinimizeComment" })
+    );
+
+    await waitFor(() => expect(invoke).toHaveBeenCalledTimes(1));
+    expect(invoke).toHaveBeenCalledWith("github_mutate_repository_commit_comment", {
+      ...target,
+      mutation: {
+        action: "minimize",
+        commentId: 42,
+        commentNodeId: "CC_42",
+        expectedUpdatedAt: "2026-08-30T01:01:00Z",
+        expectedMinimized: false,
+        classifier: "offTopic",
+      },
+    });
+    expect(
+      client.getQueryData<{
+        pages: Array<{ comments: GitHubCommitComment[] }>;
+      }>(githubQueryKeys.commitComments(target))?.pages[0].comments[0]
+    ).toMatchObject({ isMinimized: true, minimizedReason: "off-topic" });
   });
 
   it("removes the focused comment only after confirmed deletion succeeds", async () => {

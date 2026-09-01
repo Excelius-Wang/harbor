@@ -1,8 +1,12 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpListener,
+    time::timeout,
 };
 
 use crate::github_oauth::GitHubOAuthCredentials;
@@ -11,12 +15,14 @@ use super::super::{CredentialStore, GitHubService};
 use super::transport::{
     commit_comment_page_from_raw, commit_comment_route, commit_comments_route,
     create_commit_comment_with_client, list_commit_comments_with_client,
-    mutate_commit_comment_with_client, CommitCommentCapabilitiesQuery, RawCommitComment,
+    mutate_commit_comment_with_client, mutate_commit_comment_with_clients,
+    CommitCommentCapabilitiesQuery, RawCommitComment,
 };
 use super::{
     normalize_commit_comment_mutation, normalize_commit_comment_page, normalize_commit_comment_sha,
     GitHubCommitCommentGuard, GitHubCommitCommentMutation, GitHubCommitCommentPlacement,
 };
+use crate::github::GitHubCommentMinimizeClassifier;
 
 struct SavedCredentialStore;
 
@@ -110,6 +116,39 @@ fn capability_api_json(sha: &str, updated_at: &str, can_update: bool, can_delete
                 "updatedAt": updated_at,
                 "viewerCanUpdate": can_update,
                 "viewerCanDelete": can_delete,
+                "isMinimized": false,
+                "minimizedReason": null,
+                "viewerCanMinimize": false,
+                "viewerCanUnminimize": false,
+                "repository": { "id": "R_1" },
+                "commit": { "oid": sha }
+            }]
+        }
+    })
+    .to_string()
+}
+
+fn capability_api_json_with_minimize(
+    sha: &str,
+    updated_at: &str,
+    is_minimized: bool,
+    minimized_reason: Option<&str>,
+    can_minimize: bool,
+    can_unminimize: bool,
+) -> String {
+    serde_json::json!({
+        "data": {
+            "repository": { "id": "R_1" },
+            "nodes": [{
+                "__typename": "CommitComment",
+                "id": "CC_42",
+                "updatedAt": updated_at,
+                "viewerCanUpdate": true,
+                "viewerCanDelete": true,
+                "isMinimized": is_minimized,
+                "minimizedReason": minimized_reason,
+                "viewerCanMinimize": can_minimize,
+                "viewerCanUnminimize": can_unminimize,
                 "repository": { "id": "R_1" },
                 "commit": { "oid": sha }
             }]
@@ -127,6 +166,10 @@ fn capability_fixture(sha: &str) -> CommitCommentCapabilitiesQuery {
             "updatedAt": "2026-08-30T01:01:00Z",
             "viewerCanUpdate": true,
             "viewerCanDelete": false,
+            "isMinimized": false,
+            "minimizedReason": null,
+            "viewerCanMinimize": true,
+            "viewerCanUnminimize": false,
             "repository": { "id": "R_1" },
             "commit": { "oid": sha }
         }]
@@ -162,6 +205,58 @@ async fn mock_github(
     Arc<Mutex<Vec<String>>>,
     tokio::task::JoinHandle<()>,
 ) {
+    mock_github_with_retry_config(
+        responses,
+        octocrab::service::middleware::retry::RetryConfig::Simple(3),
+    )
+    .await
+}
+
+async fn mock_github_with_retry_config(
+    responses: Vec<MockResponse>,
+    retry_config: octocrab::service::middleware::retry::RetryConfig,
+) -> (
+    octocrab::Octocrab,
+    Arc<Mutex<Vec<String>>>,
+    tokio::task::JoinHandle<()>,
+) {
+    let (client, requests, server, _) =
+        mock_github_with_retry_config_and_address(responses, retry_config).await;
+    (client, requests, server)
+}
+
+async fn mock_github_pair(
+    responses: Vec<MockResponse>,
+) -> (
+    octocrab::Octocrab,
+    octocrab::Octocrab,
+    Arc<Mutex<Vec<String>>>,
+    tokio::task::JoinHandle<()>,
+) {
+    let (read_client, requests, server, base_uri) = mock_github_with_retry_config_and_address(
+        responses,
+        octocrab::service::middleware::retry::RetryConfig::Simple(3),
+    )
+    .await;
+    let write_client = octocrab::Octocrab::builder()
+        .base_uri(base_uri)
+        .expect("no-retry mock base uri")
+        .add_retry_config(octocrab::service::middleware::retry::RetryConfig::None)
+        .personal_token("github-user-access-token".to_string())
+        .build()
+        .expect("no-retry mock client");
+    (read_client, write_client, requests, server)
+}
+
+async fn mock_github_with_retry_config_and_address(
+    responses: Vec<MockResponse>,
+    retry_config: octocrab::service::middleware::retry::RetryConfig,
+) -> (
+    octocrab::Octocrab,
+    Arc<Mutex<Vec<String>>>,
+    tokio::task::JoinHandle<()>,
+    String,
+) {
     let listener = TcpListener::bind("127.0.0.1:0").await.expect("mock bind");
     let address = listener.local_addr().expect("mock address");
     let requests = Arc::new(Mutex::new(Vec::new()));
@@ -193,10 +288,30 @@ async fn mock_github(
                     }
                 }
             }
-            captured
-                .lock()
-                .expect("request lock")
-                .push(String::from_utf8(buffer).expect("request utf8"));
+            let request = String::from_utf8(buffer).expect("request utf8");
+            captured.lock().expect("request lock").push(request.clone());
+            let response_body = if response.body == "__ECHO_MINIMIZE_MUTATION__" {
+                let request_body = request.split("\r\n\r\n").nth(1).expect("request body");
+                let request_json = serde_json::from_str::<serde_json::Value>(request_body)
+                    .expect("GraphQL request JSON");
+                let client_mutation_id = request_json["variables"]["clientMutationId"]
+                    .as_str()
+                    .expect("client mutation ID");
+                let mutation_name = request_json["query"]
+                    .as_str()
+                    .expect("GraphQL query")
+                    .contains("unminimizeComment")
+                    .then_some("unminimizeComment")
+                    .unwrap_or("minimizeComment");
+                let mut data = serde_json::Map::new();
+                data.insert(
+                    mutation_name.to_string(),
+                    serde_json::json!({ "clientMutationId": client_mutation_id }),
+                );
+                serde_json::json!({ "data": data }).to_string()
+            } else {
+                response.body
+            };
             let extra_headers = response
                 .headers
                 .into_iter()
@@ -206,8 +321,8 @@ async fn mock_github(
                 "HTTP/1.1 {}\r\nContent-Type: application/json\r\n{}Content-Length: {}\r\nConnection: close\r\n\r\n{}",
                 response.status,
                 extra_headers,
-                response.body.len(),
-                response.body
+                response_body.len(),
+                response_body
             );
             stream
                 .write_all(payload.as_bytes())
@@ -218,10 +333,11 @@ async fn mock_github(
     let client = octocrab::Octocrab::builder()
         .base_uri(format!("http://{address}"))
         .expect("mock base uri")
+        .add_retry_config(retry_config)
         .personal_token("github-user-access-token".to_string())
         .build()
         .expect("mock client");
-    (client, requests, server)
+    (client, requests, server, format!("http://{address}"))
 }
 
 #[test]
@@ -248,6 +364,9 @@ fn comment_pages_keep_placement_deleted_authors_and_capabilities() {
     assert!(comment.author.is_none());
     assert!(comment.viewer_can_update);
     assert!(!comment.viewer_can_delete);
+    assert!(!comment.is_minimized);
+    assert!(comment.viewer_can_minimize);
+    assert!(!comment.viewer_can_unminimize);
 }
 
 #[test]
@@ -594,6 +713,87 @@ fn mutation_guard_keeps_the_flat_tauri_contract() {
     );
 }
 
+#[test]
+fn minimize_mutation_keeps_the_flat_tauri_contract() {
+    let value = serde_json::json!({
+        "action": "minimize",
+        "commentId": 42,
+        "commentNodeId": "CC_42",
+        "expectedUpdatedAt": "2026-08-30T01:01:00Z",
+        "expectedMinimized": false,
+        "classifier": "offTopic"
+    });
+    let mutation: GitHubCommitCommentMutation =
+        serde_json::from_value(value.clone()).expect("flat minimize mutation");
+    assert!(matches!(
+        &mutation,
+        GitHubCommitCommentMutation::Minimize {
+            guard,
+            expected_minimized: false,
+            classifier: GitHubCommentMinimizeClassifier::OffTopic,
+        } if guard == &comment_guard(42)
+    ));
+    assert_eq!(
+        serde_json::to_value(mutation).expect("flat mutation JSON"),
+        value
+    );
+}
+
+#[test]
+fn minimize_mutation_requires_the_expected_current_state_and_capability() {
+    let sha = "a".repeat(40);
+    let mutation = GitHubCommitCommentMutation::Minimize {
+        guard: comment_guard(42),
+        expected_minimized: false,
+        classifier: GitHubCommentMinimizeClassifier::OffTopic,
+    };
+    let mut capabilities = capability_fixture(&sha);
+    capabilities.nodes[0]
+        .as_mut()
+        .expect("comment capability")
+        .viewer_can_minimize = false;
+    let comment =
+        commit_comment_page_from_raw(vec![comment_fixture(&sha)], capabilities, &sha, 1, false)
+            .expect("comment page")
+            .comments
+            .into_iter()
+            .next()
+            .expect("comment");
+    assert!(matches!(
+        super::transport::ensure_comment_mutation_allowed_for_test(&comment, &mutation),
+        Err(crate::error::AppError::GitHubPermission(_))
+    ));
+
+    capabilities = serde_json::from_value(serde_json::json!({
+        "repository": { "id": "R_1" },
+        "nodes": [{
+            "__typename": "CommitComment",
+            "id": "CC_42",
+            "updatedAt": "2026-08-30T01:01:00Z",
+            "viewerCanUpdate": true,
+            "viewerCanDelete": true,
+            "isMinimized": true,
+            "minimizedReason": "off-topic",
+            "viewerCanMinimize": true,
+            "viewerCanUnminimize": true,
+            "repository": { "id": "R_1" },
+            "commit": { "oid": sha }
+        }]
+    }))
+    .expect("minimized capability fixture");
+    let comment =
+        commit_comment_page_from_raw(vec![comment_fixture(&sha)], capabilities, &sha, 1, false)
+            .expect("comment page")
+            .comments
+            .into_iter()
+            .next()
+            .expect("comment");
+    assert!(matches!(
+        super::transport::ensure_comment_mutation_allowed_for_test(&comment, &mutation),
+        Err(crate::error::AppError::GitHubCommentConflict(_))
+    ));
+}
+
 #[tokio::test]
 async fn update_transport_preflights_scope_capability_and_revision() {
     let sha = "a".repeat(40);
@@ -646,6 +846,148 @@ async fn update_transport_preflights_scope_capability_and_revision() {
         serde_json::from_str::<serde_json::Value>(body).expect("request JSON"),
         serde_json::json!({ "body": "New body" })
     );
+}
+
+#[tokio::test]
+async fn minimize_transport_writes_once_and_confirms_the_postflight_state() {
+    let sha = "a".repeat(40);
+    let (read_client, write_client, requests, server) = mock_github_pair(vec![
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: comment_api_json(&sha, "Old body", "2026-08-30T01:01:00Z"),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: capability_api_json_with_minimize(
+                &sha,
+                "2026-08-30T01:01:00Z",
+                false,
+                None,
+                true,
+                false,
+            ),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: "__ECHO_MINIMIZE_MUTATION__".to_string(),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: comment_api_json(&sha, "Old body", "2026-08-30T01:01:00Z"),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: capability_api_json_with_minimize(
+                &sha,
+                "2026-08-30T01:01:00Z",
+                true,
+                Some("off-topic"),
+                false,
+                true,
+            ),
+        },
+    ])
+    .await;
+    let mutation = GitHubCommitCommentMutation::Minimize {
+        guard: comment_guard(42),
+        expected_minimized: false,
+        classifier: GitHubCommentMinimizeClassifier::OffTopic,
+    };
+
+    let minimized = mutate_commit_comment_with_clients(
+        &read_client,
+        &write_client,
+        "octocat",
+        "hello-world",
+        &sha,
+        &mutation,
+    )
+    .await
+    .expect("minimized comment")
+    .expect("comment response");
+    server.await.expect("mock server");
+
+    assert!(minimized.is_minimized);
+    assert_eq!(minimized.minimized_reason.as_deref(), Some("off-topic"));
+    let requests = requests.lock().expect("requests");
+    assert_eq!(requests.len(), 5);
+    assert!(requests[2].starts_with("POST /graphql HTTP/1.1"));
+    let request_body = requests[2].split("\r\n\r\n").nth(1).expect("request body");
+    let request_json = serde_json::from_str::<serde_json::Value>(request_body).expect("JSON");
+    assert_eq!(request_json["variables"]["id"], "CC_42");
+    assert_eq!(request_json["variables"]["classifier"], "OFF_TOPIC");
+}
+
+#[tokio::test]
+async fn minimize_transport_does_not_retry_an_ambiguous_graphql_write() {
+    let sha = "a".repeat(40);
+    let (read_client, write_client, requests, server) = mock_github_pair(vec![
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: comment_api_json(&sha, "Old body", "2026-08-30T01:01:00Z"),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: capability_api_json_with_minimize(
+                &sha,
+                "2026-08-30T01:01:00Z",
+                false,
+                None,
+                true,
+                false,
+            ),
+        },
+        MockResponse {
+            status: "503 Service Unavailable",
+            headers: vec![],
+            body: serde_json::json!({ "message": "temporarily unavailable" }).to_string(),
+        },
+        MockResponse {
+            status: "503 Service Unavailable",
+            headers: vec![],
+            body: serde_json::json!({ "message": "retry probe" }).to_string(),
+        },
+        MockResponse {
+            status: "503 Service Unavailable",
+            headers: vec![],
+            body: serde_json::json!({ "message": "retry probe" }).to_string(),
+        },
+    ])
+    .await;
+    let mutation = GitHubCommitCommentMutation::Minimize {
+        guard: comment_guard(42),
+        expected_minimized: false,
+        classifier: GitHubCommentMinimizeClassifier::Spam,
+    };
+
+    let error = mutate_commit_comment_with_clients(
+        &read_client,
+        &write_client,
+        "octocat",
+        "hello-world",
+        &sha,
+        &mutation,
+    )
+    .await
+    .expect_err("ambiguous write");
+    let mut server = server;
+    if timeout(Duration::from_millis(250), &mut server)
+        .await
+        .is_err()
+    {
+        server.abort();
+    }
+    let _ = server.await;
+
+    assert!(matches!(error, crate::error::AppError::GitHub(_)));
+    assert_eq!(requests.lock().expect("requests").len(), 3);
 }
 
 #[tokio::test]

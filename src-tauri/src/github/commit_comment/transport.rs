@@ -3,6 +3,9 @@ use std::collections::BTreeMap;
 use http_body_util::BodyExt;
 use serde::{Deserialize, Serialize};
 
+use super::super::comment::{
+    ensure_minimized_result, run_minimize_mutation, GitHubCommentMutation,
+};
 use super::super::github_error;
 use super::{
     GitHubCommitComment, GitHubCommitCommentAuthor, GitHubCommitCommentMutation,
@@ -27,6 +30,10 @@ query HarborCommitCommentCapabilities(
       updatedAt
       viewerCanUpdate
       viewerCanDelete
+      isMinimized
+      minimizedReason
+      viewerCanMinimize
+      viewerCanUnminimize
       repository { id }
       commit { oid }
     }
@@ -80,6 +87,13 @@ pub(super) struct CommitCommentCapabilityNode {
     pub(super) updated_at: String,
     viewer_can_update: bool,
     viewer_can_delete: bool,
+    #[serde(default)]
+    pub(super) is_minimized: bool,
+    pub(super) minimized_reason: Option<String>,
+    #[serde(default)]
+    pub(super) viewer_can_minimize: bool,
+    #[serde(default)]
+    pub(super) viewer_can_unminimize: bool,
     pub(super) repository: CommitCommentRepositoryNode,
     commit: Option<CommitCommentCommitNode>,
 }
@@ -192,6 +206,7 @@ pub(super) async fn create_commit_comment_with_client(
     verify_created_comment(comment, commit_sha, body, placement.as_ref())
 }
 
+#[cfg(test)]
 pub(super) async fn mutate_commit_comment_with_client(
     client: &octocrab::Octocrab,
     owner: &str,
@@ -199,14 +214,34 @@ pub(super) async fn mutate_commit_comment_with_client(
     commit_sha: &str,
     mutation: &GitHubCommitCommentMutation,
 ) -> Result<Option<GitHubCommitComment>, AppError> {
+    mutate_commit_comment_with_clients(client, client, owner, repository, commit_sha, mutation)
+        .await
+}
+
+pub(super) async fn mutate_commit_comment_with_clients(
+    client: &octocrab::Octocrab,
+    write_client: &octocrab::Octocrab,
+    owner: &str,
+    repository: &str,
+    commit_sha: &str,
+    mutation: &GitHubCommitCommentMutation,
+) -> Result<Option<GitHubCommitComment>, AppError> {
     if matches!(mutation, GitHubCommitCommentMutation::Create { .. }) {
-        return create_commit_comment_with_client(client, owner, repository, commit_sha, mutation)
-            .await
-            .map(Some);
+        return create_commit_comment_with_client(
+            write_client,
+            owner,
+            repository,
+            commit_sha,
+            mutation,
+        )
+        .await
+        .map(Some);
     }
     let guard = match mutation {
         GitHubCommitCommentMutation::Update { guard, .. }
-        | GitHubCommitCommentMutation::Delete { guard } => guard,
+        | GitHubCommitCommentMutation::Delete { guard }
+        | GitHubCommitCommentMutation::Minimize { guard, .. }
+        | GitHubCommitCommentMutation::Unminimize { guard, .. } => guard,
         GitHubCommitCommentMutation::Create { .. } => unreachable!(),
     };
     let current = get_commit_comment(client, owner, repository, guard.comment_id).await?;
@@ -218,13 +253,7 @@ pub(super) async fn mutate_commit_comment_with_client(
         .into_iter()
         .next()
         .ok_or_else(|| AppError::GitHub("GitHub did not return the commit comment".to_string()))?;
-    ensure_comment_mutation_allowed(
-        &current,
-        guard.comment_id,
-        &guard.comment_node_id,
-        &guard.expected_updated_at,
-        matches!(mutation, GitHubCommitCommentMutation::Update { .. }),
-    )?;
+    ensure_comment_mutation_allowed(&current, guard, mutation)?;
 
     match mutation {
         GitHubCommitCommentMutation::Update { body, .. } => {
@@ -235,7 +264,7 @@ pub(super) async fn mutate_commit_comment_with_client(
                 commit_comment_route(owner, repository, guard.comment_id),
                 Some(&payload),
             )?;
-            let response = client.execute(request).await.map_err(github_error)?;
+            let response = write_client.execute(request).await.map_err(github_error)?;
             let status = response.status();
             let response = octocrab::map_github_error(response)
                 .await
@@ -265,7 +294,7 @@ pub(super) async fn mutate_commit_comment_with_client(
                 commit_comment_route(owner, repository, guard.comment_id),
                 None::<&()>,
             )?;
-            let response = client.execute(request).await.map_err(github_error)?;
+            let response = write_client.execute(request).await.map_err(github_error)?;
             let status = response.status();
             octocrab::map_github_error(response)
                 .await
@@ -276,6 +305,21 @@ pub(super) async fn mutate_commit_comment_with_client(
                 )));
             }
             Ok(None)
+        }
+        GitHubCommitCommentMutation::Minimize { .. }
+        | GitHubCommitCommentMutation::Unminimize { .. } => {
+            let generic_mutation = generic_minimize_mutation(mutation)?;
+            run_minimize_mutation(write_client, &generic_mutation).await?;
+            let refreshed =
+                refreshed_commit_comment(client, owner, repository, commit_sha, guard.comment_id)
+                    .await
+                    .map_err(super::super::comment::minimize_postflight_error)?;
+            ensure_minimized_result(
+                refreshed.is_minimized,
+                refreshed.minimized_reason.as_deref(),
+                &generic_mutation,
+            )?;
+            Ok(Some(refreshed))
         }
         GitHubCommitCommentMutation::Create { .. } => unreachable!(),
     }
@@ -363,6 +407,10 @@ pub(super) fn commit_comment_page_from_raw(
             updated_at: comment.updated_at,
             viewer_can_update: capability.viewer_can_update,
             viewer_can_delete: capability.viewer_can_delete,
+            is_minimized: capability.is_minimized,
+            minimized_reason: capability.minimized_reason,
+            viewer_can_minimize: capability.viewer_can_minimize,
+            viewer_can_unminimize: capability.viewer_can_unminimize,
         });
     }
     if !capabilities_by_id.is_empty() {
@@ -410,30 +458,115 @@ async fn get_commit_comment(
 
 fn ensure_comment_mutation_allowed(
     current: &GitHubCommitComment,
-    comment_id: u64,
-    comment_node_id: &str,
-    expected_updated_at: &str,
-    updating: bool,
+    guard: &super::GitHubCommitCommentGuard,
+    mutation: &GitHubCommitCommentMutation,
 ) -> Result<(), AppError> {
-    if current.database_id != comment_id
-        || current.id != comment_node_id
-        || current.updated_at != expected_updated_at
+    if current.database_id != guard.comment_id
+        || current.id != guard.comment_node_id
+        || current.updated_at != guard.expected_updated_at
     {
         return Err(AppError::GitHubCommentConflict(
             "the comment identity or revision changed on GitHub".to_string(),
         ));
     }
-    let allowed = if updating {
-        current.viewer_can_update
-    } else {
-        current.viewer_can_delete
+    let allowed = match mutation {
+        GitHubCommitCommentMutation::Update { .. } => current.viewer_can_update,
+        GitHubCommitCommentMutation::Delete { .. } => current.viewer_can_delete,
+        GitHubCommitCommentMutation::Minimize { .. } => current.viewer_can_minimize,
+        GitHubCommitCommentMutation::Unminimize { .. } => current.viewer_can_unminimize,
+        GitHubCommitCommentMutation::Create { .. } => false,
     };
     if !allowed {
         return Err(AppError::GitHubPermission(
             "GitHub does not allow the viewer to modify this commit comment".to_string(),
         ));
     }
+    let expected_minimized = match mutation {
+        GitHubCommitCommentMutation::Minimize {
+            expected_minimized, ..
+        }
+        | GitHubCommitCommentMutation::Unminimize {
+            expected_minimized, ..
+        } => Some(*expected_minimized),
+        _ => None,
+    };
+    if let Some(expected_minimized) = expected_minimized {
+        let requested_minimized = matches!(mutation, GitHubCommitCommentMutation::Minimize { .. });
+        if expected_minimized != current.is_minimized || requested_minimized == current.is_minimized
+        {
+            return Err(AppError::GitHubCommentConflict(
+                "the comment minimize state changed after it was loaded".to_string(),
+            ));
+        }
+    }
     Ok(())
+}
+
+#[cfg(test)]
+pub(super) fn ensure_comment_mutation_allowed_for_test(
+    current: &GitHubCommitComment,
+    mutation: &GitHubCommitCommentMutation,
+) -> Result<(), AppError> {
+    let guard = match mutation {
+        GitHubCommitCommentMutation::Update { guard, .. }
+        | GitHubCommitCommentMutation::Delete { guard }
+        | GitHubCommitCommentMutation::Minimize { guard, .. }
+        | GitHubCommitCommentMutation::Unminimize { guard, .. } => guard,
+        GitHubCommitCommentMutation::Create { .. } => {
+            return Err(AppError::Validation(
+                "a guarded commit-comment mutation is required".to_string(),
+            ));
+        }
+    };
+    ensure_comment_mutation_allowed(current, guard, mutation)
+}
+
+fn generic_minimize_mutation(
+    mutation: &GitHubCommitCommentMutation,
+) -> Result<GitHubCommentMutation, AppError> {
+    match mutation {
+        GitHubCommitCommentMutation::Minimize {
+            guard,
+            expected_minimized,
+            classifier,
+        } => Ok(GitHubCommentMutation::Minimize {
+            comment_id: guard.comment_node_id.clone(),
+            expected_updated_at: guard.expected_updated_at.clone(),
+            expected_minimized: *expected_minimized,
+            classifier: *classifier,
+        }),
+        GitHubCommitCommentMutation::Unminimize {
+            guard,
+            expected_minimized,
+        } => Ok(GitHubCommentMutation::Unminimize {
+            comment_id: guard.comment_node_id.clone(),
+            expected_updated_at: guard.expected_updated_at.clone(),
+            expected_minimized: *expected_minimized,
+        }),
+        _ => Err(AppError::Validation(
+            "the selected commit-comment mutation is not a minimize operation".to_string(),
+        )),
+    }
+}
+
+async fn refreshed_commit_comment(
+    client: &octocrab::Octocrab,
+    owner: &str,
+    repository: &str,
+    commit_sha: &str,
+    comment_id: u64,
+) -> Result<GitHubCommitComment, AppError> {
+    let raw = get_commit_comment(client, owner, repository, comment_id).await?;
+    let node_id = raw.node_id.clone();
+    let capabilities =
+        commit_comment_capabilities(client, owner, repository, vec![node_id.as_str()]).await?;
+    commit_comment_page_from_raw(vec![raw], capabilities, commit_sha, 1, false)?
+        .comments
+        .into_iter()
+        .next()
+        .ok_or_else(|| {
+            AppError::GitHub("GitHub did not return the minimized commit comment".to_string())
+        })
 }
 
 fn verify_created_comment(
@@ -453,7 +586,9 @@ fn verify_created_comment(
             "GitHub returned a different created commit comment".to_string(),
         ));
     }
-    Ok(commit_comment_from_raw(comment, false, false))
+    Ok(commit_comment_from_raw(
+        comment, false, false, false, None, false, false,
+    ))
 }
 
 fn verify_updated_comment(
@@ -477,6 +612,10 @@ fn verify_updated_comment(
         updated,
         current.viewer_can_update,
         current.viewer_can_delete,
+        current.is_minimized,
+        current.minimized_reason.clone(),
+        current.viewer_can_minimize,
+        current.viewer_can_unminimize,
     ))
 }
 
@@ -484,6 +623,10 @@ fn commit_comment_from_raw(
     comment: RawCommitComment,
     viewer_can_update: bool,
     viewer_can_delete: bool,
+    is_minimized: bool,
+    minimized_reason: Option<String>,
+    viewer_can_minimize: bool,
+    viewer_can_unminimize: bool,
 ) -> GitHubCommitComment {
     GitHubCommitComment {
         id: comment.node_id,
@@ -503,6 +646,10 @@ fn commit_comment_from_raw(
         updated_at: comment.updated_at,
         viewer_can_update,
         viewer_can_delete,
+        is_minimized,
+        minimized_reason,
+        viewer_can_minimize,
+        viewer_can_unminimize,
     }
 }
 
