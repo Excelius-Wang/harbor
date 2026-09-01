@@ -36,6 +36,7 @@ import { GitHubIssueDeleteAction } from "./github-issue-delete-action";
 import { GitHubIssueDuplicate } from "./github-issue-duplicate";
 import { GitHubIssueCloneAction } from "./github-issue-clone-action";
 import { GitHubIssueLinkedPullRequests } from "./github-issue-linked-pull-requests";
+import { GitHubIssueLinkedBranches } from "./github-issue-linked-branches";
 import { GitHubIssueMarkDuplicateAction } from "./github-issue-mark-duplicate-action";
 import { GitHubIssuePinAction } from "./github-issue-pin-action";
 import { GitHubIssueRelationships } from "./github-issue-relationships";
@@ -386,6 +387,7 @@ function GitHubIssueDetailScreen({
                         issue={detail.issue}
                         onNavigate={onNavigatePullRequest}
                       />
+                      <GitHubIssueLinkedBranches repository={repository} issue={detail.issue} />
                       <GitHubIssueRelationships
                         repository={repository}
                         issueNumber={detail.issue.number}

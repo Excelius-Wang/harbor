@@ -34,10 +34,12 @@ export function GitHubIssueRelatedIssueRow({
 export function GitHubIssueRelationLoadError({
   title,
   error,
+  message,
   onRetry,
 }: {
   title: string;
   error: ReturnType<typeof parseIpcError> | null;
+  message?: string;
   onRetry: () => void;
 }) {
   const { t } = useAppTranslation();
@@ -46,7 +48,7 @@ export function GitHubIssueRelationLoadError({
       <CircleAlert />
       <AlertTitle>{title}</AlertTitle>
       <AlertDescription>
-        <span>{error?.message}</span>
+        <span>{message ?? error?.message}</span>
         <Button type="button" variant="outline" size="xs" onClick={onRetry}>
           <RefreshCw data-icon="inline-start" />
           {t("workspace.repositories.retry")}
