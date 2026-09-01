@@ -1,5 +1,12 @@
 use super::*;
 
+use std::time::Duration;
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    net::TcpListener,
+    time::timeout,
+};
+
 #[async_trait]
 impl GitHubCommentClient for super::super::tests::FakeGitHubClient {
     async fn mutate_issue_comment(
@@ -412,4 +419,44 @@ fn client_mutation_ids_are_unique_and_echo_verifiable() {
     assert!(first.starts_with("harbor:update-issue-comment:"));
     assert!(ensure_mutation_identity(Some(first.as_str()), &first).is_ok());
     assert!(ensure_mutation_identity(Some(second.as_str()), &first).is_err());
+}
+
+#[tokio::test]
+async fn issue_comment_client_does_not_retry_transport_failures() {
+    let listener = TcpListener::bind("127.0.0.1:0").await.expect("mock bind");
+    let address = listener.local_addr().expect("mock address");
+    let server = tokio::spawn(async move {
+        let mut request_count = 0;
+        loop {
+            let accepted = timeout(Duration::from_secs(2), listener.accept()).await;
+            let Ok(Ok((mut stream, _))) = accepted else {
+                break;
+            };
+            request_count += 1;
+            let mut buffer = [0_u8; 4096];
+            let _ = timeout(Duration::from_secs(1), stream.read(&mut buffer)).await;
+            let response =
+                "HTTP/1.1 503 Service Unavailable\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+            stream
+                .write_all(response.as_bytes())
+                .await
+                .expect("mock write");
+        }
+        request_count
+    });
+
+    let client = issue_comment_client_with_base(
+        "github-user-access-token",
+        Some(&format!("http://{address}")),
+    )
+    .expect("no-retry client");
+    let payload = serde_json::json!({
+        "query": "query HarborRetryProbe { viewer { login } }",
+        "variables": {},
+    });
+    let result: Result<serde_json::Value, _> = client.graphql(&payload).await;
+    assert!(result.is_err());
+
+    let request_count = server.await.expect("mock server");
+    assert_eq!(request_count, 1);
 }

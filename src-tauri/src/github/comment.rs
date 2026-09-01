@@ -383,7 +383,7 @@ impl GitHubCommentClient for OctocrabGitHubClient {
         kind: GitHubConversationCommentKind,
         mutation: &GitHubCommentMutation,
     ) -> Result<Option<GitHubIssueTimelineItem>, AppError> {
-        let client = authenticated_client(token)?;
+        let client = issue_comment_client(token)?;
         let mut response = comment_nodes(
             &client,
             owner,
@@ -639,6 +639,29 @@ impl GitHubCommentClient for OctocrabGitHubClient {
             }
         }
     }
+}
+
+fn issue_comment_client(token: &str) -> Result<octocrab::Octocrab, AppError> {
+    issue_comment_client_with_base(token, None)
+}
+
+fn issue_comment_client_with_base(
+    token: &str,
+    base_uri: Option<&str>,
+) -> Result<octocrab::Octocrab, AppError> {
+    let builder = octocrab::Octocrab::builder()
+        .add_retry_config(octocrab::service::middleware::retry::RetryConfig::None);
+    let builder = if let Some(base_uri) = base_uri {
+        builder
+            .base_uri(base_uri)
+            .map_err(|error| AppError::GitHub(error.to_string()))?
+    } else {
+        builder
+    };
+    builder
+        .personal_token(token.to_string())
+        .build()
+        .map_err(|error| AppError::GitHub(error.to_string()))
 }
 
 pub(crate) async fn enrich_issue_timeline_comments(

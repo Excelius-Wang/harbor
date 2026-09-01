@@ -71,8 +71,10 @@ export function GitHubConversationCommentActions({
           ? "workspace.repositories.issueWritePermissionDenied"
           : "workspace.repositories.pullRequestWritePermissionDenied"
       )}
+      uncertainWriteMessage={t("workspace.repositories.commentWriteUncertain")}
       mutateComment={mutateComment}
       onConflict={() => void invalidate()}
+      onUncertainError={() => void invalidate()}
       onSuccess={(result, mutation) => {
         if (
           (mutation.action === "update" ||

@@ -2442,6 +2442,7 @@
       "deleteCommentDescription": "这条评论会从 GitHub 永久删除，删除后无法恢复。",
       "deletingComment": "正在删除…",
       "commentDeleted": "评论已删除",
+      "commentWriteUncertain": "GitHub 可能已经收到这次评论操作。重试前，请先刷新 Issue。",
       "pinComment": "置顶评论",
       "unpinComment": "取消置顶评论",
       "commentPinned": "评论已置顶",
