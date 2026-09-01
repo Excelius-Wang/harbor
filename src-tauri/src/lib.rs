@@ -66,6 +66,8 @@ pub fn run() {
             commands::github_cancel_personal_repository_invitation,
             commands::github_remove_personal_repository_collaborator,
             commands::github_update_personal_repository_settings,
+            commands::github_get_personal_repository_topics,
+            commands::github_update_personal_repository_topics,
             commands::github_delete_personal_repository,
             commands::github_get_repository_pages,
             commands::github_get_repository_pages_health,

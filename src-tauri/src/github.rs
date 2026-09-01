@@ -51,6 +51,7 @@ pub(crate) mod repository_invitations;
 pub(crate) mod repository_pages;
 pub(crate) mod repository_relationships;
 pub(crate) mod repository_settings;
+pub(crate) mod repository_topics;
 pub(crate) mod security;
 pub(crate) mod wiki;
 pub use actions::{
@@ -193,6 +194,7 @@ pub use repository_settings::{
     GitHubRepositoryCreateInput, GitHubRepositoryCreationOptions, GitHubRepositorySettings,
     GitHubRepositorySettingsUpdate,
 };
+pub use repository_topics::{GitHubRepositoryTopics, GitHubRepositoryTopicsMutation};
 pub use security::{
     GitHubCodeScanningInstancePage, GitHubSecretScanningLocationPage, GitHubSecurityAlertDetail,
     GitHubSecurityAlertFilters, GitHubSecurityAlertKind, GitHubSecurityAlertMutation,
@@ -715,6 +717,7 @@ pub(crate) trait GitHubClient:
     + repository_pages::GitHubRepositoryPagesClient
     + repository_relationships::GitHubRepositoryRelationshipsClient
     + repository_settings::GitHubRepositorySettingsClient
+    + repository_topics::GitHubRepositoryTopicsClient
     + security::GitHubSecurityClient
     + wiki::GitHubWikiClient
     + Send
