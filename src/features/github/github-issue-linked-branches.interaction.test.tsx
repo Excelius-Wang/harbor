@@ -7,6 +7,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { GitHubIssueLinkedBranchPage } from "./github-data";
 import { GitHubIssueLinkedBranches } from "./github-issue-linked-branches";
+import { githubQueryKeys } from "./github-queries";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(), isTauri: () => false }));
 vi.mock("react-i18next", () => ({
@@ -53,13 +54,13 @@ function page(branches: GitHubIssueLinkedBranchPage["branches"] = [], viewerCanC
 }
 
 function renderAction() {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
-    <QueryClientProvider
-      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-    >
+    <QueryClientProvider client={queryClient}>
       <GitHubIssueLinkedBranches repository={repository} issue={issue} />
     </QueryClientProvider>
   );
+  return queryClient;
 }
 
 beforeEach(() => {
@@ -151,7 +152,8 @@ describe("GitHub Issue linked branches", () => {
       return Promise.resolve();
     });
     const user = userEvent.setup();
-    renderAction();
+    const queryClient = renderAction();
+    const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
     await user.click(
       await screen.findByRole("button", { name: "workspace.repositories.createLinkedBranch" })
     );
@@ -176,6 +178,12 @@ describe("GitHub Issue linked branches", () => {
         branchRepository: "octocat/other",
       })
     );
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: githubQueryKeys.codeRoot({ owner: "octocat", repository: "hello-world" }),
+    });
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: githubQueryKeys.codeRoot({ owner: "octocat", repository: "other" }),
+    });
   });
 
   it("unlinks a branch without deleting it", async () => {
