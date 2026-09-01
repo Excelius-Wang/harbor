@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle2,
@@ -51,6 +51,7 @@ import {
 import { formatIssueDate } from "./github-issue-shared";
 import { GitHubMarkdownEditor } from "./github-markdown-editor";
 import { GitHubReactionBar } from "./github-reaction-bar";
+import { GitHubDiscussionCommentMinimizeAction } from "./github-discussion-comment-minimize";
 
 const GitHubReadme = lazy(() => import("./github-readme"));
 
@@ -271,6 +272,7 @@ export function GitHubDiscussionCommentCard({
   const [replying, setReplying] = useState(false);
   const [editing, setEditing] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [commentOpen, setCommentOpen] = useState(!comment.isMinimized);
   const deleted = Boolean(comment.deletedAt);
   const voteMutation = useMutation({
     mutationFn: () => updateRepositoryDiscussionUpvote(comment.id, !comment.viewerHasUpvoted),
@@ -306,6 +308,10 @@ export function GitHubDiscussionCommentCard({
         reason: comment.minimizedReason,
       })
     : t("workspace.repositories.discussionCommentMinimized");
+
+  useEffect(() => {
+    setCommentOpen(!comment.isMinimized);
+  }, [comment.isMinimized]);
 
   return (
     <article
@@ -358,7 +364,7 @@ export function GitHubDiscussionCommentCard({
         ) : null}
       </header>
 
-      <Collapsible defaultOpen={!comment.isMinimized}>
+      <Collapsible open={commentOpen} onOpenChange={setCommentOpen}>
         {comment.isMinimized ? (
           <CollapsibleTrigger asChild>
             <Button type="button" variant="ghost" size="sm" className="m-2">
@@ -449,6 +455,9 @@ export function GitHubDiscussionCommentCard({
                 : "workspace.repositories.markDiscussionAnswer"
             )}
           </Button>
+        ) : null}
+        {!deleted ? (
+          <GitHubDiscussionCommentMinimizeAction comment={comment} target={target} />
         ) : null}
         {!deleted && comment.viewerCanDelete ? (
           <Button type="button" variant="ghost" size="xs" onClick={() => setDeleteOpen(true)}>

@@ -20,6 +20,7 @@ pub(crate) mod commit_comment;
 pub(crate) mod conversation;
 pub(crate) mod discovery;
 pub(crate) mod discussion;
+pub(crate) mod discussion_comment_minimize;
 pub(crate) mod download;
 pub(crate) mod gist;
 pub(crate) mod insights;
@@ -85,6 +86,7 @@ pub use discussion::{
     GitHubDiscussionPoll, GitHubDiscussionSort, GitHubDiscussionState, GitHubDiscussionStateFilter,
     GitHubDiscussionSummary, GitHubDiscussionVote,
 };
+pub use discussion_comment_minimize::GitHubDiscussionCommentMutation;
 pub use gist::{
     GitHubGist, GitHubGistComment, GitHubGistCommentMutation, GitHubGistCommentPage,
     GitHubGistCreateInput, GitHubGistFileInput, GitHubGistFileMutation, GitHubGistPage,
