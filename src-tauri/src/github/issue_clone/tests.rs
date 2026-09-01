@@ -110,6 +110,13 @@ fn clone_preflight_requires_open_source_blank_issues_and_triage_access() {
         ensure_clone_preflight(&denied, mutation),
         Err(AppError::GitHubPermission(_))
     ));
+
+    let maintainer = GitHubIssueCloneStatus {
+        viewer_can_clone: true,
+        destination_allows_blank_issues: true,
+        ..status
+    };
+    assert!(ensure_clone_preflight(&maintainer, mutation).is_ok());
 }
 
 #[test]
@@ -152,6 +159,24 @@ fn created_clone_identity_and_content_are_verified() {
     let mut mismatched = created;
     mismatched.title = "Unexpected".to_string();
     assert!(ensure_clone_postflight(&mismatched, &clone, mutation, &status).is_err());
+}
+
+#[test]
+fn clone_postflight_preserves_explicit_permission_and_rate_limit_errors() {
+    let permission = post_write_error(
+        AppError::GitHubPermission("triage access required".to_string()),
+        8,
+    );
+    assert!(matches!(permission, AppError::GitHubPermission(_)));
+
+    let rate_limit = post_write_error(
+        AppError::GitHubRateLimited("secondary limit".to_string()),
+        8,
+    );
+    assert!(matches!(rate_limit, AppError::GitHubRateLimited(_)));
+
+    let transport = post_write_error(AppError::GitHub("connection reset".to_string()), 8);
+    assert!(matches!(transport, AppError::GitHub(message) if message.contains("Issue #8")));
 }
 
 #[tokio::test]

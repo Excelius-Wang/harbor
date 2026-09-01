@@ -173,7 +173,7 @@ impl GitHubIssueCloneClient for OctocrabGitHubClient {
         let created = execute_clone(&write_client, mutation, &status).await?;
         let postflight = load_issue_clone_postflight(&write_client, &created.target_issue_node_id)
             .await
-            .map_err(|error| confirmation_error(created.target_issue_number, &error.to_string()))?;
+            .map_err(|error| post_write_error(error, created.target_issue_number))?;
         ensure_clone_postflight(&postflight, &created, mutation, &status)?;
         Ok(created)
     }
@@ -219,7 +219,12 @@ async fn load_issue_clone_status_with_client(
         ));
     }
     let source_open = source.state.eq_ignore_ascii_case("OPEN");
-    let destination_allows_blank_issues = repository_node.is_blank_issues_enabled;
+    let maintainer_can_create_blank_issue = matches!(
+        repository_node.viewer_permission.as_deref(),
+        Some("WRITE" | "MAINTAIN" | "ADMIN")
+    );
+    let destination_allows_blank_issues =
+        repository_node.is_blank_issues_enabled || maintainer_can_create_blank_issue;
     let viewer_can_clone = source_open
         && repository_node.has_issues_enabled
         && repository_node.viewer_can_create_issues
@@ -400,6 +405,13 @@ fn confirmation_error(issue_number: u64, detail: &str) -> AppError {
     AppError::GitHub(format!(
         "GitHub created Issue #{issue_number}, but Harbor could not confirm it ({detail}); refresh the Issue list before retrying"
     ))
+}
+
+fn post_write_error(error: AppError, issue_number: u64) -> AppError {
+    match error {
+        error @ (AppError::GitHubPermission(_) | AppError::GitHubRateLimited(_)) => error,
+        error => confirmation_error(issue_number, &error.to_string()),
+    }
 }
 
 fn clone_write_error(error: octocrab::Error) -> AppError {
