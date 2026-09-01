@@ -2012,6 +2012,7 @@ pub struct GitHubIssueLinkedBranchCreateInput {
     expected_issue_node_id: String,
     expected_default_branch_oid: String,
     branch_name: Option<String>,
+    branch_repository: Option<String>,
 }
 
 #[derive(serde::Deserialize)]
@@ -2063,6 +2064,10 @@ pub async fn github_create_repository_issue_linked_branch(
         .as_deref()
         .map(crate::github::code::write::normalize_branch_name)
         .transpose()?;
+    let branch_repository = input
+        .branch_repository
+        .map(RepositoryRef::from_full_name)
+        .transpose()?;
     let mutation = IssueLinkedBranchCreateMutation {
         request: IssueLinkedBranchRequest {
             owner: repository.owner(),
@@ -2073,6 +2078,8 @@ pub async fn github_create_repository_issue_linked_branch(
         },
         expected_default_branch_oid: &expected_default_branch_oid,
         branch_name: branch_name.as_deref(),
+        destination_owner: branch_repository.as_ref().map(RepositoryRef::owner),
+        destination_repository: branch_repository.as_ref().map(RepositoryRef::name),
     };
     state.github.create_issue_linked_branch(mutation).await
 }

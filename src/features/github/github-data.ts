@@ -1608,6 +1608,7 @@ export type GitHubIssueLinkedBranchPage = {
   defaultBranch: string;
   defaultBranchOid: string;
   viewerCanCreate: boolean;
+  viewerCanRead: boolean;
   branches: GitHubIssueLinkedBranch[];
   nextCursor?: string | null;
 };
