@@ -76,6 +76,7 @@ use crate::{
         GitHubWorkflowJobLog, GitHubWorkflowJobPage, GitHubWorkflowRun, GitHubWorkflowRunAction,
         GitHubWorkflowRunDeletion, GitHubWorkflowRunFilterOptions, GitHubWorkflowRunFilters,
         GitHubWorkflowRunPage, GitHubWorkflowRunStatusFilter, IssueCloneMutation,
+        IssueLinkedBranchCreateMutation, IssueLinkedBranchDeleteMutation, IssueLinkedBranchRequest,
         IssueSubIssueCreateMutation, IssueSubIssuePriorityMutation, IssueTypeMutation,
     },
     github_oauth::{GitHubLoginAttempt, GitHubLoopbackListener, GITHUB_AUTH_EVENT},
@@ -2000,6 +2001,108 @@ pub async fn github_get_repository_issue_linked_pull_requests(
             after.as_deref(),
         )
         .await
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitHubIssueLinkedBranchCreateInput {
+    owner: String,
+    repository: String,
+    issue_number: u64,
+    expected_issue_node_id: String,
+    expected_default_branch_oid: String,
+    branch_name: Option<String>,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitHubIssueLinkedBranchDeleteInput {
+    owner: String,
+    repository: String,
+    issue_number: u64,
+    expected_issue_node_id: String,
+    linked_branch_id: String,
+    expected_branch_name: String,
+    expected_branch_oid: String,
+}
+
+#[tauri::command]
+pub async fn github_get_repository_issue_linked_branches(
+    owner: String,
+    repository: String,
+    issue_number: u64,
+    expected_issue_node_id: String,
+    after: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<crate::github::GitHubIssueLinkedBranchPage, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    let expected_issue_node_id = validate_graphql_node_id(expected_issue_node_id, "issue")?;
+    let after = validate_graphql_cursor(after)?;
+    let request = crate::github::issue_linked_branch::linked_branch_request(
+        repository.owner(),
+        repository.name(),
+        validate_item_number(issue_number, "issue")?,
+        &expected_issue_node_id,
+        after.as_deref(),
+    )?;
+    state.github.issue_linked_branches(request).await
+}
+
+#[tauri::command]
+pub async fn github_create_repository_issue_linked_branch(
+    input: GitHubIssueLinkedBranchCreateInput,
+    state: State<'_, AppState>,
+) -> Result<crate::github::GitHubIssueLinkedBranchPage, AppError> {
+    let repository = RepositoryRef::new(input.owner, input.repository)?;
+    let issue_number = validate_item_number(input.issue_number, "issue")?;
+    let expected_issue_node_id = validate_graphql_node_id(input.expected_issue_node_id, "issue")?;
+    let expected_default_branch_oid =
+        crate::github::code::write::normalize_git_sha(&input.expected_default_branch_oid)?;
+    let branch_name = input
+        .branch_name
+        .as_deref()
+        .map(crate::github::code::write::normalize_branch_name)
+        .transpose()?;
+    let mutation = IssueLinkedBranchCreateMutation {
+        request: IssueLinkedBranchRequest {
+            owner: repository.owner(),
+            repository: repository.name(),
+            issue_number,
+            expected_issue_node_id: &expected_issue_node_id,
+            after: None,
+        },
+        expected_default_branch_oid: &expected_default_branch_oid,
+        branch_name: branch_name.as_deref(),
+    };
+    state.github.create_issue_linked_branch(mutation).await
+}
+
+#[tauri::command]
+pub async fn github_delete_repository_issue_linked_branch(
+    input: GitHubIssueLinkedBranchDeleteInput,
+    state: State<'_, AppState>,
+) -> Result<crate::github::GitHubIssueLinkedBranchPage, AppError> {
+    let repository = RepositoryRef::new(input.owner, input.repository)?;
+    let issue_number = validate_item_number(input.issue_number, "issue")?;
+    let expected_issue_node_id = validate_graphql_node_id(input.expected_issue_node_id, "issue")?;
+    let linked_branch_id = validate_graphql_node_id(input.linked_branch_id, "linked branch")?;
+    let expected_branch_name =
+        crate::github::code::write::normalize_branch_name(&input.expected_branch_name)?;
+    let expected_branch_oid =
+        crate::github::code::write::normalize_git_sha(&input.expected_branch_oid)?;
+    let mutation = IssueLinkedBranchDeleteMutation {
+        request: IssueLinkedBranchRequest {
+            owner: repository.owner(),
+            repository: repository.name(),
+            issue_number,
+            expected_issue_node_id: &expected_issue_node_id,
+            after: None,
+        },
+        linked_branch_id: &linked_branch_id,
+        expected_branch_name: &expected_branch_name,
+        expected_branch_oid: &expected_branch_oid,
+    };
+    state.github.delete_issue_linked_branch(mutation).await
 }
 
 #[tauri::command]

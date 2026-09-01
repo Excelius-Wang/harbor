@@ -1592,6 +1592,26 @@ export type GitHubIssueLinkedPullRequestPage = {
   nextCursor?: string | null;
 };
 
+export type GitHubIssueLinkedBranch = {
+  id: string;
+  name: string;
+  repositoryId: string;
+  repositoryFullName: string;
+  oid: string;
+};
+
+export type GitHubIssueLinkedBranchPage = {
+  repositoryId: string;
+  repositoryFullName: string;
+  issueNodeId: string;
+  issueNumber: number;
+  defaultBranch: string;
+  defaultBranchOid: string;
+  viewerCanCreate: boolean;
+  branches: GitHubIssueLinkedBranch[];
+  nextCursor?: string | null;
+};
+
 export type GitHubIssueTimelineItem = {
   id: string;
   reactionSubject?: GitHubReactionSubjectRef;

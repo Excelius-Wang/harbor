@@ -28,6 +28,7 @@ pub(crate) mod issue_clone;
 pub(crate) mod issue_delete;
 pub(crate) mod issue_dependencies;
 pub(crate) mod issue_duplicate;
+pub(crate) mod issue_linked_branch;
 pub(crate) mod issue_linked_pull_request;
 pub(crate) mod issue_pin;
 pub(crate) mod issue_related;
@@ -108,6 +109,10 @@ pub(crate) use issue_delete::IssueDeleteMutation;
 pub use issue_delete::{GitHubIssueDeleteStatus, GitHubIssueDeletion};
 pub use issue_dependencies::GitHubIssueDependenciesPage;
 pub use issue_duplicate::GitHubIssueDuplicateReference;
+pub use issue_linked_branch::GitHubIssueLinkedBranchPage;
+pub(crate) use issue_linked_branch::{
+    IssueLinkedBranchCreateMutation, IssueLinkedBranchDeleteMutation, IssueLinkedBranchRequest,
+};
 pub use issue_linked_pull_request::GitHubIssueLinkedPullRequestPage;
 pub(crate) use issue_pin::IssuePinMutation;
 pub use issue_pin::{GitHubIssuePinAction, GitHubPinnedIssuePage};
@@ -675,6 +680,7 @@ pub(crate) trait GitHubClient:
     + issue_transfer::GitHubIssueTransferClient
     + issue_duplicate::GitHubIssueDuplicateClient
     + issue_linked_pull_request::GitHubIssueLinkedPullRequestClient
+    + issue_linked_branch::GitHubIssueLinkedBranchClient
     + issue_pin::GitHubIssuePinClient
     + issue_dependencies::GitHubIssueDependenciesClient
     + issue_relationships::GitHubIssueRelationshipsClient

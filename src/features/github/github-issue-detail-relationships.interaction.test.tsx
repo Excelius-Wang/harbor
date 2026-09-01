@@ -105,6 +105,19 @@ beforeEach(() => {
     if (command === "github_get_repository_issue_linked_pull_requests") {
       return Promise.resolve({ pullRequests: [], nextCursor: null });
     }
+    if (command === "github_get_repository_issue_linked_branches") {
+      return Promise.resolve({
+        repositoryId: "R_1",
+        repositoryFullName: "octocat/hello-world",
+        issueNodeId: "I_7",
+        issueNumber: 7,
+        defaultBranch: "main",
+        defaultBranchOid: "0123456789abcdef0123456789abcdef01234567",
+        viewerCanCreate: false,
+        branches: [],
+        nextCursor: null,
+      });
+    }
     return Promise.reject(new Error(`unexpected command ${command}`));
   });
 });
