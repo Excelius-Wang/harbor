@@ -183,10 +183,17 @@ export function GitHubCommentActions<TComment>({
                   ? "workspace.repositories.unpinComment"
                   : "workspace.repositories.pinComment"
               )}
+              aria-busy={mutation.isPending}
               disabled={mutation.isPending || disabled}
               onClick={() => mutation.mutate(pinMutation)}
             >
-              {comment.isPinned ? <PinOff /> : <Pin />}
+              {mutation.isPending ? (
+                <Spinner aria-hidden="true" />
+              ) : comment.isPinned ? (
+                <PinOff />
+              ) : (
+                <Pin />
+              )}
             </Button>
           </TooltipTrigger>
           <TooltipContent>
