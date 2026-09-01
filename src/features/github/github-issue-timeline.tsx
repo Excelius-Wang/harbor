@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { ChevronDown, CircleDotDashed, UserRound } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -108,6 +108,8 @@ function ConversationCard({
   minimizedReason?: string;
 }) {
   const { t } = useTranslation();
+  const [open, setOpen] = useState(!isMinimized);
+  useEffect(() => setOpen(!isMinimized), [isMinimized]);
   return (
     <article className="bg-card/30 overflow-hidden rounded-lg border">
       <header className="bg-card/40 flex min-h-11 min-w-0 items-center gap-2 border-b px-3.5 py-2">
@@ -142,7 +144,7 @@ function ConversationCard({
           {headerActions}
         </span>
       </header>
-      <Collapsible defaultOpen={!isMinimized}>
+      <Collapsible open={open} onOpenChange={setOpen}>
         {isMinimized ? (
           <CollapsibleTrigger asChild>
             <Button type="button" variant="ghost" size="sm" className="m-2">

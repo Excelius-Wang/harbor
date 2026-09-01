@@ -1,6 +1,9 @@
 use super::*;
 
-use std::time::Duration;
+use std::{
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpListener,
@@ -49,6 +52,8 @@ impl GitHubCommentClient for super::super::tests::FakeGitHubClient {
                 is_pinned: false,
                 viewer_can_pin: true,
                 viewer_can_unpin: false,
+                viewer_can_minimize: true,
+                viewer_can_unminimize: false,
                 is_minimized: false,
                 minimized_reason: None,
                 label: None,
@@ -67,6 +72,16 @@ impl GitHubCommentClient for super::super::tests::FakeGitHubClient {
                 ..
             }
             | GitHubCommentMutation::Unpin {
+                comment_id,
+                expected_updated_at,
+                ..
+            }
+            | GitHubCommentMutation::Minimize {
+                comment_id,
+                expected_updated_at,
+                ..
+            }
+            | GitHubCommentMutation::Unminimize {
                 comment_id,
                 expected_updated_at,
                 ..
@@ -92,8 +107,11 @@ impl GitHubCommentClient for super::super::tests::FakeGitHubClient {
                 is_pinned: matches!(mutation, GitHubCommentMutation::Pin { .. }),
                 viewer_can_pin: true,
                 viewer_can_unpin: true,
-                is_minimized: false,
-                minimized_reason: None,
+                viewer_can_minimize: true,
+                viewer_can_unminimize: true,
+                is_minimized: matches!(mutation, GitHubCommentMutation::Minimize { .. }),
+                minimized_reason: matches!(mutation, GitHubCommentMutation::Minimize { .. })
+                    .then(|| "off-topic".to_string()),
                 label: None,
                 assignee: None,
                 milestone: None,
@@ -135,6 +153,8 @@ impl GitHubCommentClient for super::super::tests::FakeGitHubClient {
                 pending: false,
                 viewer_can_update: true,
                 viewer_can_delete: true,
+                viewer_can_minimize: true,
+                viewer_can_unminimize: false,
                 is_minimized: false,
                 minimized_reason: None,
                 outdated: false,
@@ -143,6 +163,35 @@ impl GitHubCommentClient for super::super::tests::FakeGitHubClient {
             GitHubCommentMutation::Pin { .. } | GitHubCommentMutation::Unpin { .. } => Err(
                 AppError::Validation("review comment pinning is unsupported".to_string()),
             ),
+            GitHubCommentMutation::Minimize {
+                comment_id,
+                expected_updated_at,
+                ..
+            }
+            | GitHubCommentMutation::Unminimize {
+                comment_id,
+                expected_updated_at,
+                ..
+            } => Ok(Some(GitHubPullRequestReviewThreadComment {
+                id: comment_id.clone(),
+                database_id: Some(92),
+                author: "octocat".to_string(),
+                author_avatar_url: None,
+                author_association: Some("OWNER".to_string()),
+                body: "Current review body".to_string(),
+                url: "https://github.com/octocat/hello-world/pull/12#discussion_r92".to_string(),
+                created_at: "2026-08-29T08:00:00Z".to_string(),
+                updated_at: expected_updated_at.clone(),
+                pending: false,
+                viewer_can_update: true,
+                viewer_can_delete: true,
+                viewer_can_minimize: true,
+                viewer_can_unminimize: true,
+                is_minimized: matches!(mutation, GitHubCommentMutation::Minimize { .. }),
+                minimized_reason: matches!(mutation, GitHubCommentMutation::Minimize { .. })
+                    .then(|| "off-topic".to_string()),
+                outdated: false,
+            })),
         }
     }
 }
@@ -162,6 +211,8 @@ fn issue_comment_node(pull_request: Option<u64>) -> IssueCommentNode {
         is_pinned: Some(false),
         viewer_can_pin: true,
         viewer_can_unpin: false,
+        viewer_can_minimize: true,
+        viewer_can_unminimize: false,
         repository: CommentRepository {
             id: "R_1".to_string(),
         },
@@ -185,6 +236,8 @@ fn review_comment_node() -> PullRequestReviewCommentNode {
         outdated: false,
         viewer_can_update: true,
         viewer_can_delete: true,
+        viewer_can_minimize: true,
+        viewer_can_unminimize: false,
         state: "SUBMITTED".to_string(),
         repository: CommentRepository {
             id: "R_1".to_string(),
@@ -205,12 +258,17 @@ fn comment_queries_use_current_graphql_contracts() {
     assert!(COMMENT_NODES_QUERY.contains("isPinned"));
     assert!(COMMENT_NODES_QUERY.contains("viewerCanPin"));
     assert!(COMMENT_NODES_QUERY.contains("viewerCanUnpin"));
+    assert!(COMMENT_NODES_QUERY.contains("viewerCanMinimize"));
+    assert!(COMMENT_NODES_QUERY.contains("viewerCanUnminimize"));
     assert!(COMMENT_NODES_QUERY.contains("fullDatabaseId"));
     assert!(COMMENT_NODES_QUERY.contains("pullRequest { number }"));
     assert!(UPDATE_ISSUE_COMMENT_MUTATION.contains("updateIssueComment"));
     assert!(DELETE_ISSUE_COMMENT_MUTATION.contains("deleteIssueComment"));
     assert!(PIN_ISSUE_COMMENT_MUTATION.contains("pinIssueComment"));
     assert!(UNPIN_ISSUE_COMMENT_MUTATION.contains("unpinIssueComment"));
+    assert!(minimize::MINIMIZE_COMMENT_MUTATION.contains("minimizeComment"));
+    assert!(minimize::MINIMIZE_COMMENT_MUTATION.contains("classifier"));
+    assert!(minimize::UNMINIMIZE_COMMENT_MUTATION.contains("unminimizeComment"));
     assert!(UPDATE_REVIEW_COMMENT_MUTATION.contains("pullRequestReviewCommentId: $id"));
     assert!(DELETE_REVIEW_COMMENT_MUTATION.contains("deletePullRequestReviewComment"));
 }
@@ -229,11 +287,13 @@ fn comment_node_query_deserializes_the_live_typename_shape() {
             "authorAssociation": "CONTRIBUTOR",
             "isPinned": false,
             "isMinimized": true,
-            "minimizedReason": "OUTDATED",
+            "minimizedReason": "outdated",
             "viewerCanUpdate": true,
             "viewerCanDelete": true,
             "viewerCanPin": true,
             "viewerCanUnpin": false,
+            "viewerCanMinimize": true,
+            "viewerCanUnminimize": false,
             "repository": { "id": "R_1" },
             "issue": { "number": 7 },
             "pullRequest": null,
@@ -247,7 +307,7 @@ fn comment_node_query_deserializes_the_live_typename_shape() {
     };
     assert_eq!(comment.id, "IC_42");
     assert!(comment.is_minimized);
-    assert_eq!(comment.minimized_reason.as_deref(), Some("OUTDATED"));
+    assert_eq!(comment.minimized_reason.as_deref(), Some("outdated"));
 }
 
 #[test]
@@ -378,6 +438,227 @@ fn pin_mutations_require_the_current_pin_state_and_capability() {
 }
 
 #[test]
+fn minimize_mutations_require_the_current_state_and_capability() {
+    let minimize = GitHubCommentMutation::Minimize {
+        comment_id: "IC_42".to_string(),
+        expected_updated_at: "2026-08-29T08:01:00Z".to_string(),
+        expected_minimized: false,
+        classifier: GitHubCommentMinimizeClassifier::OffTopic,
+    };
+    assert!(ensure_mutation_allowed_with_minimize(
+        &minimize,
+        "2026-08-29T08:01:00Z",
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+    )
+    .is_ok());
+    assert!(matches!(
+        ensure_mutation_allowed_with_minimize(
+            &minimize,
+            "2026-08-29T08:01:00Z",
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+        ),
+        Err(AppError::GitHubPermission(_))
+    ));
+    assert!(matches!(
+        ensure_mutation_allowed_with_minimize(
+            &minimize,
+            "2026-08-29T08:01:00Z",
+            false,
+            false,
+            false,
+            false,
+            false,
+            true,
+            true,
+            false,
+        ),
+        Err(AppError::GitHubCommentConflict(_))
+    ));
+
+    let unminimize = GitHubCommentMutation::Unminimize {
+        comment_id: "IC_42".to_string(),
+        expected_updated_at: "2026-08-29T08:01:00Z".to_string(),
+        expected_minimized: true,
+    };
+    assert!(ensure_mutation_allowed_with_minimize(
+        &unminimize,
+        "2026-08-29T08:01:00Z",
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        true,
+    )
+    .is_ok());
+}
+
+#[test]
+fn minimize_classifiers_keep_graphql_and_display_names_distinct() {
+    let classifiers = [
+        (GitHubCommentMinimizeClassifier::Spam, "SPAM", "spam"),
+        (GitHubCommentMinimizeClassifier::Abuse, "ABUSE", "abuse"),
+        (
+            GitHubCommentMinimizeClassifier::OffTopic,
+            "OFF_TOPIC",
+            "off-topic",
+        ),
+        (
+            GitHubCommentMinimizeClassifier::Outdated,
+            "OUTDATED",
+            "outdated",
+        ),
+        (
+            GitHubCommentMinimizeClassifier::Duplicate,
+            "DUPLICATE",
+            "duplicate",
+        ),
+        (
+            GitHubCommentMinimizeClassifier::Resolved,
+            "RESOLVED",
+            "resolved",
+        ),
+        (
+            GitHubCommentMinimizeClassifier::LowQuality,
+            "LOW_QUALITY",
+            "low-quality",
+        ),
+    ];
+    for (classifier, graphql_name, response_reason) in classifiers {
+        assert_eq!(classifier.graphql_name(), graphql_name);
+        assert_eq!(classifier.response_reason(), response_reason);
+        let mutation = GitHubCommentMutation::Minimize {
+            comment_id: "IC_42".to_string(),
+            expected_updated_at: "2026-08-29T08:01:00Z".to_string(),
+            expected_minimized: false,
+            classifier,
+        };
+        assert!(ensure_minimized_result(true, Some(response_reason), &mutation).is_ok());
+    }
+}
+
+#[test]
+fn minimize_postflight_failures_are_classified_as_uncertain_writes() {
+    let error = minimize_postflight_error(AppError::GitHubRateLimited(
+        "secondary rate limit".to_string(),
+    ));
+    assert!(matches!(error, AppError::GitHub(message) if message.contains("may have persisted")));
+}
+
+async fn mutation_client() -> (
+    octocrab::Octocrab,
+    Arc<Mutex<Option<String>>>,
+    tokio::task::JoinHandle<()>,
+) {
+    let listener = TcpListener::bind("127.0.0.1:0").await.expect("mock bind");
+    let address = listener.local_addr().expect("mock address");
+    let captured = Arc::new(Mutex::new(None));
+    let server_captured = Arc::clone(&captured);
+    let server = tokio::spawn(async move {
+        let (mut stream, _) = listener.accept().await.expect("mock accept");
+        let mut buffer = Vec::new();
+        loop {
+            let mut chunk = [0_u8; 1024];
+            let read = stream.read(&mut chunk).await.expect("mock read");
+            if read == 0 {
+                break;
+            }
+            buffer.extend_from_slice(&chunk[..read]);
+            if let Some(header_end) = buffer.windows(4).position(|window| window == b"\r\n\r\n") {
+                let headers = String::from_utf8_lossy(&buffer[..header_end]);
+                let content_length = headers.lines().find_map(|line| {
+                    line.split_once(':').and_then(|(name, value)| {
+                        name.eq_ignore_ascii_case("content-length")
+                            .then(|| value.trim().parse::<usize>().ok())
+                            .flatten()
+                    })
+                });
+                if buffer.len() >= header_end + 4 + content_length.unwrap_or(0) {
+                    break;
+                }
+            }
+        }
+        let request = String::from_utf8(buffer).expect("request utf8");
+        let body = request
+            .split_once("\r\n\r\n")
+            .map(|(_, body)| body)
+            .unwrap_or_default();
+        let payload = serde_json::from_str::<serde_json::Value>(body).expect("request json");
+        let client_mutation_id = payload["variables"]["clientMutationId"]
+            .as_str()
+            .expect("client mutation id")
+            .to_string();
+        *server_captured.lock().expect("request lock") = Some(request);
+        let body = serde_json::json!({
+            "data": { "minimizeComment": { "clientMutationId": client_mutation_id } }
+        })
+        .to_string();
+        let response = format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .await
+            .expect("mock write");
+    });
+    let client = octocrab::Octocrab::builder()
+        .base_uri(format!("http://{address}"))
+        .expect("mock base uri")
+        .personal_token("github-user-access-token".to_string())
+        .build()
+        .expect("mock client");
+    (client, captured, server)
+}
+
+#[tokio::test]
+async fn minimize_mutation_sends_classifier_and_verifies_client_identity() {
+    let (client, captured, server) = mutation_client().await;
+    let mutation = GitHubCommentMutation::Minimize {
+        comment_id: "IC_42".to_string(),
+        expected_updated_at: "2026-08-29T08:01:00Z".to_string(),
+        expected_minimized: false,
+        classifier: GitHubCommentMinimizeClassifier::OffTopic,
+    };
+
+    run_minimize_mutation(&client, &mutation)
+        .await
+        .expect("minimize mutation");
+    server.await.expect("mock server");
+
+    let request = captured
+        .lock()
+        .expect("request lock")
+        .clone()
+        .expect("request");
+    let body = request.split_once("\r\n\r\n").expect("request body").1;
+    let payload = serde_json::from_str::<serde_json::Value>(body).expect("request json");
+    assert!(payload["query"]
+        .as_str()
+        .expect("mutation query")
+        .contains("minimizeComment"));
+    assert_eq!(payload["variables"]["id"], "IC_42");
+    assert_eq!(payload["variables"]["classifier"], "OFF_TOPIC");
+}
+
+#[test]
 fn mappings_keep_optional_authors_and_authoritative_capabilities() {
     let timeline = issue_timeline_item_from_graphql(issue_comment_node(None));
     assert_eq!(timeline.actor.as_deref(), Some("ghost"));
@@ -386,6 +667,8 @@ fn mappings_keep_optional_authors_and_authoritative_capabilities() {
     assert!(!timeline.is_pinned);
     assert!(timeline.viewer_can_pin);
     assert!(!timeline.viewer_can_unpin);
+    assert!(timeline.viewer_can_minimize);
+    assert!(!timeline.viewer_can_unminimize);
 
     let review = review_comment_from_graphql(review_comment_node());
     assert_eq!(review.author, "reviewer");
@@ -393,6 +676,8 @@ fn mappings_keep_optional_authors_and_authoritative_capabilities() {
     assert!(!review.pending);
     assert!(review.viewer_can_update);
     assert!(review.viewer_can_delete);
+    assert!(review.viewer_can_minimize);
+    assert!(!review.viewer_can_unminimize);
 }
 
 #[test]

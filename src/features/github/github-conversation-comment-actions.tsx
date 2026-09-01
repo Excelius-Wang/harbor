@@ -63,6 +63,9 @@ export function GitHubConversationCommentActions({
               viewerCanUnpin: comment.viewerCanUnpin,
             }
           : {}),
+        isMinimized: comment.isMinimized,
+        viewerCanMinimize: comment.viewerCanMinimize,
+        viewerCanUnminimize: comment.viewerCanUnminimize,
       }}
       repository={repository}
       reference={repository.defaultBranch}
@@ -79,7 +82,9 @@ export function GitHubConversationCommentActions({
         if (
           (mutation.action === "update" ||
             mutation.action === "pin" ||
-            mutation.action === "unpin") &&
+            mutation.action === "unpin" ||
+            mutation.action === "minimize" ||
+            mutation.action === "unminimize") &&
           result
         ) {
           if (target.kind === "issue") {
@@ -93,7 +98,11 @@ export function GitHubConversationCommentActions({
                 ? "workspace.repositories.commentUpdated"
                 : mutation.action === "pin"
                   ? "workspace.repositories.commentPinned"
-                  : "workspace.repositories.commentUnpinned"
+                  : mutation.action === "unpin"
+                    ? "workspace.repositories.commentUnpinned"
+                    : mutation.action === "minimize"
+                      ? "workspace.repositories.commentMinimizedSuccess"
+                      : "workspace.repositories.commentUnminimizedSuccess"
             )
           );
         } else if (mutation.action === "delete") {

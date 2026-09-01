@@ -1630,6 +1630,8 @@ export type GitHubIssueTimelineItem = {
   isPinned?: boolean;
   viewerCanPin?: boolean;
   viewerCanUnpin?: boolean;
+  viewerCanMinimize?: boolean;
+  viewerCanUnminimize?: boolean;
   isMinimized: boolean;
   minimizedReason?: string;
   label?: GitHubIssueLabel;
@@ -2120,10 +2122,21 @@ export type GitHubPullRequestReviewThreadComment = {
   pending: boolean;
   viewerCanUpdate: boolean;
   viewerCanDelete: boolean;
+  viewerCanMinimize?: boolean;
+  viewerCanUnminimize?: boolean;
   isMinimized: boolean;
   minimizedReason?: string;
   outdated: boolean;
 };
+
+export type GitHubCommentMinimizeClassifier =
+  | "spam"
+  | "abuse"
+  | "offTopic"
+  | "outdated"
+  | "duplicate"
+  | "resolved"
+  | "lowQuality";
 
 export type GitHubCommentMutation =
   | {
@@ -2142,6 +2155,19 @@ export type GitHubCommentMutation =
       commentId: string;
       expectedUpdatedAt: string;
       expectedPinned: boolean;
+    }
+  | {
+      action: "minimize";
+      commentId: string;
+      expectedUpdatedAt: string;
+      expectedMinimized: boolean;
+      classifier: GitHubCommentMinimizeClassifier;
+    }
+  | {
+      action: "unminimize";
+      commentId: string;
+      expectedUpdatedAt: string;
+      expectedMinimized: boolean;
     };
 
 export type GitHubPullRequestReviewThread = {
