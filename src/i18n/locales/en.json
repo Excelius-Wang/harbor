@@ -2289,6 +2289,7 @@
       "selectProject": "Project",
       "selectProjectPlaceholder": "Select a Project",
       "personalProjectsLoadFailed": "Harbor could not load your personal Projects",
+      "loadMorePersonalProjects": "Load more Projects",
       "noOpenPersonalProjects": "No open personal Projects",
       "noOpenPersonalProjectsDescription": "Create a personal Project first, then add this Issue from its sidebar.",
       "addToProjectFailed": "Harbor could not add this Issue to the Project",

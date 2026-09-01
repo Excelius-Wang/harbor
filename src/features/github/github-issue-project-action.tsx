@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { parseIpcError } from "@/lib/ipc-error";
 import type { GitHubIssue, GitHubRepositoryIdentity } from "./github-data";
 import { invalidateRepositoryIssue } from "./github-issue-mutations";
@@ -181,6 +182,18 @@ export function GitHubIssueProjectAction({
                   </SelectGroup>
                 </SelectContent>
               </Select>
+              {projectsResult.hasNextPage ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  onClick={() => void projectsResult.fetchNextPage()}
+                  disabled={projectsResult.isFetchingNextPage}
+                >
+                  {projectsResult.isFetchingNextPage ? <Spinner data-icon="inline-start" /> : null}
+                  {t("workspace.repositories.loadMorePersonalProjects")}
+                </Button>
+              ) : null}
               {mutationError ? (
                 <Alert variant="destructive">
                   <CircleAlert />
