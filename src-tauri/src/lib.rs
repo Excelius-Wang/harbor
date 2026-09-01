@@ -133,6 +133,8 @@ pub fn run() {
             commands::github_get_repository_issue,
             commands::github_get_repository_issue_delete_status,
             commands::github_delete_repository_issue,
+            commands::github_get_repository_issue_transfer_status,
+            commands::github_transfer_repository_issue,
             commands::github_get_repository_pinned_issues,
             commands::github_update_repository_issue_pin,
             commands::github_get_repository_issue_relationships,

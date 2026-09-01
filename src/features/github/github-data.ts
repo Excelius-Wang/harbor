@@ -1461,6 +1461,39 @@ export type GitHubIssueDeletion = {
   number: number;
 };
 
+export type GitHubIssueTransferStatus = {
+  sourceRepositoryId: string;
+  sourceRepositoryFullName: string;
+  sourceIssueNodeId: string;
+  sourceIssueNumber: number;
+  sourceIssueOpen: boolean;
+  sourcePrivate: boolean;
+  sourceViewerCanTransfer: boolean;
+  targetRepositoryId: string;
+  targetRepositoryFullName: string;
+  targetRepositoryUrl: string;
+  targetDefaultBranch: string;
+  targetPrivate: boolean;
+  targetViewerCanTransfer: boolean;
+  sameOwner: boolean;
+  privateCompatible: boolean;
+  viewerCanTransfer: boolean;
+};
+
+export type GitHubIssueTransfer = {
+  sourceRepositoryId: string;
+  sourceRepositoryFullName: string;
+  sourceIssueNodeId: string;
+  sourceIssueNumber: number;
+  targetRepositoryId: string;
+  targetRepositoryFullName: string;
+  targetRepositoryUrl: string;
+  targetDefaultBranch: string;
+  targetIssueNodeId: string;
+  targetIssueNumber: number;
+  targetIssueUrl: string;
+};
+
 export type GitHubIssueRepository = GitHubRepositoryContentContext & {
   fullName: string;
 };
