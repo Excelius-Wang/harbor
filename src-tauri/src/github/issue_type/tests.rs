@@ -154,7 +154,7 @@ fn issue_type_postflight_requires_the_selected_type_to_persist() {
     let returned = IssueTypeIssue {
         id: "I_7".to_string(),
         number: 7,
-        viewer_can_type: true,
+        viewer_can_type: Some(true),
         issue_type: Some(IssueTypeNode {
             id: "IT_task".to_string(),
             name: "Task".to_string(),

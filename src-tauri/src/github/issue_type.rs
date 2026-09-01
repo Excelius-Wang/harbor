@@ -206,7 +206,7 @@ async fn load_issue_type_status_with_client(
         issue_number: issue.number,
         current_issue_type,
         available_issue_types,
-        viewer_can_type: issue.viewer_can_type,
+        viewer_can_type: issue.viewer_can_type.unwrap_or(false),
     })
 }
 
@@ -489,7 +489,7 @@ struct IssueTypeRepository {
 struct IssueTypeIssue {
     id: String,
     number: u64,
-    viewer_can_type: bool,
+    viewer_can_type: Option<bool>,
     issue_type: Option<IssueTypeNode>,
     repository: Option<IssueTypeRepositoryIdentity>,
 }
