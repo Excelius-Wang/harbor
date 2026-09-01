@@ -15,6 +15,9 @@ use super::{
     GitHubService, OctocrabGitHubClient,
 };
 
+mod minimize;
+pub use minimize::GitHubCommentMinimizeClassifier;
+
 macro_rules! issue_comment_fields_fragment {
     () => {
         r#"
@@ -32,6 +35,8 @@ fragment HarborIssueCommentFields on IssueComment {
   viewerCanDelete
   viewerCanPin
   viewerCanUnpin
+  viewerCanMinimize
+  viewerCanUnminimize
   repository { id }
   issue { number }
   pullRequest { number }
@@ -65,6 +70,8 @@ fragment HarborPullRequestReviewCommentFields on PullRequestReviewComment {
   outdated
   viewerCanUpdate
   viewerCanDelete
+  viewerCanMinimize
+  viewerCanUnminimize
   state
   repository { id }
   pullRequest { number }
@@ -155,6 +162,8 @@ fragment HarborPullRequestReviewCommentFields on PullRequestReviewComment {
   outdated
   viewerCanUpdate
   viewerCanDelete
+  viewerCanMinimize
+  viewerCanUnminimize
   state
   repository { id }
   pullRequest { number }
@@ -200,6 +209,17 @@ pub enum GitHubCommentMutation {
         expected_updated_at: String,
         expected_pinned: bool,
     },
+    Minimize {
+        comment_id: String,
+        expected_updated_at: String,
+        expected_minimized: bool,
+        classifier: GitHubCommentMinimizeClassifier,
+    },
+    Unminimize {
+        comment_id: String,
+        expected_updated_at: String,
+        expected_minimized: bool,
+    },
 }
 
 impl GitHubCommentMutation {
@@ -208,7 +228,9 @@ impl GitHubCommentMutation {
             Self::Update { comment_id, .. }
             | Self::Delete { comment_id, .. }
             | Self::Pin { comment_id, .. }
-            | Self::Unpin { comment_id, .. } => comment_id,
+            | Self::Unpin { comment_id, .. }
+            | Self::Minimize { comment_id, .. }
+            | Self::Unminimize { comment_id, .. } => comment_id,
         }
     }
 
@@ -229,6 +251,14 @@ impl GitHubCommentMutation {
             | Self::Unpin {
                 expected_updated_at,
                 ..
+            }
+            | Self::Minimize {
+                expected_updated_at,
+                ..
+            }
+            | Self::Unminimize {
+                expected_updated_at,
+                ..
             } => expected_updated_at,
         }
     }
@@ -241,7 +271,24 @@ impl GitHubCommentMutation {
             | Self::Unpin {
                 expected_pinned, ..
             } => Some(*expected_pinned),
-            Self::Update { .. } | Self::Delete { .. } => None,
+            Self::Update { .. }
+            | Self::Delete { .. }
+            | Self::Minimize { .. }
+            | Self::Unminimize { .. } => None,
+        }
+    }
+
+    fn expected_minimized(&self) -> Option<bool> {
+        match self {
+            Self::Minimize {
+                expected_minimized, ..
+            }
+            | Self::Unminimize {
+                expected_minimized, ..
+            } => Some(*expected_minimized),
+            Self::Update { .. } | Self::Delete { .. } | Self::Pin { .. } | Self::Unpin { .. } => {
+                None
+            }
         }
     }
 }
@@ -365,7 +412,7 @@ impl GitHubCommentClient for OctocrabGitHubClient {
             }
         };
         ensure_requested_comment_id(&current.id, mutation.comment_id())?;
-        ensure_mutation_allowed(
+        ensure_mutation_allowed_with_minimize(
             mutation,
             &current.updated_at,
             current.viewer_can_update,
@@ -373,6 +420,9 @@ impl GitHubCommentClient for OctocrabGitHubClient {
             current.is_pinned.unwrap_or(false),
             current.viewer_can_pin,
             current.viewer_can_unpin,
+            current.is_minimized,
+            current.viewer_can_minimize,
+            current.viewer_can_unminimize,
         )?;
 
         if matches!(
@@ -487,6 +537,35 @@ impl GitHubCommentClient for OctocrabGitHubClient {
                 }
                 Ok(Some(issue_timeline_item_from_graphql(pinned)))
             }
+            GitHubCommentMutation::Minimize { .. } | GitHubCommentMutation::Unminimize { .. } => {
+                let comment_id = current.id.clone();
+                let client = issue_comment_client(token)?;
+                run_minimize_mutation(&client, mutation).await?;
+                let mut response = comment_nodes(&client, owner, repository, &[comment_id])
+                    .await
+                    .map_err(minimize_postflight_error)?;
+                let refreshed = response.nodes.pop().flatten().ok_or_else(|| {
+                    AppError::GitHub("GitHub did not return the minimized comment".into())
+                })?;
+                let refreshed = match refreshed {
+                    CommentNode::IssueComment(node) => {
+                        let node = validate_issue_comment_node(node, &repository_id, number, kind)?;
+                        ensure_requested_comment_id(&node.id, mutation.comment_id())?;
+                        node
+                    }
+                    _ => {
+                        return Err(AppError::GitHub(
+                            "GitHub returned a different minimized comment type".to_string(),
+                        ))
+                    }
+                };
+                ensure_minimized_result(
+                    refreshed.is_minimized,
+                    refreshed.minimized_reason.as_deref(),
+                    mutation,
+                )?;
+                Ok(Some(issue_timeline_item_from_graphql(refreshed)))
+            }
         }
     }
 
@@ -526,7 +605,7 @@ impl GitHubCommentClient for OctocrabGitHubClient {
                 "pending review comments must be changed through the pending review".to_string(),
             ));
         }
-        ensure_mutation_allowed(
+        ensure_mutation_allowed_with_minimize(
             mutation,
             &current.updated_at,
             current.viewer_can_update,
@@ -534,6 +613,9 @@ impl GitHubCommentClient for OctocrabGitHubClient {
             false,
             false,
             false,
+            current.is_minimized,
+            current.viewer_can_minimize,
+            current.viewer_can_unminimize,
         )?;
 
         match mutation {
@@ -596,6 +678,39 @@ impl GitHubCommentClient for OctocrabGitHubClient {
                     "Issue comment pinning is not available for review comments".to_string(),
                 ))
             }
+            GitHubCommentMutation::Minimize { .. } | GitHubCommentMutation::Unminimize { .. } => {
+                let comment_id = current.id.clone();
+                let client = issue_comment_client(token)?;
+                run_minimize_mutation(&client, mutation).await?;
+                let mut response = comment_nodes(&client, owner, repository, &[comment_id])
+                    .await
+                    .map_err(minimize_postflight_error)?;
+                let refreshed = response.nodes.pop().flatten().ok_or_else(|| {
+                    AppError::GitHub("GitHub did not return the minimized review comment".into())
+                })?;
+                let refreshed = match refreshed {
+                    CommentNode::PullRequestReviewComment(node) => {
+                        let node = validate_review_comment_node(
+                            node,
+                            &repository_id,
+                            pull_request_number,
+                        )?;
+                        ensure_requested_comment_id(&node.id, mutation.comment_id())?;
+                        node
+                    }
+                    _ => {
+                        return Err(AppError::GitHub(
+                            "GitHub returned a different minimized review comment type".to_string(),
+                        ))
+                    }
+                };
+                ensure_minimized_result(
+                    refreshed.is_minimized,
+                    refreshed.minimized_reason.as_deref(),
+                    mutation,
+                )?;
+                Ok(Some(review_comment_from_graphql(refreshed)))
+            }
         }
     }
 }
@@ -621,6 +736,83 @@ fn issue_comment_client_with_base(
         .personal_token(token.to_string())
         .build()
         .map_err(|error| AppError::GitHub(error.to_string()))
+}
+
+async fn run_minimize_mutation(
+    client: &octocrab::Octocrab,
+    mutation: &GitHubCommentMutation,
+) -> Result<(), AppError> {
+    let (query, client_mutation_id, variables) = match mutation {
+        GitHubCommentMutation::Minimize {
+            comment_id,
+            classifier,
+            ..
+        } => {
+            let client_mutation_id = mutation_identity("minimize-comment");
+            (
+                minimize::MINIMIZE_COMMENT_MUTATION,
+                client_mutation_id.clone(),
+                serde_json::json!({
+                    "id": comment_id,
+                    "classifier": classifier.graphql_name(),
+                    "clientMutationId": client_mutation_id,
+                }),
+            )
+        }
+        GitHubCommentMutation::Unminimize { comment_id, .. } => {
+            let client_mutation_id = mutation_identity("unminimize-comment");
+            (
+                minimize::UNMINIMIZE_COMMENT_MUTATION,
+                client_mutation_id.clone(),
+                serde_json::json!({
+                    "id": comment_id,
+                    "clientMutationId": client_mutation_id,
+                }),
+            )
+        }
+        _ => {
+            return Err(AppError::Validation(
+                "the selected comment mutation is not a minimize operation".to_string(),
+            ))
+        }
+    };
+    let payload = serde_json::json!({ "query": query, "variables": variables });
+    let response: minimize::MinimizeCommentMutation =
+        client.graphql(&payload).await.map_err(github_error)?;
+    let response = match mutation {
+        GitHubCommentMutation::Minimize { .. } => response.minimize_comment,
+        GitHubCommentMutation::Unminimize { .. } => response.unminimize_comment,
+        _ => unreachable!(),
+    }
+    .ok_or_else(|| AppError::GitHub("GitHub did not return the comment minimization".into()))?;
+    ensure_mutation_identity(response.client_mutation_id.as_deref(), &client_mutation_id)
+}
+
+fn minimize_postflight_error(error: AppError) -> AppError {
+    AppError::GitHub(format!(
+        "the comment minimize write may have persisted, but Harbor could not refresh it: {error}"
+    ))
+}
+
+fn ensure_minimized_result(
+    is_minimized: bool,
+    minimized_reason: Option<&str>,
+    mutation: &GitHubCommentMutation,
+) -> Result<(), AppError> {
+    let matches = match mutation {
+        GitHubCommentMutation::Minimize { classifier, .. } => {
+            is_minimized && minimized_reason == Some(classifier.response_reason())
+        }
+        GitHubCommentMutation::Unminimize { .. } => !is_minimized && minimized_reason.is_none(),
+        _ => false,
+    };
+    if matches {
+        Ok(())
+    } else {
+        Err(AppError::GitHubCommentConflict(
+            "the comment minimize state did not match the requested mutation".to_string(),
+        ))
+    }
 }
 
 pub(crate) async fn enrich_issue_timeline_comments(
@@ -723,6 +915,7 @@ fn validate_review_comment_node(
     Ok(node)
 }
 
+#[cfg(test)]
 fn ensure_mutation_allowed(
     mutation: &GitHubCommentMutation,
     current_updated_at: &str,
@@ -732,11 +925,40 @@ fn ensure_mutation_allowed(
     viewer_can_pin: bool,
     viewer_can_unpin: bool,
 ) -> Result<(), AppError> {
+    ensure_mutation_allowed_with_minimize(
+        mutation,
+        current_updated_at,
+        viewer_can_update,
+        viewer_can_delete,
+        current_is_pinned,
+        viewer_can_pin,
+        viewer_can_unpin,
+        false,
+        false,
+        false,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn ensure_mutation_allowed_with_minimize(
+    mutation: &GitHubCommentMutation,
+    current_updated_at: &str,
+    viewer_can_update: bool,
+    viewer_can_delete: bool,
+    current_is_pinned: bool,
+    viewer_can_pin: bool,
+    viewer_can_unpin: bool,
+    current_is_minimized: bool,
+    viewer_can_minimize: bool,
+    viewer_can_unminimize: bool,
+) -> Result<(), AppError> {
     let allowed = match mutation {
         GitHubCommentMutation::Update { .. } => viewer_can_update,
         GitHubCommentMutation::Delete { .. } => viewer_can_delete,
         GitHubCommentMutation::Pin { .. } => viewer_can_pin,
         GitHubCommentMutation::Unpin { .. } => viewer_can_unpin,
+        GitHubCommentMutation::Minimize { .. } => viewer_can_minimize,
+        GitHubCommentMutation::Unminimize { .. } => viewer_can_unminimize,
     };
     if !allowed {
         return Err(AppError::GitHubPermission(
@@ -753,6 +975,15 @@ fn ensure_mutation_allowed(
         if expected_pinned != current_is_pinned || requested_pinned == current_is_pinned {
             return Err(AppError::GitHubCommentConflict(
                 "the comment pin state changed after it was loaded".to_string(),
+            ));
+        }
+    }
+    if let Some(expected_minimized) = mutation.expected_minimized() {
+        let requested_minimized = matches!(mutation, GitHubCommentMutation::Minimize { .. });
+        if expected_minimized != current_is_minimized || requested_minimized == current_is_minimized
+        {
+            return Err(AppError::GitHubCommentConflict(
+                "the comment minimize state changed after it was loaded".to_string(),
             ));
         }
     }
@@ -813,6 +1044,8 @@ fn issue_timeline_item_from_graphql(node: IssueCommentNode) -> GitHubIssueTimeli
         is_pinned: node.is_pinned.unwrap_or(false),
         viewer_can_pin: node.viewer_can_pin,
         viewer_can_unpin: node.viewer_can_unpin,
+        viewer_can_minimize: node.viewer_can_minimize,
+        viewer_can_unminimize: node.viewer_can_unminimize,
         is_minimized: node.is_minimized,
         minimized_reason: node.minimized_reason,
         label: None,
@@ -845,6 +1078,8 @@ fn review_comment_from_graphql(
         pending: node.state.eq_ignore_ascii_case("PENDING"),
         viewer_can_update: node.viewer_can_update,
         viewer_can_delete: node.viewer_can_delete,
+        viewer_can_minimize: node.viewer_can_minimize,
+        viewer_can_unminimize: node.viewer_can_unminimize,
         is_minimized: node.is_minimized,
         minimized_reason: node.minimized_reason,
         outdated: node.outdated,
@@ -891,6 +1126,8 @@ struct IssueCommentNode {
     minimized_reason: Option<String>,
     viewer_can_update: bool,
     viewer_can_delete: bool,
+    viewer_can_minimize: bool,
+    viewer_can_unminimize: bool,
     viewer_can_pin: bool,
     viewer_can_unpin: bool,
     repository: CommentRepository,
@@ -914,6 +1151,8 @@ struct PullRequestReviewCommentNode {
     outdated: bool,
     viewer_can_update: bool,
     viewer_can_delete: bool,
+    viewer_can_minimize: bool,
+    viewer_can_unminimize: bool,
     state: String,
     repository: CommentRepository,
     pull_request: CommentParent,

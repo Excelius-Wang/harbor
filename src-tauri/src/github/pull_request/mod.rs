@@ -594,6 +594,8 @@ impl GitHubPullRequestMutationClient for super::tests::FakeGitHubClient {
             is_pinned: false,
             viewer_can_pin: false,
             viewer_can_unpin: false,
+            viewer_can_minimize: false,
+            viewer_can_unminimize: false,
             is_minimized: false,
             minimized_reason: None,
             label: None,

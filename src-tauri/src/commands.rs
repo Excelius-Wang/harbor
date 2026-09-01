@@ -5165,6 +5165,40 @@ fn validate_comment_mutation(
                 expected_pinned,
             })
         }
+        GitHubCommentMutation::Minimize {
+            comment_id,
+            expected_updated_at,
+            expected_minimized,
+            classifier,
+        } => {
+            if expected_minimized {
+                return Err(AppError::Validation(
+                    "minimize mutation must start from a visible comment".to_string(),
+                ));
+            }
+            Ok(GitHubCommentMutation::Minimize {
+                comment_id: validate_graphql_node_id(comment_id, "comment")?,
+                expected_updated_at: validate_comment_updated_at(expected_updated_at)?,
+                expected_minimized,
+                classifier,
+            })
+        }
+        GitHubCommentMutation::Unminimize {
+            comment_id,
+            expected_updated_at,
+            expected_minimized,
+        } => {
+            if !expected_minimized {
+                return Err(AppError::Validation(
+                    "unminimize mutation must start from a minimized comment".to_string(),
+                ));
+            }
+            Ok(GitHubCommentMutation::Unminimize {
+                comment_id: validate_graphql_node_id(comment_id, "comment")?,
+                expected_updated_at: validate_comment_updated_at(expected_updated_at)?,
+                expected_minimized,
+            })
+        }
     }
 }
 
@@ -5403,6 +5437,8 @@ pub async fn repository_context_ask(
 
 #[cfg(test)]
 mod tests {
+    use crate::github::GitHubCommentMinimizeClassifier;
+
     use super::*;
 
     #[test]
@@ -5766,6 +5802,37 @@ mod tests {
             expected_pinned: false,
         })
         .is_err());
+        let minimize = validate_comment_mutation(GitHubCommentMutation::Minimize {
+            comment_id: "  IC_kwDOexample  ".to_string(),
+            expected_updated_at: " 2026-08-29T08:01:00Z ".to_string(),
+            expected_minimized: false,
+            classifier: GitHubCommentMinimizeClassifier::OffTopic,
+        })
+        .expect("comment minimize");
+        assert!(matches!(
+            minimize,
+            GitHubCommentMutation::Minimize {
+                comment_id,
+                expected_updated_at,
+                expected_minimized: false,
+                classifier: GitHubCommentMinimizeClassifier::OffTopic,
+            } if comment_id == "IC_kwDOexample" && expected_updated_at == "2026-08-29T08:01:00Z"
+        ));
+        assert!(validate_comment_mutation(GitHubCommentMutation::Minimize {
+            comment_id: "IC_kwDOexample".to_string(),
+            expected_updated_at: "2026-08-29T08:01:00Z".to_string(),
+            expected_minimized: true,
+            classifier: GitHubCommentMinimizeClassifier::OffTopic,
+        })
+        .is_err());
+        assert!(
+            validate_comment_mutation(GitHubCommentMutation::Unminimize {
+                comment_id: "IC_kwDOexample".to_string(),
+                expected_updated_at: "2026-08-29T08:01:00Z".to_string(),
+                expected_minimized: false,
+            })
+            .is_err()
+        );
     }
 
     #[test]

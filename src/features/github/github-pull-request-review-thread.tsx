@@ -68,6 +68,8 @@ function ReviewThreadComment({
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const invalidate = () => invalidateRepositoryPullRequest(queryClient, target);
+  const [open, setOpen] = useState(!comment.isMinimized);
+  useEffect(() => setOpen(!comment.isMinimized), [comment.isMinimized]);
   return (
     <article className="min-w-0 border-b last:border-b-0">
       <header className="bg-card/50 flex min-h-10 min-w-0 items-center gap-2 px-3 py-2">
@@ -109,25 +111,34 @@ function ReviewThreadComment({
             repository={repository}
             reference={reference}
             permissionMessage={t("workspace.repositories.pullRequestWritePermissionDenied")}
+            uncertainWriteMessage={t("workspace.repositories.commentWriteUncertain")}
             mutateComment={(mutation) =>
-              mutation.action === "update" || mutation.action === "delete"
+              mutation.action === "update" ||
+              mutation.action === "delete" ||
+              mutation.action === "minimize" ||
+              mutation.action === "unminimize"
                 ? mutateRepositoryPullRequestReviewComment(target, mutation)
                 : Promise.reject(new Error("pinning review comments is unsupported"))
             }
             onConflict={() => void invalidate()}
+            onUncertainError={() => void invalidate()}
             onSuccess={(result, mutation) => {
               if (mutation.action === "update" && result) {
                 syncUpdatedPullRequestReviewComment(queryClient, target, result);
                 toast.success(t("workspace.repositories.commentUpdated"));
               } else if (mutation.action === "delete") {
                 toast.success(t("workspace.repositories.commentDeleted"));
+              } else if (mutation.action === "minimize") {
+                toast.success(t("workspace.repositories.commentMinimizedSuccess"));
+              } else if (mutation.action === "unminimize") {
+                toast.success(t("workspace.repositories.commentUnminimizedSuccess"));
               }
               void invalidate();
             }}
           />
         ) : null}
       </header>
-      <Collapsible defaultOpen={!comment.isMinimized}>
+      <Collapsible open={open} onOpenChange={setOpen}>
         {comment.isMinimized ? (
           <CollapsibleTrigger asChild>
             <Button type="button" variant="ghost" size="sm" className="m-2">

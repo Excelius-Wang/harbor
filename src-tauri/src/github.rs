@@ -64,6 +64,8 @@ pub use code::{
     GitHubBlame, GitHubCodeOverview, GitHubCodeSearchPage, GitHubCommitDetailPage,
     GitHubContentListing, GitHubFilePreview, GitHubRepositoryCommitPage, GitHubTagPage,
 };
+#[allow(unused_imports)]
+pub use comment::GitHubCommentMinimizeClassifier;
 pub use comment::GitHubCommentMutation;
 pub use commit_comment::{
     GitHubCommitComment, GitHubCommitCommentMutation, GitHubCommitCommentPage,
@@ -580,6 +582,8 @@ pub struct GitHubPullRequestReviewThreadComment {
     pub pending: bool,
     pub viewer_can_update: bool,
     pub viewer_can_delete: bool,
+    pub viewer_can_minimize: bool,
+    pub viewer_can_unminimize: bool,
     pub is_minimized: bool,
     pub minimized_reason: Option<String>,
     pub outdated: bool,
@@ -1486,6 +1490,8 @@ mutation AddPullRequestReviewThreadReply($threadId: ID!, $body: String!) {
       outdated
       viewerCanUpdate
       viewerCanDelete
+      viewerCanMinimize
+      viewerCanUnminimize
       author {
         login
         avatarUrl
@@ -1612,6 +1618,8 @@ query PullRequestReviewThreads(
               outdated
               viewerCanUpdate
               viewerCanDelete
+              viewerCanMinimize
+              viewerCanUnminimize
               author {
                 login
                 avatarUrl
@@ -1703,6 +1711,8 @@ struct PullRequestReviewThreadCommentNode {
     outdated: bool,
     viewer_can_update: bool,
     viewer_can_delete: bool,
+    viewer_can_minimize: bool,
+    viewer_can_unminimize: bool,
 }
 
 #[derive(Deserialize)]
@@ -2203,6 +2213,8 @@ fn pull_request_review_thread_comment_from_graphql(
         pending: comment.state.eq_ignore_ascii_case("PENDING"),
         viewer_can_update: comment.viewer_can_update,
         viewer_can_delete: comment.viewer_can_delete,
+        viewer_can_minimize: comment.viewer_can_minimize,
+        viewer_can_unminimize: comment.viewer_can_unminimize,
         is_minimized: comment.is_minimized,
         minimized_reason: comment.minimized_reason,
         outdated: comment.outdated,
@@ -2583,6 +2595,8 @@ mod tests {
                 pending: false,
                 viewer_can_update: true,
                 viewer_can_delete: true,
+                viewer_can_minimize: true,
+                viewer_can_unminimize: false,
                 is_minimized: false,
                 minimized_reason: None,
                 outdated: false,
@@ -4387,6 +4401,8 @@ mod tests {
                     outdated: true,
                     viewer_can_update: true,
                     viewer_can_delete: true,
+                    viewer_can_minimize: true,
+                    viewer_can_unminimize: false,
                 }],
                 page_info: GraphQlPageInfo {
                     has_next_page: true,
@@ -4423,7 +4439,9 @@ mod tests {
                 "minimizedReason": null,
                 "outdated": false,
                 "viewerCanUpdate": true,
-                "viewerCanDelete": true
+                "viewerCanDelete": true,
+                "viewerCanMinimize": true,
+                "viewerCanUnminimize": false
             }))
             .expect("GraphQL BigInt comment fixture");
 
