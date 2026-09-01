@@ -206,6 +206,12 @@ export function GitHubCommentActions<TComment>({
         </Tooltip>
       ) : null}
 
+      {mutation.error && !editOpen && !deleteOpen ? (
+        <Alert variant="destructive" role="alert" className="max-w-sm">
+          <AlertDescription>{errorMessage}</AlertDescription>
+        </Alert>
+      ) : null}
+
       <Dialog
         open={editOpen}
         onOpenChange={(open) => {

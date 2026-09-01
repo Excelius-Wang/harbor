@@ -8,6 +8,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { GitHubConversationCommentActions } from "./github-conversation-comment-actions";
 import type { GitHubIssueTimelineItem } from "./github-data";
+import { githubQueryKeys } from "./github-queries";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
@@ -58,6 +59,7 @@ function renderActions() {
       </TooltipProvider>
     </QueryClientProvider>
   );
+  return queryClient;
 }
 
 beforeAll(() => {
@@ -103,5 +105,18 @@ describe("GitHub Issue comment pin action", () => {
         },
       })
     );
+  });
+
+  it("refreshes the Issue after an uncertain GitHub write", async () => {
+    vi.mocked(invoke).mockRejectedValue({ code: "github", message: "network failure" });
+    const queryClient = renderActions();
+    const detailKey = githubQueryKeys.issueDetail({ ...target, timelinePage: 1 });
+    queryClient.setQueryData(detailKey, { issue: {}, timeline: [] });
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "workspace.repositories.pinComment" }));
+
+    await screen.findByText("workspace.repositories.commentWriteUncertain");
+    await waitFor(() => expect(queryClient.getQueryState(detailKey)?.isInvalidated).toBe(true));
   });
 });

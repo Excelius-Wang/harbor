@@ -15,16 +15,9 @@ use super::{
     GitHubService, OctocrabGitHubClient,
 };
 
-const COMMENT_NODES_QUERY: &str = r#"
-query HarborCommentNodes($owner: String!, $repository: String!, $ids: [ID!]!) {
-  repository(owner: $owner, name: $repository) { id }
-  nodes(ids: $ids) {
-    __typename
-    ...HarborIssueCommentFields
-    ...HarborPullRequestReviewCommentFields
-  }
-}
-
+macro_rules! issue_comment_fields_fragment {
+    () => {
+        r#"
 fragment HarborIssueCommentFields on IssueComment {
   id
   body
@@ -43,6 +36,20 @@ fragment HarborIssueCommentFields on IssueComment {
   issue { number }
   pullRequest { number }
   author { login avatarUrl }
+}
+"#
+    };
+}
+
+const COMMENT_NODES_QUERY: &str = concat!(
+    r#"
+query HarborCommentNodes($owner: String!, $repository: String!, $ids: [ID!]!) {
+  repository(owner: $owner, name: $repository) { id }
+  nodes(ids: $ids) {
+    __typename
+    ...HarborIssueCommentFields
+    ...HarborPullRequestReviewCommentFields
+  }
 }
 
 fragment HarborPullRequestReviewCommentFields on PullRequestReviewComment {
@@ -63,9 +70,12 @@ fragment HarborPullRequestReviewCommentFields on PullRequestReviewComment {
   pullRequest { number }
   author { login avatarUrl }
 }
-"#;
+"#,
+    issue_comment_fields_fragment!()
+);
 
-const UPDATE_ISSUE_COMMENT_MUTATION: &str = r#"
+const UPDATE_ISSUE_COMMENT_MUTATION: &str = concat!(
+    r#"
 mutation HarborUpdateIssueComment(
   $id: ID!
   $body: String!
@@ -80,27 +90,9 @@ mutation HarborUpdateIssueComment(
     issueComment { ...HarborIssueCommentFields }
   }
 }
-
-fragment HarborIssueCommentFields on IssueComment {
-  id
-  body
-  url
-  createdAt
-  updatedAt
-  authorAssociation
-  isPinned
-  isMinimized
-  minimizedReason
-  viewerCanUpdate
-  viewerCanDelete
-  viewerCanPin
-  viewerCanUnpin
-  repository { id }
-  issue { number }
-  pullRequest { number }
-  author { login avatarUrl }
-}
-"#;
+"#,
+    issue_comment_fields_fragment!()
+);
 
 const DELETE_ISSUE_COMMENT_MUTATION: &str = r#"
 mutation HarborDeleteIssueComment($id: ID!, $clientMutationId: String!) {
@@ -110,63 +102,29 @@ mutation HarborDeleteIssueComment($id: ID!, $clientMutationId: String!) {
 }
 "#;
 
-const PIN_ISSUE_COMMENT_MUTATION: &str = r#"
+const PIN_ISSUE_COMMENT_MUTATION: &str = concat!(
+    r#"
 mutation HarborPinIssueComment($id: ID!, $clientMutationId: String!) {
   pinIssueComment(input: { issueCommentId: $id, clientMutationId: $clientMutationId }) {
     clientMutationId
     issueComment { ...HarborIssueCommentFields }
   }
 }
+"#,
+    issue_comment_fields_fragment!()
+);
 
-fragment HarborIssueCommentFields on IssueComment {
-  id
-  body
-  url
-  createdAt
-  updatedAt
-  authorAssociation
-  isPinned
-  isMinimized
-  minimizedReason
-  viewerCanUpdate
-  viewerCanDelete
-  viewerCanPin
-  viewerCanUnpin
-  repository { id }
-  issue { number }
-  pullRequest { number }
-  author { login avatarUrl }
-}
-"#;
-
-const UNPIN_ISSUE_COMMENT_MUTATION: &str = r#"
+const UNPIN_ISSUE_COMMENT_MUTATION: &str = concat!(
+    r#"
 mutation HarborUnpinIssueComment($id: ID!, $clientMutationId: String!) {
   unpinIssueComment(input: { issueCommentId: $id, clientMutationId: $clientMutationId }) {
     clientMutationId
     issueComment { ...HarborIssueCommentFields }
   }
 }
-
-fragment HarborIssueCommentFields on IssueComment {
-  id
-  body
-  url
-  createdAt
-  updatedAt
-  authorAssociation
-  isPinned
-  isMinimized
-  minimizedReason
-  viewerCanUpdate
-  viewerCanDelete
-  viewerCanPin
-  viewerCanUnpin
-  repository { id }
-  issue { number }
-  pullRequest { number }
-  author { login avatarUrl }
-}
-"#;
+"#,
+    issue_comment_fields_fragment!()
+);
 
 const UPDATE_REVIEW_COMMENT_MUTATION: &str = r#"
 mutation HarborUpdatePullRequestReviewComment(
@@ -383,7 +341,7 @@ impl GitHubCommentClient for OctocrabGitHubClient {
         kind: GitHubConversationCommentKind,
         mutation: &GitHubCommentMutation,
     ) -> Result<Option<GitHubIssueTimelineItem>, AppError> {
-        let client = issue_comment_client(token)?;
+        let client = authenticated_client(token)?;
         let mut response = comment_nodes(
             &client,
             owner,
@@ -482,6 +440,7 @@ impl GitHubCommentClient for OctocrabGitHubClient {
                 Ok(None)
             }
             GitHubCommentMutation::Pin { .. } | GitHubCommentMutation::Unpin { .. } => {
+                let client = issue_comment_client(token)?;
                 let client_mutation_id =
                     mutation_identity(if matches!(mutation, GitHubCommentMutation::Pin { .. }) {
                         "pin-issue-comment"
