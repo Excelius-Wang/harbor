@@ -297,12 +297,15 @@ async fn mock_github_with_retry_config_and_address(
                 let client_mutation_id = request_json["variables"]["clientMutationId"]
                     .as_str()
                     .expect("client mutation ID");
-                let mutation_name = request_json["query"]
+                let mutation_name = if request_json["query"]
                     .as_str()
                     .expect("GraphQL query")
                     .contains("unminimizeComment")
-                    .then_some("unminimizeComment")
-                    .unwrap_or("minimizeComment");
+                {
+                    "unminimizeComment"
+                } else {
+                    "minimizeComment"
+                };
                 let mut data = serde_json::Map::new();
                 data.insert(
                     mutation_name.to_string(),
