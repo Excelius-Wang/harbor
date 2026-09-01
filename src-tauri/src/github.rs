@@ -24,6 +24,7 @@ pub(crate) mod download;
 pub(crate) mod gist;
 pub(crate) mod insights;
 pub(crate) mod issue;
+pub(crate) mod issue_delete;
 pub(crate) mod issue_dependencies;
 pub(crate) mod issue_duplicate;
 pub(crate) mod issue_linked_pull_request;
@@ -98,6 +99,8 @@ pub use issue::{
     GitHubIssueStateCapabilities, GitHubIssueStateMutation, GitHubIssueSummary,
     GitHubIssueTimelineItem,
 };
+pub(crate) use issue_delete::IssueDeleteMutation;
+pub use issue_delete::{GitHubIssueDeleteStatus, GitHubIssueDeletion};
 pub use issue_dependencies::GitHubIssueDependenciesPage;
 pub use issue_duplicate::GitHubIssueDuplicateReference;
 pub use issue_linked_pull_request::GitHubIssueLinkedPullRequestPage;
@@ -659,6 +662,7 @@ pub(crate) trait GitHubClient:
     + gist::GitHubGistClient
     + insights::GitHubInsightsClient
     + issue::GitHubIssueClient
+    + issue_delete::GitHubIssueDeleteClient
     + issue_duplicate::GitHubIssueDuplicateClient
     + issue_linked_pull_request::GitHubIssueLinkedPullRequestClient
     + issue_pin::GitHubIssuePinClient
@@ -2843,6 +2847,10 @@ mod tests {
             .pinned_issues("octocat", "hello-world")
             .await
             .expect("pinned Issue page");
+        let issue_delete_status = service
+            .issue_delete_status("octocat", "hello-world", 7)
+            .await
+            .expect("Issue delete status");
         let issue_creation_policy = service
             .issue_creation_policy("octocat", "hello-world")
             .await
@@ -3014,6 +3022,7 @@ mod tests {
         assert_eq!(duplicate, None);
         assert!(linked_pull_requests.pull_requests.is_empty());
         assert!(pinned_issues.issues.is_empty());
+        assert!(issue_delete_status.viewer_can_delete);
         assert!(issue_creation_policy.blank_issue_allowed);
         assert!(discussion_categories.enabled);
         assert_eq!(discussions.discussions[0].number, 42);
@@ -3331,6 +3340,13 @@ mod tests {
             )
             .await
             .expect("pinned Issue");
+        let deleted_issue = service
+            .delete_issue(
+                IssueDeleteMutation::new("octocat", "hello-world", 7, "I_7")
+                    .expect("Issue delete mutation"),
+            )
+            .await
+            .expect("deleted Issue");
         let label = service
             .mutate_issue_label(
                 "octocat",
@@ -3382,6 +3398,7 @@ mod tests {
         assert_eq!(unmarked_duplicate.number, 7);
         assert_eq!(marked_duplicate.number, 7);
         assert_eq!(pinned_issues.issues[0].number, 7);
+        assert_eq!(deleted_issue.number, 7);
         assert_eq!(label.name, "needs-triage");
         assert_eq!(label.color, "a1b2c3");
         assert_eq!(milestone.title, "Harbor 1.0");

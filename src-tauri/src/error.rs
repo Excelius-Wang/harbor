@@ -45,6 +45,8 @@ pub enum AppError {
     GitHubCommentConflict(String),
     #[error("GitHub Issue state changed: {0}")]
     GitHubIssueStateConflict(String),
+    #[error("GitHub could not confirm Issue deletion: {0}")]
+    GitHubIssueDeletionConflict(String),
     #[error("GitHub Issue moved: {0}")]
     GitHubIssueMoved(String),
     #[error("GitHub workflow artifact has expired")]
@@ -99,6 +101,7 @@ impl Serialize for AppError {
             Self::GitHubWikiUnsupportedPath(_) => "githubWikiUnsupportedPath",
             Self::GitHubCommentConflict(_) => "githubCommentConflict",
             Self::GitHubIssueStateConflict(_) => "githubIssueStateConflict",
+            Self::GitHubIssueDeletionConflict(_) => "githubIssueDeletionConflict",
             Self::GitHubIssueMoved(_) => "githubIssueMoved",
             Self::GitHubArtifactExpired => "githubArtifactExpired",
             Self::GitHubAuthentication(_) => "githubAuthentication",
@@ -143,6 +146,22 @@ mod tests {
             serde_json::json!({
                 "code": "githubIssueStateConflict",
                 "message": "GitHub Issue state changed: the Issue changed"
+            })
+        );
+    }
+
+    #[test]
+    fn github_issue_deletion_conflict_has_a_stable_ipc_code() {
+        let payload = serde_json::to_value(AppError::GitHubIssueDeletionConflict(
+            "the deletion may have persisted".to_string(),
+        ))
+        .expect("serialize error");
+
+        assert_eq!(
+            payload,
+            serde_json::json!({
+                "code": "githubIssueDeletionConflict",
+                "message": "GitHub could not confirm Issue deletion: the deletion may have persisted"
             })
         );
     }
