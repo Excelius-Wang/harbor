@@ -1,5 +1,6 @@
 use super::*;
 use crate::error::AppError;
+use crate::github::issue_related::test_support::{assert_rest_request, mock_github, MockResponse};
 
 #[async_trait::async_trait]
 impl GitHubIssueTypeClient for super::super::tests::FakeGitHubClient {
@@ -29,7 +30,7 @@ impl GitHubIssueTypeClient for super::super::tests::FakeGitHubClient {
     }
 }
 
-fn status(current: Option<&str>, viewer_can_update: bool) -> GitHubIssueTypeStatus {
+fn status(current: Option<&str>, viewer_can_type: bool) -> GitHubIssueTypeStatus {
     GitHubIssueTypeStatus {
         repository_id: "R_1".to_string(),
         repository_full_name: "octocat/hello-world".to_string(),
@@ -47,7 +48,7 @@ fn status(current: Option<&str>, viewer_can_update: bool) -> GitHubIssueTypeStat
             name: "Bug".to_string(),
             description: Some("An unexpected problem".to_string()),
         }],
-        viewer_can_update,
+        viewer_can_type,
     }
 }
 
@@ -144,7 +145,7 @@ fn issue_type_serialization_keeps_frontend_field_names() {
     assert_eq!(value["repositoryId"], "R_1");
     assert_eq!(value["issueNodeId"], "I_7");
     assert_eq!(value["availableIssueTypes"][0]["nodeId"], "IT_bug");
-    assert_eq!(value["viewerCanUpdate"], true);
+    assert_eq!(value["viewerCanType"], true);
 }
 
 #[test]
@@ -153,7 +154,7 @@ fn issue_type_postflight_requires_the_selected_type_to_persist() {
     let returned = IssueTypeIssue {
         id: "I_7".to_string(),
         number: 7,
-        viewer_can_update: true,
+        viewer_can_type: true,
         issue_type: Some(IssueTypeNode {
             id: "IT_task".to_string(),
             name: "Task".to_string(),
@@ -176,4 +177,189 @@ fn issue_type_postflight_requires_the_selected_type_to_persist() {
         ensure_issue_type_postflight(&status, &returned, mutation),
         Err(AppError::GitHub(_))
     ));
+}
+
+fn graphql_status_response(issue_type_id: &str, issue_type_name: &str) -> String {
+    serde_json::json!({
+        "data": {
+            "repository": {
+                "id": "R_1",
+                "nameWithOwner": "octocat/hello-world",
+                "issue": {
+                    "id": "I_7",
+                    "number": 7,
+                    "viewerCanType": true,
+                    "issueType": {
+                        "id": issue_type_id,
+                        "name": issue_type_name,
+                        "description": null
+                    }
+                }
+            }
+        }
+    })
+    .to_string()
+}
+
+fn issue_types_response() -> String {
+    serde_json::json!([
+        {
+            "id": 410,
+            "node_id": "IT_bug",
+            "name": "Bug",
+            "description": "An unexpected problem"
+        },
+        {
+            "id": 411,
+            "node_id": "IT_task",
+            "name": "Task",
+            "description": null
+        }
+    ])
+    .to_string()
+}
+
+fn graphql_update_response() -> String {
+    serde_json::json!({
+        "data": {
+            "updateIssueIssueType": {
+                "issue": {
+                    "id": "I_7",
+                    "number": 7,
+                    "viewerCanType": true,
+                    "issueType": {
+                        "id": "IT_task",
+                        "name": "Task",
+                        "description": null
+                    },
+                    "repository": {
+                        "id": "R_1",
+                        "nameWithOwner": "octocat/hello-world"
+                    }
+                }
+            }
+        }
+    })
+    .to_string()
+}
+
+#[tokio::test]
+async fn transport_updates_type_and_confirms_the_postflight_state() {
+    let (client, requests, server) = mock_github(vec![
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: graphql_status_response("IT_bug", "Bug"),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: issue_types_response(),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: graphql_update_response(),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: graphql_status_response("IT_task", "Task"),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: issue_types_response(),
+        },
+    ])
+    .await;
+    let status = load_issue_type_status_with_client(&client, "octocat", "hello-world", 7)
+        .await
+        .expect("issue type status");
+    let mutation = IssueTypeMutation {
+        owner: "octocat",
+        repository: "hello-world",
+        issue_number: 7,
+        expected_issue_node_id: "I_7",
+        expected_issue_type_node_id: Some("IT_bug"),
+        issue_type_node_id: Some("IT_task"),
+    };
+    let returned = execute_issue_type_update(&client, mutation, &status)
+        .await
+        .expect("issue type mutation");
+    let postflight = load_issue_type_status_with_client(&client, "octocat", "hello-world", 7)
+        .await
+        .expect("postflight status");
+    ensure_issue_type_postflight(&postflight, &returned, mutation).expect("confirmed type");
+    server.await.expect("mock server");
+
+    let requests = requests.lock().expect("requests");
+    assert_eq!(requests.len(), 5);
+    assert!(requests[0].contains("HarborIssueTypeStatus"));
+    assert_rest_request(&requests[1], "/repos/octocat/hello-world/issue-types");
+    assert!(requests[2].contains("HarborUpdateIssueType"));
+    assert!(requests[3].contains("HarborIssueTypeStatus"));
+    assert_rest_request(&requests[4], "/repos/octocat/hello-world/issue-types");
+}
+
+#[tokio::test]
+async fn issue_type_client_does_not_retry_transport_failures() {
+    use std::time::Duration;
+    use tokio::{
+        io::{AsyncReadExt, AsyncWriteExt},
+        net::TcpListener,
+        time::timeout,
+    };
+
+    let listener = TcpListener::bind("127.0.0.1:0").await.expect("mock bind");
+    let address = listener.local_addr().expect("mock address");
+    let server = tokio::spawn(async move {
+        let mut request_count = 0;
+        loop {
+            let accepted = timeout(Duration::from_secs(2), listener.accept()).await;
+            let Ok(Ok((mut stream, _))) = accepted else {
+                break;
+            };
+            request_count += 1;
+            let mut buffer = [0_u8; 4096];
+            let _ = timeout(Duration::from_secs(1), stream.read(&mut buffer)).await;
+            let response =
+                "HTTP/1.1 503 Service Unavailable\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+            stream
+                .write_all(response.as_bytes())
+                .await
+                .expect("mock write");
+        }
+        request_count
+    });
+    let client = issue_type_client_with_base(
+        "github-user-access-token",
+        Some(&format!("http://{address}")),
+    )
+    .expect("no-retry client");
+    let payload = serde_json::json!({
+        "query": "query HarborRetryProbe { viewer { login } }",
+        "variables": {},
+    });
+    let result: Result<serde_json::Value, _> = client.graphql(&payload).await;
+    assert!(result.is_err());
+    assert_eq!(server.await.expect("mock server"), 1);
+}
+
+#[test]
+fn issue_type_postflight_preserves_permission_and_rate_limit_errors() {
+    let permission = post_write_error(
+        AppError::GitHubPermission("write access required".to_string()),
+        7,
+    );
+    assert!(matches!(permission, AppError::GitHubPermission(_)));
+
+    let rate_limit = post_write_error(
+        AppError::GitHubRateLimited("secondary limit".to_string()),
+        7,
+    );
+    assert!(matches!(rate_limit, AppError::GitHubRateLimited(_)));
+
+    let transport = post_write_error(AppError::GitHub("connection reset".to_string()), 7);
+    assert!(matches!(transport, AppError::GitHub(message) if message.contains("Issue #7")));
 }

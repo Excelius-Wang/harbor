@@ -22,6 +22,13 @@ import {
 } from "./github-issue-type-mutations";
 import { repositoryIssueTypeStatusQueryOptions } from "./github-queries";
 
+function issueTypeErrorMessage(code: string) {
+  if (code === "githubPermission") return "workspace.repositories.issueWritePermissionDenied";
+  if (code === "githubRateLimited") return "workspace.repositories.githubRateLimited";
+  if (code === "githubIssueStateConflict") return "workspace.repositories.issueStateChanged";
+  return undefined;
+}
+
 export function GitHubIssueTypeAction({
   repository,
   issue,
@@ -85,7 +92,17 @@ export function GitHubIssueTypeAction({
   const status = result.data;
   const currentValue = status.currentIssueType?.nodeId ?? "none";
   const mutationError = mutation.error ? parseIpcError(mutation.error) : null;
-  const canUpdate = status.viewerCanUpdate && !mutation.isPending;
+  const mutationErrorMessageKey = mutationError
+    ? issueTypeErrorMessage(mutationError.code)
+    : undefined;
+  const canUpdate = status.viewerCanType && !mutation.isPending;
+  const issueTypeOptions =
+    status.currentIssueType &&
+    !status.availableIssueTypes.some(
+      (issueType) => issueType.nodeId === status.currentIssueType?.nodeId
+    )
+      ? [status.currentIssueType, ...status.availableIssueTypes]
+      : status.availableIssueTypes;
 
   return (
     <div className="flex min-w-0 flex-col gap-2">
@@ -107,7 +124,7 @@ export function GitHubIssueTypeAction({
         <SelectContent>
           <SelectGroup>
             <SelectItem value="none">{t("workspace.repositories.noIssueType")}</SelectItem>
-            {status.availableIssueTypes.map((issueType) => (
+            {issueTypeOptions.map((issueType) => (
               <SelectItem key={issueType.nodeId} value={issueType.nodeId}>
                 {issueType.name}
               </SelectItem>
@@ -120,9 +137,7 @@ export function GitHubIssueTypeAction({
           <CircleAlert />
           <AlertTitle>{t("workspace.repositories.issueTypeUpdateFailed")}</AlertTitle>
           <AlertDescription>
-            {mutationError.code === "githubPermission"
-              ? t("workspace.repositories.issueWritePermissionDenied")
-              : mutationError.message}
+            {mutationErrorMessageKey ? t(mutationErrorMessageKey) : mutationError.message}
           </AlertDescription>
         </Alert>
       ) : null}

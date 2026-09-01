@@ -21,7 +21,7 @@ query HarborIssueTypeStatus($owner: String!, $repository: String!, $issueNumber:
     issue(number: $issueNumber) {
       id
       number
-      viewerCanUpdate
+      viewerCanType
       issueType {
         id
         name
@@ -41,7 +41,7 @@ mutation HarborUpdateIssueType($issueId: ID!, $issueTypeId: ID) {
     issue {
       id
       number
-      viewerCanUpdate
+      viewerCanType
       issueType {
         id
         name
@@ -71,7 +71,7 @@ pub struct GitHubIssueTypeStatus {
     pub issue_number: u64,
     pub current_issue_type: Option<GitHubIssueType>,
     pub available_issue_types: Vec<GitHubIssueType>,
-    pub viewer_can_update: bool,
+    pub viewer_can_type: bool,
 }
 
 #[derive(Clone, Copy)]
@@ -206,7 +206,7 @@ async fn load_issue_type_status_with_client(
         issue_number: issue.number,
         current_issue_type,
         available_issue_types,
-        viewer_can_update: issue.viewer_can_update,
+        viewer_can_type: issue.viewer_can_type,
     })
 }
 
@@ -301,7 +301,7 @@ fn ensure_issue_type_preflight(
             "the Issue type changed; refresh before updating it".to_string(),
         ));
     }
-    if !status.viewer_can_update {
+    if !status.viewer_can_type {
         return Err(AppError::GitHubPermission(
             "write access is required to update an Issue type".to_string(),
         ));
@@ -448,8 +448,23 @@ fn issue_type_write_error(error: octocrab::Error) -> AppError {
 }
 
 fn issue_type_client(token: &str) -> Result<octocrab::Octocrab, AppError> {
-    octocrab::Octocrab::builder()
-        .add_retry_config(octocrab::service::middleware::retry::RetryConfig::None)
+    issue_type_client_with_base(token, None)
+}
+
+fn issue_type_client_with_base(
+    token: &str,
+    base_uri: Option<&str>,
+) -> Result<octocrab::Octocrab, AppError> {
+    let builder = octocrab::Octocrab::builder()
+        .add_retry_config(octocrab::service::middleware::retry::RetryConfig::None);
+    let builder = if let Some(base_uri) = base_uri {
+        builder
+            .base_uri(base_uri)
+            .map_err(|error| AppError::GitHub(error.to_string()))?
+    } else {
+        builder
+    };
+    builder
         .personal_token(token.to_string())
         .build()
         .map_err(|error| AppError::GitHub(error.to_string()))
@@ -474,7 +489,7 @@ struct IssueTypeRepository {
 struct IssueTypeIssue {
     id: String,
     number: u64,
-    viewer_can_update: bool,
+    viewer_can_type: bool,
     issue_type: Option<IssueTypeNode>,
     repository: Option<IssueTypeRepositoryIdentity>,
 }

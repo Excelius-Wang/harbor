@@ -2,7 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GitHubIssueTypeAction } from "./github-issue-type-action";
@@ -53,18 +53,24 @@ const status = {
     },
     { id: 411, nodeId: "IT_task", name: "Task", description: null },
   ],
-  viewerCanUpdate: true,
+  viewerCanType: true,
 };
+let updateShouldFail = false;
 
 beforeEach(() => {
   HTMLElement.prototype.hasPointerCapture = () => false;
   HTMLElement.prototype.setPointerCapture = () => {};
   HTMLElement.prototype.releasePointerCapture = () => {};
   HTMLElement.prototype.scrollIntoView = () => {};
+  updateShouldFail = false;
   vi.mocked(invoke).mockReset();
   vi.mocked(invoke).mockImplementation((command) => {
     if (command === "github_get_repository_issue_type_status") return Promise.resolve(status);
-    if (command === "github_update_repository_issue_type") return Promise.resolve(status);
+    if (command === "github_update_repository_issue_type") {
+      return updateShouldFail
+        ? Promise.reject({ code: "githubRateLimited", message: "slow down" })
+        : Promise.resolve(status);
+    }
     return Promise.reject(new Error(`unexpected command ${command}`));
   });
 });
@@ -96,5 +102,38 @@ describe("GitHub Issue type action", () => {
       expectedIssueTypeNodeId: "IT_bug",
       issueTypeNodeId: "IT_task",
     });
+  });
+
+  it("surfaces mutation errors and refreshes the authoritative status", async () => {
+    const user = userEvent.setup();
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
+    render(
+      <QueryClientProvider client={queryClient}>
+        <GitHubIssueTypeAction repository={repository} issue={issue} />
+      </QueryClientProvider>
+    );
+
+    const trigger = await screen.findByRole("combobox", {
+      name: "workspace.repositories.issueType",
+    });
+    updateShouldFail = true;
+    await user.click(trigger);
+    await user.click(await screen.findByRole("option", { name: "Task" }));
+
+    expect(await screen.findByText("workspace.repositories.githubRateLimited")).toBeTruthy();
+    await waitFor(() => {
+      expect(invalidateQueries).toHaveBeenCalledWith({
+        queryKey: ["github", "repository", "octocat", "hello-world", "issue", 7, "issue-type"],
+      });
+    });
+    expect(
+      vi
+        .mocked(invoke)
+        .mock.calls.filter(([command]) => command === "github_get_repository_issue_type_status")
+        .length
+    ).toBeGreaterThan(1);
   });
 });

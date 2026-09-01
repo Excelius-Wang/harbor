@@ -1406,7 +1406,7 @@ export type GitHubIssueTypeStatus = {
   issueNumber: number;
   currentIssueType?: GitHubIssueType | null;
   availableIssueTypes: GitHubIssueType[];
-  viewerCanUpdate: boolean;
+  viewerCanType: boolean;
 };
 
 export type GitHubIssueContactLink = {
