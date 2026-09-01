@@ -106,6 +106,7 @@ pub fn run() {
             commands::github_update_repository_discussion,
             commands::github_create_repository_discussion_comment,
             commands::github_update_repository_discussion_comment,
+            commands::github_mutate_repository_discussion_comment,
             commands::github_update_repository_discussion_state,
             commands::github_update_repository_discussion_upvote,
             commands::github_update_repository_discussion_answer,

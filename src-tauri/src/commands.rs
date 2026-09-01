@@ -16,15 +16,16 @@ use crate::{
         GitHubDeveloperFeedPage, GitHubDiscoverySearchKind, GitHubDiscoverySearchPage,
         GitHubDiscoverySearchSort, GitHubDiscussionAnsweredFilter, GitHubDiscussionCategoryPage,
         GitHubDiscussionCloseReason, GitHubDiscussionComment, GitHubDiscussionCommentDeletion,
-        GitHubDiscussionDeletion, GitHubDiscussionDetailPage, GitHubDiscussionFilters,
-        GitHubDiscussionPage, GitHubDiscussionPoll, GitHubDiscussionSort, GitHubDiscussionState,
-        GitHubDiscussionStateFilter, GitHubDiscussionSummary, GitHubDiscussionVote,
-        GitHubFileDownload, GitHubFileDownloadResult, GitHubFilePreview, GitHubForkInput,
-        GitHubForkResult, GitHubGist, GitHubGistComment, GitHubGistCommentMutation,
-        GitHubGistCommentPage, GitHubGistCreateInput, GitHubGistFileInput, GitHubGistFileMutation,
-        GitHubGistPage, GitHubGistRevisionDetail, GitHubGistRevisionPage, GitHubGistSource,
-        GitHubGistUpdateInput, GitHubInsightsTrafficPeriod, GitHubIssue, GitHubIssueAssigneePage,
-        GitHubIssueAssignment, GitHubIssueClone, GitHubIssueCloneStatus, GitHubIssueCreateInput,
+        GitHubDiscussionCommentMutation, GitHubDiscussionDeletion, GitHubDiscussionDetailPage,
+        GitHubDiscussionFilters, GitHubDiscussionPage, GitHubDiscussionPoll, GitHubDiscussionSort,
+        GitHubDiscussionState, GitHubDiscussionStateFilter, GitHubDiscussionSummary,
+        GitHubDiscussionVote, GitHubFileDownload, GitHubFileDownloadResult, GitHubFilePreview,
+        GitHubForkInput, GitHubForkResult, GitHubGist, GitHubGistComment,
+        GitHubGistCommentMutation, GitHubGistCommentPage, GitHubGistCreateInput,
+        GitHubGistFileInput, GitHubGistFileMutation, GitHubGistPage, GitHubGistRevisionDetail,
+        GitHubGistRevisionPage, GitHubGistSource, GitHubGistUpdateInput,
+        GitHubInsightsTrafficPeriod, GitHubIssue, GitHubIssueAssigneePage, GitHubIssueAssignment,
+        GitHubIssueClone, GitHubIssueCloneStatus, GitHubIssueCreateInput,
         GitHubIssueCreationPolicy, GitHubIssueDependenciesPage, GitHubIssueDetailPage,
         GitHubIssueDuplicateReference, GitHubIssueFilters, GitHubIssueInboxFilters,
         GitHubIssueInboxPage, GitHubIssueInboxScope, GitHubIssueLabel, GitHubIssueLabelMutation,
@@ -1158,6 +1159,27 @@ pub async fn github_update_repository_discussion_comment(
         .update_discussion_comment(
             &validate_graphql_node_id(comment_id, "discussion comment")?,
             validate_issue_comment(&body)?,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_mutate_repository_discussion_comment(
+    owner: String,
+    repository: String,
+    discussion_number: u64,
+    mutation: GitHubDiscussionCommentMutation,
+    state: State<'_, AppState>,
+) -> Result<(), AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    let mutation = validate_discussion_comment_mutation(mutation)?;
+    state
+        .github
+        .mutate_discussion_comment(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(discussion_number, "discussion")?,
+            &mutation,
         )
         .await
 }
@@ -5202,6 +5224,48 @@ fn validate_comment_mutation(
     }
 }
 
+fn validate_discussion_comment_mutation(
+    mutation: GitHubDiscussionCommentMutation,
+) -> Result<GitHubDiscussionCommentMutation, AppError> {
+    match mutation {
+        GitHubDiscussionCommentMutation::Minimize {
+            comment_id,
+            expected_updated_at,
+            expected_minimized,
+            classifier,
+        } => {
+            if expected_minimized {
+                return Err(AppError::Validation(
+                    "minimize mutation must start from a visible discussion comment".to_string(),
+                ));
+            }
+            Ok(GitHubDiscussionCommentMutation::Minimize {
+                comment_id: validate_graphql_node_id(comment_id, "discussion comment")?,
+                expected_updated_at: validate_comment_updated_at(expected_updated_at)?,
+                expected_minimized,
+                classifier,
+            })
+        }
+        GitHubDiscussionCommentMutation::Unminimize {
+            comment_id,
+            expected_updated_at,
+            expected_minimized,
+        } => {
+            if !expected_minimized {
+                return Err(AppError::Validation(
+                    "unminimize mutation must start from a minimized discussion comment"
+                        .to_string(),
+                ));
+            }
+            Ok(GitHubDiscussionCommentMutation::Unminimize {
+                comment_id: validate_graphql_node_id(comment_id, "discussion comment")?,
+                expected_updated_at: validate_comment_updated_at(expected_updated_at)?,
+                expected_minimized,
+            })
+        }
+    }
+}
+
 fn validate_comment_updated_at(updated_at: String) -> Result<String, AppError> {
     let updated_at = updated_at.trim().to_string();
     if updated_at.is_empty()
@@ -5833,6 +5897,35 @@ mod tests {
             })
             .is_err()
         );
+    }
+
+    #[test]
+    fn discussion_comment_mutations_validate_node_revision_and_state() {
+        let mutation =
+            validate_discussion_comment_mutation(GitHubDiscussionCommentMutation::Minimize {
+                comment_id: " DC_kwDOexample ".to_string(),
+                expected_updated_at: " 2026-08-30T08:00:00Z ".to_string(),
+                expected_minimized: false,
+                classifier: GitHubCommentMinimizeClassifier::OffTopic,
+            })
+            .expect("discussion comment minimize");
+        assert!(matches!(
+            mutation,
+            GitHubDiscussionCommentMutation::Minimize {
+                comment_id,
+                expected_updated_at,
+                expected_minimized: false,
+                classifier: GitHubCommentMinimizeClassifier::OffTopic,
+            } if comment_id == "DC_kwDOexample" && expected_updated_at == "2026-08-30T08:00:00Z"
+        ));
+        assert!(validate_discussion_comment_mutation(
+            GitHubDiscussionCommentMutation::Unminimize {
+                comment_id: "DC_kwDOexample".to_string(),
+                expected_updated_at: "2026-08-30T08:00:00Z".to_string(),
+                expected_minimized: false,
+            },
+        )
+        .is_err());
     }
 
     #[test]

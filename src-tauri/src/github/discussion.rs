@@ -1,7 +1,14 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
-use super::{authenticated_client, github_error, GitHubService, OctocrabGitHubClient};
+use super::{
+    authenticated_client,
+    discussion_comment_minimize::{
+        mutate_discussion_comment as mutate_discussion_comment_backend,
+        GitHubDiscussionCommentMutation,
+    },
+    github_error, GitHubService, OctocrabGitHubClient,
+};
 use crate::error::AppError;
 
 const DISCUSSION_PAGE_SIZE: i32 = 30;
@@ -56,6 +63,8 @@ fragment HarborDiscussionComment on DiscussionComment {
   viewerCanUnmarkAsAnswer
   viewerCanUpdate
   viewerCanUpvote
+  viewerCanMinimize
+  viewerCanUnminimize
   viewerDidAuthor
   viewerHasUpvoted
 }
@@ -455,6 +464,8 @@ pub struct GitHubDiscussionComment {
     pub viewer_can_unmark_as_answer: bool,
     pub viewer_can_update: bool,
     pub viewer_can_upvote: bool,
+    pub viewer_can_minimize: bool,
+    pub viewer_can_unminimize: bool,
     pub viewer_did_author: bool,
     pub viewer_has_upvoted: bool,
     pub replies: Vec<GitHubDiscussionComment>,
@@ -583,6 +594,15 @@ pub(crate) trait GitHubDiscussionClient: Send + Sync {
         comment_id: &str,
         body: &str,
     ) -> Result<GitHubDiscussionComment, AppError>;
+
+    async fn mutate_discussion_comment(
+        &self,
+        token: &str,
+        owner: &str,
+        repository: &str,
+        discussion_number: u64,
+        mutation: &GitHubDiscussionCommentMutation,
+    ) -> Result<(), AppError>;
 
     async fn update_discussion_state(
         &self,
@@ -739,6 +759,19 @@ impl GitHubService {
         let token = self.load_access_token().await?;
         self.client
             .update_discussion_comment(&token, comment_id, body)
+            .await
+    }
+
+    pub async fn mutate_discussion_comment(
+        &self,
+        owner: &str,
+        repository: &str,
+        discussion_number: u64,
+        mutation: &GitHubDiscussionCommentMutation,
+    ) -> Result<(), AppError> {
+        let token = self.load_access_token().await?;
+        self.client
+            .mutate_discussion_comment(&token, owner, repository, discussion_number, mutation)
             .await
     }
 
@@ -978,6 +1011,18 @@ impl GitHubDiscussionClient for OctocrabGitHubClient {
         let response: DiscussionCommentMutation =
             client.graphql(&payload).await.map_err(github_error)?;
         discussion_comment_from_mutation(response.update_discussion_comment, "updated")
+    }
+
+    async fn mutate_discussion_comment(
+        &self,
+        token: &str,
+        owner: &str,
+        repository: &str,
+        discussion_number: u64,
+        mutation: &GitHubDiscussionCommentMutation,
+    ) -> Result<(), AppError> {
+        mutate_discussion_comment_backend(token, owner, repository, discussion_number, mutation)
+            .await
     }
 
     async fn update_discussion_state(
@@ -1643,6 +1688,8 @@ fn discussion_comment_from_graphql(comment: GraphQlDiscussionComment) -> GitHubD
         viewer_can_unmark_as_answer: comment.viewer_can_unmark_as_answer,
         viewer_can_update: comment.viewer_can_update,
         viewer_can_upvote: comment.viewer_can_upvote,
+        viewer_can_minimize: comment.viewer_can_minimize,
+        viewer_can_unminimize: comment.viewer_can_unminimize,
         viewer_did_author: comment.viewer_did_author,
         viewer_has_upvoted: comment.viewer_has_upvoted,
         replies_have_more: comment
@@ -1794,6 +1841,8 @@ struct GraphQlDiscussionComment {
     viewer_can_unmark_as_answer: bool,
     viewer_can_update: bool,
     viewer_can_upvote: bool,
+    viewer_can_minimize: bool,
+    viewer_can_unminimize: bool,
     viewer_did_author: bool,
     viewer_has_upvoted: bool,
     #[serde(default)]

@@ -1185,6 +1185,8 @@ export type GitHubDiscussionComment = {
   viewerCanUnmarkAsAnswer: boolean;
   viewerCanUpdate: boolean;
   viewerCanUpvote: boolean;
+  viewerCanMinimize: boolean;
+  viewerCanUnminimize: boolean;
   viewerDidAuthor: boolean;
   viewerHasUpvoted: boolean;
   replies: GitHubDiscussionComment[];

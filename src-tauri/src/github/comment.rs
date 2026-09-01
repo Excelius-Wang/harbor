@@ -738,7 +738,7 @@ fn issue_comment_client_with_base(
         .map_err(|error| AppError::GitHub(error.to_string()))
 }
 
-async fn run_minimize_mutation(
+pub(crate) async fn run_minimize_mutation(
     client: &octocrab::Octocrab,
     mutation: &GitHubCommentMutation,
 ) -> Result<(), AppError> {

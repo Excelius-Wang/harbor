@@ -10,6 +10,7 @@ import type {
   GitHubDiscussionPoll,
   GitHubDiscussionState,
   GitHubDiscussionSummary,
+  GitHubCommentMinimizeClassifier,
   GitHubDiscussionVote,
 } from "./github-data";
 import { githubQueryKeys } from "./github-queries";
@@ -28,6 +29,21 @@ export type GitHubDiscussionContent = {
   title: string;
   body: string;
 };
+
+export type GitHubDiscussionCommentMutation =
+  | {
+      action: "minimize";
+      commentId: string;
+      expectedUpdatedAt: string;
+      expectedMinimized: false;
+      classifier: GitHubCommentMinimizeClassifier;
+    }
+  | {
+      action: "unminimize";
+      commentId: string;
+      expectedUpdatedAt: string;
+      expectedMinimized: true;
+    };
 
 export function createRepositoryDiscussion(
   target: GitHubDiscussionRepositoryTarget,
@@ -66,6 +82,16 @@ export function updateRepositoryDiscussionComment(commentId: string, body: strin
   return invoke<GitHubDiscussionComment>("github_update_repository_discussion_comment", {
     commentId,
     body,
+  });
+}
+
+export function mutateRepositoryDiscussionComment(
+  target: GitHubDiscussionMutationTarget,
+  mutation: GitHubDiscussionCommentMutation
+) {
+  return invoke<void>("github_mutate_repository_discussion_comment", {
+    ...target,
+    mutation,
   });
 }
 

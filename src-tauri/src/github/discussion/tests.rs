@@ -64,6 +64,8 @@ fn comment(id: &str, body: &str) -> GitHubDiscussionComment {
         viewer_can_unmark_as_answer: false,
         viewer_can_update: true,
         viewer_can_upvote: true,
+        viewer_can_minimize: true,
+        viewer_can_unminimize: false,
         viewer_did_author: false,
         viewer_has_upvoted: false,
         replies: Vec::new(),
@@ -221,6 +223,23 @@ impl GitHubDiscussionClient for super::super::tests::FakeGitHubClient {
         Ok(comment(comment_id, body))
     }
 
+    async fn mutate_discussion_comment(
+        &self,
+        token: &str,
+        owner: &str,
+        repository: &str,
+        discussion_number: u64,
+        mutation: &GitHubDiscussionCommentMutation,
+    ) -> Result<(), AppError> {
+        assert_eq!(token, "github-user-access-token");
+        assert_eq!(
+            (owner, repository, discussion_number),
+            ("octocat", "hello-world", 42)
+        );
+        assert_eq!(mutation.comment_id(), "DC_1");
+        Ok(())
+    }
+
     async fn update_discussion_state(
         &self,
         token: &str,
@@ -356,6 +375,8 @@ fn discussion_graphql_json() -> serde_json::Value {
         "viewerCanUnmarkAsAnswer": false,
         "viewerCanUpdate": false,
         "viewerCanUpvote": true,
+        "viewerCanMinimize": true,
+        "viewerCanUnminimize": false,
         "viewerDidAuthor": false,
         "viewerHasUpvoted": false
     });
@@ -377,6 +398,8 @@ fn discussion_graphql_json() -> serde_json::Value {
         "viewerCanUnmarkAsAnswer": false,
         "viewerCanUpdate": false,
         "viewerCanUpvote": true,
+        "viewerCanMinimize": true,
+        "viewerCanUnminimize": false,
         "viewerDidAuthor": false,
         "viewerHasUpvoted": false,
         "replies": {
@@ -668,6 +691,12 @@ fn discussion_comment_delete_guard_checks_type_scope_and_capability_data() {
         "DC_1",
     )
     .is_err());
+}
+
+#[test]
+fn discussion_comments_expose_minimize_capabilities() {
+    assert!(DISCUSSION_COMMENT_FRAGMENT.contains("viewerCanMinimize"));
+    assert!(DISCUSSION_COMMENT_FRAGMENT.contains("viewerCanUnminimize"));
 }
 
 #[test]

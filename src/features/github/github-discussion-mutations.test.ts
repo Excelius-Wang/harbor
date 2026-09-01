@@ -88,6 +88,8 @@ const comment: GitHubDiscussionComment = {
   viewerCanUnmarkAsAnswer: false,
   viewerCanUpdate: true,
   viewerCanUpvote: true,
+  viewerCanMinimize: true,
+  viewerCanUnminimize: false,
   viewerDidAuthor: false,
   viewerHasUpvoted: false,
   replies: [],
