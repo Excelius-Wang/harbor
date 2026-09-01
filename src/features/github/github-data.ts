@@ -1392,6 +1392,23 @@ export type GitHubIssue = {
   updatedAt: string;
 };
 
+export type GitHubIssueType = {
+  id?: number | null;
+  nodeId: string;
+  name: string;
+  description?: string | null;
+};
+
+export type GitHubIssueTypeStatus = {
+  repositoryId: string;
+  repositoryFullName: string;
+  issueNodeId: string;
+  issueNumber: number;
+  currentIssueType?: GitHubIssueType | null;
+  availableIssueTypes: GitHubIssueType[];
+  viewerCanType: boolean;
+};
+
 export type GitHubIssueContactLink = {
   name: string;
   about: string;
