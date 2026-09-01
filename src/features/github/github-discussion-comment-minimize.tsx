@@ -89,7 +89,9 @@ export function GitHubDiscussionCommentMinimizeAction({
       ? t("workspace.repositories.discussionWritePermissionDenied")
       : error.code === "githubCommentConflict"
         ? t("workspace.repositories.commentChanged")
-        : error.message
+        : error.code === "github" || error.code === "unknown"
+          ? t("workspace.repositories.commentWriteUncertain")
+          : error.message
     : null;
   const minimizeMutation: GitHubDiscussionCommentMutation = {
     action: "minimize",
