@@ -56,6 +56,13 @@ export function GitHubConversationCommentActions({
         updatedAt: comment.updatedAt,
         viewerCanUpdate: comment.viewerCanUpdate,
         viewerCanDelete: comment.viewerCanDelete,
+        ...(target.kind === "issue"
+          ? {
+              isPinned: comment.isPinned,
+              viewerCanPin: comment.viewerCanPin,
+              viewerCanUnpin: comment.viewerCanUnpin,
+            }
+          : {}),
       }}
       repository={repository}
       reference={repository.defaultBranch}
@@ -67,13 +74,26 @@ export function GitHubConversationCommentActions({
       mutateComment={mutateComment}
       onConflict={() => void invalidate()}
       onSuccess={(result, mutation) => {
-        if (mutation.action === "update" && result) {
+        if (
+          (mutation.action === "update" ||
+            mutation.action === "pin" ||
+            mutation.action === "unpin") &&
+          result
+        ) {
           if (target.kind === "issue") {
             syncUpdatedIssueComment(queryClient, target, result);
           } else {
             syncUpdatedPullRequestComment(queryClient, target, result);
           }
-          toast.success(t("workspace.repositories.commentUpdated"));
+          toast.success(
+            t(
+              mutation.action === "update"
+                ? "workspace.repositories.commentUpdated"
+                : mutation.action === "pin"
+                  ? "workspace.repositories.commentPinned"
+                  : "workspace.repositories.commentUnpinned"
+            )
+          );
         } else if (mutation.action === "delete") {
           toast.success(t("workspace.repositories.commentDeleted"));
         }

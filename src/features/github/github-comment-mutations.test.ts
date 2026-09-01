@@ -48,6 +48,9 @@ const comment: GitHubIssueTimelineItem = {
   updatedAt: "2026-08-29T08:01:00Z",
   viewerCanUpdate: true,
   viewerCanDelete: true,
+  isPinned: false,
+  viewerCanPin: true,
+  viewerCanUnpin: false,
   isMinimized: false,
 };
 const updatedComment = {
@@ -85,6 +88,26 @@ describe("GitHub comment mutations", () => {
       "github_mutate_repository_pull_request_review_comment",
       { ...pullRequestTarget, mutation: update }
     );
+  });
+
+  it("sends the exact pin transition and expected state", async () => {
+    vi.mocked(invoke).mockResolvedValue(updatedComment);
+    await mutateRepositoryIssueComment(issueTarget, {
+      action: "pin",
+      commentId: comment.id,
+      expectedUpdatedAt: comment.updatedAt!,
+      expectedPinned: false,
+    });
+
+    expect(invoke).toHaveBeenCalledWith("github_mutate_repository_issue_comment", {
+      ...issueTarget,
+      mutation: {
+        action: "pin",
+        commentId: "IC_42",
+        expectedUpdatedAt: "2026-08-29T08:01:00Z",
+        expectedPinned: false,
+      },
+    });
   });
 
   it("does not leak UI-only target discriminants into Tauri arguments", async () => {

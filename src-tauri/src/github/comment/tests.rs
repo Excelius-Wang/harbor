@@ -39,6 +39,9 @@ impl GitHubCommentClient for super::super::tests::FakeGitHubClient {
                 updated_at: Some(expected_updated_at.clone()),
                 viewer_can_update: true,
                 viewer_can_delete: true,
+                is_pinned: false,
+                viewer_can_pin: true,
+                viewer_can_unpin: false,
                 is_minimized: false,
                 minimized_reason: None,
                 label: None,
@@ -51,6 +54,48 @@ impl GitHubCommentClient for super::super::tests::FakeGitHubClient {
                 review_state: None,
             })),
             GitHubCommentMutation::Delete { .. } => Ok(None),
+            GitHubCommentMutation::Pin {
+                comment_id,
+                expected_updated_at,
+                ..
+            }
+            | GitHubCommentMutation::Unpin {
+                comment_id,
+                expected_updated_at,
+                ..
+            } => Ok(Some(GitHubIssueTimelineItem {
+                id: comment_id.clone(),
+                reaction_subject: Some(GitHubReactionSubjectRef {
+                    id: comment_id.clone(),
+                    kind: GitHubReactionSubjectKind::IssueComment,
+                }),
+                kind: GitHubIssueTimelineKind::Comment,
+                event: "commented".to_string(),
+                actor: Some("octocat".to_string()),
+                actor_avatar_url: None,
+                author_association: Some("OWNER".to_string()),
+                body: Some("Current body".to_string()),
+                url: Some(
+                    "https://github.com/octocat/hello-world/issues/7#issuecomment-42".to_string(),
+                ),
+                created_at: Some("2026-08-29T08:00:00Z".to_string()),
+                updated_at: Some(expected_updated_at.clone()),
+                viewer_can_update: true,
+                viewer_can_delete: true,
+                is_pinned: matches!(mutation, GitHubCommentMutation::Pin { .. }),
+                viewer_can_pin: true,
+                viewer_can_unpin: true,
+                is_minimized: false,
+                minimized_reason: None,
+                label: None,
+                assignee: None,
+                milestone: None,
+                rename_from: None,
+                rename_to: None,
+                commit_id: None,
+                review_id: None,
+                review_state: None,
+            })),
         }
     }
 
@@ -88,6 +133,9 @@ impl GitHubCommentClient for super::super::tests::FakeGitHubClient {
                 outdated: false,
             })),
             GitHubCommentMutation::Delete { .. } => Ok(None),
+            GitHubCommentMutation::Pin { .. } | GitHubCommentMutation::Unpin { .. } => Err(
+                AppError::Validation("review comment pinning is unsupported".to_string()),
+            ),
         }
     }
 }
@@ -104,6 +152,9 @@ fn issue_comment_node(pull_request: Option<u64>) -> IssueCommentNode {
         minimized_reason: None,
         viewer_can_update: true,
         viewer_can_delete: true,
+        is_pinned: Some(false),
+        viewer_can_pin: true,
+        viewer_can_unpin: false,
         repository: CommentRepository {
             id: "R_1".to_string(),
         },
@@ -144,10 +195,15 @@ fn comment_queries_use_current_graphql_contracts() {
     assert!(COMMENT_NODES_QUERY.contains("nodes(ids: $ids)"));
     assert!(COMMENT_NODES_QUERY.contains("viewerCanUpdate"));
     assert!(COMMENT_NODES_QUERY.contains("viewerCanDelete"));
+    assert!(COMMENT_NODES_QUERY.contains("isPinned"));
+    assert!(COMMENT_NODES_QUERY.contains("viewerCanPin"));
+    assert!(COMMENT_NODES_QUERY.contains("viewerCanUnpin"));
     assert!(COMMENT_NODES_QUERY.contains("fullDatabaseId"));
     assert!(COMMENT_NODES_QUERY.contains("pullRequest { number }"));
     assert!(UPDATE_ISSUE_COMMENT_MUTATION.contains("updateIssueComment"));
     assert!(DELETE_ISSUE_COMMENT_MUTATION.contains("deleteIssueComment"));
+    assert!(PIN_ISSUE_COMMENT_MUTATION.contains("pinIssueComment"));
+    assert!(UNPIN_ISSUE_COMMENT_MUTATION.contains("unpinIssueComment"));
     assert!(UPDATE_REVIEW_COMMENT_MUTATION.contains("pullRequestReviewCommentId: $id"));
     assert!(DELETE_REVIEW_COMMENT_MUTATION.contains("deletePullRequestReviewComment"));
 }
@@ -164,10 +220,13 @@ fn comment_node_query_deserializes_the_live_typename_shape() {
             "createdAt": "2026-08-29T08:00:00Z",
             "updatedAt": "2026-08-29T08:01:00Z",
             "authorAssociation": "CONTRIBUTOR",
+            "isPinned": false,
             "isMinimized": true,
             "minimizedReason": "OUTDATED",
             "viewerCanUpdate": true,
             "viewerCanDelete": true,
+            "viewerCanPin": true,
+            "viewerCanUnpin": false,
             "repository": { "id": "R_1" },
             "issue": { "number": 7 },
             "pullRequest": null,
@@ -230,17 +289,85 @@ fn mutations_require_capability_and_the_displayed_revision() {
         expected_updated_at: "2026-08-29T08:01:00Z".to_string(),
         body: "Updated".to_string(),
     };
-    assert!(ensure_mutation_allowed(&update, "2026-08-29T08:01:00Z", true, false).is_ok());
+    assert!(ensure_mutation_allowed(
+        &update,
+        "2026-08-29T08:01:00Z",
+        true,
+        false,
+        false,
+        false,
+        false,
+    )
+    .is_ok());
     assert!(matches!(
-        ensure_mutation_allowed(&update, "2026-08-29T08:02:00Z", true, false),
+        ensure_mutation_allowed(
+            &update,
+            "2026-08-29T08:02:00Z",
+            true,
+            false,
+            false,
+            false,
+            false,
+        ),
         Err(AppError::GitHubCommentConflict(_))
     ));
     assert!(matches!(
-        ensure_mutation_allowed(&update, "2026-08-29T08:01:00Z", false, true),
+        ensure_mutation_allowed(
+            &update,
+            "2026-08-29T08:01:00Z",
+            false,
+            true,
+            false,
+            false,
+            false,
+        ),
         Err(AppError::GitHubPermission(_))
     ));
     assert!(ensure_requested_comment_id("IC_42", "IC_42").is_ok());
     assert!(ensure_requested_comment_id("IC_43", "IC_42").is_err());
+}
+
+#[test]
+fn pin_mutations_require_the_current_pin_state_and_capability() {
+    let pin = GitHubCommentMutation::Pin {
+        comment_id: "IC_42".to_string(),
+        expected_updated_at: "2026-08-29T08:01:00Z".to_string(),
+        expected_pinned: false,
+    };
+    assert!(ensure_mutation_allowed(
+        &pin,
+        "2026-08-29T08:01:00Z",
+        false,
+        false,
+        false,
+        true,
+        false,
+    )
+    .is_ok());
+    assert!(matches!(
+        ensure_mutation_allowed(
+            &pin,
+            "2026-08-29T08:01:00Z",
+            false,
+            false,
+            true,
+            true,
+            false,
+        ),
+        Err(AppError::GitHubCommentConflict(_))
+    ));
+    assert!(matches!(
+        ensure_mutation_allowed(
+            &pin,
+            "2026-08-29T08:01:00Z",
+            false,
+            false,
+            false,
+            false,
+            false,
+        ),
+        Err(AppError::GitHubPermission(_))
+    ));
 }
 
 #[test]
@@ -249,6 +376,9 @@ fn mappings_keep_optional_authors_and_authoritative_capabilities() {
     assert_eq!(timeline.actor.as_deref(), Some("ghost"));
     assert!(timeline.viewer_can_update);
     assert!(timeline.viewer_can_delete);
+    assert!(!timeline.is_pinned);
+    assert!(timeline.viewer_can_pin);
+    assert!(!timeline.viewer_can_unpin);
 
     let review = review_comment_from_graphql(review_comment_node());
     assert_eq!(review.author, "reviewer");

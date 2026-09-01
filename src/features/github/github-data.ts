@@ -1567,6 +1567,9 @@ export type GitHubIssueTimelineItem = {
   updatedAt?: string;
   viewerCanUpdate: boolean;
   viewerCanDelete: boolean;
+  isPinned?: boolean;
+  viewerCanPin?: boolean;
+  viewerCanUnpin?: boolean;
   isMinimized: boolean;
   minimizedReason?: string;
   label?: GitHubIssueLabel;
@@ -2073,6 +2076,12 @@ export type GitHubCommentMutation =
       action: "delete";
       commentId: string;
       expectedUpdatedAt: string;
+    }
+  | {
+      action: "pin" | "unpin";
+      commentId: string;
+      expectedUpdatedAt: string;
+      expectedPinned: boolean;
     };
 
 export type GitHubPullRequestReviewThread = {

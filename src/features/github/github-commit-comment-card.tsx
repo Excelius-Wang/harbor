@@ -45,6 +45,9 @@ export function GitHubCommitCommentCard({
   const queryClient = useQueryClient();
   const author = comment.author?.login ?? t("workspace.repositories.unknownActor");
   const mutateComment = (mutation: GitHubCommentMutation) => {
+    if (mutation.action !== "update" && mutation.action !== "delete") {
+      return Promise.reject(new Error("pinning commit comments is unsupported"));
+    }
     const guard = {
       commentId: comment.databaseId,
       commentNodeId: comment.id,

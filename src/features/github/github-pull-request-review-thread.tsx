@@ -109,7 +109,11 @@ function ReviewThreadComment({
             repository={repository}
             reference={reference}
             permissionMessage={t("workspace.repositories.pullRequestWritePermissionDenied")}
-            mutateComment={(mutation) => mutateRepositoryPullRequestReviewComment(target, mutation)}
+            mutateComment={(mutation) =>
+              mutation.action === "update" || mutation.action === "delete"
+                ? mutateRepositoryPullRequestReviewComment(target, mutation)
+                : Promise.reject(new Error("pinning review comments is unsupported"))
+            }
             onConflict={() => void invalidate()}
             onSuccess={(result, mutation) => {
               if (mutation.action === "update" && result) {
