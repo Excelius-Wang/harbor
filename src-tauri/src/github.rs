@@ -32,6 +32,7 @@ pub(crate) mod issue_pin;
 pub(crate) mod issue_related;
 pub(crate) mod issue_relationships;
 pub(crate) mod issue_taxonomy;
+pub(crate) mod issue_transfer;
 pub(crate) mod item_metadata;
 pub(crate) mod notification;
 pub(crate) mod packages;
@@ -113,6 +114,8 @@ pub(crate) use issue_relationships::{IssueSubIssueCreateMutation, IssueSubIssueP
 #[cfg(test)]
 use issue_taxonomy::GitHubIssueMilestoneState;
 pub use issue_taxonomy::{GitHubIssueLabelMutation, GitHubIssueMilestoneMutation};
+pub(crate) use issue_transfer::IssueTransferMutation;
+pub use issue_transfer::{GitHubIssueTransfer, GitHubIssueTransferStatus};
 pub use notification::{GitHubNotificationAction, GitHubNotificationPage};
 #[cfg(test)]
 use packages::GitHubPackageVersionAction;
@@ -663,6 +666,7 @@ pub(crate) trait GitHubClient:
     + insights::GitHubInsightsClient
     + issue::GitHubIssueClient
     + issue_delete::GitHubIssueDeleteClient
+    + issue_transfer::GitHubIssueTransferClient
     + issue_duplicate::GitHubIssueDuplicateClient
     + issue_linked_pull_request::GitHubIssueLinkedPullRequestClient
     + issue_pin::GitHubIssuePinClient
@@ -2851,6 +2855,24 @@ mod tests {
             .issue_delete_status("octocat", "hello-world", 7)
             .await
             .expect("Issue delete status");
+        let issue_transfer_status = service
+            .issue_transfer_status("octocat", "hello-world", 7, "octocat", "destination")
+            .await
+            .expect("Issue transfer status");
+        let issue_transfer = service
+            .transfer_issue(
+                IssueTransferMutation::new(
+                    "octocat",
+                    "hello-world",
+                    7,
+                    "octocat",
+                    "destination",
+                    "I_7",
+                )
+                .expect("Issue transfer mutation"),
+            )
+            .await
+            .expect("Issue transfer");
         let issue_creation_policy = service
             .issue_creation_policy("octocat", "hello-world")
             .await
@@ -3023,6 +3045,8 @@ mod tests {
         assert!(linked_pull_requests.pull_requests.is_empty());
         assert!(pinned_issues.issues.is_empty());
         assert!(issue_delete_status.viewer_can_delete);
+        assert!(issue_transfer_status.viewer_can_transfer);
+        assert_eq!(issue_transfer.target_issue_number, 11);
         assert!(issue_creation_policy.blank_issue_allowed);
         assert!(discussion_categories.enabled);
         assert_eq!(discussions.discussions[0].number, 42);

@@ -47,6 +47,8 @@ pub enum AppError {
     GitHubIssueStateConflict(String),
     #[error("GitHub could not confirm Issue deletion: {0}")]
     GitHubIssueDeletionConflict(String),
+    #[error("GitHub could not confirm Issue transfer: {0}")]
+    GitHubIssueTransferConflict(String),
     #[error("GitHub Issue moved: {0}")]
     GitHubIssueMoved(String),
     #[error("GitHub workflow artifact has expired")]
@@ -102,6 +104,7 @@ impl Serialize for AppError {
             Self::GitHubCommentConflict(_) => "githubCommentConflict",
             Self::GitHubIssueStateConflict(_) => "githubIssueStateConflict",
             Self::GitHubIssueDeletionConflict(_) => "githubIssueDeletionConflict",
+            Self::GitHubIssueTransferConflict(_) => "githubIssueTransferConflict",
             Self::GitHubIssueMoved(_) => "githubIssueMoved",
             Self::GitHubArtifactExpired => "githubArtifactExpired",
             Self::GitHubAuthentication(_) => "githubAuthentication",
@@ -162,6 +165,22 @@ mod tests {
             serde_json::json!({
                 "code": "githubIssueDeletionConflict",
                 "message": "GitHub could not confirm Issue deletion: the deletion may have persisted"
+            })
+        );
+    }
+
+    #[test]
+    fn github_issue_transfer_conflict_has_a_stable_ipc_code() {
+        let payload = serde_json::to_value(AppError::GitHubIssueTransferConflict(
+            "the transfer may have persisted".to_string(),
+        ))
+        .expect("serialize error");
+
+        assert_eq!(
+            payload,
+            serde_json::json!({
+                "code": "githubIssueTransferConflict",
+                "message": "GitHub could not confirm Issue transfer: the transfer may have persisted"
             })
         );
     }

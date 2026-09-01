@@ -1669,6 +1669,65 @@ pub async fn github_delete_repository_issue(
     state.github.delete_issue(mutation).await
 }
 
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitHubIssueTransferStatusInput {
+    source_owner: String,
+    source_repository: String,
+    issue_number: u64,
+    target_owner: String,
+    target_repository: String,
+}
+
+#[tauri::command]
+pub async fn github_get_repository_issue_transfer_status(
+    input: GitHubIssueTransferStatusInput,
+    state: State<'_, AppState>,
+) -> Result<crate::github::GitHubIssueTransferStatus, AppError> {
+    let source = RepositoryRef::new(input.source_owner, input.source_repository)?;
+    let target = RepositoryRef::new(input.target_owner, input.target_repository)?;
+    state
+        .github
+        .issue_transfer_status(
+            source.owner(),
+            source.name(),
+            validate_item_number(input.issue_number, "issue")?,
+            target.owner(),
+            target.name(),
+        )
+        .await
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitHubIssueTransferInput {
+    source_owner: String,
+    source_repository: String,
+    issue_number: u64,
+    target_owner: String,
+    target_repository: String,
+    expected_issue_node_id: String,
+}
+
+#[tauri::command]
+pub async fn github_transfer_repository_issue(
+    input: GitHubIssueTransferInput,
+    state: State<'_, AppState>,
+) -> Result<crate::github::GitHubIssueTransfer, AppError> {
+    let source = RepositoryRef::new(input.source_owner, input.source_repository)?;
+    let target = RepositoryRef::new(input.target_owner, input.target_repository)?;
+    let expected_issue_node_id = validate_graphql_node_id(input.expected_issue_node_id, "issue")?;
+    let mutation = crate::github::IssueTransferMutation::new(
+        source.owner(),
+        source.name(),
+        validate_item_number(input.issue_number, "issue")?,
+        target.owner(),
+        target.name(),
+        &expected_issue_node_id,
+    )?;
+    state.github.transfer_issue(mutation).await
+}
+
 #[tauri::command]
 pub async fn github_get_repository_pinned_issues(
     owner: String,

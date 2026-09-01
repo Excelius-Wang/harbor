@@ -39,6 +39,7 @@ import { GitHubIssueMarkDuplicateAction } from "./github-issue-mark-duplicate-ac
 import { GitHubIssuePinAction } from "./github-issue-pin-action";
 import { GitHubIssueRelationships } from "./github-issue-relationships";
 import { GitHubIssueStateAction } from "./github-issue-state-action";
+import { GitHubIssueTransferAction } from "./github-issue-transfer";
 import {
   createRepositoryIssueComment,
   invalidateRepositoryIssue,
@@ -216,6 +217,7 @@ function GitHubIssueDetailScreen({
   onBack,
   backLabel,
   onNavigate,
+  onTransferred,
   onNavigatePullRequest,
 }: {
   repository: GitHubRepositoryContentContext;
@@ -223,6 +225,7 @@ function GitHubIssueDetailScreen({
   onBack: () => void;
   backLabel?: string;
   onNavigate: (repository: GitHubRepositoryContentContext, issueNumber: number) => void;
+  onTransferred: (repository: GitHubRepositoryContentContext, issueNumber: number) => void;
   onNavigatePullRequest: (pullRequest: GitHubIssueLinkedPullRequestReference) => void;
 }) {
   const { t, i18n } = useTranslation();
@@ -308,6 +311,21 @@ function GitHubIssueDetailScreen({
                   repository={repository}
                   issue={detail.issue}
                   onDeleted={onBack}
+                />
+                <GitHubIssueTransferAction
+                  repository={repository}
+                  issue={detail.issue}
+                  onTransferred={(target) =>
+                    onTransferred(
+                      {
+                        owner: target.owner,
+                        name: target.name,
+                        url: target.url,
+                        defaultBranch: target.defaultBranch,
+                      },
+                      target.issueNumber
+                    )
+                  }
                 />
                 <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
                   <Pencil data-icon="inline-start" />
@@ -472,6 +490,19 @@ export function GitHubIssueDetail({
       onBack={goBack}
       backLabel={history.length > 1 ? t("workspace.repositories.backToPreviousIssue") : backLabel}
       onNavigate={navigate}
+      onTransferred={(nextRepository, nextIssueNumber) => {
+        setNavigation((currentNavigation) => {
+          const currentHistory =
+            currentNavigation.rootKey === rootKey ? currentNavigation.history : [root];
+          return {
+            rootKey,
+            history: [
+              ...currentHistory.slice(0, -1),
+              issueDetailLocation(nextRepository, nextIssueNumber),
+            ],
+          };
+        });
+      }}
       onNavigatePullRequest={(pullRequest) =>
         setPullRequestNavigation({ sourceKey: currentKey, pullRequest })
       }
