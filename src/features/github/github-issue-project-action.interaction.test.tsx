@@ -158,4 +158,51 @@ describe("GitHub Issue project action", () => {
     expect(await screen.findByText("workspace.projects.permissionDescription")).toBeTruthy();
     expect(screen.getByRole("dialog")).toBeTruthy();
   });
+
+  it("loads later personal Projects through the cursor", async () => {
+    const user = userEvent.setup();
+    let projectPageRequest = 0;
+    const secondPage = {
+      ...projectPage,
+      projects: [{ ...projectPage.projects[0], id: "PVT_2", number: 2, title: "Backlog" }],
+      endCursor: null,
+      hasMore: false,
+    };
+    vi.mocked(invoke).mockImplementation((command) => {
+      if (command === "github_list_personal_projects") {
+        projectPageRequest += 1;
+        return Promise.resolve(
+          projectPageRequest === 1
+            ? { ...projectPage, endCursor: "CURSOR_1", hasMore: true }
+            : secondPage
+        );
+      }
+      if (command === "github_add_personal_project_item") return Promise.resolve({});
+      return Promise.reject(new Error(`unexpected command ${command}`));
+    });
+    render(
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
+        <GitHubIssueProjectAction repository={repository} issue={issue} />
+      </QueryClientProvider>
+    );
+
+    await user.click(screen.getByRole("button", { name: "workspace.repositories.addToProject" }));
+    await user.click(
+      await screen.findByRole("button", {
+        name: "workspace.repositories.loadMorePersonalProjects",
+      })
+    );
+    await user.click(
+      await screen.findByRole("combobox", { name: "workspace.repositories.selectProject" })
+    );
+    await screen.findByRole("option", { name: "Backlog (#2)" });
+    expect(invoke).toHaveBeenCalledWith("github_list_personal_projects", {
+      projectState: "open",
+      query: "",
+      sort: "updated",
+      after: "CURSOR_1",
+    });
+  });
 });
