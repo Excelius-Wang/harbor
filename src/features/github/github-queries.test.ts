@@ -1153,6 +1153,7 @@ describe("GitHub repository queries", () => {
       "approved",
       "merged",
       "success",
+      null,
       "comments",
       2,
     ]);

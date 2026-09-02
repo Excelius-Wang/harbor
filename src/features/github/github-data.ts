@@ -1702,6 +1702,7 @@ export type GitHubPullRequestSort =
 export type GitHubPullRequestReviewFilter = "none" | "required" | "approved" | "changesRequested";
 export type GitHubPullRequestMergeFilter = "merged" | "unmerged";
 export type GitHubPullRequestStatusFilter = "success" | "failure" | "pending";
+export type GitHubPullRequestDraftFilter = "draft";
 export type GitHubPullRequestInboxScope = "authored" | "assigned" | "reviewRequested";
 export type GitHubPullRequestMergeMethod = "merge" | "squash" | "rebase";
 export type GitHubPullRequestAutoMergeState =

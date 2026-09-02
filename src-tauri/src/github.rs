@@ -335,6 +335,20 @@ pub enum GitHubPullRequestStatusFilter {
     Pending,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum GitHubPullRequestDraftFilter {
+    Draft,
+}
+
+impl GitHubPullRequestDraftFilter {
+    fn search_qualifier(self) -> &'static str {
+        match self {
+            Self::Draft => "is:draft",
+        }
+    }
+}
+
 impl GitHubPullRequestStatusFilter {
     fn search_qualifier(self) -> &'static str {
         match self {
@@ -361,6 +375,7 @@ pub struct GitHubPullRequestFilters {
     pub review: Option<GitHubPullRequestReviewFilter>,
     pub merge: Option<GitHubPullRequestMergeFilter>,
     pub status: Option<GitHubPullRequestStatusFilter>,
+    pub draft: Option<GitHubPullRequestDraftFilter>,
     pub sort: GitHubPullRequestSort,
     pub page: u32,
 }
@@ -1877,7 +1892,7 @@ fn pull_request_search_query(
         GitHubPullRequestState::Closed => "closed",
     };
     let mut query = vec![
-        pull_request_search_terms(&filters.query, filters.review),
+        pull_request_search_terms(&filters.query, filters.review, filters.draft),
         format!("repo:{owner}/{repository}"),
         "is:pr".to_string(),
         format!("is:{state}"),
@@ -1894,6 +1909,9 @@ fn pull_request_search_query(
     }
     if let Some(status) = filters.status {
         query.push(status.search_qualifier().to_string());
+    }
+    if let Some(draft) = filters.draft {
+        query.push(draft.search_qualifier().to_string());
     }
     query
         .into_iter()
@@ -1957,6 +1975,7 @@ fn pull_request_inbox_search_terms(query: &str) -> String {
 fn pull_request_search_terms(
     query: &str,
     selected_review: Option<GitHubPullRequestReviewFilter>,
+    selected_draft: Option<GitHubPullRequestDraftFilter>,
 ) -> String {
     query
         .split_whitespace()
@@ -1965,7 +1984,8 @@ fn pull_request_search_terms(
             !(["repo:", "org:", "user:", "is:", "type:", "state:"]
                 .iter()
                 .any(|prefix| term.starts_with(prefix))
-                || selected_review.is_some() && term.starts_with("review:"))
+                || selected_review.is_some() && term.starts_with("review:")
+                || selected_draft.is_some() && term.starts_with("is:draft"))
         })
         .collect::<Vec<_>>()
         .join(" ")
@@ -4272,6 +4292,7 @@ mod tests {
             review: Some(GitHubPullRequestReviewFilter::Approved),
             merge: Some(GitHubPullRequestMergeFilter::Merged),
             status: Some(GitHubPullRequestStatusFilter::Success),
+            draft: None,
             sort: GitHubPullRequestSort::Updated,
             page: 1,
         };
@@ -4285,7 +4306,7 @@ mod tests {
     #[test]
     fn pull_request_review_filters_use_github_search_values() {
         assert_eq!(
-            pull_request_search_terms("review:approved crash", None),
+            pull_request_search_terms("review:approved crash", None, None),
             "review:approved crash"
         );
         assert_eq!(
@@ -4311,6 +4332,46 @@ mod tests {
         assert_eq!(
             GitHubPullRequestMergeFilter::Unmerged.search_qualifier(),
             "is:unmerged"
+        );
+    }
+
+    #[test]
+    fn pull_request_draft_filter_owns_the_draft_qualifier() {
+        assert_eq!(
+            GitHubPullRequestDraftFilter::Draft.search_qualifier(),
+            "is:draft"
+        );
+        assert_eq!(
+            pull_request_search_terms("is:draft -is:draft crash", None, None),
+            "crash"
+        );
+        assert_eq!(
+            pull_request_search_terms(
+                "is:draft -is:draft crash",
+                None,
+                Some(GitHubPullRequestDraftFilter::Draft)
+            ),
+            "crash"
+        );
+    }
+
+    #[test]
+    fn selected_pull_request_draft_filter_owns_the_draft_qualifier() {
+        let filters = GitHubPullRequestFilters {
+            state: GitHubPullRequestState::Open,
+            query: "is:draft -is:draft crash".to_string(),
+            label: String::new(),
+            review: None,
+            merge: None,
+            status: None,
+            draft: Some(GitHubPullRequestDraftFilter::Draft),
+            sort: GitHubPullRequestSort::Updated,
+            page: 1,
+        };
+
+        assert_eq!(
+            pull_request_search_query("octocat", "hello-world", &filters),
+            "crash repo:octocat/hello-world is:pr is:open is:draft"
         );
     }
 
@@ -4355,6 +4416,7 @@ mod tests {
             review: None,
             merge: Some(GitHubPullRequestMergeFilter::Unmerged),
             status: None,
+            draft: None,
             sort: GitHubPullRequestSort::Updated,
             page: 1,
         };

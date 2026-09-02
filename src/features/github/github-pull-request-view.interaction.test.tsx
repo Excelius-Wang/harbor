@@ -62,6 +62,39 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe("GitHub Pull Request list filters", () => {
+  it("sends the selected draft filter", async () => {
+    const user = userEvent.setup();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <GitHubPullRequestView repository={repository} />
+      </QueryClientProvider>
+    );
+
+    const draftTrigger = await screen.findByRole("combobox", {
+      name: "workspace.repositories.pullRequestDraftFilter",
+    });
+    await user.click(draftTrigger);
+    await user.click(
+      await screen.findByRole("option", {
+        name: "workspace.repositories.pullRequestDraftFilters.draft",
+      })
+    );
+
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith("github_list_repository_pull_requests", {
+        owner: "octocat",
+        repository: "hello-world",
+        pullRequestState: "open",
+        query: "",
+        label: "",
+        draft: "draft",
+        sort: "updated",
+        page: 1,
+      });
+    });
+  });
+
   it("sends the most-reactions sort", async () => {
     const user = userEvent.setup();
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });

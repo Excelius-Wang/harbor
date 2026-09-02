@@ -1467,6 +1467,11 @@
       "openPullRequests": "Open",
       "closedPullRequests": "Closed",
       "searchPullRequests": "Search pull requests…",
+      "pullRequestDraftFilter": "Draft status",
+      "allPullRequestDrafts": "All draft statuses",
+      "pullRequestDraftFilters": {
+        "draft": "Draft"
+      },
       "pullRequestReviewFilter": "Review status",
       "allPullRequestReviews": "All review statuses",
       "pullRequestReviewFilters": {

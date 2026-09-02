@@ -1461,6 +1461,11 @@
       "openPullRequests": "开放",
       "closedPullRequests": "已关闭",
       "searchPullRequests": "搜索拉取请求…",
+      "pullRequestDraftFilter": "草稿状态",
+      "allPullRequestDrafts": "全部草稿状态",
+      "pullRequestDraftFilters": {
+        "draft": "草稿"
+      },
       "pullRequestReviewFilter": "评审状态",
       "allPullRequestReviews": "全部评审状态",
       "pullRequestReviewFilters": {
