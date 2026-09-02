@@ -4,6 +4,17 @@ use crate::github::issue_related::test_support::{assert_rest_request, mock_githu
 
 #[async_trait::async_trait]
 impl GitHubIssueTypeClient for super::super::tests::FakeGitHubClient {
+    async fn issue_types(
+        &self,
+        token: &str,
+        owner: &str,
+        repository: &str,
+    ) -> Result<Vec<GitHubIssueType>, AppError> {
+        assert_eq!(token, "github-user-access-token");
+        assert_eq!((owner, repository), ("octocat", "hello-world"));
+        Ok(status(None, true).available_issue_types)
+    }
+
     async fn issue_type_status(
         &self,
         token: &str,
@@ -304,6 +315,26 @@ async fn transport_updates_type_and_confirms_the_postflight_state() {
     assert!(requests[2].contains("HarborUpdateIssueType"));
     assert!(requests[3].contains("HarborIssueTypeStatus"));
     assert_rest_request(&requests[4], "/repos/octocat/hello-world/issue-types");
+}
+
+#[tokio::test]
+async fn missing_issue_type_catalog_is_empty_for_personal_repositories() {
+    let (client, requests, server) = mock_github(vec![MockResponse {
+        status: "404 Not Found",
+        headers: vec![],
+        body: serde_json::json!({"message": "Not Found"}).to_string(),
+    }])
+    .await;
+
+    let types = load_issue_types_with_client(&client, "octocat", "hello-world")
+        .await
+        .expect("unsupported issue types are empty");
+    assert!(types.is_empty());
+    server.await.expect("mock server");
+
+    let requests = requests.lock().expect("requests");
+    assert_eq!(requests.len(), 1);
+    assert_rest_request(&requests[0], "/repos/octocat/hello-world/issue-types");
 }
 
 #[tokio::test]

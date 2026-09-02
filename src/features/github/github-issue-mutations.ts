@@ -25,6 +25,7 @@ const REPOSITORY_ISSUE_QUERY_KEY_INDEX = {
   page: 11,
   milestone: 12,
   linkedPullRequest: 13,
+  issueType: 14,
 } as const;
 
 function reconcileUpdatedPageItems<T>(
@@ -290,9 +291,14 @@ function updateRepositoryIssuePages(
     const closeReasonMatches = repositoryIssueCloseReasonMatches(queryKey, issue);
     const milestoneMatches = repositoryIssueMilestoneMatches(queryKey, issue);
     const linkedPullRequestFilter = repositoryIssueLinkedPullRequestEnabled(queryKey);
+    const issueTypeFilter = repositoryIssueTypeEnabled(queryKey);
     const exactDestination = repositoryIssuePageAccepts(queryKey, issue);
     const shouldInsert = !matches.length && cachedState === issue.state && exactDestination;
-    if (matches.length && cachedState === issue.state && linkedPullRequestFilter) {
+    if (
+      matches.length &&
+      cachedState === issue.state &&
+      (linkedPullRequestFilter || issueTypeFilter)
+    ) {
       void queryClient.invalidateQueries({ queryKey, exact: true });
       continue;
     }
@@ -379,7 +385,8 @@ function repositoryIssuePageAccepts(queryKey: QueryKey, issue: GitHubIssue) {
     (label === "" || issue.labels.some((item) => item.name === label)) &&
     repositoryIssueCloseReasonMatches(queryKey, issue) &&
     repositoryIssueMilestoneMatches(queryKey, issue) &&
-    !repositoryIssueLinkedPullRequestEnabled(queryKey)
+    !repositoryIssueLinkedPullRequestEnabled(queryKey) &&
+    !repositoryIssueTypeEnabled(queryKey)
   );
 }
 
@@ -401,6 +408,11 @@ function repositoryIssueMilestoneMatches(queryKey: QueryKey, issue: GitHubIssue)
 
 function repositoryIssueLinkedPullRequestEnabled(queryKey: QueryKey) {
   return queryKey[REPOSITORY_ISSUE_QUERY_KEY_INDEX.linkedPullRequest] === true;
+}
+
+function repositoryIssueTypeEnabled(queryKey: QueryKey) {
+  const issueType = queryKey[REPOSITORY_ISSUE_QUERY_KEY_INDEX.issueType];
+  return typeof issueType === "string" && issueType.length > 0;
 }
 
 function matchesIssueSummary(summary: GitHubIssueSummary, target: GitHubIssueMutationTarget) {

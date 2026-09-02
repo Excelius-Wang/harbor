@@ -5,7 +5,7 @@ use octocrab::FromResponse;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    authenticated_client, github_error,
+    authenticated_client, github_error, is_not_found,
     issue_related::{api_request, graphql_node_id_is_valid},
     GitHubService, OctocrabGitHubClient,
 };
@@ -86,6 +86,13 @@ pub(crate) struct IssueTypeMutation<'a> {
 
 #[async_trait]
 pub(crate) trait GitHubIssueTypeClient: Send + Sync {
+    async fn issue_types(
+        &self,
+        token: &str,
+        owner: &str,
+        repository: &str,
+    ) -> Result<Vec<GitHubIssueType>, AppError>;
+
     async fn issue_type_status(
         &self,
         token: &str,
@@ -102,6 +109,15 @@ pub(crate) trait GitHubIssueTypeClient: Send + Sync {
 }
 
 impl GitHubService {
+    pub async fn issue_types(
+        &self,
+        owner: &str,
+        repository: &str,
+    ) -> Result<Vec<GitHubIssueType>, AppError> {
+        let token = self.load_access_token().await?;
+        self.client.issue_types(&token, owner, repository).await
+    }
+
     pub async fn issue_type_status(
         &self,
         owner: &str,
@@ -125,6 +141,16 @@ impl GitHubService {
 
 #[async_trait]
 impl GitHubIssueTypeClient for OctocrabGitHubClient {
+    async fn issue_types(
+        &self,
+        token: &str,
+        owner: &str,
+        repository: &str,
+    ) -> Result<Vec<GitHubIssueType>, AppError> {
+        let client = authenticated_client(token)?;
+        load_issue_types_with_client(&client, owner, repository).await
+    }
+
     async fn issue_type_status(
         &self,
         token: &str,
@@ -220,9 +246,11 @@ async fn load_issue_types_with_client(
         .replace("{repository}", repository);
     let request = api_request(client, route)?;
     let response = client.execute(request).await.map_err(github_error)?;
-    let response = octocrab::map_github_error(response)
-        .await
-        .map_err(github_error)?;
+    let response = match octocrab::map_github_error(response).await {
+        Ok(response) => response,
+        Err(error) if is_not_found(&error) => return Ok(Vec::new()),
+        Err(error) => return Err(github_error(error)),
+    };
     let values = serde_json::Value::from_response(response)
         .await
         .map_err(|error| {

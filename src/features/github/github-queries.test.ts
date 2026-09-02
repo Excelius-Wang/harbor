@@ -25,6 +25,7 @@ import {
   repositoryIssueAssigneesQueryOptions,
   repositoryIssueLabelsQueryOptions,
   repositoryIssueMilestonesQueryOptions,
+  repositoryIssueTypesQueryOptions,
   repositoryInsightsContributorsQueryOptions,
   repositoryInsightsOverviewQueryOptions,
   repositoryInsightsTrafficQueryOptions,
@@ -951,6 +952,7 @@ describe("GitHub repository queries", () => {
       label: "bug",
       milestone: "Harbor 0.2",
       linkedPullRequest: true,
+      issueType: "Bug",
       sort: "comments",
       page: 3,
       closeReason: "notPlanned",
@@ -973,6 +975,7 @@ describe("GitHub repository queries", () => {
       3,
       "Harbor 0.2",
       true,
+      "Bug",
     ]);
     expect(invoke).toHaveBeenCalledWith("github_list_repository_issues", {
       owner: "octocat",
@@ -983,6 +986,7 @@ describe("GitHub repository queries", () => {
       label: "bug",
       milestone: "Harbor 0.2",
       linkedPullRequest: true,
+      issueType: "Bug",
       sort: "comments",
       page: 3,
       closeReason: "notPlanned",
@@ -1091,20 +1095,26 @@ describe("GitHub repository queries", () => {
     vi.mocked(invoke)
       .mockResolvedValueOnce({ labels: [] })
       .mockResolvedValueOnce({ assignees: [] })
-      .mockResolvedValueOnce({ milestones: [] });
+      .mockResolvedValueOnce({ milestones: [] })
+      .mockResolvedValueOnce([]);
     const target = { owner: "octocat", repository: "hello-world" };
     const labels = repositoryIssueLabelsQueryOptions(target);
     const assignees = repositoryIssueAssigneesQueryOptions(target);
     const milestones = repositoryIssueMilestonesQueryOptions(target);
+    const types = repositoryIssueTypesQueryOptions(target);
 
     await client.fetchQuery(labels);
     await client.fetchQuery(assignees);
     await client.fetchQuery(milestones);
+    await client.fetchQuery(types);
 
     expect(invoke).toHaveBeenNthCalledWith(1, "github_list_repository_issue_labels", target);
     expect(invoke).toHaveBeenNthCalledWith(2, "github_list_repository_issue_assignees", target);
     expect(invoke).toHaveBeenNthCalledWith(3, "github_list_repository_issue_milestones", target);
-    expect(new Set([labels.queryKey, assignees.queryKey, milestones.queryKey]).size).toBe(3);
+    expect(invoke).toHaveBeenNthCalledWith(4, "github_list_repository_issue_types", target);
+    expect(
+      new Set([labels.queryKey, assignees.queryKey, milestones.queryKey, types.queryKey]).size
+    ).toBe(4);
   });
 
   it("keys and invokes pull request pages with repository filters", async () => {

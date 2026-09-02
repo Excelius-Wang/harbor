@@ -2336,6 +2336,8 @@
       "labels": "Labels",
       "milestone": "Milestone",
       "issueType": "Issue type",
+      "issueTypeFilter": "Issue type",
+      "allIssueTypes": "All Issue types",
       "noIssueType": "No type",
       "issueTypeLoadFailed": "Harbor could not load Issue types",
       "issueTypeUpdateFailed": "Harbor could not update the Issue type",

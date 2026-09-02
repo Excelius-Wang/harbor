@@ -2329,6 +2329,8 @@
       "labels": "标签",
       "milestone": "里程碑",
       "issueType": "Issue 类型",
+      "issueTypeFilter": "Issue 类型",
+      "allIssueTypes": "全部 Issue 类型",
       "noIssueType": "不设置类型",
       "issueTypeLoadFailed": "Issue 类型没有加载成功",
       "issueTypeUpdateFailed": "Issue 类型没有更新成功",

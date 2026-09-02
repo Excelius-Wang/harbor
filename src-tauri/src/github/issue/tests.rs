@@ -69,6 +69,7 @@ impl GitHubIssueClient for super::super::tests::FakeGitHubClient {
                     label: String::new(),
                     milestone: None,
                     linked_pull_request: false,
+                    issue_type: None,
                     sort: filters.sort,
                     page: filters.page,
                     close_reason: None,
@@ -172,6 +173,7 @@ impl GitHubIssueClient for super::super::tests::FakeGitHubClient {
                     label: String::new(),
                     milestone: None,
                     linked_pull_request: false,
+                    issue_type: None,
                     sort: GitHubIssueSort::Updated,
                     page: 1,
                     close_reason: None,
@@ -339,6 +341,7 @@ fn issue_search_is_scoped_to_real_issues_and_selected_filters() {
         label: "help wanted".to_string(),
         milestone: Some("Harbor 0.2".to_string()),
         linked_pull_request: true,
+        issue_type: Some("Bug \"next\"".to_string()),
         sort: GitHubIssueSort::Comments,
         page: 3,
         close_reason: None,
@@ -346,7 +349,7 @@ fn issue_search_is_scoped_to_real_issues_and_selected_filters() {
 
     assert_eq!(
         issue_search_query("octocat", "hello-world", &filters),
-        "render crash repo:octocat/hello-world is:issue is:closed no:assignee label:\"help wanted\" milestone:\"Harbor 0.2\" linked:pr"
+        "render crash repo:octocat/hello-world is:issue is:closed no:assignee label:\"help wanted\" milestone:\"Harbor 0.2\" linked:pr type:\"Bug \\\"next\\\"\""
     );
 }
 
@@ -359,6 +362,7 @@ fn issue_search_escapes_milestone_titles() {
         label: String::new(),
         milestone: Some("Roadmap \\\"2026\\\"".to_string()),
         linked_pull_request: false,
+        issue_type: None,
         sort: GitHubIssueSort::Updated,
         page: 1,
         close_reason: None,
@@ -379,6 +383,7 @@ fn issue_search_filters_closed_issues_by_the_selected_reason() {
         label: String::new(),
         milestone: None,
         linked_pull_request: false,
+        issue_type: None,
         sort: GitHubIssueSort::Updated,
         page: 1,
         close_reason: Some(GitHubIssueCloseReasonFilter::NotPlanned),
@@ -409,6 +414,7 @@ fn issue_search_uses_github_reason_qualifiers_for_each_close_reason() {
             label: String::new(),
             milestone: None,
             linked_pull_request: false,
+            issue_type: None,
             sort: GitHubIssueSort::Updated,
             page: 1,
             close_reason: Some(close_reason),
@@ -426,6 +432,7 @@ fn issue_search_removes_scope_changing_user_qualifiers() {
         label: String::new(),
         milestone: None,
         linked_pull_request: false,
+        issue_type: None,
         sort: GitHubIssueSort::Updated,
         page: 1,
         close_reason: None,

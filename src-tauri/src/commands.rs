@@ -34,11 +34,12 @@ use crate::{
         GitHubIssuePage, GitHubIssueRelationshipsPage, GitHubIssueSort, GitHubIssueState,
         GitHubIssueStateCapabilities, GitHubIssueStateMutation, GitHubIssueSubIssueCreateInput,
         GitHubIssueSubIssuePriorityInput, GitHubIssueSummary, GitHubIssueTimelineItem,
-        GitHubIssueTrackingDirection, GitHubIssueTrackingPage, GitHubIssueTypeStatus,
-        GitHubLoginAvailability, GitHubNotificationAction, GitHubNotificationPage, GitHubPackage,
-        GitHubPackagePage, GitHubPackageType, GitHubPackageVersionMutationInput,
-        GitHubPackageVersionMutationResult, GitHubPackageVersionPage, GitHubPackageVersionState,
-        GitHubPackageVisibility, GitHubPagesHealth, GitHubPagesMutation, GitHubPagesWorkspace,
+        GitHubIssueTrackingDirection, GitHubIssueTrackingPage, GitHubIssueType,
+        GitHubIssueTypeStatus, GitHubLoginAvailability, GitHubNotificationAction,
+        GitHubNotificationPage, GitHubPackage, GitHubPackagePage, GitHubPackageType,
+        GitHubPackageVersionMutationInput, GitHubPackageVersionMutationResult,
+        GitHubPackageVersionPage, GitHubPackageVersionState, GitHubPackageVisibility,
+        GitHubPagesHealth, GitHubPagesMutation, GitHubPagesWorkspace,
         GitHubPendingPullRequestReview, GitHubProfileActivityPage, GitHubProfileConnectionKind,
         GitHubProjectDetail, GitHubProjectFilters, GitHubProjectItem, GitHubProjectItemAction,
         GitHubProjectItemAddition, GitHubProjectItemFilters, GitHubProjectItemUpdate,
@@ -1554,6 +1555,7 @@ pub async fn github_list_repository_issues(
     label: String,
     milestone: Option<String>,
     linked_pull_request: Option<bool>,
+    issue_type: Option<String>,
     sort: GitHubIssueSort,
     close_reason: Option<GitHubIssueCloseReasonFilter>,
     page: u32,
@@ -1568,6 +1570,7 @@ pub async fn github_list_repository_issues(
         label: validate_issue_label(label)?,
         milestone: validate_issue_milestone(milestone)?,
         linked_pull_request: linked_pull_request.unwrap_or(false),
+        issue_type: validate_issue_type_filter(issue_type)?,
         sort,
         page: validate_issue_page(page)?,
         close_reason,
@@ -2436,6 +2439,19 @@ pub async fn github_update_repository_issue_metadata(
             &assignees,
             milestone_number,
         )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_list_repository_issue_types(
+    owner: String,
+    repository: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<GitHubIssueType>, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .issue_types(repository.owner(), repository.name())
         .await
 }
 
@@ -5166,6 +5182,20 @@ fn validate_issue_milestone(milestone: Option<String>) -> Result<Option<String>,
     Ok(Some(milestone))
 }
 
+fn validate_issue_type_filter(issue_type: Option<String>) -> Result<Option<String>, AppError> {
+    let Some(issue_type) = issue_type else {
+        return Ok(None);
+    };
+    let issue_type = issue_type.trim().to_string();
+    if issue_type.is_empty() {
+        return Ok(None);
+    }
+    if issue_type.chars().count() > 256 || issue_type.chars().any(char::is_control) {
+        return Err(AppError::Validation("issue type is invalid".to_string()));
+    }
+    Ok(Some(issue_type))
+}
+
 fn validate_issue_title(title: String) -> Result<String, AppError> {
     let title = title.trim().to_string();
     if title.is_empty() || title.chars().any(char::is_control) {
@@ -5835,6 +5865,15 @@ mod tests {
         );
         assert!(validate_issue_milestone(Some("里".repeat(257))).is_err());
         assert!(validate_issue_milestone(Some("bad\nname".to_string())).is_err());
+        assert_eq!(
+            validate_issue_type_filter(Some("  Bug  ".to_string())).expect("issue type"),
+            Some("Bug".to_string())
+        );
+        assert_eq!(
+            validate_issue_type_filter(Some("  ".to_string())).expect("empty type"),
+            None
+        );
+        assert!(validate_issue_type_filter(Some("bad\nname".to_string())).is_err());
         assert!(validate_page(0).is_err());
         assert!(validate_page(1_001).is_err());
         assert_eq!(validate_issue_page(34).expect("last search page"), 34);
