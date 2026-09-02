@@ -174,7 +174,7 @@ async fn topic_replace_does_not_retry_an_ambiguous_write() {
         names: vec!["new".to_string()],
         expected_names: vec!["old".to_string()],
     };
-    replace_repository_topics_with_clients(
+    let error = replace_repository_topics_with_clients(
         &read_client,
         &write_client,
         "octocat",
@@ -188,6 +188,60 @@ async fn topic_replace_does_not_retry_an_ambiguous_write() {
     let requests = requests.lock().expect("requests");
     assert_eq!(requests.len(), 3);
     assert!(requests[2].starts_with("PUT /repos/octocat/harbor/topics HTTP/1.1"));
+    assert!(matches!(
+        error,
+        AppError::GitHubRepositoryTopicsConflict(message)
+            if message.contains("may have persisted") && message.contains("refresh before retrying")
+    ));
+}
+
+#[tokio::test]
+async fn topic_replace_reports_an_uncertain_postflight_failure() {
+    let (read_client, write_client, requests, server) = mock_topics_clients(vec![
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: user_response("octocat"),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: topics_response(&["old"]),
+        },
+        MockResponse {
+            status: "200 OK",
+            headers: vec![],
+            body: topics_response(&["new"]),
+        },
+        MockResponse {
+            status: "503 Service Unavailable",
+            headers: vec![],
+            body: json!({ "message": "try again" }).to_string(),
+        },
+    ])
+    .await;
+
+    let mutation = GitHubRepositoryTopicsMutation {
+        names: vec!["new".to_string()],
+        expected_names: vec!["old".to_string()],
+    };
+    let error = replace_repository_topics_with_clients(
+        &read_client,
+        &write_client,
+        "octocat",
+        "harbor",
+        &mutation,
+    )
+    .await
+    .expect_err("failed postflight must remain explicit");
+    server.await.expect("mock server");
+
+    assert!(matches!(
+        error,
+        AppError::GitHubRepositoryTopicsConflict(message)
+            if message.contains("may have persisted") && message.contains("refresh before retrying")
+    ));
+    assert_eq!(requests.lock().expect("requests").len(), 4);
 }
 
 #[tokio::test]

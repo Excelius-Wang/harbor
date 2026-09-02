@@ -127,18 +127,21 @@ pub(super) async fn replace_repository_topics_with_clients(
         ));
     }
 
-    let returned =
-        replace_topics_with_client(write_client, owner, repository, &requested_names).await?;
+    let returned = replace_topics_with_client(write_client, owner, repository, &requested_names)
+        .await
+        .map_err(post_write_error)?;
     if returned.names != requested_names {
-        return Err(AppError::GitHubRepositoryTopicsConflict(
-            "GitHub did not apply the requested repository topics".to_string(),
+        return Err(write_may_have_persisted(
+            "the requested topic set was not returned",
         ));
     }
 
-    let postflight = load_topics_with_client(read_client, owner, repository).await?;
+    let postflight = load_topics_with_client(read_client, owner, repository)
+        .await
+        .map_err(post_write_error)?;
     if postflight.names != requested_names {
-        return Err(AppError::GitHubRepositoryTopicsConflict(
-            "GitHub did not persist the requested repository topics".to_string(),
+        return Err(write_may_have_persisted(
+            "the requested topic set was not confirmed after saving",
         ));
     }
     Ok(postflight)
@@ -248,6 +251,19 @@ fn topics_write_client(token: &str) -> Result<octocrab::Octocrab, AppError> {
         .personal_token(token.to_string())
         .build()
         .map_err(|error| AppError::GitHub(error.to_string()))
+}
+
+fn post_write_error(error: AppError) -> AppError {
+    match error {
+        error @ (AppError::GitHubPermission(_) | AppError::GitHubRateLimited(_)) => error,
+        error => write_may_have_persisted(&error.to_string()),
+    }
+}
+
+fn write_may_have_persisted(message: &str) -> AppError {
+    AppError::GitHubRepositoryTopicsConflict(format!(
+        "{message}; the repository topics update may have persisted; refresh before retrying"
+    ))
 }
 
 fn topics_route(owner: &str, repository: &str) -> String {

@@ -923,7 +923,7 @@
         "topics": "仓库主题",
         "topicsDescription": "给仓库添加主题，方便分类；最多添加 20 个。",
         "topicList": "主题名称",
-        "topicPlaceholder": "rust、tauri、desktop-app",
+        "topicPlaceholder": "rust, tauri, desktop-app",
         "topicListDescription": "用逗号或换行分隔主题。GitHub 会统一保存为小写，只能使用字母、数字和连字符。",
         "topicsPublicNotice": "主题名称始终公开，私有仓库也一样。",
         "saveTopics": "保存主题",
@@ -931,6 +931,7 @@
         "topicsLoadFailed": "仓库主题没有加载成功",
         "topicsSaveFailed": "仓库主题没有更新成功",
         "topicsPermissionDenied": "只有仓库所有者可以修改主题。",
+        "topicsSaveUncertain": "这次更新可能已经生效。请先刷新主题，再决定是否重试。",
         "topicValidation": {
           "invalid": "主题只能使用小写字母、数字和连字符，长度不能超过 50 个字符。",
           "duplicate": "同一个主题只能填写一次。",

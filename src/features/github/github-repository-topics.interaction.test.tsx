@@ -2,13 +2,16 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { GitHubRepository } from "./github-data";
+import { githubQueryKeys } from "./github-queries";
 import { GitHubRepositoryTopicsCard } from "./github-repository-topics";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(), isTauri: () => false }));
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }),
 }));
@@ -29,17 +32,18 @@ const repository: GitHubRepository = {
 };
 
 function renderCard() {
-  return render(
-    <QueryClientProvider
-      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-    >
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const rendered = render(
+    <QueryClientProvider client={queryClient}>
       <GitHubRepositoryTopicsCard repository={repository} />
     </QueryClientProvider>
   );
+  return { ...rendered, queryClient };
 }
 
 beforeEach(() => {
   vi.mocked(invoke).mockReset();
+  vi.mocked(toast.error).mockReset();
   vi.mocked(invoke).mockImplementation((command) => {
     if (command === "github_get_personal_repository_topics") {
       return Promise.resolve({ names: ["rust", "tauri"] });
@@ -96,6 +100,66 @@ describe("GitHub repository topics", () => {
       repository: "harbor",
       mutation: { names: [], expectedNames: ["rust", "tauri"] },
     });
+  });
+
+  it("keeps the edit-start snapshot when a background refresh changes the topics", async () => {
+    const user = userEvent.setup();
+    const { queryClient } = renderCard();
+
+    const input = await screen.findByRole("textbox", {
+      name: "workspace.repositories.settings.topicList",
+    });
+    await user.clear(input);
+    await user.type(input, "rust, desktop-app");
+    await act(async () => {
+      queryClient.setQueryData(githubQueryKeys.repositoryTopics(repository), {
+        names: ["external-change"],
+      });
+    });
+    await user.click(
+      screen.getByRole("button", { name: "workspace.repositories.settings.saveTopics" })
+    );
+
+    expect(invoke).toHaveBeenCalledWith("github_update_personal_repository_topics", {
+      owner: "octocat",
+      repository: "harbor",
+      mutation: {
+        names: ["rust", "desktop-app"],
+        expectedNames: ["rust", "tauri"],
+      },
+    });
+  });
+
+  it("warns that a conflicted write may have succeeded", async () => {
+    const user = userEvent.setup();
+    vi.mocked(invoke).mockImplementation((command) => {
+      if (command === "github_get_personal_repository_topics") {
+        return Promise.resolve({ names: ["rust", "tauri"] });
+      }
+      if (command === "github_update_personal_repository_topics") {
+        return Promise.reject({
+          code: "githubRepositoryTopicsConflict",
+          message: "the update may have persisted",
+        });
+      }
+      return Promise.reject(new Error(`unexpected command ${command}`));
+    });
+    renderCard();
+
+    const input = await screen.findByRole("textbox", {
+      name: "workspace.repositories.settings.topicList",
+    });
+    await user.clear(input);
+    await user.type(input, "rust, desktop-app");
+    await user.click(
+      screen.getByRole("button", { name: "workspace.repositories.settings.saveTopics" })
+    );
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("workspace.repositories.settings.topicsSaveFailed", {
+        description: "workspace.repositories.settings.topicsSaveUncertain",
+      })
+    );
   });
 
   it("shows a retry action when topics cannot be loaded", async () => {

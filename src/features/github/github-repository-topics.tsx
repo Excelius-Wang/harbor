@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CircleAlert, Save, Tags } from "lucide-react";
 import { toast } from "sonner";
@@ -36,6 +36,7 @@ export function GitHubRepositoryTopicsCard({ repository }: { repository: GitHubR
   };
   const result = useQuery(personalRepositoryTopicsQueryOptions(target));
   const [draft, setDraft] = useState<string | null>(null);
+  const editBaselineRef = useRef<string[] | null>(null);
   const value = draft ?? (result.data ? formatTopics(result.data.names) : "");
   const parsed = parseRepositoryTopics(value);
   const currentNames = result.data?.names ?? [];
@@ -47,16 +48,24 @@ export function GitHubRepositoryTopicsCard({ repository }: { repository: GitHubR
 
   useEffect(() => {
     setDraft(null);
+    editBaselineRef.current = null;
   }, [repository.id]);
+
+  useEffect(() => {
+    if (draft === null && result.data) {
+      editBaselineRef.current = [...result.data.names];
+    }
+  }, [draft, result.data]);
 
   const mutation = useMutation({
     mutationFn: () =>
       updatePersonalRepositoryTopics(target, {
         names: parsed.names ?? [],
-        expectedNames: currentNames,
+        expectedNames: editBaselineRef.current ?? currentNames,
       }),
     onSuccess: (next) => {
       queryClient.setQueryData(personalRepositoryTopicsQueryOptions(target).queryKey, next);
+      editBaselineRef.current = [...next.names];
       setDraft(formatTopics(next.names));
       toast.success(t("workspace.repositories.settings.topicsSaved"));
     },
@@ -67,7 +76,9 @@ export function GitHubRepositoryTopicsCard({ repository }: { repository: GitHubR
         description:
           parsedError.code === "githubPermission"
             ? t("workspace.repositories.settings.topicsPermissionDenied")
-            : parsedError.message,
+            : parsedError.code === "githubRepositoryTopicsConflict"
+              ? t("workspace.repositories.settings.topicsSaveUncertain")
+              : parsedError.message,
       });
     },
   });
@@ -154,7 +165,12 @@ export function GitHubRepositoryTopicsCard({ repository }: { repository: GitHubR
               disabled={repository.isArchived || mutation.isPending}
               aria-invalid={Boolean(validationMessage) || undefined}
               placeholder={t("workspace.repositories.settings.topicPlaceholder")}
-              onChange={(event) => setDraft(event.currentTarget.value)}
+              onChange={(event) => {
+                if (draft === null) {
+                  editBaselineRef.current = [...currentNames];
+                }
+                setDraft(event.currentTarget.value);
+              }}
             />
             <FieldDescription>
               {validationMessage ?? t("workspace.repositories.settings.topicListDescription")}
