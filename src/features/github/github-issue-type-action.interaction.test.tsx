@@ -128,6 +128,9 @@ describe("GitHub Issue type action", () => {
       expect(invalidateQueries).toHaveBeenCalledWith({
         queryKey: ["github", "repository", "octocat", "hello-world", "issue", 7, "issue-type"],
       });
+      expect(invalidateQueries).toHaveBeenCalledWith({
+        queryKey: ["github", "repository", "octocat", "hello-world", "issues"],
+      });
     });
     expect(
       vi

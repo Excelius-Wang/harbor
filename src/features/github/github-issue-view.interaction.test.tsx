@@ -87,6 +87,11 @@ beforeEach(() => {
         ],
       });
     }
+    if (command === "github_list_repository_issue_types") {
+      return Promise.resolve([
+        { id: 410, nodeId: "IT_bug", name: "Bug", description: "An unexpected problem" },
+      ]);
+    }
     return Promise.reject(new Error(`unexpected command ${command}`));
   });
 });
@@ -195,6 +200,7 @@ describe("GitHub Issue milestone filter", () => {
         return Promise.resolve({ labels: [] });
       }
       if (command === "github_list_repository_issue_milestones") return milestonesPromise;
+      if (command === "github_list_repository_issue_types") return Promise.resolve([]);
       return Promise.reject(new Error(`unexpected command ${command}`));
     });
 
@@ -233,6 +239,7 @@ describe("GitHub Issue milestone filter", () => {
           ? Promise.reject({ code: "githubPermission", message: "milestone permission changed" })
           : Promise.resolve({ milestones: [] });
       }
+      if (command === "github_list_repository_issue_types") return Promise.resolve([]);
       return Promise.reject(new Error(`unexpected command ${command}`));
     });
 
@@ -310,6 +317,33 @@ describe("GitHub Issue linked pull request filter", () => {
         query: "",
         label: "",
         linkedPullRequest: true,
+        sort: "updated",
+        page: 1,
+      });
+    });
+  });
+});
+
+describe("GitHub Issue type filter", () => {
+  it("loads repository Issue types and sends the selected name", async () => {
+    const user = userEvent.setup();
+    renderView();
+
+    const typeTrigger = await screen.findByRole("combobox", {
+      name: "workspace.repositories.issueTypeFilter",
+    });
+    await user.click(typeTrigger);
+    await user.click(await screen.findByRole("option", { name: "Bug" }));
+
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith("github_list_repository_issues", {
+        owner: "octocat",
+        repository: "hello-world",
+        issueState: "open",
+        assignment: "all",
+        query: "",
+        label: "",
+        issueType: "Bug",
         sort: "updated",
         page: 1,
       });

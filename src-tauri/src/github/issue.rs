@@ -90,6 +90,7 @@ pub struct GitHubIssueFilters {
     pub label: String,
     pub milestone: Option<String>,
     pub linked_pull_request: bool,
+    pub issue_type: Option<String>,
     pub sort: GitHubIssueSort,
     pub page: u32,
     pub close_reason: Option<GitHubIssueCloseReasonFilter>,
@@ -705,6 +706,10 @@ fn issue_search_query(owner: &str, repository: &str, filters: &GitHubIssueFilter
     }
     if filters.linked_pull_request {
         query.push("linked:pr".to_string());
+    }
+    if let Some(issue_type) = &filters.issue_type {
+        let issue_type = issue_type.replace('\\', "\\\\").replace('"', "\\\"");
+        query.push(format!("type:\"{issue_type}\""));
     }
     if let Some(reason) = filters.close_reason {
         query.push(reason.search_qualifier().to_string());

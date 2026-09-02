@@ -132,8 +132,8 @@ pub use issue_taxonomy::{GitHubIssueLabelMutation, GitHubIssueMilestoneMutation}
 pub use issue_tracking::{GitHubIssueTrackingDirection, GitHubIssueTrackingPage};
 pub(crate) use issue_transfer::IssueTransferMutation;
 pub use issue_transfer::{GitHubIssueTransfer, GitHubIssueTransferStatus};
-pub use issue_type::GitHubIssueTypeStatus;
 pub(crate) use issue_type::IssueTypeMutation;
+pub use issue_type::{GitHubIssueType, GitHubIssueTypeStatus};
 pub use notification::{GitHubNotificationAction, GitHubNotificationPage};
 #[cfg(test)]
 use packages::GitHubPackageVersionAction;
@@ -2859,6 +2859,7 @@ mod tests {
             label: String::new(),
             milestone: None,
             linked_pull_request: false,
+            issue_type: None,
             sort: GitHubIssueSort::Updated,
             page: 1,
             close_reason: None,

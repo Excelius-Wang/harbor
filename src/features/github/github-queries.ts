@@ -39,6 +39,7 @@ import type {
   GitHubIssuePage,
   GitHubIssueSort,
   GitHubIssueState,
+  GitHubIssueType,
   GitHubIssueTypeStatus,
   GitHubInsightsTrafficPeriod,
   GitHubNotificationPage,
@@ -208,6 +209,7 @@ export type GitHubIssuesTarget = GitHubRepositoryTarget & {
   label: string;
   milestone?: string | null;
   linkedPullRequest?: boolean;
+  issueType?: string | null;
   sort: GitHubIssueSort;
   closeReason?: GitHubIssueCloseReasonFilter | null;
   page: number;
@@ -671,6 +673,7 @@ export const githubQueryKeys = {
     label,
     milestone,
     linkedPullRequest,
+    issueType,
     sort,
     closeReason,
     page,
@@ -690,6 +693,7 @@ export const githubQueryKeys = {
       page,
       milestone ?? null,
       linkedPullRequest ?? false,
+      issueType ?? null,
     ] as const,
   issuesRoot: ({ owner, repository }: GitHubRepositoryTarget) =>
     ["github", "repository", owner, repository, "issues"] as const,
@@ -730,6 +734,8 @@ export const githubQueryKeys = {
     ["github", "repository", owner, repository, "issue-assignees"] as const,
   issueMilestones: ({ owner, repository }: GitHubRepositoryTarget) =>
     ["github", "repository", owner, repository, "issue-milestones"] as const,
+  issueTypes: ({ owner, repository }: GitHubRepositoryTarget) =>
+    ["github", "repository", owner, repository, "issue-types"] as const,
   issueTypeStatus: ({ owner, repository, issueNumber }: GitHubIssueTypeTarget) =>
     ["github", "repository", owner, repository, "issue", issueNumber, "issue-type"] as const,
   pullRequests: ({
@@ -1637,6 +1643,7 @@ export function repositoryIssuesQueryOptions(target: GitHubIssuesTarget) {
         label: target.label,
         ...(target.milestone ? { milestone: target.milestone } : {}),
         ...(target.linkedPullRequest ? { linkedPullRequest: true } : {}),
+        ...(target.issueType ? { issueType: target.issueType } : {}),
         sort: target.sort,
         page: target.page,
         ...(target.closeReason ? { closeReason: target.closeReason } : {}),
@@ -1810,6 +1817,18 @@ export function repositoryIssueTypeStatusQueryOptions(target: GitHubIssueTypeTar
         issueNumber: target.issueNumber,
       }),
     staleTime: GITHUB_QUERY_STALE_TIME,
+  });
+}
+
+export function repositoryIssueTypesQueryOptions(target: GitHubRepositoryTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.issueTypes(target),
+    queryFn: () =>
+      invoke<GitHubIssueType[]>("github_list_repository_issue_types", {
+        owner: target.owner,
+        repository: target.repository,
+      }),
+    staleTime: 5 * GITHUB_QUERY_STALE_TIME,
   });
 }
 

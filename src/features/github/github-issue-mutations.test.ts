@@ -744,6 +744,33 @@ describe("GitHub Issue mutations", () => {
     expect(queryClient.getQueryState(linkedListKey)?.isInvalidated).toBe(true);
   });
 
+  it("invalidates Issue-type caches when an Issue changes", () => {
+    const queryClient = new QueryClient();
+    const typeListKey = githubQueryKeys.issues({
+      owner: target.owner,
+      repository: target.repository,
+      state: "open",
+      assignment: "all",
+      query: "",
+      label: "",
+      issueType: "Bug",
+      sort: "updated",
+      page: 1,
+    });
+    queryClient.setQueryData<GitHubIssuePage>(typeListKey, {
+      issues: [issue],
+      totalCount: 1,
+      page: 1,
+      hasPrevious: false,
+      hasMore: false,
+    });
+
+    syncUpdatedIssue(queryClient, target, { ...issue, title: "Updated title" });
+
+    expect(queryClient.getQueryData<GitHubIssuePage>(typeListKey)?.issues).toEqual([issue]);
+    expect(queryClient.getQueryState(typeListKey)?.isInvalidated).toBe(true);
+  });
+
   it("invalidates only Issue detail, list, and inbox roots", async () => {
     const queryClient = new QueryClient();
     const affected = [

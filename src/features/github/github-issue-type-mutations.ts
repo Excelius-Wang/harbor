@@ -34,5 +34,6 @@ export async function invalidateRepositoryIssueType(
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: githubQueryKeys.issueTypeStatus(target) }),
     queryClient.invalidateQueries({ queryKey: githubQueryKeys.issueRoot(target) }),
+    queryClient.invalidateQueries({ queryKey: githubQueryKeys.issuesRoot(target) }),
   ]);
 }

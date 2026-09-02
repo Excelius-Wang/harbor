@@ -50,6 +50,7 @@ import {
   repositoryIssueDetailQueryOptions,
   repositoryIssueLabelsQueryOptions,
   repositoryIssueMilestonesQueryOptions,
+  repositoryIssueTypesQueryOptions,
   repositoryIssuesQueryOptions,
 } from "./github-queries";
 
@@ -57,6 +58,7 @@ const ALL_LABELS = "__all__";
 const ALL_CLOSE_REASONS = "__all_close_reasons__";
 const ALL_MILESTONES = "__all_milestones__";
 const ALL_LINKED_PULL_REQUESTS = "__all_linked_pull_requests__";
+const ALL_ISSUE_TYPES = "__all_issue_types__";
 
 const GitHubIssueTaxonomyView = lazy(() =>
   import("./github-issue-taxonomy-view").then((module) => ({
@@ -97,6 +99,7 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
   const [label, setLabel] = useState("");
   const [milestone, setMilestone] = useState<string | null>(null);
   const [linkedPullRequest, setLinkedPullRequest] = useState(false);
+  const [issueType, setIssueType] = useState<string | null>(null);
   const [closeReason, setCloseReason] = useState<GitHubIssueCloseReasonFilter | null>(null);
   const [sort, setSort] = useState<GitHubIssueSort>("updated");
   const [page, setPage] = useState(1);
@@ -113,6 +116,7 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
       label,
       milestone,
       linkedPullRequest,
+      issueType,
       closeReason,
       sort,
       page,
@@ -128,6 +132,12 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
       repository: repository.name,
     })
   );
+  const issueTypesResult = useQuery(
+    repositoryIssueTypesQueryOptions({ owner: repository.owner, repository: repository.name })
+  );
+  const selectedIssueTypeNodeId = issueTypesResult.data?.find(
+    (item) => item.name === issueType
+  )?.nodeId;
   const selectedMilestoneNumber = milestonesResult.data?.milestones.find(
     (item) => item.title === milestone
   )?.number;
@@ -140,7 +150,9 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
         ? { source: "labels" as const, error: parseIpcError(labelsResult.error) }
         : milestonesResult.error
           ? { source: "milestones" as const, error: parseIpcError(milestonesResult.error) }
-          : null;
+          : issueTypesResult.error
+            ? { source: "issueTypes" as const, error: parseIpcError(issueTypesResult.error) }
+            : null;
 
   useEffect(() => {
     setState("open");
@@ -150,6 +162,7 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
     setLabel("");
     setMilestone(null);
     setLinkedPullRequest(false);
+    setIssueType(null);
     setCloseReason(null);
     setSort("updated");
     setPage(1);
@@ -157,6 +170,17 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
     setCreatingIssue(false);
     setManagingTaxonomy(false);
   }, [repository.id]);
+
+  useEffect(() => {
+    if (
+      issueType &&
+      issueTypesResult.data &&
+      !issueTypesResult.data.some((item) => item.name === issueType)
+    ) {
+      setIssueType(null);
+      setPage(1);
+    }
+  }, [issueType, issueTypesResult.data]);
 
   useEffect(() => {
     if (
@@ -256,8 +280,8 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
           className={cn(
             "grid min-w-0 grid-cols-1 gap-2 @min-[480px]/issues:grid-cols-3",
             state === "closed"
-              ? "@min-[1040px]/issues:grid-cols-[minmax(180px,1fr)_repeat(6,minmax(128px,144px))]"
-              : "@min-[900px]/issues:grid-cols-[minmax(180px,1fr)_repeat(5,minmax(128px,144px))]"
+              ? "@min-[1180px]/issues:grid-cols-[minmax(180px,1fr)_repeat(7,minmax(128px,144px))]"
+              : "@min-[1040px]/issues:grid-cols-[minmax(180px,1fr)_repeat(6,minmax(128px,144px))]"
           )}
           onSubmit={(event) => {
             event.preventDefault();
@@ -297,6 +321,39 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
                 <SelectItem value="unassigned">
                   {t("workspace.repositories.unassignedIssues")}
                 </SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <Select
+            value={selectedIssueTypeNodeId ?? ALL_ISSUE_TYPES}
+            onValueChange={(value) =>
+              resetPage(() =>
+                setIssueType(
+                  value === ALL_ISSUE_TYPES
+                    ? null
+                    : (issueTypesResult.data?.find((item) => item.nodeId === value)?.name ?? null)
+                )
+              )
+            }
+          >
+            <SelectTrigger
+              size="sm"
+              className="w-full min-w-0"
+              aria-label={t("workspace.repositories.issueTypeFilter")}
+              disabled={issueTypesResult.isPending}
+            >
+              <SelectValue placeholder={t("workspace.repositories.allIssueTypes")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value={ALL_ISSUE_TYPES}>
+                  {t("workspace.repositories.allIssueTypes")}
+                </SelectItem>
+                {(issueTypesResult.data ?? []).map((item) => (
+                  <SelectItem key={item.nodeId} value={item.nodeId}>
+                    {item.name}
+                  </SelectItem>
+                ))}
               </SelectGroup>
             </SelectContent>
           </Select>
@@ -442,7 +499,9 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
                   ? issuesResult.refetch()
                   : supplementalError.source === "labels"
                     ? labelsResult.refetch()
-                    : milestonesResult.refetch())
+                    : supplementalError.source === "milestones"
+                      ? milestonesResult.refetch()
+                      : issueTypesResult.refetch())
               }
             >
               {t("workspace.repositories.retry")}
