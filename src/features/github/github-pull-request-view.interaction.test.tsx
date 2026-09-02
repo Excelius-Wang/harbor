@@ -95,6 +95,39 @@ describe("GitHub Pull Request list filters", () => {
     });
   });
 
+  it("sends the created-by-me filter", async () => {
+    const user = userEvent.setup();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <GitHubPullRequestView repository={repository} />
+      </QueryClientProvider>
+    );
+
+    const authorTrigger = await screen.findByRole("combobox", {
+      name: "workspace.repositories.pullRequestAuthorFilter",
+    });
+    await user.click(authorTrigger);
+    await user.click(
+      await screen.findByRole("option", {
+        name: "workspace.repositories.createdByMePullRequests",
+      })
+    );
+
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith("github_list_repository_pull_requests", {
+        owner: "octocat",
+        repository: "hello-world",
+        pullRequestState: "open",
+        query: "",
+        label: "",
+        createdByMe: true,
+        sort: "updated",
+        page: 1,
+      });
+    });
+  });
+
   it("sends the linked-to-Issue filter", async () => {
     const user = userEvent.setup();
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
