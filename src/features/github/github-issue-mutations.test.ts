@@ -716,6 +716,34 @@ describe("GitHub Issue mutations", () => {
     ]);
   });
 
+  it("invalidates linked-pull-request caches when an Issue changes", () => {
+    const queryClient = new QueryClient();
+    const linkedListKey = githubQueryKeys.issues({
+      owner: target.owner,
+      repository: target.repository,
+      state: "open",
+      assignment: "all",
+      query: "",
+      label: "",
+      linkedPullRequest: true,
+      sort: "updated",
+      page: 1,
+    });
+    queryClient.setQueryData<GitHubIssuePage>(linkedListKey, {
+      issues: [issue],
+      totalCount: 1,
+      page: 1,
+      hasPrevious: false,
+      hasMore: false,
+    });
+
+    const updatedIssue = { ...issue, title: "Updated title" };
+    syncUpdatedIssue(queryClient, target, updatedIssue);
+
+    expect(queryClient.getQueryData<GitHubIssuePage>(linkedListKey)?.issues).toEqual([issue]);
+    expect(queryClient.getQueryState(linkedListKey)?.isInvalidated).toBe(true);
+  });
+
   it("invalidates only Issue detail, list, and inbox roots", async () => {
     const queryClient = new QueryClient();
     const affected = [

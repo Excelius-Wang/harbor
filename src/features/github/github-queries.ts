@@ -207,6 +207,7 @@ export type GitHubIssuesTarget = GitHubRepositoryTarget & {
   query: string;
   label: string;
   milestone?: string | null;
+  linkedPullRequest?: boolean;
   sort: GitHubIssueSort;
   closeReason?: GitHubIssueCloseReasonFilter | null;
   page: number;
@@ -669,6 +670,7 @@ export const githubQueryKeys = {
     query,
     label,
     milestone,
+    linkedPullRequest,
     sort,
     closeReason,
     page,
@@ -687,6 +689,7 @@ export const githubQueryKeys = {
       sort,
       page,
       milestone ?? null,
+      linkedPullRequest ?? false,
     ] as const,
   issuesRoot: ({ owner, repository }: GitHubRepositoryTarget) =>
     ["github", "repository", owner, repository, "issues"] as const,
@@ -1633,6 +1636,7 @@ export function repositoryIssuesQueryOptions(target: GitHubIssuesTarget) {
         query: target.query,
         label: target.label,
         ...(target.milestone ? { milestone: target.milestone } : {}),
+        ...(target.linkedPullRequest ? { linkedPullRequest: true } : {}),
         sort: target.sort,
         page: target.page,
         ...(target.closeReason ? { closeReason: target.closeReason } : {}),

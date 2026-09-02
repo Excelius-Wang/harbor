@@ -56,6 +56,7 @@ import {
 const ALL_LABELS = "__all__";
 const ALL_CLOSE_REASONS = "__all_close_reasons__";
 const ALL_MILESTONES = "__all_milestones__";
+const ALL_LINKED_PULL_REQUESTS = "__all_linked_pull_requests__";
 
 const GitHubIssueTaxonomyView = lazy(() =>
   import("./github-issue-taxonomy-view").then((module) => ({
@@ -95,6 +96,7 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
   const [query, setQuery] = useState("");
   const [label, setLabel] = useState("");
   const [milestone, setMilestone] = useState<string | null>(null);
+  const [linkedPullRequest, setLinkedPullRequest] = useState(false);
   const [closeReason, setCloseReason] = useState<GitHubIssueCloseReasonFilter | null>(null);
   const [sort, setSort] = useState<GitHubIssueSort>("updated");
   const [page, setPage] = useState(1);
@@ -110,6 +112,7 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
       query,
       label,
       milestone,
+      linkedPullRequest,
       closeReason,
       sort,
       page,
@@ -146,6 +149,7 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
     setQuery("");
     setLabel("");
     setMilestone(null);
+    setLinkedPullRequest(false);
     setCloseReason(null);
     setSort("updated");
     setPage(1);
@@ -252,8 +256,8 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
           className={cn(
             "grid min-w-0 grid-cols-1 gap-2 @min-[480px]/issues:grid-cols-3",
             state === "closed"
-              ? "@min-[720px]/issues:grid-cols-[minmax(180px,1fr)_repeat(5,minmax(128px,144px))]"
-              : "@min-[720px]/issues:grid-cols-[minmax(180px,1fr)_repeat(4,minmax(128px,144px))]"
+              ? "@min-[1040px]/issues:grid-cols-[minmax(180px,1fr)_repeat(6,minmax(128px,144px))]"
+              : "@min-[900px]/issues:grid-cols-[minmax(180px,1fr)_repeat(5,minmax(128px,144px))]"
           )}
           onSubmit={(event) => {
             event.preventDefault();
@@ -328,6 +332,28 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
                     {item.title}
                   </SelectItem>
                 ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <Select
+            value={linkedPullRequest ? "linked" : ALL_LINKED_PULL_REQUESTS}
+            onValueChange={(value) => resetPage(() => setLinkedPullRequest(value === "linked"))}
+          >
+            <SelectTrigger
+              size="sm"
+              className="w-full min-w-0"
+              aria-label={t("workspace.repositories.issueLinkedPullRequestFilter")}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value={ALL_LINKED_PULL_REQUESTS}>
+                  {t("workspace.repositories.allIssueLinkedPullRequests")}
+                </SelectItem>
+                <SelectItem value="linked">
+                  {t("workspace.repositories.issueLinkedPullRequest")}
+                </SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>

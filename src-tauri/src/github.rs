@@ -2858,6 +2858,7 @@ mod tests {
             query: String::new(),
             label: String::new(),
             milestone: None,
+            linked_pull_request: false,
             sort: GitHubIssueSort::Updated,
             page: 1,
             close_reason: None,

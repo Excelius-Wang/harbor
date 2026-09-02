@@ -287,3 +287,32 @@ describe("GitHub Issue milestone filter", () => {
     });
   });
 });
+
+describe("GitHub Issue linked pull request filter", () => {
+  it("sends the linked pull request search filter", async () => {
+    const user = userEvent.setup();
+    renderView();
+
+    const linkedTrigger = await screen.findByRole("combobox", {
+      name: "workspace.repositories.issueLinkedPullRequestFilter",
+    });
+    await user.click(linkedTrigger);
+    await user.click(
+      await screen.findByRole("option", { name: "workspace.repositories.issueLinkedPullRequest" })
+    );
+
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith("github_list_repository_issues", {
+        owner: "octocat",
+        repository: "hello-world",
+        issueState: "open",
+        assignment: "all",
+        query: "",
+        label: "",
+        linkedPullRequest: true,
+        sort: "updated",
+        page: 1,
+      });
+    });
+  });
+});
