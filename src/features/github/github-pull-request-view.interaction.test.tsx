@@ -62,6 +62,39 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe("GitHub Pull Request list filters", () => {
+  it("sends the direct review-requested filter", async () => {
+    const user = userEvent.setup();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <GitHubPullRequestView repository={repository} />
+      </QueryClientProvider>
+    );
+
+    const reviewRequestedTrigger = await screen.findByRole("combobox", {
+      name: "workspace.repositories.pullRequestReviewRequestedFilter",
+    });
+    await user.click(reviewRequestedTrigger);
+    await user.click(
+      await screen.findByRole("option", {
+        name: "workspace.repositories.pullRequestReviewRequested",
+      })
+    );
+
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith("github_list_repository_pull_requests", {
+        owner: "octocat",
+        repository: "hello-world",
+        pullRequestState: "open",
+        query: "",
+        label: "",
+        reviewRequested: true,
+        sort: "updated",
+        page: 1,
+      });
+    });
+  });
+
   it("sends the linked-to-Issue filter", async () => {
     const user = userEvent.setup();
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
