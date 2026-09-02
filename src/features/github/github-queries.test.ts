@@ -1133,6 +1133,7 @@ describe("GitHub repository queries", () => {
       query: "author:hubot crash",
       label: "bug",
       review: "approved",
+      merge: "merged",
       sort: "comments",
       page: 2,
     });
@@ -1149,6 +1150,7 @@ describe("GitHub repository queries", () => {
       "author:hubot crash",
       "bug",
       "approved",
+      "merged",
       "comments",
       2,
     ]);
@@ -1159,6 +1161,7 @@ describe("GitHub repository queries", () => {
       query: "author:hubot crash",
       label: "bug",
       review: "approved",
+      merge: "merged",
       sort: "comments",
       page: 2,
     });

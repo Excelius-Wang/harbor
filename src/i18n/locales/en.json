@@ -1475,6 +1475,12 @@
         "approved": "Approved",
         "changesRequested": "Changes requested"
       },
+      "pullRequestMergeFilter": "Merge status",
+      "allPullRequestMerges": "All merge statuses",
+      "pullRequestMergeFilters": {
+        "merged": "Merged",
+        "unmerged": "Not merged"
+      },
       "pullRequestPagination": "Pull request pages",
       "backToPullRequests": "Back to pull requests",
       "openedPullRequestBy": "@{{author}} opened this pull request on {{date}}",

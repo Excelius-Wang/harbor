@@ -1686,6 +1686,7 @@ export type GitHubIssueDetailPage = {
 export type GitHubPullRequestState = "open" | "closed";
 export type GitHubPullRequestSort = "updated" | "created" | "comments";
 export type GitHubPullRequestReviewFilter = "none" | "required" | "approved" | "changesRequested";
+export type GitHubPullRequestMergeFilter = "merged" | "unmerged";
 export type GitHubPullRequestInboxScope = "authored" | "assigned" | "reviewRequested";
 export type GitHubPullRequestMergeMethod = "merge" | "squash" | "rebase";
 export type GitHubPullRequestAutoMergeState =

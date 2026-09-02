@@ -61,7 +61,7 @@ beforeEach(() => {
 
 afterEach(() => cleanup());
 
-describe("GitHub Pull Request review filter", () => {
+describe("GitHub Pull Request list filters", () => {
   it("sends the selected GitHub review status", async () => {
     const user = userEvent.setup();
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -89,6 +89,39 @@ describe("GitHub Pull Request review filter", () => {
         query: "",
         label: "",
         review: "approved",
+        sort: "updated",
+        page: 1,
+      });
+    });
+  });
+
+  it("sends the selected GitHub merge status", async () => {
+    const user = userEvent.setup();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <GitHubPullRequestView repository={repository} />
+      </QueryClientProvider>
+    );
+
+    const mergeTrigger = await screen.findByRole("combobox", {
+      name: "workspace.repositories.pullRequestMergeFilter",
+    });
+    await user.click(mergeTrigger);
+    await user.click(
+      await screen.findByRole("option", {
+        name: "workspace.repositories.pullRequestMergeFilters.merged",
+      })
+    );
+
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith("github_list_repository_pull_requests", {
+        owner: "octocat",
+        repository: "hello-world",
+        pullRequestState: "closed",
+        query: "",
+        label: "",
+        merge: "merged",
         sort: "updated",
         page: 1,
       });
