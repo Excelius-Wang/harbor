@@ -1461,6 +1461,14 @@
       "openPullRequests": "开放",
       "closedPullRequests": "已关闭",
       "searchPullRequests": "搜索拉取请求…",
+      "pullRequestReviewFilter": "评审状态",
+      "allPullRequestReviews": "全部评审状态",
+      "pullRequestReviewFilters": {
+        "none": "尚未评审",
+        "required": "需要评审",
+        "approved": "已批准",
+        "changesRequested": "要求修改"
+      },
       "pullRequestPagination": "拉取请求分页",
       "backToPullRequests": "返回拉取请求",
       "openedPullRequestBy": "@{{author}} 创建于 {{date}}",

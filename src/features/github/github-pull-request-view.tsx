@@ -27,6 +27,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { parseIpcError } from "@/lib/ipc-error";
 import { cn } from "@/lib/utils";
 import type {
+  GitHubPullRequestReviewFilter,
   GitHubPullRequestSort,
   GitHubPullRequestState,
   GitHubRepository,
@@ -42,6 +43,7 @@ import {
 } from "./github-queries";
 
 const ALL_LABELS = "__all__";
+const ALL_REVIEWS = "__all_reviews__";
 
 function PullRequestSkeletons() {
   return (
@@ -73,6 +75,7 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
   const [draftQuery, setDraftQuery] = useState("");
   const [query, setQuery] = useState("");
   const [label, setLabel] = useState("");
+  const [review, setReview] = useState<GitHubPullRequestReviewFilter | null>(null);
   const [sort, setSort] = useState<GitHubPullRequestSort>("updated");
   const [page, setPage] = useState(1);
   const [selectedPullRequestNumber, setSelectedPullRequestNumber] = useState<number | null>(null);
@@ -84,6 +87,7 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
       state,
       query,
       label,
+      review,
       sort,
       page,
     }),
@@ -107,6 +111,7 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
     setDraftQuery("");
     setQuery("");
     setLabel("");
+    setReview(null);
     setSort("updated");
     setPage(1);
     setSelectedPullRequestNumber(null);
@@ -174,7 +179,7 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
           </div>
         </div>
         <form
-          className="grid min-w-0 grid-cols-1 gap-2 @min-[480px]/pulls:grid-cols-3 @min-[720px]/pulls:grid-cols-[minmax(180px,1fr)_repeat(2,minmax(128px,144px))]"
+          className="grid min-w-0 grid-cols-1 gap-2 @min-[480px]/pulls:grid-cols-3 @min-[720px]/pulls:grid-cols-[minmax(180px,1fr)_repeat(3,minmax(128px,144px))]"
           onSubmit={(event) => {
             event.preventDefault();
             resetPage(() => setQuery(draftQuery.trim()));
@@ -213,6 +218,41 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
                     {item.name}
                   </SelectItem>
                 ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <Select
+            value={review ?? ALL_REVIEWS}
+            onValueChange={(value) =>
+              resetPage(() =>
+                setReview(value === ALL_REVIEWS ? null : (value as GitHubPullRequestReviewFilter))
+              )
+            }
+          >
+            <SelectTrigger
+              size="sm"
+              className="w-full min-w-0"
+              aria-label={t("workspace.repositories.pullRequestReviewFilter")}
+            >
+              <SelectValue placeholder={t("workspace.repositories.allPullRequestReviews")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value={ALL_REVIEWS}>
+                  {t("workspace.repositories.allPullRequestReviews")}
+                </SelectItem>
+                <SelectItem value="none">
+                  {t("workspace.repositories.pullRequestReviewFilters.none")}
+                </SelectItem>
+                <SelectItem value="required">
+                  {t("workspace.repositories.pullRequestReviewFilters.required")}
+                </SelectItem>
+                <SelectItem value="approved">
+                  {t("workspace.repositories.pullRequestReviewFilters.approved")}
+                </SelectItem>
+                <SelectItem value="changesRequested">
+                  {t("workspace.repositories.pullRequestReviewFilters.changesRequested")}
+                </SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
