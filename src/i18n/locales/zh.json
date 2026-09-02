@@ -1477,6 +1477,9 @@
         "approved": "已批准",
         "changesRequested": "要求修改"
       },
+      "pullRequestReviewRequestedFilter": "评审请求",
+      "allPullRequestReviewRequests": "全部评审请求",
+      "pullRequestReviewRequested": "请求我评审",
       "pullRequestMergeFilter": "合入状态",
       "allPullRequestMerges": "全部合入状态",
       "pullRequestMergeFilters": {

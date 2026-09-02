@@ -1135,6 +1135,7 @@ describe("GitHub repository queries", () => {
       review: "approved",
       merge: "merged",
       status: "success",
+      reviewRequested: true,
       sort: "comments",
       page: 2,
     });
@@ -1155,6 +1156,7 @@ describe("GitHub repository queries", () => {
       "success",
       null,
       false,
+      true,
       "comments",
       2,
     ]);
@@ -1167,6 +1169,7 @@ describe("GitHub repository queries", () => {
       review: "approved",
       merge: "merged",
       status: "success",
+      reviewRequested: true,
       sort: "comments",
       page: 2,
     });
