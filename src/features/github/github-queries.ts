@@ -88,6 +88,7 @@ import type {
   GitHubRepositoryInvitationPage,
   GitHubRepositoryRelationship,
   GitHubRepositorySettings,
+  GitHubRepositoryTopics,
   GitHubRepositoryCommitPage,
   GitHubCodeScanningInstancePage,
   GitHubSecretScanningLocationPage,
@@ -426,6 +427,8 @@ export const githubQueryKeys = {
   repositoryCreationOptions: ["github", "repository-creation-options"] as const,
   repositorySettings: ({ owner, repository }: GitHubRepositoryTarget) =>
     ["github", "repository", owner, repository, "settings"] as const,
+  repositoryTopics: ({ owner, repository }: GitHubRepositoryTarget) =>
+    ["github", "repository", owner, repository, "topics"] as const,
   repositoryInsightsRoot: ({ owner, repository }: GitHubRepositoryTarget) =>
     ["github", "repository", owner, repository, "insights"] as const,
   repositoryInsightsOverview: ({ owner, repository }: GitHubRepositoryTarget) =>
@@ -1084,6 +1087,14 @@ export function personalRepositorySettingsQueryOptions(target: GitHubRepositoryT
     queryKey: githubQueryKeys.repositorySettings(target),
     queryFn: () =>
       invoke<GitHubRepositorySettings>("github_get_personal_repository_settings", target),
+    staleTime: GITHUB_QUERY_STALE_TIME,
+  });
+}
+
+export function personalRepositoryTopicsQueryOptions(target: GitHubRepositoryTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.repositoryTopics(target),
+    queryFn: () => invoke<GitHubRepositoryTopics>("github_get_personal_repository_topics", target),
     staleTime: GITHUB_QUERY_STALE_TIME,
   });
 }

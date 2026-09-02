@@ -436,6 +436,10 @@ export type GitHubRepositorySettingsUpdate = Omit<GitHubRepositorySettings, "rep
   confirmArchiveChange: boolean;
 };
 
+export type GitHubRepositoryTopics = {
+  names: string[];
+};
+
 export type GitHubInsightsTrafficPeriod = "day" | "week";
 
 export type GitHubInsightsStatisticStatus = "ready" | "building" | "unavailable";

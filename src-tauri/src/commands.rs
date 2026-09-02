@@ -65,7 +65,8 @@ use crate::{
         GitHubRepositoryInsightsContributors, GitHubRepositoryInsightsOverview,
         GitHubRepositoryInsightsTraffic, GitHubRepositoryInvitationPage,
         GitHubRepositoryInviteResult, GitHubRepositoryPage, GitHubRepositoryRelationship,
-        GitHubRepositorySettings, GitHubRepositorySettingsUpdate, GitHubRepositoryWatchLevel,
+        GitHubRepositorySettings, GitHubRepositorySettingsUpdate, GitHubRepositoryTopics,
+        GitHubRepositoryTopicsMutation, GitHubRepositoryWatchLevel,
         GitHubSecretScanningLocationPage, GitHubSecurityAlertDetail, GitHubSecurityAlertFilters,
         GitHubSecurityAlertKind, GitHubSecurityAlertMutation, GitHubSecurityAlertPage,
         GitHubSecurityAlertSeverityFilter, GitHubSecurityAlertSort, GitHubSecurityAlertStateFilter,
@@ -539,6 +540,33 @@ pub async fn github_update_personal_repository_settings(
             repository.name(),
             &validate_repository_settings_update(update)?,
         )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_get_personal_repository_topics(
+    owner: String,
+    repository: String,
+    state: State<'_, AppState>,
+) -> Result<GitHubRepositoryTopics, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .repository_topics(repository.owner(), repository.name())
+        .await
+}
+
+#[tauri::command]
+pub async fn github_update_personal_repository_topics(
+    owner: String,
+    repository: String,
+    mutation: GitHubRepositoryTopicsMutation,
+    state: State<'_, AppState>,
+) -> Result<GitHubRepositoryTopics, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    state
+        .github
+        .update_repository_topics(repository.owner(), repository.name(), &mutation)
         .await
 }
 

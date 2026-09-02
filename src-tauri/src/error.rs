@@ -49,6 +49,10 @@ pub enum AppError {
     GitHubIssueDeletionConflict(String),
     #[error("GitHub could not confirm Issue transfer: {0}")]
     GitHubIssueTransferConflict(String),
+    #[error("GitHub repository topics changed before saving: {0}")]
+    GitHubRepositoryTopicsStale(String),
+    #[error("GitHub repository topics changed: {0}")]
+    GitHubRepositoryTopicsConflict(String),
     #[error("GitHub Issue moved: {0}")]
     GitHubIssueMoved(String),
     #[error("GitHub workflow artifact has expired")]
@@ -105,6 +109,8 @@ impl Serialize for AppError {
             Self::GitHubIssueStateConflict(_) => "githubIssueStateConflict",
             Self::GitHubIssueDeletionConflict(_) => "githubIssueDeletionConflict",
             Self::GitHubIssueTransferConflict(_) => "githubIssueTransferConflict",
+            Self::GitHubRepositoryTopicsStale(_) => "githubRepositoryTopicsStale",
+            Self::GitHubRepositoryTopicsConflict(_) => "githubRepositoryTopicsConflict",
             Self::GitHubIssueMoved(_) => "githubIssueMoved",
             Self::GitHubArtifactExpired => "githubArtifactExpired",
             Self::GitHubAuthentication(_) => "githubAuthentication",
@@ -181,6 +187,38 @@ mod tests {
             serde_json::json!({
                 "code": "githubIssueTransferConflict",
                 "message": "GitHub could not confirm Issue transfer: the transfer may have persisted"
+            })
+        );
+    }
+
+    #[test]
+    fn github_repository_topics_conflict_has_a_stable_ipc_code() {
+        let payload = serde_json::to_value(AppError::GitHubRepositoryTopicsConflict(
+            "refresh before saving".to_string(),
+        ))
+        .expect("serialize error");
+
+        assert_eq!(
+            payload,
+            serde_json::json!({
+                "code": "githubRepositoryTopicsConflict",
+                "message": "GitHub repository topics changed: refresh before saving"
+            })
+        );
+    }
+
+    #[test]
+    fn github_repository_topics_stale_has_a_stable_ipc_code() {
+        let payload = serde_json::to_value(AppError::GitHubRepositoryTopicsStale(
+            "refresh before saving".to_string(),
+        ))
+        .expect("serialize error");
+
+        assert_eq!(
+            payload,
+            serde_json::json!({
+                "code": "githubRepositoryTopicsStale",
+                "message": "GitHub repository topics changed before saving: refresh before saving"
             })
         );
     }
