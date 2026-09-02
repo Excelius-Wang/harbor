@@ -1467,6 +1467,14 @@
       "openPullRequests": "Open",
       "closedPullRequests": "Closed",
       "searchPullRequests": "Search pull requests…",
+      "pullRequestReviewFilter": "Review status",
+      "allPullRequestReviews": "All review statuses",
+      "pullRequestReviewFilters": {
+        "none": "No reviews",
+        "required": "Review required",
+        "approved": "Approved",
+        "changesRequested": "Changes requested"
+      },
       "pullRequestPagination": "Pull request pages",
       "backToPullRequests": "Back to pull requests",
       "openedPullRequestBy": "@{{author}} opened this pull request on {{date}}",

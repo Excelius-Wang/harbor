@@ -289,6 +289,26 @@ pub enum GitHubPullRequestSort {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub enum GitHubPullRequestReviewFilter {
+    None,
+    Required,
+    Approved,
+    ChangesRequested,
+}
+
+impl GitHubPullRequestReviewFilter {
+    fn search_qualifier(self) -> &'static str {
+        match self {
+            Self::None => "review:none",
+            Self::Required => "review:required",
+            Self::Approved => "review:approved",
+            Self::ChangesRequested => "review:changes_requested",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub enum GitHubPullRequestInboxScope {
     Authored,
     Assigned,
@@ -300,6 +320,7 @@ pub struct GitHubPullRequestFilters {
     pub state: GitHubPullRequestState,
     pub query: String,
     pub label: String,
+    pub review: Option<GitHubPullRequestReviewFilter>,
     pub sort: GitHubPullRequestSort,
     pub page: u32,
 }
@@ -1810,7 +1831,7 @@ fn pull_request_search_query(
         GitHubPullRequestState::Closed => "closed",
     };
     let mut query = vec![
-        pull_request_search_terms(&filters.query),
+        pull_request_search_terms(&filters.query, filters.review),
         format!("repo:{owner}/{repository}"),
         "is:pr".to_string(),
         format!("is:{state}"),
@@ -1818,6 +1839,9 @@ fn pull_request_search_query(
     if !filters.label.is_empty() {
         let label = filters.label.replace('\\', "\\\\").replace('"', "\\\"");
         query.push(format!("label:\"{label}\""));
+    }
+    if let Some(review) = filters.review {
+        query.push(review.search_qualifier().to_string());
     }
     query
         .into_iter()
@@ -1878,14 +1902,18 @@ fn pull_request_inbox_search_terms(query: &str) -> String {
         .join(" ")
 }
 
-fn pull_request_search_terms(query: &str) -> String {
+fn pull_request_search_terms(
+    query: &str,
+    selected_review: Option<GitHubPullRequestReviewFilter>,
+) -> String {
     query
         .split_whitespace()
         .filter(|term| {
-            let term = term.to_ascii_lowercase();
-            !["repo:", "org:", "user:", "is:", "type:", "state:"]
+            let term = term.trim_matches(['-', '(', ')']).to_ascii_lowercase();
+            !(["repo:", "org:", "user:", "is:", "type:", "state:"]
                 .iter()
                 .any(|prefix| term.starts_with(prefix))
+                || selected_review.is_some() && term.starts_with("review:"))
         })
         .collect::<Vec<_>>()
         .join(" ")
@@ -4184,18 +4212,43 @@ mod tests {
     }
 
     #[test]
-    fn pull_request_search_keeps_review_filters_but_enforces_repository_and_state() {
+    fn selected_pull_request_review_filter_owns_the_review_qualifier() {
         let filters = GitHubPullRequestFilters {
             state: GitHubPullRequestState::Closed,
-            query: "repo:other/project author:hubot review:approved crash".to_string(),
+            query: "repo:other/project author:hubot (-review:required) crash".to_string(),
             label: "release candidate".to_string(),
+            review: Some(GitHubPullRequestReviewFilter::Approved),
             sort: GitHubPullRequestSort::Updated,
             page: 1,
         };
 
         assert_eq!(
             pull_request_search_query("octocat", "hello-world", &filters),
-            "author:hubot review:approved crash repo:octocat/hello-world is:pr is:closed label:\"release candidate\""
+            "author:hubot crash repo:octocat/hello-world is:pr is:closed label:\"release candidate\" review:approved"
+        );
+    }
+
+    #[test]
+    fn pull_request_review_filters_use_github_search_values() {
+        assert_eq!(
+            pull_request_search_terms("review:approved crash", None),
+            "review:approved crash"
+        );
+        assert_eq!(
+            GitHubPullRequestReviewFilter::None.search_qualifier(),
+            "review:none"
+        );
+        assert_eq!(
+            GitHubPullRequestReviewFilter::Required.search_qualifier(),
+            "review:required"
+        );
+        assert_eq!(
+            GitHubPullRequestReviewFilter::Approved.search_qualifier(),
+            "review:approved"
+        );
+        assert_eq!(
+            GitHubPullRequestReviewFilter::ChangesRequested.search_qualifier(),
+            "review:changes_requested"
         );
     }
 

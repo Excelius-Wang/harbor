@@ -1132,6 +1132,7 @@ describe("GitHub repository queries", () => {
       state: "closed",
       query: "author:hubot crash",
       label: "bug",
+      review: "approved",
       sort: "comments",
       page: 2,
     });
@@ -1147,6 +1148,7 @@ describe("GitHub repository queries", () => {
       "closed",
       "author:hubot crash",
       "bug",
+      "approved",
       "comments",
       2,
     ]);
@@ -1156,6 +1158,7 @@ describe("GitHub repository queries", () => {
       pullRequestState: "closed",
       query: "author:hubot crash",
       label: "bug",
+      review: "approved",
       sort: "comments",
       page: 2,
     });
