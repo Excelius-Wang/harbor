@@ -92,6 +92,7 @@ pub struct GitHubIssueFilters {
     pub state: GitHubIssueState,
     pub assignment: GitHubIssueAssignment,
     pub created_by_me: bool,
+    pub mentioned_to_me: bool,
     pub query: String,
     pub label: String,
     pub milestone: Option<String>,
@@ -700,7 +701,11 @@ fn issue_search_query(owner: &str, repository: &str, filters: &GitHubIssueFilter
         GitHubIssueState::Closed => "closed",
     };
     let mut query = vec![
-        issue_search_terms(&filters.query, filters.created_by_me),
+        issue_search_terms(
+            &filters.query,
+            filters.created_by_me,
+            filters.mentioned_to_me,
+        ),
         format!("repo:{owner}/{repository}"),
         "is:issue".to_string(),
         format!("is:{state}"),
@@ -712,6 +717,9 @@ fn issue_search_query(owner: &str, repository: &str, filters: &GitHubIssueFilter
     }
     if filters.created_by_me {
         query.push("author:@me".to_string());
+    }
+    if filters.mentioned_to_me {
+        query.push("mentions:@me".to_string());
     }
     if !filters.label.is_empty() {
         let label = filters.label.replace('\\', "\\\\").replace('"', "\\\"");
@@ -788,7 +796,11 @@ fn issue_inbox_search_terms(query: &str) -> String {
         .join(" ")
 }
 
-fn issue_search_terms(query: &str, selected_created_by_me: bool) -> String {
+fn issue_search_terms(
+    query: &str,
+    selected_created_by_me: bool,
+    selected_mentioned_to_me: bool,
+) -> String {
     query
         .split_whitespace()
         .filter(|term| {
@@ -805,7 +817,8 @@ fn issue_search_terms(query: &str, selected_created_by_me: bool) -> String {
             ]
             .iter()
             .any(|prefix| term.starts_with(prefix))
-                || selected_created_by_me && term.starts_with("author:"))
+                || selected_created_by_me && term.starts_with("author:")
+                || selected_mentioned_to_me && term.starts_with("mentions:"))
         })
         .collect::<Vec<_>>()
         .join(" ")

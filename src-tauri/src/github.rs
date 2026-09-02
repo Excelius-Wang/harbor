@@ -2988,6 +2988,7 @@ mod tests {
             state: GitHubIssueState::Open,
             assignment: GitHubIssueAssignment::All,
             created_by_me: false,
+            mentioned_to_me: false,
             query: String::new(),
             label: String::new(),
             milestone: None,

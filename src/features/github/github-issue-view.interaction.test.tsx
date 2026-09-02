@@ -159,6 +159,37 @@ describe("GitHub Issue author filter", () => {
   });
 });
 
+describe("GitHub Issue mentions filter", () => {
+  it("sends the mentioning-me search filter", async () => {
+    const user = userEvent.setup();
+    renderView();
+
+    const mentionsTrigger = await screen.findByRole("combobox", {
+      name: "workspace.repositories.issueMentionedFilter",
+    });
+    await user.click(mentionsTrigger);
+    await user.click(
+      await screen.findByRole("option", {
+        name: "workspace.repositories.mentionedToMeIssues",
+      })
+    );
+
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith("github_list_repository_issues", {
+        owner: "octocat",
+        repository: "hello-world",
+        issueState: "open",
+        assignment: "all",
+        mentionedToMe: true,
+        query: "",
+        label: "",
+        sort: "updated",
+        page: 1,
+      });
+    });
+  });
+});
+
 describe("GitHub Issue close-reason filter", () => {
   it("shows the filter for closed Issues and sends the selected reason", async () => {
     const user = userEvent.setup();
