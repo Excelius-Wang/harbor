@@ -1466,6 +1466,9 @@
       "pullRequestDraftFilters": {
         "draft": "草稿"
       },
+      "pullRequestLinkedIssueFilter": "关联 Issue",
+      "allPullRequestLinkedIssues": "全部关联状态",
+      "pullRequestLinkedIssue": "已关联 Issue",
       "pullRequestReviewFilter": "评审状态",
       "allPullRequestReviews": "全部评审状态",
       "pullRequestReviewFilters": {

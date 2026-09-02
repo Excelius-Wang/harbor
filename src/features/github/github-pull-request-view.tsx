@@ -47,6 +47,7 @@ import {
 
 const ALL_LABELS = "__all__";
 const ALL_DRAFTS = "__all_drafts__";
+const ALL_LINKED_ISSUES = "__all_linked_issues__";
 const ALL_REVIEWS = "__all_reviews__";
 const ALL_MERGES = "__all_merges__";
 const ALL_STATUSES = "__all_statuses__";
@@ -82,6 +83,7 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
   const [query, setQuery] = useState("");
   const [label, setLabel] = useState("");
   const [draft, setDraft] = useState<GitHubPullRequestDraftFilter | null>(null);
+  const [linkedIssue, setLinkedIssue] = useState(false);
   const [review, setReview] = useState<GitHubPullRequestReviewFilter | null>(null);
   const [merge, setMerge] = useState<GitHubPullRequestMergeFilter | null>(null);
   const [status, setStatus] = useState<GitHubPullRequestStatusFilter | null>(null);
@@ -97,6 +99,7 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
       query,
       label,
       draft,
+      linkedIssue,
       review,
       merge,
       status,
@@ -124,6 +127,7 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
     setQuery("");
     setLabel("");
     setDraft(null);
+    setLinkedIssue(false);
     setReview(null);
     setMerge(null);
     setStatus(null);
@@ -202,13 +206,13 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
           </div>
         </div>
         <form
-          className="grid min-w-0 grid-cols-1 gap-2 @min-[480px]/pulls:grid-cols-3 @min-[1120px]/pulls:grid-cols-[minmax(180px,1fr)_repeat(6,minmax(128px,144px))]"
+          className="grid min-w-0 grid-cols-1 gap-2 @min-[480px]/pulls:grid-cols-3 @min-[1280px]/pulls:grid-cols-[minmax(180px,1fr)_repeat(7,minmax(128px,144px))]"
           onSubmit={(event) => {
             event.preventDefault();
             resetPage(() => setQuery(draftQuery.trim()));
           }}
         >
-          <div className="relative min-w-0 @min-[480px]/pulls:col-span-3 @min-[1120px]/pulls:col-span-1">
+          <div className="relative min-w-0 @min-[480px]/pulls:col-span-3 @min-[1280px]/pulls:col-span-1">
             <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
             <Input
               value={draftQuery}
@@ -241,6 +245,28 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
                     {item.name}
                   </SelectItem>
                 ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <Select
+            value={linkedIssue ? "linked" : ALL_LINKED_ISSUES}
+            onValueChange={(value) => resetPage(() => setLinkedIssue(value === "linked"))}
+          >
+            <SelectTrigger
+              size="sm"
+              className="w-full min-w-0"
+              aria-label={t("workspace.repositories.pullRequestLinkedIssueFilter")}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value={ALL_LINKED_ISSUES}>
+                  {t("workspace.repositories.allPullRequestLinkedIssues")}
+                </SelectItem>
+                <SelectItem value="linked">
+                  {t("workspace.repositories.pullRequestLinkedIssue")}
+                </SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
