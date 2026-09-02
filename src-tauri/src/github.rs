@@ -35,6 +35,7 @@ pub(crate) mod issue_pin;
 pub(crate) mod issue_related;
 pub(crate) mod issue_relationships;
 pub(crate) mod issue_taxonomy;
+pub(crate) mod issue_tracking;
 pub(crate) mod issue_transfer;
 pub(crate) mod issue_type;
 pub(crate) mod item_metadata;
@@ -128,6 +129,7 @@ pub(crate) use issue_relationships::{IssueSubIssueCreateMutation, IssueSubIssueP
 #[cfg(test)]
 use issue_taxonomy::GitHubIssueMilestoneState;
 pub use issue_taxonomy::{GitHubIssueLabelMutation, GitHubIssueMilestoneMutation};
+pub use issue_tracking::{GitHubIssueTrackingDirection, GitHubIssueTrackingPage};
 pub(crate) use issue_transfer::IssueTransferMutation;
 pub use issue_transfer::{GitHubIssueTransfer, GitHubIssueTransferStatus};
 pub use issue_type::GitHubIssueTypeStatus;
@@ -688,6 +690,7 @@ pub(crate) trait GitHubClient:
     + issue_transfer::GitHubIssueTransferClient
     + issue_duplicate::GitHubIssueDuplicateClient
     + issue_linked_pull_request::GitHubIssueLinkedPullRequestClient
+    + issue_tracking::GitHubIssueTrackingClient
     + issue_linked_branch::GitHubIssueLinkedBranchClient
     + issue_pin::GitHubIssuePinClient
     + issue_dependencies::GitHubIssueDependenciesClient
@@ -2879,6 +2882,17 @@ mod tests {
             .issue_linked_pull_requests("octocat", "hello-world", 7, "I_7", None)
             .await
             .expect("linked pull request page");
+        let issue_tracking = service
+            .issue_tracking(
+                "octocat",
+                "hello-world",
+                7,
+                "I_7",
+                GitHubIssueTrackingDirection::Tracked,
+                None,
+            )
+            .await
+            .expect("Issue tracking page");
         let pinned_issues = service
             .pinned_issues("octocat", "hello-world")
             .await
@@ -3075,6 +3089,7 @@ mod tests {
         assert_eq!(issue_inbox.issues[0].issue.number, 7);
         assert_eq!(duplicate, None);
         assert!(linked_pull_requests.pull_requests.is_empty());
+        assert!(issue_tracking.issues.is_empty());
         assert!(pinned_issues.issues.is_empty());
         assert!(issue_delete_status.viewer_can_delete);
         assert!(issue_transfer_status.viewer_can_transfer);

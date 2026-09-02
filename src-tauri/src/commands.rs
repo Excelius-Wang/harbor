@@ -34,11 +34,11 @@ use crate::{
         GitHubIssueRelationshipsPage, GitHubIssueSort, GitHubIssueState,
         GitHubIssueStateCapabilities, GitHubIssueStateMutation, GitHubIssueSubIssueCreateInput,
         GitHubIssueSubIssuePriorityInput, GitHubIssueSummary, GitHubIssueTimelineItem,
-        GitHubIssueTypeStatus, GitHubLoginAvailability, GitHubNotificationAction,
-        GitHubNotificationPage, GitHubPackage, GitHubPackagePage, GitHubPackageType,
-        GitHubPackageVersionMutationInput, GitHubPackageVersionMutationResult,
-        GitHubPackageVersionPage, GitHubPackageVersionState, GitHubPackageVisibility,
-        GitHubPagesHealth, GitHubPagesMutation, GitHubPagesWorkspace,
+        GitHubIssueTrackingDirection, GitHubIssueTrackingPage, GitHubIssueTypeStatus,
+        GitHubLoginAvailability, GitHubNotificationAction, GitHubNotificationPage, GitHubPackage,
+        GitHubPackagePage, GitHubPackageType, GitHubPackageVersionMutationInput,
+        GitHubPackageVersionMutationResult, GitHubPackageVersionPage, GitHubPackageVersionState,
+        GitHubPackageVisibility, GitHubPagesHealth, GitHubPagesMutation, GitHubPagesWorkspace,
         GitHubPendingPullRequestReview, GitHubProfileActivityPage, GitHubProfileConnectionKind,
         GitHubProjectDetail, GitHubProjectFilters, GitHubProjectItem, GitHubProjectItemAction,
         GitHubProjectItemAddition, GitHubProjectItemFilters, GitHubProjectItemUpdate,
@@ -2048,6 +2048,32 @@ pub async fn github_get_repository_issue_linked_pull_requests(
             repository.name(),
             validate_item_number(issue_number, "issue")?,
             &expected_issue_node_id,
+            after.as_deref(),
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn github_get_repository_issue_tracking(
+    owner: String,
+    repository: String,
+    issue_number: u64,
+    expected_issue_node_id: String,
+    direction: GitHubIssueTrackingDirection,
+    after: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<GitHubIssueTrackingPage, AppError> {
+    let repository = RepositoryRef::new(owner, repository)?;
+    let expected_issue_node_id = validate_graphql_node_id(expected_issue_node_id, "issue")?;
+    let after = validate_graphql_cursor(after)?;
+    state
+        .github
+        .issue_tracking(
+            repository.owner(),
+            repository.name(),
+            validate_item_number(issue_number, "issue")?,
+            &expected_issue_node_id,
+            direction,
             after.as_deref(),
         )
         .await

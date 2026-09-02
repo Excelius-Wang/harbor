@@ -118,6 +118,9 @@ beforeEach(() => {
         nextCursor: null,
       });
     }
+    if (command === "github_get_repository_issue_tracking") {
+      return Promise.resolve({ direction: "tracked", issues: [], nextCursor: null });
+    }
     return Promise.reject(new Error(`unexpected command ${command}`));
   });
 });

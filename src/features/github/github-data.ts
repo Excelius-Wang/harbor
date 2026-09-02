@@ -1564,6 +1564,30 @@ export type GitHubIssueRelationshipsPage = {
   hasMore: boolean;
 };
 
+export type GitHubIssueTrackingDirection = "tracked" | "trackedBy";
+
+export type GitHubIssueTrackingRepository = {
+  owner: string;
+  name: string;
+  fullName: string;
+  url: string;
+};
+
+export type GitHubIssueTrackingReference = {
+  nodeId: string;
+  number: number;
+  title: string;
+  url: string;
+  state: GitHubIssueState;
+  repository: GitHubIssueTrackingRepository;
+};
+
+export type GitHubIssueTrackingPage = {
+  direction: GitHubIssueTrackingDirection;
+  issues: GitHubIssueTrackingReference[];
+  nextCursor: string | null;
+};
+
 export type GitHubIssueDependenciesPage = {
   blockedBy: GitHubIssueSummary[];
   blocking: GitHubIssueSummary[];
