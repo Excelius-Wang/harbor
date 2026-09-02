@@ -38,6 +38,7 @@ import { GitHubIssueCloneAction } from "./github-issue-clone-action";
 import { GitHubIssueConvertDiscussionAction } from "./github-issue-convert-discussion-action";
 import { GitHubIssueLinkedPullRequests } from "./github-issue-linked-pull-requests";
 import { GitHubIssueLinkedBranches } from "./github-issue-linked-branches";
+import { GitHubIssueTracking } from "./github-issue-tracking";
 import { GitHubIssueMarkDuplicateAction } from "./github-issue-mark-duplicate-action";
 import { GitHubIssuePinAction } from "./github-issue-pin-action";
 import { GitHubIssueRelationships } from "./github-issue-relationships";
@@ -404,6 +405,21 @@ function GitHubIssueDetailScreen({
                         issueNumber={detail.issue.number}
                         onNavigate={(summary) =>
                           onNavigate(summary.repository, summary.issue.number)
+                        }
+                      />
+                      <GitHubIssueTracking
+                        repository={repository}
+                        issue={detail.issue}
+                        onNavigate={(trackedIssue) =>
+                          onNavigate(
+                            {
+                              owner: trackedIssue.repository.owner,
+                              name: trackedIssue.repository.name,
+                              url: trackedIssue.repository.url,
+                              defaultBranch: "HEAD",
+                            },
+                            trackedIssue.number
+                          )
                         }
                       />
                     </>

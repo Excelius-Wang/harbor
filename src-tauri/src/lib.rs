@@ -150,6 +150,7 @@ pub fn run() {
             commands::github_unmark_repository_issue_duplicate,
             commands::github_mark_repository_issue_duplicate,
             commands::github_get_repository_issue_linked_pull_requests,
+            commands::github_get_repository_issue_tracking,
             commands::github_get_repository_issue_linked_branches,
             commands::github_create_repository_issue_linked_branch,
             commands::github_delete_repository_issue_linked_branch,
