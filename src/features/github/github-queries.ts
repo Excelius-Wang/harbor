@@ -70,6 +70,7 @@ import type {
   GitHubPullRequestFileViewStateSnapshot,
   GitHubPullRequestInboxScope,
   GitHubPullRequestMergeQueueStatus,
+  GitHubPullRequestMergeFilter,
   GitHubPullRequestMaintainerEditability,
   GitHubPullRequestPage,
   GitHubPullRequestReviewThreadPage,
@@ -238,6 +239,7 @@ export type GitHubPullRequestsTarget = GitHubRepositoryTarget & {
   query: string;
   label: string;
   review?: GitHubPullRequestReviewFilter | null;
+  merge?: GitHubPullRequestMergeFilter | null;
   sort: GitHubPullRequestSort;
   page: number;
 };
@@ -747,6 +749,7 @@ export const githubQueryKeys = {
     query,
     label,
     review,
+    merge,
     sort,
     page,
   }: GitHubPullRequestsTarget) =>
@@ -760,6 +763,7 @@ export const githubQueryKeys = {
       query,
       label,
       review ?? null,
+      merge ?? null,
       sort,
       page,
     ] as const,
@@ -1847,6 +1851,7 @@ export function repositoryPullRequestsQueryOptions(target: GitHubPullRequestsTar
         query: target.query,
         label: target.label,
         ...(target.review ? { review: target.review } : {}),
+        ...(target.merge ? { merge: target.merge } : {}),
         sort: target.sort,
         page: target.page,
       }),

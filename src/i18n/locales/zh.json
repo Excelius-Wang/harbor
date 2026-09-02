@@ -1469,6 +1469,12 @@
         "approved": "已批准",
         "changesRequested": "要求修改"
       },
+      "pullRequestMergeFilter": "合入状态",
+      "allPullRequestMerges": "全部合入状态",
+      "pullRequestMergeFilters": {
+        "merged": "已合入",
+        "unmerged": "未合入"
+      },
       "pullRequestPagination": "拉取请求分页",
       "backToPullRequests": "返回拉取请求",
       "openedPullRequestBy": "@{{author}} 创建于 {{date}}",

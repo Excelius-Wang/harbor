@@ -27,6 +27,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { parseIpcError } from "@/lib/ipc-error";
 import { cn } from "@/lib/utils";
 import type {
+  GitHubPullRequestMergeFilter,
   GitHubPullRequestReviewFilter,
   GitHubPullRequestSort,
   GitHubPullRequestState,
@@ -44,6 +45,7 @@ import {
 
 const ALL_LABELS = "__all__";
 const ALL_REVIEWS = "__all_reviews__";
+const ALL_MERGES = "__all_merges__";
 
 function PullRequestSkeletons() {
   return (
@@ -76,6 +78,7 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
   const [query, setQuery] = useState("");
   const [label, setLabel] = useState("");
   const [review, setReview] = useState<GitHubPullRequestReviewFilter | null>(null);
+  const [merge, setMerge] = useState<GitHubPullRequestMergeFilter | null>(null);
   const [sort, setSort] = useState<GitHubPullRequestSort>("updated");
   const [page, setPage] = useState(1);
   const [selectedPullRequestNumber, setSelectedPullRequestNumber] = useState<number | null>(null);
@@ -88,6 +91,7 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
       query,
       label,
       review,
+      merge,
       sort,
       page,
     }),
@@ -112,6 +116,7 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
     setQuery("");
     setLabel("");
     setReview(null);
+    setMerge(null);
     setSort("updated");
     setPage(1);
     setSelectedPullRequestNumber(null);
@@ -152,7 +157,15 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
         <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
           <Tabs
             value={state}
-            onValueChange={(value) => resetPage(() => setState(value as GitHubPullRequestState))}
+            onValueChange={(value) =>
+              resetPage(() => {
+                const nextState = value as GitHubPullRequestState;
+                setState(nextState);
+                if (nextState === "open" && merge === "merged") {
+                  setMerge(null);
+                }
+              })
+            }
           >
             <TabsList className="h-8">
               <TabsTrigger value="open" className="text-xs">
@@ -179,13 +192,13 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
           </div>
         </div>
         <form
-          className="grid min-w-0 grid-cols-1 gap-2 @min-[480px]/pulls:grid-cols-3 @min-[720px]/pulls:grid-cols-[minmax(180px,1fr)_repeat(3,minmax(128px,144px))]"
+          className="grid min-w-0 grid-cols-1 gap-2 @min-[480px]/pulls:grid-cols-3 @min-[900px]/pulls:grid-cols-[minmax(180px,1fr)_repeat(4,minmax(128px,144px))]"
           onSubmit={(event) => {
             event.preventDefault();
             resetPage(() => setQuery(draftQuery.trim()));
           }}
         >
-          <div className="relative min-w-0 @min-[480px]/pulls:col-span-3 @min-[720px]/pulls:col-span-1">
+          <div className="relative min-w-0 @min-[480px]/pulls:col-span-3 @min-[900px]/pulls:col-span-1">
             <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
             <Input
               value={draftQuery}
@@ -218,6 +231,40 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
                     {item.name}
                   </SelectItem>
                 ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <Select
+            value={merge ?? ALL_MERGES}
+            onValueChange={(value) =>
+              resetPage(() => {
+                const nextMerge =
+                  value === ALL_MERGES ? null : (value as GitHubPullRequestMergeFilter);
+                setMerge(nextMerge);
+                if (nextMerge === "merged") {
+                  setState("closed");
+                }
+              })
+            }
+          >
+            <SelectTrigger
+              size="sm"
+              className="w-full min-w-0"
+              aria-label={t("workspace.repositories.pullRequestMergeFilter")}
+            >
+              <SelectValue placeholder={t("workspace.repositories.allPullRequestMerges")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value={ALL_MERGES}>
+                  {t("workspace.repositories.allPullRequestMerges")}
+                </SelectItem>
+                <SelectItem value="merged">
+                  {t("workspace.repositories.pullRequestMergeFilters.merged")}
+                </SelectItem>
+                <SelectItem value="unmerged">
+                  {t("workspace.repositories.pullRequestMergeFilters.unmerged")}
+                </SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
