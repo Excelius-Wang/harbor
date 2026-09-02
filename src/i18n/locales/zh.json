@@ -2578,6 +2578,8 @@
         "notPlanned": "不计划处理",
         "duplicate": "重复 Issue"
       },
+      "allIssueMilestones": "全部里程碑",
+      "issueMilestoneFilter": "Issue 里程碑",
       "allDiscussionCategories": "全部分类",
       "discussionCount": "{{count}} 条讨论",
       "openDiscussions": "开放的讨论",

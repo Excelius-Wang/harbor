@@ -665,6 +665,57 @@ describe("GitHub Issue mutations", () => {
     ]);
   });
 
+  it("moves an Issue between milestone caches when its milestone changes", () => {
+    const queryClient = new QueryClient();
+    const previousMilestoneKey = githubQueryKeys.issues({
+      owner: target.owner,
+      repository: target.repository,
+      state: "open",
+      assignment: "all",
+      query: "",
+      label: "",
+      milestone: "Harbor 0.2",
+      sort: "updated",
+      page: 1,
+    });
+    const nextMilestoneKey = githubQueryKeys.issues({
+      owner: target.owner,
+      repository: target.repository,
+      state: "open",
+      assignment: "all",
+      query: "",
+      label: "",
+      milestone: "Harbor 0.3",
+      sort: "updated",
+      page: 1,
+    });
+    const previousIssue = { ...issue, milestone: "Harbor 0.2" };
+    const nextIssue = { ...previousIssue, milestone: "Harbor 0.3" };
+    queryClient.setQueryData<GitHubIssuePage>(previousMilestoneKey, {
+      issues: [previousIssue],
+      totalCount: 1,
+      page: 1,
+      hasPrevious: false,
+      hasMore: false,
+    });
+    queryClient.setQueryData<GitHubIssuePage>(nextMilestoneKey, {
+      issues: [],
+      totalCount: 0,
+      page: 1,
+      hasPrevious: false,
+      hasMore: false,
+    });
+
+    syncUpdatedIssue(queryClient, target, nextIssue);
+
+    expect(queryClient.getQueryData<GitHubIssuePage>(previousMilestoneKey)?.issues).toEqual([]);
+    expect(queryClient.getQueryData<GitHubIssuePage>(previousMilestoneKey)?.totalCount).toBe(0);
+    expect(queryClient.getQueryState(previousMilestoneKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryData<GitHubIssuePage>(nextMilestoneKey)?.issues).toEqual([
+      nextIssue,
+    ]);
+  });
+
   it("invalidates only Issue detail, list, and inbox roots", async () => {
     const queryClient = new QueryClient();
     const affected = [

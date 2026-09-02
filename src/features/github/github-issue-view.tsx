@@ -49,11 +49,13 @@ import { GitHubPinnedIssues } from "./github-pinned-issues";
 import {
   repositoryIssueDetailQueryOptions,
   repositoryIssueLabelsQueryOptions,
+  repositoryIssueMilestonesQueryOptions,
   repositoryIssuesQueryOptions,
 } from "./github-queries";
 
 const ALL_LABELS = "__all__";
 const ALL_CLOSE_REASONS = "__all_close_reasons__";
+const ALL_MILESTONES = "__all_milestones__";
 
 const GitHubIssueTaxonomyView = lazy(() =>
   import("./github-issue-taxonomy-view").then((module) => ({
@@ -92,6 +94,7 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
   const [draftQuery, setDraftQuery] = useState("");
   const [query, setQuery] = useState("");
   const [label, setLabel] = useState("");
+  const [milestone, setMilestone] = useState<string | null>(null);
   const [closeReason, setCloseReason] = useState<GitHubIssueCloseReasonFilter | null>(null);
   const [sort, setSort] = useState<GitHubIssueSort>("updated");
   const [page, setPage] = useState(1);
@@ -106,6 +109,7 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
       assignment,
       query,
       label,
+      milestone,
       closeReason,
       sort,
       page,
@@ -115,6 +119,15 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
   const labelsResult = useQuery(
     repositoryIssueLabelsQueryOptions({ owner: repository.owner, repository: repository.name })
   );
+  const milestonesResult = useQuery(
+    repositoryIssueMilestonesQueryOptions({
+      owner: repository.owner,
+      repository: repository.name,
+    })
+  );
+  const selectedMilestoneNumber = milestonesResult.data?.milestones.find(
+    (item) => item.title === milestone
+  )?.number;
   const issuePage = issuesResult.data;
   const error = !issuePage && issuesResult.error ? parseIpcError(issuesResult.error) : null;
   const supplementalError =
@@ -122,7 +135,9 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
       ? { source: "issues" as const, error: parseIpcError(issuesResult.error) }
       : labelsResult.error
         ? { source: "labels" as const, error: parseIpcError(labelsResult.error) }
-        : null;
+        : milestonesResult.error
+          ? { source: "milestones" as const, error: parseIpcError(milestonesResult.error) }
+          : null;
 
   useEffect(() => {
     setState("open");
@@ -130,6 +145,7 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
     setDraftQuery("");
     setQuery("");
     setLabel("");
+    setMilestone(null);
     setCloseReason(null);
     setSort("updated");
     setPage(1);
@@ -137,6 +153,17 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
     setCreatingIssue(false);
     setManagingTaxonomy(false);
   }, [repository.id]);
+
+  useEffect(() => {
+    if (
+      milestone &&
+      milestonesResult.data &&
+      !milestonesResult.data.milestones.some((item) => item.title === milestone)
+    ) {
+      setMilestone(null);
+      setPage(1);
+    }
+  }, [milestone, milestonesResult.data]);
 
   if (managingTaxonomy) {
     return (
@@ -225,8 +252,8 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
           className={cn(
             "grid min-w-0 grid-cols-1 gap-2 @min-[480px]/issues:grid-cols-3",
             state === "closed"
-              ? "@min-[720px]/issues:grid-cols-[minmax(180px,1fr)_repeat(4,minmax(128px,144px))]"
-              : "@min-[720px]/issues:grid-cols-[minmax(180px,1fr)_repeat(3,minmax(128px,144px))]"
+              ? "@min-[720px]/issues:grid-cols-[minmax(180px,1fr)_repeat(5,minmax(128px,144px))]"
+              : "@min-[720px]/issues:grid-cols-[minmax(180px,1fr)_repeat(4,minmax(128px,144px))]"
           )}
           onSubmit={(event) => {
             event.preventDefault();
@@ -266,6 +293,41 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
                 <SelectItem value="unassigned">
                   {t("workspace.repositories.unassignedIssues")}
                 </SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <Select
+            value={selectedMilestoneNumber?.toString() ?? ALL_MILESTONES}
+            onValueChange={(value) =>
+              resetPage(() =>
+                setMilestone(
+                  value === ALL_MILESTONES
+                    ? null
+                    : (milestonesResult.data?.milestones.find(
+                        (item) => item.number.toString() === value
+                      )?.title ?? null)
+                )
+              )
+            }
+          >
+            <SelectTrigger
+              size="sm"
+              className="w-full min-w-0"
+              aria-label={t("workspace.repositories.issueMilestoneFilter")}
+              disabled={milestonesResult.isPending}
+            >
+              <SelectValue placeholder={t("workspace.repositories.allIssueMilestones")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value={ALL_MILESTONES}>
+                  {t("workspace.repositories.allIssueMilestones")}
+                </SelectItem>
+                {(milestonesResult.data?.milestones ?? []).map((item) => (
+                  <SelectItem key={item.number} value={item.number.toString()}>
+                    {item.title}
+                  </SelectItem>
+                ))}
               </SelectGroup>
             </SelectContent>
           </Select>
@@ -352,7 +414,9 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
               onClick={() =>
                 void (supplementalError.source === "issues"
                   ? issuesResult.refetch()
-                  : labelsResult.refetch())
+                  : supplementalError.source === "labels"
+                    ? labelsResult.refetch()
+                    : milestonesResult.refetch())
               }
             >
               {t("workspace.repositories.retry")}

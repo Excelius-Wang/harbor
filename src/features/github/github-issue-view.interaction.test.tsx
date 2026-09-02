@@ -67,6 +67,26 @@ beforeEach(() => {
     if (command === "github_list_repository_issue_labels") {
       return Promise.resolve({ labels: [] });
     }
+    if (command === "github_list_repository_issue_milestones") {
+      return Promise.resolve({
+        milestones: [
+          {
+            number: 3,
+            title: "Harbor 0.2",
+            state: "open",
+            openIssues: 4,
+            closedIssues: 7,
+          },
+          {
+            number: 4,
+            title: "__all_milestones__",
+            state: "open",
+            openIssues: 1,
+            closedIssues: 0,
+          },
+        ],
+      });
+    }
     return Promise.reject(new Error(`unexpected command ${command}`));
   });
 });
@@ -151,6 +171,119 @@ describe("GitHub Issue close-reason filter", () => {
         .map(([, request]) => request as Record<string, unknown>);
       expect(issueRequests.length).toBeGreaterThan(0);
       expect(issueRequests[issueRequests.length - 1]).not.toHaveProperty("closeReason");
+    });
+  });
+});
+
+describe("GitHub Issue milestone filter", () => {
+  it("keeps the filter disabled while milestones load and exposes the empty state", async () => {
+    let resolveMilestones!: (value: { milestones: never[] }) => void;
+    const milestonesPromise = new Promise<{ milestones: never[] }>((resolve) => {
+      resolveMilestones = resolve;
+    });
+    vi.mocked(invoke).mockImplementation((command) => {
+      if (command === "github_list_repository_issues") {
+        return Promise.resolve({
+          issues: [],
+          totalCount: 0,
+          page: 1,
+          hasPrevious: false,
+          hasMore: false,
+        });
+      }
+      if (command === "github_list_repository_issue_labels") {
+        return Promise.resolve({ labels: [] });
+      }
+      if (command === "github_list_repository_issue_milestones") return milestonesPromise;
+      return Promise.reject(new Error(`unexpected command ${command}`));
+    });
+
+    renderView();
+    const milestoneTrigger = await screen.findByRole("combobox", {
+      name: "workspace.repositories.issueMilestoneFilter",
+    });
+    expect((milestoneTrigger as HTMLButtonElement).disabled).toBe(true);
+
+    resolveMilestones({ milestones: [] });
+    await waitFor(() => expect((milestoneTrigger as HTMLButtonElement).disabled).toBe(false));
+    await userEvent.setup().click(milestoneTrigger);
+    expect(
+      await screen.findByRole("option", { name: "workspace.repositories.allIssueMilestones" })
+    ).toBeDefined();
+  });
+
+  it("shows a permission error and retries the milestone query", async () => {
+    let milestoneAttempts = 0;
+    vi.mocked(invoke).mockImplementation((command) => {
+      if (command === "github_list_repository_issues") {
+        return Promise.resolve({
+          issues: [],
+          totalCount: 0,
+          page: 1,
+          hasPrevious: false,
+          hasMore: false,
+        });
+      }
+      if (command === "github_list_repository_issue_labels") {
+        return Promise.resolve({ labels: [] });
+      }
+      if (command === "github_list_repository_issue_milestones") {
+        milestoneAttempts += 1;
+        return milestoneAttempts === 1
+          ? Promise.reject({ code: "githubPermission", message: "milestone permission changed" })
+          : Promise.resolve({ milestones: [] });
+      }
+      return Promise.reject(new Error(`unexpected command ${command}`));
+    });
+
+    const user = userEvent.setup();
+    renderView();
+    expect(await screen.findByText("milestone permission changed")).toBeDefined();
+    await user.click(screen.getByRole("button", { name: "workspace.repositories.retry" }));
+    await waitFor(() => expect(milestoneAttempts).toBe(2));
+    await waitFor(() => expect(screen.queryByText("milestone permission changed")).toBeNull());
+  });
+
+  it("loads repository milestones and sends the selected title", async () => {
+    const user = userEvent.setup();
+    renderView();
+
+    const milestoneTrigger = await screen.findByRole("combobox", {
+      name: "workspace.repositories.issueMilestoneFilter",
+    });
+    await user.click(milestoneTrigger);
+    await user.click(await screen.findByRole("option", { name: "Harbor 0.2" }));
+
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith("github_list_repository_issues", {
+        owner: "octocat",
+        repository: "hello-world",
+        issueState: "open",
+        assignment: "all",
+        query: "",
+        label: "",
+        milestone: "Harbor 0.2",
+        sort: "updated",
+        page: 1,
+      });
+    });
+  });
+
+  it("can select a milestone whose title matches the clear sentinel", async () => {
+    const user = userEvent.setup();
+    renderView();
+
+    const milestoneTrigger = await screen.findByRole("combobox", {
+      name: "workspace.repositories.issueMilestoneFilter",
+    });
+    await user.click(milestoneTrigger);
+    await user.click(await screen.findByRole("option", { name: "__all_milestones__" }));
+
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith(
+        "github_list_repository_issues",
+        expect.objectContaining({ milestone: "__all_milestones__" })
+      );
     });
   });
 });
