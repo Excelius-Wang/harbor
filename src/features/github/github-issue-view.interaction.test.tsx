@@ -180,6 +180,36 @@ describe("GitHub Issue close-reason filter", () => {
   });
 });
 
+describe("GitHub Issue sort", () => {
+  it("sends the selected ascending sort", async () => {
+    const user = userEvent.setup();
+    renderView();
+
+    const sortTrigger = await screen.findByRole("combobox", {
+      name: "workspace.repositories.sort",
+    });
+    await user.click(sortTrigger);
+    await user.click(
+      await screen.findByRole("option", {
+        name: "workspace.repositories.sortUpdatedAscending",
+      })
+    );
+
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith("github_list_repository_issues", {
+        owner: "octocat",
+        repository: "hello-world",
+        issueState: "open",
+        assignment: "all",
+        query: "",
+        label: "",
+        sort: "updatedAscending",
+        page: 1,
+      });
+    });
+  });
+});
+
 describe("GitHub Issue milestone filter", () => {
   it("keeps the filter disabled while milestones load and exposes the empty state", async () => {
     let resolveMilestones!: (value: { milestones: never[] }) => void;

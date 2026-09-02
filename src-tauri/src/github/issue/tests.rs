@@ -354,6 +354,38 @@ fn issue_search_is_scoped_to_real_issues_and_selected_filters() {
 }
 
 #[test]
+fn issue_search_sort_maps_github_web_sort_options() {
+    assert_eq!(
+        issue_search_sort(GitHubIssueSort::Updated),
+        ("updated", "desc")
+    );
+    assert_eq!(
+        issue_search_sort(GitHubIssueSort::UpdatedAscending),
+        ("updated", "asc")
+    );
+    assert_eq!(
+        issue_search_sort(GitHubIssueSort::Created),
+        ("created", "desc")
+    );
+    assert_eq!(
+        issue_search_sort(GitHubIssueSort::CreatedAscending),
+        ("created", "asc")
+    );
+    assert_eq!(
+        issue_search_sort(GitHubIssueSort::Comments),
+        ("comments", "desc")
+    );
+    assert_eq!(
+        issue_search_sort(GitHubIssueSort::CommentsAscending),
+        ("comments", "asc")
+    );
+    assert_eq!(
+        issue_search_sort(GitHubIssueSort::Reactions),
+        ("reactions", "desc")
+    );
+}
+
+#[test]
 fn issue_search_escapes_milestone_titles() {
     let filters = GitHubIssueFilters {
         state: GitHubIssueState::Open,

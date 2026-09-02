@@ -62,6 +62,38 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe("GitHub Pull Request list filters", () => {
+  it("sends the most-reactions sort", async () => {
+    const user = userEvent.setup();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <GitHubPullRequestView repository={repository} />
+      </QueryClientProvider>
+    );
+
+    const sortTrigger = await screen.findByRole("combobox", {
+      name: "workspace.repositories.sort",
+    });
+    await user.click(sortTrigger);
+    await user.click(
+      await screen.findByRole("option", {
+        name: "workspace.repositories.sortReactions",
+      })
+    );
+
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith("github_list_repository_pull_requests", {
+        owner: "octocat",
+        repository: "hello-world",
+        pullRequestState: "open",
+        query: "",
+        label: "",
+        sort: "reactions",
+        page: 1,
+      });
+    });
+  });
+
   it("sends the selected GitHub review status", async () => {
     const user = userEvent.setup();
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });

@@ -235,15 +235,31 @@ export function GitHubIssueInbox({
               value={sort}
               onValueChange={(value) => resetPage(() => setSort(value as GitHubIssueSort))}
             >
-              <SelectTrigger size="sm" className="w-full min-w-0">
+              <SelectTrigger
+                size="sm"
+                className="w-full min-w-0"
+                aria-label={t("workspace.repositories.sort")}
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
                   <SelectItem value="updated">{t("workspace.repositories.sortUpdated")}</SelectItem>
+                  <SelectItem value="updatedAscending">
+                    {t("workspace.repositories.sortUpdatedAscending")}
+                  </SelectItem>
                   <SelectItem value="created">{t("workspace.repositories.sortCreated")}</SelectItem>
+                  <SelectItem value="createdAscending">
+                    {t("workspace.repositories.sortCreatedAscending")}
+                  </SelectItem>
                   <SelectItem value="comments">
                     {t("workspace.repositories.sortComments")}
+                  </SelectItem>
+                  <SelectItem value="commentsAscending">
+                    {t("workspace.repositories.sortCommentsAscending")}
+                  </SelectItem>
+                  <SelectItem value="reactions">
+                    {t("workspace.repositories.sortReactions")}
                   </SelectItem>
                 </SelectGroup>
               </SelectContent>
