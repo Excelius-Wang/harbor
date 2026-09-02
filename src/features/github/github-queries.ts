@@ -30,6 +30,7 @@ import type {
   GitHubGistSource,
   GitHubIssueAssignment,
   GitHubIssueAssigneePage,
+  GitHubIssueCloseReasonFilter,
   GitHubIssueDetailPage,
   GitHubIssueInboxPage,
   GitHubIssueInboxScope,
@@ -206,6 +207,7 @@ export type GitHubIssuesTarget = GitHubRepositoryTarget & {
   query: string;
   label: string;
   sort: GitHubIssueSort;
+  closeReason?: GitHubIssueCloseReasonFilter | null;
   page: number;
 };
 
@@ -666,6 +668,7 @@ export const githubQueryKeys = {
     query,
     label,
     sort,
+    closeReason,
     page,
   }: GitHubIssuesTarget) =>
     [
@@ -678,6 +681,7 @@ export const githubQueryKeys = {
       assignment,
       query,
       label,
+      closeReason ?? null,
       sort,
       page,
     ] as const,
@@ -1625,6 +1629,7 @@ export function repositoryIssuesQueryOptions(target: GitHubIssuesTarget) {
         assignment: target.assignment,
         query: target.query,
         label: target.label,
+        closeReason: target.closeReason ?? null,
         sort: target.sort,
         page: target.page,
       }),

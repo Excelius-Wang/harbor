@@ -570,6 +570,50 @@ describe("GitHub Issue mutations", () => {
     );
   });
 
+  it("keeps closed Issue lists scoped to their selected close reason", () => {
+    const queryClient = new QueryClient();
+    const completedListKey = githubQueryKeys.issues({
+      owner: target.owner,
+      repository: target.repository,
+      state: "closed",
+      assignment: "all",
+      query: "",
+      label: "",
+      closeReason: "completed",
+      sort: "updated",
+      page: 1,
+    });
+    const notPlannedListKey = githubQueryKeys.issues({
+      owner: target.owner,
+      repository: target.repository,
+      state: "closed",
+      assignment: "all",
+      query: "",
+      label: "",
+      closeReason: "notPlanned",
+      sort: "updated",
+      page: 1,
+    });
+    const closedIssue = { ...issue, state: "closed" as const, stateReason: "completed" };
+    for (const key of [completedListKey, notPlannedListKey]) {
+      queryClient.setQueryData<GitHubIssuePage>(key, {
+        issues: [],
+        totalCount: 0,
+        page: 1,
+        hasPrevious: false,
+        hasMore: false,
+      });
+    }
+
+    syncUpdatedIssue(queryClient, target, closedIssue);
+
+    expect(queryClient.getQueryData<GitHubIssuePage>(completedListKey)?.issues).toEqual([
+      closedIssue,
+    ]);
+    expect(queryClient.getQueryData<GitHubIssuePage>(notPlannedListKey)?.issues).toEqual([]);
+    expect(queryClient.getQueryState(notPlannedListKey)?.isInvalidated).toBe(true);
+  });
+
   it("invalidates only Issue detail, list, and inbox roots", async () => {
     const queryClient = new QueryClient();
     const affected = [

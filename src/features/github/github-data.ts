@@ -1334,6 +1334,7 @@ export type GitHubItemMetadataValue = {
 
 export type GitHubIssueState = "open" | "closed";
 export type GitHubIssueCloseReason = "completed" | "notPlanned";
+export type GitHubIssueCloseReasonFilter = "completed" | "notPlanned" | "duplicate";
 export type GitHubIssueStateReason =
   | "completed"
   | "notPlanned"

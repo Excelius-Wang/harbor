@@ -36,6 +36,7 @@ import { parseIpcError } from "@/lib/ipc-error";
 import { cn } from "@/lib/utils";
 import type {
   GitHubIssueAssignment,
+  GitHubIssueCloseReasonFilter,
   GitHubIssueSort,
   GitHubIssueState,
   GitHubRepository,
@@ -52,6 +53,7 @@ import {
 } from "./github-queries";
 
 const ALL_LABELS = "__all__";
+const ALL_CLOSE_REASONS = "__all_close_reasons__";
 
 const GitHubIssueTaxonomyView = lazy(() =>
   import("./github-issue-taxonomy-view").then((module) => ({
@@ -90,6 +92,7 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
   const [draftQuery, setDraftQuery] = useState("");
   const [query, setQuery] = useState("");
   const [label, setLabel] = useState("");
+  const [closeReason, setCloseReason] = useState<GitHubIssueCloseReasonFilter | null>(null);
   const [sort, setSort] = useState<GitHubIssueSort>("updated");
   const [page, setPage] = useState(1);
   const [selectedIssueNumber, setSelectedIssueNumber] = useState<number | null>(null);
@@ -103,6 +106,7 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
       assignment,
       query,
       label,
+      closeReason,
       sort,
       page,
     }),
@@ -126,6 +130,7 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
     setDraftQuery("");
     setQuery("");
     setLabel("");
+    setCloseReason(null);
     setSort("updated");
     setPage(1);
     setSelectedIssueNumber(null);
@@ -178,7 +183,12 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
         <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
           <Tabs
             value={state}
-            onValueChange={(value) => resetPage(() => setState(value as GitHubIssueState))}
+            onValueChange={(value) =>
+              resetPage(() => {
+                setState(value as GitHubIssueState);
+                if (value === "open") setCloseReason(null);
+              })
+            }
           >
             <TabsList className="h-8">
               <TabsTrigger value="open" className="text-xs">
@@ -212,7 +222,12 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
           </div>
         </div>
         <form
-          className="grid min-w-0 grid-cols-1 gap-2 @min-[480px]/issues:grid-cols-3 @min-[720px]/issues:grid-cols-[minmax(180px,1fr)_repeat(3,minmax(128px,144px))]"
+          className={cn(
+            "grid min-w-0 grid-cols-1 gap-2 @min-[480px]/issues:grid-cols-3",
+            state === "closed"
+              ? "@min-[720px]/issues:grid-cols-[minmax(180px,1fr)_repeat(4,minmax(128px,144px))]"
+              : "@min-[720px]/issues:grid-cols-[minmax(180px,1fr)_repeat(3,minmax(128px,144px))]"
+          )}
           onSubmit={(event) => {
             event.preventDefault();
             resetPage(() => setQuery(draftQuery.trim()));
@@ -254,6 +269,38 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
               </SelectGroup>
             </SelectContent>
           </Select>
+          {state === "closed" ? (
+            <Select
+              value={closeReason ?? ALL_CLOSE_REASONS}
+              onValueChange={(value) =>
+                resetPage(() =>
+                  setCloseReason(
+                    value === ALL_CLOSE_REASONS ? null : (value as GitHubIssueCloseReasonFilter)
+                  )
+                )
+              }
+            >
+              <SelectTrigger size="sm" className="w-full min-w-0">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value={ALL_CLOSE_REASONS}>
+                    {t("workspace.repositories.allIssueCloseReasons")}
+                  </SelectItem>
+                  <SelectItem value="completed">
+                    {t("workspace.repositories.issueCloseReasons.completed")}
+                  </SelectItem>
+                  <SelectItem value="notPlanned">
+                    {t("workspace.repositories.issueCloseReasons.notPlanned")}
+                  </SelectItem>
+                  <SelectItem value="duplicate">
+                    {t("workspace.repositories.issueCloseReasons.duplicate")}
+                  </SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          ) : null}
           <Select
             value={label || ALL_LABELS}
             onValueChange={(value) => resetPage(() => setLabel(value === ALL_LABELS ? "" : value))}

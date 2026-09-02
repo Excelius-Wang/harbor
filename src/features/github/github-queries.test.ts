@@ -951,6 +951,7 @@ describe("GitHub repository queries", () => {
       label: "bug",
       sort: "comments",
       page: 3,
+      closeReason: "notPlanned",
     });
 
     await client.fetchQuery(options);
@@ -965,6 +966,7 @@ describe("GitHub repository queries", () => {
       "unassigned",
       "render crash",
       "bug",
+      "notPlanned",
       "comments",
       3,
     ]);
@@ -977,6 +979,7 @@ describe("GitHub repository queries", () => {
       label: "bug",
       sort: "comments",
       page: 3,
+      closeReason: "notPlanned",
     });
   });
 

@@ -2,6 +2,7 @@ import type { QueryClient, QueryKey } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
 import type {
   GitHubIssue,
+  GitHubIssueCloseReasonFilter,
   GitHubIssueCloseReason,
   GitHubIssueDetailPage,
   GitHubIssueInboxPage,
@@ -291,7 +292,7 @@ function updateRepositoryIssuePages(
       page.hasMore
     );
     const staleUpdatedPage =
-      cachedState === issue.state && queryKey[9] === "updated" && queryKey[10] !== 1;
+      cachedState === issue.state && queryKey[10] === "updated" && queryKey[11] !== 1;
     if (staleUpdatedPage) {
       queryClient.setQueryData<GitHubIssuePage>(queryKey, {
         ...page,
@@ -300,7 +301,7 @@ function updateRepositoryIssuePages(
       void queryClient.invalidateQueries({ queryKey, exact: true });
       continue;
     }
-    const moveToFront = queryKey[9] === "updated" && queryKey[10] === 1;
+    const moveToFront = queryKey[10] === "updated" && queryKey[11] === 1;
     queryClient.setQueryData<GitHubIssuePage>(
       queryKey,
       cachedState && cachedState !== issue.state
@@ -334,14 +335,16 @@ function repositoryIssuePageAccepts(queryKey: QueryKey, issue: GitHubIssue) {
   const assignment = queryKey[6];
   const query = queryKey[7];
   const label = queryKey[8];
-  const sort = queryKey[9];
-  const page = queryKey[10];
+  const closeReason = queryKey[9] as GitHubIssueCloseReasonFilter | null;
+  const sort = queryKey[10];
+  const page = queryKey[11];
   return (
     page === 1 &&
     sort === "updated" &&
     (assignment === "all" || (assignment === "unassigned" && !issue.assignees.length)) &&
     query === "" &&
-    (label === "" || issue.labels.some((item) => item.name === label))
+    (label === "" || issue.labels.some((item) => item.name === label)) &&
+    (closeReason === null || closeReason === issue.stateReason)
   );
 }
 
