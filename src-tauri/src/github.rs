@@ -325,6 +325,24 @@ impl GitHubPullRequestMergeFilter {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub enum GitHubPullRequestStatusFilter {
+    Success,
+    Failure,
+    Pending,
+}
+
+impl GitHubPullRequestStatusFilter {
+    fn search_qualifier(self) -> &'static str {
+        match self {
+            Self::Success => "status:success",
+            Self::Failure => "status:failure",
+            Self::Pending => "status:pending",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub enum GitHubPullRequestInboxScope {
     Authored,
     Assigned,
@@ -338,6 +356,7 @@ pub struct GitHubPullRequestFilters {
     pub label: String,
     pub review: Option<GitHubPullRequestReviewFilter>,
     pub merge: Option<GitHubPullRequestMergeFilter>,
+    pub status: Option<GitHubPullRequestStatusFilter>,
     pub sort: GitHubPullRequestSort,
     pub page: u32,
 }
@@ -1862,6 +1881,9 @@ fn pull_request_search_query(
     }
     if let Some(merge) = filters.merge {
         query.push(merge.search_qualifier().to_string());
+    }
+    if let Some(status) = filters.status {
+        query.push(status.search_qualifier().to_string());
     }
     query
         .into_iter()
@@ -4239,13 +4261,14 @@ mod tests {
             label: "release candidate".to_string(),
             review: Some(GitHubPullRequestReviewFilter::Approved),
             merge: Some(GitHubPullRequestMergeFilter::Merged),
+            status: Some(GitHubPullRequestStatusFilter::Success),
             sort: GitHubPullRequestSort::Updated,
             page: 1,
         };
 
         assert_eq!(
             pull_request_search_query("octocat", "hello-world", &filters),
-            "author:hubot crash repo:octocat/hello-world is:pr is:closed label:\"release candidate\" review:approved is:merged"
+            "author:hubot crash repo:octocat/hello-world is:pr is:closed label:\"release candidate\" review:approved is:merged status:success"
         );
     }
 
@@ -4289,6 +4312,7 @@ mod tests {
             label: String::new(),
             review: None,
             merge: Some(GitHubPullRequestMergeFilter::Unmerged),
+            status: None,
             sort: GitHubPullRequestSort::Updated,
             page: 1,
         };
@@ -4296,6 +4320,22 @@ mod tests {
         assert_eq!(
             pull_request_search_query("octocat", "hello-world", &filters),
             "author:hubot crash repo:octocat/hello-world is:pr is:closed is:unmerged"
+        );
+    }
+
+    #[test]
+    fn pull_request_status_filters_use_github_search_values() {
+        assert_eq!(
+            GitHubPullRequestStatusFilter::Success.search_qualifier(),
+            "status:success"
+        );
+        assert_eq!(
+            GitHubPullRequestStatusFilter::Failure.search_qualifier(),
+            "status:failure"
+        );
+        assert_eq!(
+            GitHubPullRequestStatusFilter::Pending.search_qualifier(),
+            "status:pending"
         );
     }
 

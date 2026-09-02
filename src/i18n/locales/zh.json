@@ -1475,6 +1475,13 @@
         "merged": "已合入",
         "unmerged": "未合入"
       },
+      "pullRequestStatusFilter": "检查状态",
+      "allPullRequestStatuses": "全部检查状态",
+      "pullRequestStatusFilters": {
+        "success": "检查通过",
+        "failure": "检查失败",
+        "pending": "检查中"
+      },
       "pullRequestPagination": "拉取请求分页",
       "backToPullRequests": "返回拉取请求",
       "openedPullRequestBy": "@{{author}} 创建于 {{date}}",

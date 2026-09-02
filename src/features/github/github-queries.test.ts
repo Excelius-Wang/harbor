@@ -1134,6 +1134,7 @@ describe("GitHub repository queries", () => {
       label: "bug",
       review: "approved",
       merge: "merged",
+      status: "success",
       sort: "comments",
       page: 2,
     });
@@ -1151,6 +1152,7 @@ describe("GitHub repository queries", () => {
       "bug",
       "approved",
       "merged",
+      "success",
       "comments",
       2,
     ]);
@@ -1162,6 +1164,7 @@ describe("GitHub repository queries", () => {
       label: "bug",
       review: "approved",
       merge: "merged",
+      status: "success",
       sort: "comments",
       page: 2,
     });
