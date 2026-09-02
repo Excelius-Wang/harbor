@@ -127,4 +127,37 @@ describe("GitHub Pull Request list filters", () => {
       });
     });
   });
+
+  it("sends the selected GitHub checks status", async () => {
+    const user = userEvent.setup();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <GitHubPullRequestView repository={repository} />
+      </QueryClientProvider>
+    );
+
+    const statusTrigger = await screen.findByRole("combobox", {
+      name: "workspace.repositories.pullRequestStatusFilter",
+    });
+    await user.click(statusTrigger);
+    await user.click(
+      await screen.findByRole("option", {
+        name: "workspace.repositories.pullRequestStatusFilters.failure",
+      })
+    );
+
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith("github_list_repository_pull_requests", {
+        owner: "octocat",
+        repository: "hello-world",
+        pullRequestState: "open",
+        query: "",
+        label: "",
+        status: "failure",
+        sort: "updated",
+        page: 1,
+      });
+    });
+  });
 });

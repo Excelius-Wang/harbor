@@ -77,6 +77,7 @@ import type {
   GitHubPullRequestReviewFilter,
   GitHubPullRequestReviewPage,
   GitHubPullRequestReviewTeamPage,
+  GitHubPullRequestStatusFilter,
   GitHubPullRequestSort,
   GitHubPullRequestState,
   GitHubReactionSubject,
@@ -240,6 +241,7 @@ export type GitHubPullRequestsTarget = GitHubRepositoryTarget & {
   label: string;
   review?: GitHubPullRequestReviewFilter | null;
   merge?: GitHubPullRequestMergeFilter | null;
+  status?: GitHubPullRequestStatusFilter | null;
   sort: GitHubPullRequestSort;
   page: number;
 };
@@ -750,6 +752,7 @@ export const githubQueryKeys = {
     label,
     review,
     merge,
+    status,
     sort,
     page,
   }: GitHubPullRequestsTarget) =>
@@ -764,6 +767,7 @@ export const githubQueryKeys = {
       label,
       review ?? null,
       merge ?? null,
+      status ?? null,
       sort,
       page,
     ] as const,
@@ -1852,6 +1856,7 @@ export function repositoryPullRequestsQueryOptions(target: GitHubPullRequestsTar
         label: target.label,
         ...(target.review ? { review: target.review } : {}),
         ...(target.merge ? { merge: target.merge } : {}),
+        ...(target.status ? { status: target.status } : {}),
         sort: target.sort,
         page: target.page,
       }),

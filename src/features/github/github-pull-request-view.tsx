@@ -31,6 +31,7 @@ import type {
   GitHubPullRequestReviewFilter,
   GitHubPullRequestSort,
   GitHubPullRequestState,
+  GitHubPullRequestStatusFilter,
   GitHubRepository,
 } from "./github-data";
 import { GitHubPullRequestDetail } from "./github-pull-request-detail";
@@ -46,6 +47,7 @@ import {
 const ALL_LABELS = "__all__";
 const ALL_REVIEWS = "__all_reviews__";
 const ALL_MERGES = "__all_merges__";
+const ALL_STATUSES = "__all_statuses__";
 
 function PullRequestSkeletons() {
   return (
@@ -79,6 +81,7 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
   const [label, setLabel] = useState("");
   const [review, setReview] = useState<GitHubPullRequestReviewFilter | null>(null);
   const [merge, setMerge] = useState<GitHubPullRequestMergeFilter | null>(null);
+  const [status, setStatus] = useState<GitHubPullRequestStatusFilter | null>(null);
   const [sort, setSort] = useState<GitHubPullRequestSort>("updated");
   const [page, setPage] = useState(1);
   const [selectedPullRequestNumber, setSelectedPullRequestNumber] = useState<number | null>(null);
@@ -92,6 +95,7 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
       label,
       review,
       merge,
+      status,
       sort,
       page,
     }),
@@ -117,6 +121,7 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
     setLabel("");
     setReview(null);
     setMerge(null);
+    setStatus(null);
     setSort("updated");
     setPage(1);
     setSelectedPullRequestNumber(null);
@@ -192,13 +197,13 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
           </div>
         </div>
         <form
-          className="grid min-w-0 grid-cols-1 gap-2 @min-[480px]/pulls:grid-cols-3 @min-[900px]/pulls:grid-cols-[minmax(180px,1fr)_repeat(4,minmax(128px,144px))]"
+          className="grid min-w-0 grid-cols-1 gap-2 @min-[480px]/pulls:grid-cols-3 @min-[960px]/pulls:grid-cols-[minmax(180px,1fr)_repeat(5,minmax(128px,144px))]"
           onSubmit={(event) => {
             event.preventDefault();
             resetPage(() => setQuery(draftQuery.trim()));
           }}
         >
-          <div className="relative min-w-0 @min-[480px]/pulls:col-span-3 @min-[900px]/pulls:col-span-1">
+          <div className="relative min-w-0 @min-[480px]/pulls:col-span-3 @min-[960px]/pulls:col-span-1">
             <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
             <Input
               value={draftQuery}
@@ -231,6 +236,38 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
                     {item.name}
                   </SelectItem>
                 ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <Select
+            value={status ?? ALL_STATUSES}
+            onValueChange={(value) =>
+              resetPage(() =>
+                setStatus(value === ALL_STATUSES ? null : (value as GitHubPullRequestStatusFilter))
+              )
+            }
+          >
+            <SelectTrigger
+              size="sm"
+              className="w-full min-w-0"
+              aria-label={t("workspace.repositories.pullRequestStatusFilter")}
+            >
+              <SelectValue placeholder={t("workspace.repositories.allPullRequestStatuses")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value={ALL_STATUSES}>
+                  {t("workspace.repositories.allPullRequestStatuses")}
+                </SelectItem>
+                <SelectItem value="success">
+                  {t("workspace.repositories.pullRequestStatusFilters.success")}
+                </SelectItem>
+                <SelectItem value="failure">
+                  {t("workspace.repositories.pullRequestStatusFilters.failure")}
+                </SelectItem>
+                <SelectItem value="pending">
+                  {t("workspace.repositories.pullRequestStatusFilters.pending")}
+                </SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>

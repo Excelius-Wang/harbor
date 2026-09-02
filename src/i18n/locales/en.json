@@ -1481,6 +1481,13 @@
         "merged": "Merged",
         "unmerged": "Not merged"
       },
+      "pullRequestStatusFilter": "Checks status",
+      "allPullRequestStatuses": "All check statuses",
+      "pullRequestStatusFilters": {
+        "success": "Checks passing",
+        "failure": "Checks failing",
+        "pending": "Checks pending"
+      },
       "pullRequestPagination": "Pull request pages",
       "backToPullRequests": "Back to pull requests",
       "openedPullRequestBy": "@{{author}} opened this pull request on {{date}}",
