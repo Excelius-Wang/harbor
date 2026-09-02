@@ -1352,7 +1352,7 @@ export type GitHubIssueStateCapabilities = {
   viewerCanClose: boolean;
   viewerCanReopen: boolean;
 };
-export type GitHubIssueAssignment = "all" | "unassigned";
+export type GitHubIssueAssignment = "all" | "assignedToMe" | "unassigned";
 export type GitHubIssueSort =
   | "updated"
   | "updatedAscending"

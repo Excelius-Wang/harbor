@@ -290,6 +290,7 @@ function updateRepositoryIssuePages(
     const cachedState = issueStateFromQueryKey(queryKey);
     const closeReasonMatches = repositoryIssueCloseReasonMatches(queryKey, issue);
     const milestoneMatches = repositoryIssueMilestoneMatches(queryKey, issue);
+    const assignmentFilter = queryKey[REPOSITORY_ISSUE_QUERY_KEY_INDEX.assignment];
     const linkedPullRequestFilter = repositoryIssueLinkedPullRequestEnabled(queryKey);
     const issueTypeFilter = repositoryIssueTypeEnabled(queryKey);
     const exactDestination = repositoryIssuePageAccepts(queryKey, issue);
@@ -297,7 +298,7 @@ function updateRepositoryIssuePages(
     if (
       matches.length &&
       cachedState === issue.state &&
-      (linkedPullRequestFilter || issueTypeFilter)
+      (linkedPullRequestFilter || issueTypeFilter || assignmentFilter === "assignedToMe")
     ) {
       void queryClient.invalidateQueries({ queryKey, exact: true });
       continue;

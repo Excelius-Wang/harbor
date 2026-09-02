@@ -771,6 +771,35 @@ describe("GitHub Issue mutations", () => {
     expect(queryClient.getQueryState(typeListKey)?.isInvalidated).toBe(true);
   });
 
+  it("invalidates assigned-to-me caches when an Issue changes", () => {
+    const queryClient = new QueryClient();
+    const assignedToMeListKey = githubQueryKeys.issues({
+      owner: target.owner,
+      repository: target.repository,
+      state: "open",
+      assignment: "assignedToMe",
+      query: "",
+      label: "",
+      sort: "updated",
+      page: 1,
+    });
+    queryClient.setQueryData<GitHubIssuePage>(assignedToMeListKey, {
+      issues: [issue],
+      totalCount: 1,
+      page: 1,
+      hasPrevious: false,
+      hasMore: false,
+    });
+
+    syncUpdatedIssue(queryClient, target, {
+      ...issue,
+      assignees: ["another-user"],
+    });
+
+    expect(queryClient.getQueryData<GitHubIssuePage>(assignedToMeListKey)?.issues).toEqual([issue]);
+    expect(queryClient.getQueryState(assignedToMeListKey)?.isInvalidated).toBe(true);
+  });
+
   it("invalidates only Issue detail, list, and inbox roots", async () => {
     const queryClient = new QueryClient();
     const affected = [

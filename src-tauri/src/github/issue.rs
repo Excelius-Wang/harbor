@@ -53,6 +53,7 @@ pub enum GitHubIssueState {
 #[serde(rename_all = "camelCase")]
 pub enum GitHubIssueAssignment {
     All,
+    AssignedToMe,
     Unassigned,
 }
 
@@ -703,8 +704,10 @@ fn issue_search_query(owner: &str, repository: &str, filters: &GitHubIssueFilter
         "is:issue".to_string(),
         format!("is:{state}"),
     ];
-    if filters.assignment == GitHubIssueAssignment::Unassigned {
-        query.push("no:assignee".to_string());
+    match filters.assignment {
+        GitHubIssueAssignment::All => {}
+        GitHubIssueAssignment::AssignedToMe => query.push("assignee:@me".to_string()),
+        GitHubIssueAssignment::Unassigned => query.push("no:assignee".to_string()),
     }
     if !filters.label.is_empty() {
         let label = filters.label.replace('\\', "\\\\").replace('"', "\\\"");
