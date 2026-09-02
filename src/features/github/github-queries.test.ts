@@ -950,6 +950,7 @@ describe("GitHub repository queries", () => {
       query: "render crash",
       label: "bug",
       milestone: "Harbor 0.2",
+      linkedPullRequest: true,
       sort: "comments",
       page: 3,
       closeReason: "notPlanned",
@@ -971,6 +972,7 @@ describe("GitHub repository queries", () => {
       "comments",
       3,
       "Harbor 0.2",
+      true,
     ]);
     expect(invoke).toHaveBeenCalledWith("github_list_repository_issues", {
       owner: "octocat",
@@ -980,6 +982,7 @@ describe("GitHub repository queries", () => {
       query: "render crash",
       label: "bug",
       milestone: "Harbor 0.2",
+      linkedPullRequest: true,
       sort: "comments",
       page: 3,
       closeReason: "notPlanned",

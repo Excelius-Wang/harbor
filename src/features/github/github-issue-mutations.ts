@@ -16,7 +16,16 @@ import type {
 import { githubQueryKeys } from "./github-queries";
 
 const GITHUB_ISSUE_PAGE_SIZE = 30;
-const REPOSITORY_ISSUE_MILESTONE_QUERY_KEY_INDEX = 12;
+const REPOSITORY_ISSUE_QUERY_KEY_INDEX = {
+  assignment: 6,
+  query: 7,
+  label: 8,
+  closeReason: 9,
+  sort: 10,
+  page: 11,
+  milestone: 12,
+  linkedPullRequest: 13,
+} as const;
 
 function reconcileUpdatedPageItems<T>(
   items: T[],
@@ -280,8 +289,13 @@ function updateRepositoryIssuePages(
     const cachedState = issueStateFromQueryKey(queryKey);
     const closeReasonMatches = repositoryIssueCloseReasonMatches(queryKey, issue);
     const milestoneMatches = repositoryIssueMilestoneMatches(queryKey, issue);
+    const linkedPullRequestFilter = repositoryIssueLinkedPullRequestEnabled(queryKey);
     const exactDestination = repositoryIssuePageAccepts(queryKey, issue);
     const shouldInsert = !matches.length && cachedState === issue.state && exactDestination;
+    if (matches.length && cachedState === issue.state && linkedPullRequestFilter) {
+      void queryClient.invalidateQueries({ queryKey, exact: true });
+      continue;
+    }
     if (
       matches.length &&
       cachedState === issue.state &&
@@ -308,7 +322,9 @@ function updateRepositoryIssuePages(
       page.hasMore
     );
     const staleUpdatedPage =
-      cachedState === issue.state && queryKey[10] === "updated" && queryKey[11] !== 1;
+      cachedState === issue.state &&
+      queryKey[REPOSITORY_ISSUE_QUERY_KEY_INDEX.sort] === "updated" &&
+      queryKey[REPOSITORY_ISSUE_QUERY_KEY_INDEX.page] !== 1;
     if (staleUpdatedPage) {
       queryClient.setQueryData<GitHubIssuePage>(queryKey, {
         ...page,
@@ -317,7 +333,9 @@ function updateRepositoryIssuePages(
       void queryClient.invalidateQueries({ queryKey, exact: true });
       continue;
     }
-    const moveToFront = queryKey[10] === "updated" && queryKey[11] === 1;
+    const moveToFront =
+      queryKey[REPOSITORY_ISSUE_QUERY_KEY_INDEX.sort] === "updated" &&
+      queryKey[REPOSITORY_ISSUE_QUERY_KEY_INDEX.page] === 1;
     queryClient.setQueryData<GitHubIssuePage>(
       queryKey,
       cachedState && cachedState !== issue.state
@@ -348,11 +366,11 @@ function updateRepositoryIssuePages(
 }
 
 function repositoryIssuePageAccepts(queryKey: QueryKey, issue: GitHubIssue) {
-  const assignment = queryKey[6];
-  const query = queryKey[7];
-  const label = queryKey[8];
-  const sort = queryKey[10];
-  const page = queryKey[11];
+  const assignment = queryKey[REPOSITORY_ISSUE_QUERY_KEY_INDEX.assignment];
+  const query = queryKey[REPOSITORY_ISSUE_QUERY_KEY_INDEX.query];
+  const label = queryKey[REPOSITORY_ISSUE_QUERY_KEY_INDEX.label];
+  const sort = queryKey[REPOSITORY_ISSUE_QUERY_KEY_INDEX.sort];
+  const page = queryKey[REPOSITORY_ISSUE_QUERY_KEY_INDEX.page];
   return (
     page === 1 &&
     sort === "updated" &&
@@ -360,21 +378,29 @@ function repositoryIssuePageAccepts(queryKey: QueryKey, issue: GitHubIssue) {
     query === "" &&
     (label === "" || issue.labels.some((item) => item.name === label)) &&
     repositoryIssueCloseReasonMatches(queryKey, issue) &&
-    repositoryIssueMilestoneMatches(queryKey, issue)
+    repositoryIssueMilestoneMatches(queryKey, issue) &&
+    !repositoryIssueLinkedPullRequestEnabled(queryKey)
   );
 }
 
 function repositoryIssueCloseReasonMatches(queryKey: QueryKey, issue: GitHubIssue) {
-  const closeReason = queryKey[9] as GitHubIssueCloseReasonFilter | null | undefined;
+  const closeReason = queryKey[REPOSITORY_ISSUE_QUERY_KEY_INDEX.closeReason] as
+    | GitHubIssueCloseReasonFilter
+    | null
+    | undefined;
   return closeReason === null || closeReason === undefined || closeReason === issue.stateReason;
 }
 
 function repositoryIssueMilestoneMatches(queryKey: QueryKey, issue: GitHubIssue) {
-  const milestone = queryKey[REPOSITORY_ISSUE_MILESTONE_QUERY_KEY_INDEX] as
+  const milestone = queryKey[REPOSITORY_ISSUE_QUERY_KEY_INDEX.milestone] as
     | string
     | null
     | undefined;
   return milestone === null || milestone === undefined || milestone === issue.milestone;
+}
+
+function repositoryIssueLinkedPullRequestEnabled(queryKey: QueryKey) {
+  return queryKey[REPOSITORY_ISSUE_QUERY_KEY_INDEX.linkedPullRequest] === true;
 }
 
 function matchesIssueSummary(summary: GitHubIssueSummary, target: GitHubIssueMutationTarget) {
