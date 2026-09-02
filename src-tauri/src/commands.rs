@@ -25,13 +25,13 @@ use crate::{
         GitHubGistFileInput, GitHubGistFileMutation, GitHubGistPage, GitHubGistRevisionDetail,
         GitHubGistRevisionPage, GitHubGistSource, GitHubGistUpdateInput,
         GitHubInsightsTrafficPeriod, GitHubIssue, GitHubIssueAssigneePage, GitHubIssueAssignment,
-        GitHubIssueClone, GitHubIssueCloneStatus, GitHubIssueCreateInput,
-        GitHubIssueCreationPolicy, GitHubIssueDependenciesPage, GitHubIssueDetailPage,
-        GitHubIssueDuplicateReference, GitHubIssueFilters, GitHubIssueInboxFilters,
-        GitHubIssueInboxPage, GitHubIssueInboxScope, GitHubIssueLabel, GitHubIssueLabelMutation,
-        GitHubIssueLabelPage, GitHubIssueLinkedPullRequestPage, GitHubIssueMilestone,
-        GitHubIssueMilestoneMutation, GitHubIssueMilestonePage, GitHubIssuePage,
-        GitHubIssueRelationshipsPage, GitHubIssueSort, GitHubIssueState,
+        GitHubIssueClone, GitHubIssueCloneStatus, GitHubIssueCloseReasonFilter,
+        GitHubIssueCreateInput, GitHubIssueCreationPolicy, GitHubIssueDependenciesPage,
+        GitHubIssueDetailPage, GitHubIssueDuplicateReference, GitHubIssueFilters,
+        GitHubIssueInboxFilters, GitHubIssueInboxPage, GitHubIssueInboxScope, GitHubIssueLabel,
+        GitHubIssueLabelMutation, GitHubIssueLabelPage, GitHubIssueLinkedPullRequestPage,
+        GitHubIssueMilestone, GitHubIssueMilestoneMutation, GitHubIssueMilestonePage,
+        GitHubIssuePage, GitHubIssueRelationshipsPage, GitHubIssueSort, GitHubIssueState,
         GitHubIssueStateCapabilities, GitHubIssueStateMutation, GitHubIssueSubIssueCreateInput,
         GitHubIssueSubIssuePriorityInput, GitHubIssueSummary, GitHubIssueTimelineItem,
         GitHubIssueTrackingDirection, GitHubIssueTrackingPage, GitHubIssueTypeStatus,
@@ -1553,10 +1553,12 @@ pub async fn github_list_repository_issues(
     query: String,
     label: String,
     sort: GitHubIssueSort,
+    close_reason: Option<GitHubIssueCloseReasonFilter>,
     page: u32,
     state: State<'_, AppState>,
 ) -> Result<GitHubIssuePage, AppError> {
     let repository = RepositoryRef::new(owner, repository)?;
+    validate_issue_close_reason_filter(issue_state, close_reason)?;
     let filters = GitHubIssueFilters {
         state: issue_state,
         assignment,
@@ -1564,6 +1566,7 @@ pub async fn github_list_repository_issues(
         label: validate_issue_label(label)?,
         sort,
         page: validate_issue_page(page)?,
+        close_reason,
     };
     state
         .github
@@ -4957,6 +4960,18 @@ fn validate_issue_query(query: String) -> Result<String, AppError> {
     Ok(query)
 }
 
+fn validate_issue_close_reason_filter(
+    state: GitHubIssueState,
+    close_reason: Option<GitHubIssueCloseReasonFilter>,
+) -> Result<(), AppError> {
+    if state == GitHubIssueState::Open && close_reason.is_some() {
+        return Err(AppError::Validation(
+            "a close-reason filter requires closed Issues".to_string(),
+        ));
+    }
+    Ok(())
+}
+
 fn validate_project_number(number: u32) -> Result<u32, AppError> {
     if number == 0 || number > i32::MAX as u32 {
         Err(AppError::Validation(
@@ -5790,6 +5805,21 @@ mod tests {
         assert!(validate_page(1_001).is_err());
         assert_eq!(validate_issue_page(34).expect("last search page"), 34);
         assert!(validate_issue_page(35).is_err());
+    }
+
+    #[test]
+    fn issue_close_reason_filters_only_apply_to_closed_issues() {
+        assert!(validate_issue_close_reason_filter(
+            GitHubIssueState::Closed,
+            Some(GitHubIssueCloseReasonFilter::Duplicate),
+        )
+        .is_ok());
+        assert!(validate_issue_close_reason_filter(GitHubIssueState::Open, None).is_ok());
+        assert!(validate_issue_close_reason_filter(
+            GitHubIssueState::Open,
+            Some(GitHubIssueCloseReasonFilter::Completed),
+        )
+        .is_err());
     }
 
     #[test]

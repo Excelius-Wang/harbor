@@ -69,6 +69,7 @@ impl GitHubIssueClient for super::super::tests::FakeGitHubClient {
                     label: String::new(),
                     sort: filters.sort,
                     page: filters.page,
+                    close_reason: None,
                 },
             )
             .await?
@@ -169,6 +170,7 @@ impl GitHubIssueClient for super::super::tests::FakeGitHubClient {
                     label: String::new(),
                     sort: GitHubIssueSort::Updated,
                     page: 1,
+                    close_reason: None,
                 },
             )
             .await?;
@@ -333,12 +335,56 @@ fn issue_search_is_scoped_to_real_issues_and_selected_filters() {
         label: "help wanted".to_string(),
         sort: GitHubIssueSort::Comments,
         page: 3,
+        close_reason: None,
     };
 
     assert_eq!(
         issue_search_query("octocat", "hello-world", &filters),
         "render crash repo:octocat/hello-world is:issue is:closed no:assignee label:\"help wanted\""
     );
+}
+
+#[test]
+fn issue_search_filters_closed_issues_by_the_selected_reason() {
+    let filters = GitHubIssueFilters {
+        state: GitHubIssueState::Closed,
+        assignment: GitHubIssueAssignment::All,
+        query: String::new(),
+        label: String::new(),
+        sort: GitHubIssueSort::Updated,
+        page: 1,
+        close_reason: Some(GitHubIssueCloseReasonFilter::NotPlanned),
+    };
+
+    assert_eq!(
+        issue_search_query("octocat", "hello-world", &filters),
+        "repo:octocat/hello-world is:issue is:closed reason:\"not planned\""
+    );
+}
+
+#[test]
+fn issue_search_uses_github_reason_qualifiers_for_each_close_reason() {
+    let cases = [
+        (GitHubIssueCloseReasonFilter::Completed, "reason:completed"),
+        (
+            GitHubIssueCloseReasonFilter::NotPlanned,
+            "reason:\"not planned\"",
+        ),
+        (GitHubIssueCloseReasonFilter::Duplicate, "reason:duplicate"),
+    ];
+
+    for (close_reason, qualifier) in cases {
+        let filters = GitHubIssueFilters {
+            state: GitHubIssueState::Closed,
+            assignment: GitHubIssueAssignment::All,
+            query: String::new(),
+            label: String::new(),
+            sort: GitHubIssueSort::Updated,
+            page: 1,
+            close_reason: Some(close_reason),
+        };
+        assert!(issue_search_query("octocat", "hello-world", &filters).ends_with(qualifier));
+    }
 }
 
 #[test]
@@ -350,6 +396,7 @@ fn issue_search_removes_scope_changing_user_qualifiers() {
         label: String::new(),
         sort: GitHubIssueSort::Updated,
         page: 1,
+        close_reason: None,
     };
 
     assert_eq!(

@@ -2,6 +2,7 @@ import type { QueryClient, QueryKey } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
 import type {
   GitHubIssue,
+  GitHubIssueCloseReasonFilter,
   GitHubIssueCloseReason,
   GitHubIssueDetailPage,
   GitHubIssueInboxPage,
@@ -276,8 +277,18 @@ function updateRepositoryIssuePages(
     if (!page) continue;
     const matches = page.issues.filter((item) => item.number === target.issueNumber);
     const cachedState = issueStateFromQueryKey(queryKey);
+    const closeReasonMatches = repositoryIssueCloseReasonMatches(queryKey, issue);
     const exactDestination = repositoryIssuePageAccepts(queryKey, issue);
     const shouldInsert = !matches.length && cachedState === issue.state && exactDestination;
+    if (matches.length && cachedState === issue.state && !closeReasonMatches) {
+      queryClient.setQueryData<GitHubIssuePage>(queryKey, {
+        ...page,
+        issues: page.issues.filter((item) => item.number !== target.issueNumber),
+        totalCount: Math.max(0, page.totalCount - matches.length),
+      });
+      void queryClient.invalidateQueries({ queryKey, exact: true });
+      continue;
+    }
     if (!matches.length && !shouldInsert) {
       if (cachedState === issue.state) {
         void queryClient.invalidateQueries({ queryKey, exact: true });
@@ -291,7 +302,7 @@ function updateRepositoryIssuePages(
       page.hasMore
     );
     const staleUpdatedPage =
-      cachedState === issue.state && queryKey[9] === "updated" && queryKey[10] !== 1;
+      cachedState === issue.state && queryKey[10] === "updated" && queryKey[11] !== 1;
     if (staleUpdatedPage) {
       queryClient.setQueryData<GitHubIssuePage>(queryKey, {
         ...page,
@@ -300,7 +311,7 @@ function updateRepositoryIssuePages(
       void queryClient.invalidateQueries({ queryKey, exact: true });
       continue;
     }
-    const moveToFront = queryKey[9] === "updated" && queryKey[10] === 1;
+    const moveToFront = queryKey[10] === "updated" && queryKey[11] === 1;
     queryClient.setQueryData<GitHubIssuePage>(
       queryKey,
       cachedState && cachedState !== issue.state
@@ -334,15 +345,21 @@ function repositoryIssuePageAccepts(queryKey: QueryKey, issue: GitHubIssue) {
   const assignment = queryKey[6];
   const query = queryKey[7];
   const label = queryKey[8];
-  const sort = queryKey[9];
-  const page = queryKey[10];
+  const sort = queryKey[10];
+  const page = queryKey[11];
   return (
     page === 1 &&
     sort === "updated" &&
     (assignment === "all" || (assignment === "unassigned" && !issue.assignees.length)) &&
     query === "" &&
-    (label === "" || issue.labels.some((item) => item.name === label))
+    (label === "" || issue.labels.some((item) => item.name === label)) &&
+    repositoryIssueCloseReasonMatches(queryKey, issue)
   );
+}
+
+function repositoryIssueCloseReasonMatches(queryKey: QueryKey, issue: GitHubIssue) {
+  const closeReason = queryKey[9] as GitHubIssueCloseReasonFilter | null | undefined;
+  return closeReason === null || closeReason === undefined || closeReason === issue.stateReason;
 }
 
 function matchesIssueSummary(summary: GitHubIssueSummary, target: GitHubIssueMutationTarget) {

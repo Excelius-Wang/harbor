@@ -2571,6 +2571,13 @@
         "notPlanned": "已按不计划处理关闭",
         "duplicate": "已按重复 Issue 关闭"
       },
+      "allIssueCloseReasons": "全部关闭理由",
+      "issueCloseReasonFilter": "Issue 关闭理由",
+      "issueCloseReasons": {
+        "completed": "已完成",
+        "notPlanned": "不计划处理",
+        "duplicate": "重复 Issue"
+      },
       "allDiscussionCategories": "全部分类",
       "discussionCount": "{{count}} 条讨论",
       "openDiscussions": "开放的讨论",

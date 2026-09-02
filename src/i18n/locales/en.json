@@ -2578,6 +2578,13 @@
         "notPlanned": "Closed as not planned",
         "duplicate": "Closed as duplicate"
       },
+      "allIssueCloseReasons": "All close reasons",
+      "issueCloseReasonFilter": "Issue close reason",
+      "issueCloseReasons": {
+        "completed": "Completed",
+        "notPlanned": "Not planned",
+        "duplicate": "Duplicate"
+      },
       "allDiscussionCategories": "All categories",
       "discussionCount": "{{count}} discussions",
       "openDiscussions": "Open discussions",

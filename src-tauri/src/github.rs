@@ -102,11 +102,11 @@ pub(crate) use issue::GitHubIssueCreateInput;
 #[cfg(test)]
 use issue::GitHubIssueTimelineKind;
 pub use issue::{
-    GitHubIssue, GitHubIssueAssigneePage, GitHubIssueAssignment, GitHubIssueCreationPolicy,
-    GitHubIssueDetailPage, GitHubIssueFilters, GitHubIssueInboxFilters, GitHubIssueInboxPage,
-    GitHubIssueInboxScope, GitHubIssueLabel, GitHubIssueLabelPage, GitHubIssueMilestone,
-    GitHubIssueMilestonePage, GitHubIssuePage, GitHubIssueSort, GitHubIssueState,
-    GitHubIssueStateCapabilities, GitHubIssueStateMutation, GitHubIssueSummary,
+    GitHubIssue, GitHubIssueAssigneePage, GitHubIssueAssignment, GitHubIssueCloseReasonFilter,
+    GitHubIssueCreationPolicy, GitHubIssueDetailPage, GitHubIssueFilters, GitHubIssueInboxFilters,
+    GitHubIssueInboxPage, GitHubIssueInboxScope, GitHubIssueLabel, GitHubIssueLabelPage,
+    GitHubIssueMilestone, GitHubIssueMilestonePage, GitHubIssuePage, GitHubIssueSort,
+    GitHubIssueState, GitHubIssueStateCapabilities, GitHubIssueStateMutation, GitHubIssueSummary,
     GitHubIssueTimelineItem,
 };
 pub(crate) use issue_clone::IssueCloneMutation;
@@ -2859,6 +2859,7 @@ mod tests {
             label: String::new(),
             sort: GitHubIssueSort::Updated,
             page: 1,
+            close_reason: None,
         };
         let issues = service
             .issues("octocat", "hello-world", &issue_filters)

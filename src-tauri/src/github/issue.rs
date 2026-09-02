@@ -64,6 +64,24 @@ pub enum GitHubIssueSort {
     Comments,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum GitHubIssueCloseReasonFilter {
+    Completed,
+    NotPlanned,
+    Duplicate,
+}
+
+impl GitHubIssueCloseReasonFilter {
+    fn search_qualifier(self) -> &'static str {
+        match self {
+            Self::Completed => "reason:completed",
+            Self::NotPlanned => "reason:\"not planned\"",
+            Self::Duplicate => "reason:duplicate",
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct GitHubIssueFilters {
     pub state: GitHubIssueState,
@@ -72,6 +90,7 @@ pub struct GitHubIssueFilters {
     pub label: String,
     pub sort: GitHubIssueSort,
     pub page: u32,
+    pub close_reason: Option<GitHubIssueCloseReasonFilter>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -677,6 +696,9 @@ fn issue_search_query(owner: &str, repository: &str, filters: &GitHubIssueFilter
     if !filters.label.is_empty() {
         let label = filters.label.replace('\\', "\\\\").replace('"', "\\\"");
         query.push(format!("label:\"{label}\""));
+    }
+    if let Some(reason) = filters.close_reason {
+        query.push(reason.search_qualifier().to_string());
     }
     query
         .into_iter()
