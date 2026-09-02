@@ -280,7 +280,11 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
                 )
               }
             >
-              <SelectTrigger size="sm" className="w-full min-w-0">
+              <SelectTrigger
+                size="sm"
+                className="w-full min-w-0"
+                aria-label={t("workspace.repositories.issueCloseReasonFilter")}
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

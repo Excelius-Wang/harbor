@@ -2579,6 +2579,7 @@
         "duplicate": "Closed as duplicate"
       },
       "allIssueCloseReasons": "All close reasons",
+      "issueCloseReasonFilter": "Issue close reason",
       "issueCloseReasons": {
         "completed": "Completed",
         "notPlanned": "Not planned",

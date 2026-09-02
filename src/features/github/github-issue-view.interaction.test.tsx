@@ -6,6 +6,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { GitHubIssueView } from "./github-issue-view";
+import { githubQueryKeys } from "./github-queries";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(), isTauri: () => false }));
 vi.mock("react-i18next", () => ({
@@ -29,13 +30,13 @@ const repository = {
 };
 
 function renderView() {
-  return render(
-    <QueryClientProvider
-      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-    >
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const view = render(
+    <QueryClientProvider client={client}>
       <GitHubIssueView repository={repository} />
     </QueryClientProvider>
   );
+  return { ...view, client };
 }
 
 beforeAll(() => {
@@ -78,7 +79,9 @@ describe("GitHub Issue close-reason filter", () => {
     renderView();
 
     await user.click(screen.getByRole("tab", { name: "workspace.repositories.closedIssues" }));
-    const reasonTrigger = (await screen.findAllByRole("combobox"))[1];
+    const reasonTrigger = await screen.findByRole("combobox", {
+      name: "workspace.repositories.issueCloseReasonFilter",
+    });
     await user.click(reasonTrigger);
     await user.click(
       await screen.findByRole("option", {
@@ -103,20 +106,49 @@ describe("GitHub Issue close-reason filter", () => {
 
   it("clears the reason when returning to open Issues", async () => {
     const user = userEvent.setup();
-    renderView();
+    const { client } = renderView();
 
     await user.click(screen.getByRole("tab", { name: "workspace.repositories.closedIssues" }));
-    expect(
-      (await screen.findAllByText("workspace.repositories.allIssueCloseReasons"))[0]
-    ).toBeDefined();
+    const reasonTrigger = await screen.findByRole("combobox", {
+      name: "workspace.repositories.issueCloseReasonFilter",
+    });
+    await user.click(reasonTrigger);
+    await user.click(
+      await screen.findByRole("option", {
+        name: "workspace.repositories.issueCloseReasons.notPlanned",
+      })
+    );
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith(
+        "github_list_repository_issues",
+        expect.objectContaining({ closeReason: "notPlanned" })
+      );
+    });
+    vi.mocked(invoke).mockClear();
+    client.removeQueries({
+      queryKey: githubQueryKeys.issues({
+        owner: repository.owner,
+        repository: repository.name,
+        state: "open",
+        assignment: "all",
+        query: "",
+        label: "",
+        closeReason: null,
+        sort: "updated",
+        page: 1,
+      }),
+      exact: true,
+    });
     await user.click(screen.getByRole("tab", { name: "workspace.repositories.openIssues" }));
 
     await waitFor(() =>
       expect(screen.queryByText("workspace.repositories.allIssueCloseReasons")).toBeNull()
     );
-    expect(invoke).not.toHaveBeenCalledWith(
-      "github_list_repository_issues",
-      expect.objectContaining({ closeReason: "notPlanned" })
-    );
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith(
+        "github_list_repository_issues",
+        expect.not.objectContaining({ closeReason: expect.anything() })
+      );
+    });
   });
 });

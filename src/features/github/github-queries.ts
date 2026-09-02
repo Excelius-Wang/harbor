@@ -1629,9 +1629,9 @@ export function repositoryIssuesQueryOptions(target: GitHubIssuesTarget) {
         assignment: target.assignment,
         query: target.query,
         label: target.label,
-        closeReason: target.closeReason ?? null,
         sort: target.sort,
         page: target.page,
+        ...(target.closeReason ? { closeReason: target.closeReason } : {}),
       }),
     staleTime: GITHUB_QUERY_STALE_TIME,
   });

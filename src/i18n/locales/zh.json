@@ -2572,6 +2572,7 @@
         "duplicate": "已按重复 Issue 关闭"
       },
       "allIssueCloseReasons": "全部关闭理由",
+      "issueCloseReasonFilter": "Issue 关闭理由",
       "issueCloseReasons": {
         "completed": "已完成",
         "notPlanned": "不计划处理",

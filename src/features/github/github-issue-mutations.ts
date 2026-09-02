@@ -277,8 +277,18 @@ function updateRepositoryIssuePages(
     if (!page) continue;
     const matches = page.issues.filter((item) => item.number === target.issueNumber);
     const cachedState = issueStateFromQueryKey(queryKey);
+    const closeReasonMatches = repositoryIssueCloseReasonMatches(queryKey, issue);
     const exactDestination = repositoryIssuePageAccepts(queryKey, issue);
     const shouldInsert = !matches.length && cachedState === issue.state && exactDestination;
+    if (matches.length && cachedState === issue.state && !closeReasonMatches) {
+      queryClient.setQueryData<GitHubIssuePage>(queryKey, {
+        ...page,
+        issues: page.issues.filter((item) => item.number !== target.issueNumber),
+        totalCount: Math.max(0, page.totalCount - matches.length),
+      });
+      void queryClient.invalidateQueries({ queryKey, exact: true });
+      continue;
+    }
     if (!matches.length && !shouldInsert) {
       if (cachedState === issue.state) {
         void queryClient.invalidateQueries({ queryKey, exact: true });
@@ -335,7 +345,6 @@ function repositoryIssuePageAccepts(queryKey: QueryKey, issue: GitHubIssue) {
   const assignment = queryKey[6];
   const query = queryKey[7];
   const label = queryKey[8];
-  const closeReason = queryKey[9] as GitHubIssueCloseReasonFilter | null;
   const sort = queryKey[10];
   const page = queryKey[11];
   return (
@@ -344,8 +353,13 @@ function repositoryIssuePageAccepts(queryKey: QueryKey, issue: GitHubIssue) {
     (assignment === "all" || (assignment === "unassigned" && !issue.assignees.length)) &&
     query === "" &&
     (label === "" || issue.labels.some((item) => item.name === label)) &&
-    (closeReason === null || closeReason === issue.stateReason)
+    repositoryIssueCloseReasonMatches(queryKey, issue)
   );
+}
+
+function repositoryIssueCloseReasonMatches(queryKey: QueryKey, issue: GitHubIssue) {
+  const closeReason = queryKey[9] as GitHubIssueCloseReasonFilter | null | undefined;
+  return closeReason === null || closeReason === undefined || closeReason === issue.stateReason;
 }
 
 function matchesIssueSummary(summary: GitHubIssueSummary, target: GitHubIssueMutationTarget) {
