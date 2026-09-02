@@ -1480,6 +1480,9 @@
       "pullRequestReviewRequestedFilter": "评审请求",
       "allPullRequestReviewRequests": "全部评审请求",
       "pullRequestReviewRequested": "请求我评审",
+      "pullRequestAuthorFilter": "作者",
+      "allPullRequestAuthors": "全部作者",
+      "createdByMePullRequests": "我创建的",
       "pullRequestMergeFilter": "合入状态",
       "allPullRequestMerges": "全部合入状态",
       "pullRequestMergeFilters": {

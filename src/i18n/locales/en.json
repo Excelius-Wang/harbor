@@ -1486,6 +1486,9 @@
       "pullRequestReviewRequestedFilter": "Review requested",
       "allPullRequestReviewRequests": "All review requests",
       "pullRequestReviewRequested": "Requested from me",
+      "pullRequestAuthorFilter": "Author",
+      "allPullRequestAuthors": "All authors",
+      "createdByMePullRequests": "Created by me",
       "pullRequestMergeFilter": "Merge status",
       "allPullRequestMerges": "All merge statuses",
       "pullRequestMergeFilters": {

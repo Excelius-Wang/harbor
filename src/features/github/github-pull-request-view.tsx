@@ -49,6 +49,7 @@ const ALL_LABELS = "__all__";
 const ALL_DRAFTS = "__all_drafts__";
 const ALL_LINKED_ISSUES = "__all_linked_issues__";
 const ALL_REVIEW_REQUESTS = "__all_review_requests__";
+const ALL_CREATED_BY_ME = "__all_created_by_me__";
 const ALL_REVIEWS = "__all_reviews__";
 const ALL_MERGES = "__all_merges__";
 const ALL_STATUSES = "__all_statuses__";
@@ -86,6 +87,7 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
   const [draft, setDraft] = useState<GitHubPullRequestDraftFilter | null>(null);
   const [linkedIssue, setLinkedIssue] = useState(false);
   const [reviewRequested, setReviewRequested] = useState(false);
+  const [createdByMe, setCreatedByMe] = useState(false);
   const [review, setReview] = useState<GitHubPullRequestReviewFilter | null>(null);
   const [merge, setMerge] = useState<GitHubPullRequestMergeFilter | null>(null);
   const [status, setStatus] = useState<GitHubPullRequestStatusFilter | null>(null);
@@ -103,6 +105,7 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
       draft,
       linkedIssue,
       reviewRequested,
+      createdByMe,
       review,
       merge,
       status,
@@ -132,6 +135,7 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
     setDraft(null);
     setLinkedIssue(false);
     setReviewRequested(false);
+    setCreatedByMe(false);
     setReview(null);
     setMerge(null);
     setStatus(null);
@@ -210,13 +214,13 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
           </div>
         </div>
         <form
-          className="grid min-w-0 grid-cols-1 gap-2 @min-[480px]/pulls:grid-cols-3 @min-[1440px]/pulls:grid-cols-[minmax(180px,1fr)_repeat(8,minmax(128px,144px))]"
+          className="grid min-w-0 grid-cols-1 gap-2 @min-[480px]/pulls:grid-cols-3 @min-[1600px]/pulls:grid-cols-[minmax(180px,1fr)_repeat(9,minmax(128px,144px))]"
           onSubmit={(event) => {
             event.preventDefault();
             resetPage(() => setQuery(draftQuery.trim()));
           }}
         >
-          <div className="relative min-w-0 @min-[480px]/pulls:col-span-3 @min-[1440px]/pulls:col-span-1">
+          <div className="relative min-w-0 @min-[480px]/pulls:col-span-3 @min-[1600px]/pulls:col-span-1">
             <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
             <Input
               value={draftQuery}
@@ -419,6 +423,28 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
                 </SelectItem>
                 <SelectItem value="requested">
                   {t("workspace.repositories.pullRequestReviewRequested")}
+                </SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <Select
+            value={createdByMe ? "created" : ALL_CREATED_BY_ME}
+            onValueChange={(value) => resetPage(() => setCreatedByMe(value === "created"))}
+          >
+            <SelectTrigger
+              size="sm"
+              className="w-full min-w-0"
+              aria-label={t("workspace.repositories.pullRequestAuthorFilter")}
+            >
+              <SelectValue placeholder={t("workspace.repositories.allPullRequestAuthors")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value={ALL_CREATED_BY_ME}>
+                  {t("workspace.repositories.allPullRequestAuthors")}
+                </SelectItem>
+                <SelectItem value="created">
+                  {t("workspace.repositories.createdByMePullRequests")}
                 </SelectItem>
               </SelectGroup>
             </SelectContent>

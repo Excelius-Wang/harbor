@@ -378,6 +378,7 @@ pub struct GitHubPullRequestFilters {
     pub draft: Option<GitHubPullRequestDraftFilter>,
     pub linked_issue: bool,
     pub review_requested: bool,
+    pub created_by_me: bool,
     pub sort: GitHubPullRequestSort,
     pub page: u32,
 }
@@ -1900,6 +1901,7 @@ fn pull_request_search_query(
             filters.draft,
             filters.linked_issue,
             filters.review_requested,
+            filters.created_by_me,
         ),
         format!("repo:{owner}/{repository}"),
         "is:pr".to_string(),
@@ -1926,6 +1928,9 @@ fn pull_request_search_query(
     }
     if filters.review_requested {
         query.push("user-review-requested:@me".to_string());
+    }
+    if filters.created_by_me {
+        query.push("author:@me".to_string());
     }
     query
         .into_iter()
@@ -1992,6 +1997,7 @@ fn pull_request_search_terms(
     selected_draft: Option<GitHubPullRequestDraftFilter>,
     selected_linked_issue: bool,
     selected_review_requested: bool,
+    selected_created_by_me: bool,
 ) -> String {
     query
         .split_whitespace()
@@ -2010,7 +2016,8 @@ fn pull_request_search_terms(
                         "team-review-requested:",
                     ]
                     .iter()
-                    .any(|prefix| term.starts_with(prefix)))
+                    .any(|prefix| term.starts_with(prefix))
+                || selected_created_by_me && term.starts_with("author:"))
         })
         .collect::<Vec<_>>()
         .join(" ")
@@ -4321,6 +4328,7 @@ mod tests {
             draft: None,
             linked_issue: false,
             review_requested: false,
+            created_by_me: false,
             sort: GitHubPullRequestSort::Updated,
             page: 1,
         };
@@ -4334,7 +4342,7 @@ mod tests {
     #[test]
     fn pull_request_review_filters_use_github_search_values() {
         assert_eq!(
-            pull_request_search_terms("review:approved crash", None, None, false, false),
+            pull_request_search_terms("review:approved crash", None, None, false, false, false),
             "review:approved crash"
         );
         assert_eq!(
@@ -4370,7 +4378,7 @@ mod tests {
             "is:draft"
         );
         assert_eq!(
-            pull_request_search_terms("is:draft -is:draft crash", None, None, false, false),
+            pull_request_search_terms("is:draft -is:draft crash", None, None, false, false, false),
             "crash"
         );
         assert_eq!(
@@ -4378,6 +4386,7 @@ mod tests {
                 "is:draft -is:draft crash",
                 None,
                 Some(GitHubPullRequestDraftFilter::Draft),
+                false,
                 false,
                 false,
             ),
@@ -4397,6 +4406,7 @@ mod tests {
             draft: Some(GitHubPullRequestDraftFilter::Draft),
             linked_issue: false,
             review_requested: false,
+            created_by_me: false,
             sort: GitHubPullRequestSort::Updated,
             page: 1,
         };
@@ -4419,6 +4429,7 @@ mod tests {
             draft: None,
             linked_issue: true,
             review_requested: false,
+            created_by_me: false,
             sort: GitHubPullRequestSort::Updated,
             page: 1,
         };
@@ -4441,6 +4452,7 @@ mod tests {
             draft: None,
             linked_issue: false,
             review_requested: true,
+            created_by_me: false,
             sort: GitHubPullRequestSort::Updated,
             page: 1,
         };
@@ -4448,6 +4460,29 @@ mod tests {
         assert_eq!(
             pull_request_search_query("octocat", "hello-world", &filters),
             "crash repo:octocat/hello-world is:pr is:open user-review-requested:@me"
+        );
+    }
+
+    #[test]
+    fn selected_pull_request_created_by_me_filter_owns_author_qualifiers() {
+        let filters = GitHubPullRequestFilters {
+            state: GitHubPullRequestState::Open,
+            query: "author:someone -(author:another) crash".to_string(),
+            label: String::new(),
+            review: None,
+            merge: None,
+            status: None,
+            draft: None,
+            linked_issue: false,
+            review_requested: false,
+            created_by_me: true,
+            sort: GitHubPullRequestSort::Updated,
+            page: 1,
+        };
+
+        assert_eq!(
+            pull_request_search_query("octocat", "hello-world", &filters),
+            "crash repo:octocat/hello-world is:pr is:open author:@me"
         );
     }
 
@@ -4495,6 +4530,7 @@ mod tests {
             draft: None,
             linked_issue: false,
             review_requested: false,
+            created_by_me: false,
             sort: GitHubPullRequestSort::Updated,
             page: 1,
         };
