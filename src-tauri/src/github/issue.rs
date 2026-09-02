@@ -57,11 +57,15 @@ pub enum GitHubIssueAssignment {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "camelCase")]
 pub enum GitHubIssueSort {
     Updated,
+    UpdatedAscending,
     Created,
+    CreatedAscending,
     Comments,
+    CommentsAscending,
+    Reactions,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -431,10 +435,11 @@ impl GitHubIssueClient for OctocrabGitHubClient {
     ) -> Result<GitHubIssuePage, AppError> {
         let client = authenticated_client(token)?;
         let query = issue_search_query(owner, repository, filters);
+        let (sort, order) = issue_search_sort(filters.sort);
         let parameters = SearchParameters {
             query: &query,
-            sort: issue_search_sort(filters.sort),
-            order: "desc",
+            sort,
+            order,
             per_page: ISSUE_PAGE_SIZE,
             page: filters.page,
         };
@@ -465,10 +470,11 @@ impl GitHubIssueClient for OctocrabGitHubClient {
     ) -> Result<GitHubIssueInboxPage, AppError> {
         let client = authenticated_client(token)?;
         let query = issue_inbox_search_query(filters);
+        let (sort, order) = issue_search_sort(filters.sort);
         let parameters = SearchParameters {
             query: &query,
-            sort: issue_search_sort(filters.sort),
-            order: "desc",
+            sort,
+            order,
             per_page: ISSUE_PAGE_SIZE,
             page: filters.page,
         };
@@ -674,11 +680,15 @@ fn issue_page_from_octocrab(
     }
 }
 
-fn issue_search_sort(sort: GitHubIssueSort) -> &'static str {
+fn issue_search_sort(sort: GitHubIssueSort) -> (&'static str, &'static str) {
     match sort {
-        GitHubIssueSort::Updated => "updated",
-        GitHubIssueSort::Created => "created",
-        GitHubIssueSort::Comments => "comments",
+        GitHubIssueSort::Updated => ("updated", "desc"),
+        GitHubIssueSort::UpdatedAscending => ("updated", "asc"),
+        GitHubIssueSort::Created => ("created", "desc"),
+        GitHubIssueSort::CreatedAscending => ("created", "asc"),
+        GitHubIssueSort::Comments => ("comments", "desc"),
+        GitHubIssueSort::CommentsAscending => ("comments", "asc"),
+        GitHubIssueSort::Reactions => ("reactions", "desc"),
     }
 }
 

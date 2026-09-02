@@ -1353,7 +1353,14 @@ export type GitHubIssueStateCapabilities = {
   viewerCanReopen: boolean;
 };
 export type GitHubIssueAssignment = "all" | "unassigned";
-export type GitHubIssueSort = "updated" | "created" | "comments";
+export type GitHubIssueSort =
+  | "updated"
+  | "updatedAscending"
+  | "created"
+  | "createdAscending"
+  | "comments"
+  | "commentsAscending"
+  | "reactions";
 export type GitHubIssueInboxScope = "authored" | "assigned" | "mentioned";
 
 export type GitHubConversationKind = "issue" | "pullRequest";
@@ -1684,7 +1691,14 @@ export type GitHubIssueDetailPage = {
 };
 
 export type GitHubPullRequestState = "open" | "closed";
-export type GitHubPullRequestSort = "updated" | "created" | "comments";
+export type GitHubPullRequestSort =
+  | "updated"
+  | "updatedAscending"
+  | "created"
+  | "createdAscending"
+  | "comments"
+  | "commentsAscending"
+  | "reactions";
 export type GitHubPullRequestReviewFilter = "none" | "required" | "approved" | "changesRequested";
 export type GitHubPullRequestMergeFilter = "merged" | "unmerged";
 export type GitHubPullRequestStatusFilter = "success" | "failure" | "pending";

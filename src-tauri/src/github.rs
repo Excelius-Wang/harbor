@@ -280,11 +280,15 @@ pub enum GitHubPullRequestState {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "camelCase")]
 pub enum GitHubPullRequestSort {
     Updated,
+    UpdatedAscending,
     Created,
+    CreatedAscending,
     Comments,
+    CommentsAscending,
+    Reactions,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -1178,10 +1182,11 @@ impl GitHubClient for OctocrabGitHubClient {
     ) -> Result<GitHubPullRequestPage, AppError> {
         let client = authenticated_client(token)?;
         let query = pull_request_search_query(owner, repository, filters);
+        let (sort, order) = pull_request_search_sort(filters.sort);
         let parameters = SearchParameters {
             query: &query,
-            sort: pull_request_search_sort(filters.sort),
-            order: "desc",
+            sort,
+            order,
             per_page: PULL_REQUEST_SEARCH_PAGE_SIZE as u8,
             page: filters.page,
         };
@@ -1211,10 +1216,11 @@ impl GitHubClient for OctocrabGitHubClient {
     ) -> Result<GitHubPullRequestPage, AppError> {
         let client = authenticated_client(token)?;
         let query = pull_request_inbox_search_query(filters);
+        let (sort, order) = pull_request_search_sort(filters.sort);
         let parameters = SearchParameters {
             query: &query,
-            sort: pull_request_search_sort(filters.sort),
-            order: "desc",
+            sort,
+            order,
             per_page: PULL_REQUEST_SEARCH_PAGE_SIZE as u8,
             page: filters.page,
         };
@@ -1849,11 +1855,15 @@ fn repository_page_from_octocrab(
     }
 }
 
-fn pull_request_search_sort(sort: GitHubPullRequestSort) -> &'static str {
+fn pull_request_search_sort(sort: GitHubPullRequestSort) -> (&'static str, &'static str) {
     match sort {
-        GitHubPullRequestSort::Updated => "updated",
-        GitHubPullRequestSort::Created => "created",
-        GitHubPullRequestSort::Comments => "comments",
+        GitHubPullRequestSort::Updated => ("updated", "desc"),
+        GitHubPullRequestSort::UpdatedAscending => ("updated", "asc"),
+        GitHubPullRequestSort::Created => ("created", "desc"),
+        GitHubPullRequestSort::CreatedAscending => ("created", "asc"),
+        GitHubPullRequestSort::Comments => ("comments", "desc"),
+        GitHubPullRequestSort::CommentsAscending => ("comments", "asc"),
+        GitHubPullRequestSort::Reactions => ("reactions", "desc"),
     }
 }
 
@@ -4301,6 +4311,38 @@ mod tests {
         assert_eq!(
             GitHubPullRequestMergeFilter::Unmerged.search_qualifier(),
             "is:unmerged"
+        );
+    }
+
+    #[test]
+    fn pull_request_search_sort_maps_github_web_sort_options() {
+        assert_eq!(
+            pull_request_search_sort(GitHubPullRequestSort::Updated),
+            ("updated", "desc")
+        );
+        assert_eq!(
+            pull_request_search_sort(GitHubPullRequestSort::UpdatedAscending),
+            ("updated", "asc")
+        );
+        assert_eq!(
+            pull_request_search_sort(GitHubPullRequestSort::Created),
+            ("created", "desc")
+        );
+        assert_eq!(
+            pull_request_search_sort(GitHubPullRequestSort::CreatedAscending),
+            ("created", "asc")
+        );
+        assert_eq!(
+            pull_request_search_sort(GitHubPullRequestSort::Comments),
+            ("comments", "desc")
+        );
+        assert_eq!(
+            pull_request_search_sort(GitHubPullRequestSort::CommentsAscending),
+            ("comments", "asc")
+        );
+        assert_eq!(
+            pull_request_search_sort(GitHubPullRequestSort::Reactions),
+            ("reactions", "desc")
         );
     }
 
