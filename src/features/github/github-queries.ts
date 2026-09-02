@@ -244,6 +244,7 @@ export type GitHubPullRequestsTarget = GitHubRepositoryTarget & {
   merge?: GitHubPullRequestMergeFilter | null;
   status?: GitHubPullRequestStatusFilter | null;
   draft?: GitHubPullRequestDraftFilter | null;
+  linkedIssue?: boolean;
   sort: GitHubPullRequestSort;
   page: number;
 };
@@ -756,6 +757,7 @@ export const githubQueryKeys = {
     merge,
     status,
     draft,
+    linkedIssue,
     sort,
     page,
   }: GitHubPullRequestsTarget) =>
@@ -772,6 +774,7 @@ export const githubQueryKeys = {
       merge ?? null,
       status ?? null,
       draft ?? null,
+      linkedIssue ?? false,
       sort,
       page,
     ] as const,
@@ -1862,6 +1865,7 @@ export function repositoryPullRequestsQueryOptions(target: GitHubPullRequestsTar
         ...(target.merge ? { merge: target.merge } : {}),
         ...(target.status ? { status: target.status } : {}),
         ...(target.draft ? { draft: target.draft } : {}),
+        ...(target.linkedIssue ? { linkedIssue: true } : {}),
         sort: target.sort,
         page: target.page,
       }),

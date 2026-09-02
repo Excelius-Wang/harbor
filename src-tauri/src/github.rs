@@ -376,6 +376,7 @@ pub struct GitHubPullRequestFilters {
     pub merge: Option<GitHubPullRequestMergeFilter>,
     pub status: Option<GitHubPullRequestStatusFilter>,
     pub draft: Option<GitHubPullRequestDraftFilter>,
+    pub linked_issue: bool,
     pub sort: GitHubPullRequestSort,
     pub page: u32,
 }
@@ -1892,7 +1893,12 @@ fn pull_request_search_query(
         GitHubPullRequestState::Closed => "closed",
     };
     let mut query = vec![
-        pull_request_search_terms(&filters.query, filters.review, filters.draft),
+        pull_request_search_terms(
+            &filters.query,
+            filters.review,
+            filters.draft,
+            filters.linked_issue,
+        ),
         format!("repo:{owner}/{repository}"),
         "is:pr".to_string(),
         format!("is:{state}"),
@@ -1912,6 +1918,9 @@ fn pull_request_search_query(
     }
     if let Some(draft) = filters.draft {
         query.push(draft.search_qualifier().to_string());
+    }
+    if filters.linked_issue {
+        query.push("linked:issue".to_string());
     }
     query
         .into_iter()
@@ -1976,6 +1985,7 @@ fn pull_request_search_terms(
     query: &str,
     selected_review: Option<GitHubPullRequestReviewFilter>,
     selected_draft: Option<GitHubPullRequestDraftFilter>,
+    selected_linked_issue: bool,
 ) -> String {
     query
         .split_whitespace()
@@ -1985,7 +1995,8 @@ fn pull_request_search_terms(
                 .iter()
                 .any(|prefix| term.starts_with(prefix))
                 || selected_review.is_some() && term.starts_with("review:")
-                || selected_draft.is_some() && term.starts_with("is:draft"))
+                || selected_draft.is_some() && term.starts_with("is:draft")
+                || selected_linked_issue && term.starts_with("linked:"))
         })
         .collect::<Vec<_>>()
         .join(" ")
@@ -4293,6 +4304,7 @@ mod tests {
             merge: Some(GitHubPullRequestMergeFilter::Merged),
             status: Some(GitHubPullRequestStatusFilter::Success),
             draft: None,
+            linked_issue: false,
             sort: GitHubPullRequestSort::Updated,
             page: 1,
         };
@@ -4306,7 +4318,7 @@ mod tests {
     #[test]
     fn pull_request_review_filters_use_github_search_values() {
         assert_eq!(
-            pull_request_search_terms("review:approved crash", None, None),
+            pull_request_search_terms("review:approved crash", None, None, false),
             "review:approved crash"
         );
         assert_eq!(
@@ -4342,14 +4354,15 @@ mod tests {
             "is:draft"
         );
         assert_eq!(
-            pull_request_search_terms("is:draft -is:draft crash", None, None),
+            pull_request_search_terms("is:draft -is:draft crash", None, None, false),
             "crash"
         );
         assert_eq!(
             pull_request_search_terms(
                 "is:draft -is:draft crash",
                 None,
-                Some(GitHubPullRequestDraftFilter::Draft)
+                Some(GitHubPullRequestDraftFilter::Draft),
+                false,
             ),
             "crash"
         );
@@ -4365,6 +4378,7 @@ mod tests {
             merge: None,
             status: None,
             draft: Some(GitHubPullRequestDraftFilter::Draft),
+            linked_issue: false,
             sort: GitHubPullRequestSort::Updated,
             page: 1,
         };
@@ -4372,6 +4386,27 @@ mod tests {
         assert_eq!(
             pull_request_search_query("octocat", "hello-world", &filters),
             "crash repo:octocat/hello-world is:pr is:open is:draft"
+        );
+    }
+
+    #[test]
+    fn selected_pull_request_linked_issue_filter_owns_the_linked_qualifier() {
+        let filters = GitHubPullRequestFilters {
+            state: GitHubPullRequestState::Open,
+            query: "linked:issue -linked:issue crash".to_string(),
+            label: String::new(),
+            review: None,
+            merge: None,
+            status: None,
+            draft: None,
+            linked_issue: true,
+            sort: GitHubPullRequestSort::Updated,
+            page: 1,
+        };
+
+        assert_eq!(
+            pull_request_search_query("octocat", "hello-world", &filters),
+            "crash repo:octocat/hello-world is:pr is:open linked:issue"
         );
     }
 
@@ -4417,6 +4452,7 @@ mod tests {
             merge: Some(GitHubPullRequestMergeFilter::Unmerged),
             status: None,
             draft: None,
+            linked_issue: false,
             sort: GitHubPullRequestSort::Updated,
             page: 1,
         };

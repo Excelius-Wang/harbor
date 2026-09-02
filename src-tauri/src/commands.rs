@@ -2594,6 +2594,7 @@ pub async fn github_list_repository_pull_requests(
     merge: Option<GitHubPullRequestMergeFilter>,
     status: Option<GitHubPullRequestStatusFilter>,
     draft: Option<GitHubPullRequestDraftFilter>,
+    linked_issue: Option<bool>,
     sort: GitHubPullRequestSort,
     page: u32,
     state: State<'_, AppState>,
@@ -2607,6 +2608,7 @@ pub async fn github_list_repository_pull_requests(
         merge,
         status,
         draft,
+        linked_issue: linked_issue.unwrap_or(false),
         sort,
         page: validate_issue_page(page)?,
     };

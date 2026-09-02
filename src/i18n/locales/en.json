@@ -1472,6 +1472,9 @@
       "pullRequestDraftFilters": {
         "draft": "Draft"
       },
+      "pullRequestLinkedIssueFilter": "Linked Issue",
+      "allPullRequestLinkedIssues": "All linked states",
+      "pullRequestLinkedIssue": "Linked to an Issue",
       "pullRequestReviewFilter": "Review status",
       "allPullRequestReviews": "All review statuses",
       "pullRequestReviewFilters": {
