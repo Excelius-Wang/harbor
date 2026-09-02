@@ -98,6 +98,36 @@ beforeEach(() => {
 
 afterEach(() => cleanup());
 
+describe("GitHub Issue assignment filter", () => {
+  it("sends the assigned-to-me search filter", async () => {
+    const user = userEvent.setup();
+    renderView();
+
+    const assignmentTrigger = await screen.findByRole("combobox", {
+      name: "workspace.repositories.issueAssignmentFilter",
+    });
+    await user.click(assignmentTrigger);
+    await user.click(
+      await screen.findByRole("option", {
+        name: "workspace.repositories.assignedToMeIssues",
+      })
+    );
+
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith("github_list_repository_issues", {
+        owner: "octocat",
+        repository: "hello-world",
+        issueState: "open",
+        assignment: "assignedToMe",
+        query: "",
+        label: "",
+        sort: "updated",
+        page: 1,
+      });
+    });
+  });
+});
+
 describe("GitHub Issue close-reason filter", () => {
   it("shows the filter for closed Issues and sends the selected reason", async () => {
     const user = userEvent.setup();

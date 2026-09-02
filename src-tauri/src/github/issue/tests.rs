@@ -354,6 +354,27 @@ fn issue_search_is_scoped_to_real_issues_and_selected_filters() {
 }
 
 #[test]
+fn issue_search_filters_for_issues_assigned_to_the_viewer() {
+    let filters = GitHubIssueFilters {
+        state: GitHubIssueState::Open,
+        assignment: GitHubIssueAssignment::AssignedToMe,
+        query: "render crash".to_string(),
+        label: String::new(),
+        milestone: None,
+        linked_pull_request: false,
+        issue_type: None,
+        sort: GitHubIssueSort::Updated,
+        page: 1,
+        close_reason: None,
+    };
+
+    assert_eq!(
+        issue_search_query("octocat", "hello-world", &filters),
+        "render crash repo:octocat/hello-world is:issue is:open assignee:@me"
+    );
+}
+
+#[test]
 fn issue_search_sort_maps_github_web_sort_options() {
     assert_eq!(
         issue_search_sort(GitHubIssueSort::Updated),

@@ -312,12 +312,19 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
               resetPage(() => setAssignment(value as GitHubIssueAssignment))
             }
           >
-            <SelectTrigger size="sm" className="w-full min-w-0">
+            <SelectTrigger
+              size="sm"
+              className="w-full min-w-0"
+              aria-label={t("workspace.repositories.issueAssignmentFilter")}
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
                 <SelectItem value="all">{t("workspace.repositories.allAssignees")}</SelectItem>
+                <SelectItem value="assignedToMe">
+                  {t("workspace.repositories.assignedToMeIssues")}
+                </SelectItem>
                 <SelectItem value="unassigned">
                   {t("workspace.repositories.unassignedIssues")}
                 </SelectItem>
