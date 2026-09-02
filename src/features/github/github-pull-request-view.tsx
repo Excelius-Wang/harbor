@@ -27,6 +27,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { parseIpcError } from "@/lib/ipc-error";
 import { cn } from "@/lib/utils";
 import type {
+  GitHubPullRequestDraftFilter,
   GitHubPullRequestMergeFilter,
   GitHubPullRequestReviewFilter,
   GitHubPullRequestSort,
@@ -45,6 +46,7 @@ import {
 } from "./github-queries";
 
 const ALL_LABELS = "__all__";
+const ALL_DRAFTS = "__all_drafts__";
 const ALL_REVIEWS = "__all_reviews__";
 const ALL_MERGES = "__all_merges__";
 const ALL_STATUSES = "__all_statuses__";
@@ -79,6 +81,7 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
   const [draftQuery, setDraftQuery] = useState("");
   const [query, setQuery] = useState("");
   const [label, setLabel] = useState("");
+  const [draft, setDraft] = useState<GitHubPullRequestDraftFilter | null>(null);
   const [review, setReview] = useState<GitHubPullRequestReviewFilter | null>(null);
   const [merge, setMerge] = useState<GitHubPullRequestMergeFilter | null>(null);
   const [status, setStatus] = useState<GitHubPullRequestStatusFilter | null>(null);
@@ -93,6 +96,7 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
       state,
       query,
       label,
+      draft,
       review,
       merge,
       status,
@@ -119,6 +123,7 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
     setDraftQuery("");
     setQuery("");
     setLabel("");
+    setDraft(null);
     setReview(null);
     setMerge(null);
     setStatus(null);
@@ -197,13 +202,13 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
           </div>
         </div>
         <form
-          className="grid min-w-0 grid-cols-1 gap-2 @min-[480px]/pulls:grid-cols-3 @min-[960px]/pulls:grid-cols-[minmax(180px,1fr)_repeat(5,minmax(128px,144px))]"
+          className="grid min-w-0 grid-cols-1 gap-2 @min-[480px]/pulls:grid-cols-3 @min-[1120px]/pulls:grid-cols-[minmax(180px,1fr)_repeat(6,minmax(128px,144px))]"
           onSubmit={(event) => {
             event.preventDefault();
             resetPage(() => setQuery(draftQuery.trim()));
           }}
         >
-          <div className="relative min-w-0 @min-[480px]/pulls:col-span-3 @min-[960px]/pulls:col-span-1">
+          <div className="relative min-w-0 @min-[480px]/pulls:col-span-3 @min-[1120px]/pulls:col-span-1">
             <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
             <Input
               value={draftQuery}
@@ -236,6 +241,32 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
                     {item.name}
                   </SelectItem>
                 ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <Select
+            value={draft ?? ALL_DRAFTS}
+            onValueChange={(value) =>
+              resetPage(() =>
+                setDraft(value === ALL_DRAFTS ? null : (value as GitHubPullRequestDraftFilter))
+              )
+            }
+          >
+            <SelectTrigger
+              size="sm"
+              className="w-full min-w-0"
+              aria-label={t("workspace.repositories.pullRequestDraftFilter")}
+            >
+              <SelectValue placeholder={t("workspace.repositories.allPullRequestDrafts")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value={ALL_DRAFTS}>
+                  {t("workspace.repositories.allPullRequestDrafts")}
+                </SelectItem>
+                <SelectItem value="draft">
+                  {t("workspace.repositories.pullRequestDraftFilters.draft")}
+                </SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
