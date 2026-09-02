@@ -1552,6 +1552,7 @@ pub async fn github_list_repository_issues(
     assignment: GitHubIssueAssignment,
     query: String,
     label: String,
+    milestone: Option<String>,
     sort: GitHubIssueSort,
     close_reason: Option<GitHubIssueCloseReasonFilter>,
     page: u32,
@@ -1564,6 +1565,7 @@ pub async fn github_list_repository_issues(
         assignment,
         query: validate_issue_query(query)?,
         label: validate_issue_label(label)?,
+        milestone: validate_issue_milestone(milestone)?,
         sort,
         page: validate_issue_page(page)?,
         close_reason,
@@ -5146,6 +5148,22 @@ fn validate_issue_label(label: String) -> Result<String, AppError> {
     Ok(label)
 }
 
+fn validate_issue_milestone(milestone: Option<String>) -> Result<Option<String>, AppError> {
+    let Some(milestone) = milestone else {
+        return Ok(None);
+    };
+    let milestone = milestone.trim().to_string();
+    if milestone.is_empty() {
+        return Ok(None);
+    }
+    if milestone.chars().count() > 256 || milestone.chars().any(char::is_control) {
+        return Err(AppError::Validation(
+            "issue milestone is invalid".to_string(),
+        ));
+    }
+    Ok(Some(milestone))
+}
+
 fn validate_issue_title(title: String) -> Result<String, AppError> {
     let title = title.trim().to_string();
     if title.is_empty() || title.chars().any(char::is_control) {
@@ -5801,6 +5819,20 @@ mod tests {
             validate_issue_label("  good first issue  ".to_string()).expect("label"),
             "good first issue"
         );
+        assert_eq!(
+            validate_issue_milestone(Some("  Harbor 0.2  ".to_string())).expect("milestone"),
+            Some("Harbor 0.2".to_string())
+        );
+        assert_eq!(
+            validate_issue_milestone(Some("  ".to_string())).expect("empty milestone"),
+            None
+        );
+        assert_eq!(
+            validate_issue_milestone(Some("里".repeat(256))).expect("unicode milestone"),
+            Some("里".repeat(256))
+        );
+        assert!(validate_issue_milestone(Some("里".repeat(257))).is_err());
+        assert!(validate_issue_milestone(Some("bad\nname".to_string())).is_err());
         assert!(validate_page(0).is_err());
         assert!(validate_page(1_001).is_err());
         assert_eq!(validate_issue_page(34).expect("last search page"), 34);

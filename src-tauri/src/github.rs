@@ -2857,6 +2857,7 @@ mod tests {
             assignment: GitHubIssueAssignment::All,
             query: String::new(),
             label: String::new(),
+            milestone: None,
             sort: GitHubIssueSort::Updated,
             page: 1,
             close_reason: None,

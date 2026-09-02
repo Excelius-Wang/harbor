@@ -2585,6 +2585,8 @@
         "notPlanned": "Not planned",
         "duplicate": "Duplicate"
       },
+      "allIssueMilestones": "All milestones",
+      "issueMilestoneFilter": "Issue milestone",
       "allDiscussionCategories": "All categories",
       "discussionCount": "{{count}} discussions",
       "openDiscussions": "Open discussions",

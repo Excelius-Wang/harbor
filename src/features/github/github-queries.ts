@@ -206,6 +206,7 @@ export type GitHubIssuesTarget = GitHubRepositoryTarget & {
   assignment: GitHubIssueAssignment;
   query: string;
   label: string;
+  milestone?: string | null;
   sort: GitHubIssueSort;
   closeReason?: GitHubIssueCloseReasonFilter | null;
   page: number;
@@ -667,6 +668,7 @@ export const githubQueryKeys = {
     assignment,
     query,
     label,
+    milestone,
     sort,
     closeReason,
     page,
@@ -684,6 +686,7 @@ export const githubQueryKeys = {
       closeReason ?? null,
       sort,
       page,
+      milestone ?? null,
     ] as const,
   issuesRoot: ({ owner, repository }: GitHubRepositoryTarget) =>
     ["github", "repository", owner, repository, "issues"] as const,
@@ -1629,6 +1632,7 @@ export function repositoryIssuesQueryOptions(target: GitHubIssuesTarget) {
         assignment: target.assignment,
         query: target.query,
         label: target.label,
+        ...(target.milestone ? { milestone: target.milestone } : {}),
         sort: target.sort,
         page: target.page,
         ...(target.closeReason ? { closeReason: target.closeReason } : {}),

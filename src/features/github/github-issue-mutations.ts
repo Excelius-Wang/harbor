@@ -16,6 +16,7 @@ import type {
 import { githubQueryKeys } from "./github-queries";
 
 const GITHUB_ISSUE_PAGE_SIZE = 30;
+const REPOSITORY_ISSUE_MILESTONE_QUERY_KEY_INDEX = 12;
 
 function reconcileUpdatedPageItems<T>(
   items: T[],
@@ -278,9 +279,14 @@ function updateRepositoryIssuePages(
     const matches = page.issues.filter((item) => item.number === target.issueNumber);
     const cachedState = issueStateFromQueryKey(queryKey);
     const closeReasonMatches = repositoryIssueCloseReasonMatches(queryKey, issue);
+    const milestoneMatches = repositoryIssueMilestoneMatches(queryKey, issue);
     const exactDestination = repositoryIssuePageAccepts(queryKey, issue);
     const shouldInsert = !matches.length && cachedState === issue.state && exactDestination;
-    if (matches.length && cachedState === issue.state && !closeReasonMatches) {
+    if (
+      matches.length &&
+      cachedState === issue.state &&
+      (!closeReasonMatches || !milestoneMatches)
+    ) {
       queryClient.setQueryData<GitHubIssuePage>(queryKey, {
         ...page,
         issues: page.issues.filter((item) => item.number !== target.issueNumber),
@@ -353,13 +359,22 @@ function repositoryIssuePageAccepts(queryKey: QueryKey, issue: GitHubIssue) {
     (assignment === "all" || (assignment === "unassigned" && !issue.assignees.length)) &&
     query === "" &&
     (label === "" || issue.labels.some((item) => item.name === label)) &&
-    repositoryIssueCloseReasonMatches(queryKey, issue)
+    repositoryIssueCloseReasonMatches(queryKey, issue) &&
+    repositoryIssueMilestoneMatches(queryKey, issue)
   );
 }
 
 function repositoryIssueCloseReasonMatches(queryKey: QueryKey, issue: GitHubIssue) {
   const closeReason = queryKey[9] as GitHubIssueCloseReasonFilter | null | undefined;
   return closeReason === null || closeReason === undefined || closeReason === issue.stateReason;
+}
+
+function repositoryIssueMilestoneMatches(queryKey: QueryKey, issue: GitHubIssue) {
+  const milestone = queryKey[REPOSITORY_ISSUE_MILESTONE_QUERY_KEY_INDEX] as
+    | string
+    | null
+    | undefined;
+  return milestone === null || milestone === undefined || milestone === issue.milestone;
 }
 
 function matchesIssueSummary(summary: GitHubIssueSummary, target: GitHubIssueMutationTarget) {

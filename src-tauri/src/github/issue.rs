@@ -88,6 +88,7 @@ pub struct GitHubIssueFilters {
     pub assignment: GitHubIssueAssignment,
     pub query: String,
     pub label: String,
+    pub milestone: Option<String>,
     pub sort: GitHubIssueSort,
     pub page: u32,
     pub close_reason: Option<GitHubIssueCloseReasonFilter>,
@@ -696,6 +697,10 @@ fn issue_search_query(owner: &str, repository: &str, filters: &GitHubIssueFilter
     if !filters.label.is_empty() {
         let label = filters.label.replace('\\', "\\\\").replace('"', "\\\"");
         query.push(format!("label:\"{label}\""));
+    }
+    if let Some(milestone) = &filters.milestone {
+        let milestone = milestone.replace('\\', "\\\\").replace('"', "\\\"");
+        query.push(format!("milestone:\"{milestone}\""));
     }
     if let Some(reason) = filters.close_reason {
         query.push(reason.search_qualifier().to_string());
