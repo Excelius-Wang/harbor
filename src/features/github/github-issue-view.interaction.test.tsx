@@ -128,6 +128,37 @@ describe("GitHub Issue assignment filter", () => {
   });
 });
 
+describe("GitHub Issue author filter", () => {
+  it("sends the created-by-me search filter", async () => {
+    const user = userEvent.setup();
+    renderView();
+
+    const authorTrigger = await screen.findByRole("combobox", {
+      name: "workspace.repositories.issueAuthorFilter",
+    });
+    await user.click(authorTrigger);
+    await user.click(
+      await screen.findByRole("option", {
+        name: "workspace.repositories.createdByMeIssues",
+      })
+    );
+
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith("github_list_repository_issues", {
+        owner: "octocat",
+        repository: "hello-world",
+        issueState: "open",
+        assignment: "all",
+        createdByMe: true,
+        query: "",
+        label: "",
+        sort: "updated",
+        page: 1,
+      });
+    });
+  });
+});
+
 describe("GitHub Issue close-reason filter", () => {
   it("shows the filter for closed Issues and sends the selected reason", async () => {
     const user = userEvent.setup();

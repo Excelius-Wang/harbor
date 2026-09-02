@@ -209,6 +209,7 @@ export type GitHubReleaseTarget = GitHubRepositoryTarget & {
 export type GitHubIssuesTarget = GitHubRepositoryTarget & {
   state: GitHubIssueState;
   assignment: GitHubIssueAssignment;
+  createdByMe?: boolean;
   query: string;
   label: string;
   milestone?: string | null;
@@ -679,6 +680,7 @@ export const githubQueryKeys = {
     repository,
     state,
     assignment,
+    createdByMe,
     query,
     label,
     milestone,
@@ -696,6 +698,7 @@ export const githubQueryKeys = {
       "issues",
       state,
       assignment,
+      createdByMe ?? false,
       query,
       label,
       closeReason ?? null,
@@ -1661,6 +1664,7 @@ export function repositoryIssuesQueryOptions(target: GitHubIssuesTarget) {
         repository: target.repository,
         issueState: target.state,
         assignment: target.assignment,
+        ...(target.createdByMe ? { createdByMe: true } : {}),
         query: target.query,
         label: target.label,
         ...(target.milestone ? { milestone: target.milestone } : {}),

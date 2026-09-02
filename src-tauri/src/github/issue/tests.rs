@@ -65,6 +65,7 @@ impl GitHubIssueClient for super::super::tests::FakeGitHubClient {
                 &GitHubIssueFilters {
                     state: filters.state,
                     assignment: GitHubIssueAssignment::All,
+                    created_by_me: false,
                     query: filters.query.clone(),
                     label: String::new(),
                     milestone: None,
@@ -169,6 +170,7 @@ impl GitHubIssueClient for super::super::tests::FakeGitHubClient {
                 &GitHubIssueFilters {
                     state: GitHubIssueState::Open,
                     assignment: GitHubIssueAssignment::All,
+                    created_by_me: false,
                     query: String::new(),
                     label: String::new(),
                     milestone: None,
@@ -337,6 +339,7 @@ fn issue_search_is_scoped_to_real_issues_and_selected_filters() {
     let filters = GitHubIssueFilters {
         state: GitHubIssueState::Closed,
         assignment: GitHubIssueAssignment::Unassigned,
+        created_by_me: false,
         query: "render crash".to_string(),
         label: "help wanted".to_string(),
         milestone: Some("Harbor 0.2".to_string()),
@@ -358,6 +361,7 @@ fn issue_search_filters_for_issues_assigned_to_the_viewer() {
     let filters = GitHubIssueFilters {
         state: GitHubIssueState::Open,
         assignment: GitHubIssueAssignment::AssignedToMe,
+        created_by_me: false,
         query: "render crash".to_string(),
         label: String::new(),
         milestone: None,
@@ -371,6 +375,28 @@ fn issue_search_filters_for_issues_assigned_to_the_viewer() {
     assert_eq!(
         issue_search_query("octocat", "hello-world", &filters),
         "render crash repo:octocat/hello-world is:issue is:open assignee:@me"
+    );
+}
+
+#[test]
+fn issue_search_filters_for_issues_created_by_the_viewer() {
+    let filters = GitHubIssueFilters {
+        state: GitHubIssueState::Open,
+        assignment: GitHubIssueAssignment::All,
+        created_by_me: true,
+        query: "author:someone -(author:another) render crash".to_string(),
+        label: String::new(),
+        milestone: None,
+        linked_pull_request: false,
+        issue_type: None,
+        sort: GitHubIssueSort::Updated,
+        page: 1,
+        close_reason: None,
+    };
+
+    assert_eq!(
+        issue_search_query("octocat", "hello-world", &filters),
+        "render crash repo:octocat/hello-world is:issue is:open author:@me"
     );
 }
 
@@ -411,6 +437,7 @@ fn issue_search_escapes_milestone_titles() {
     let filters = GitHubIssueFilters {
         state: GitHubIssueState::Open,
         assignment: GitHubIssueAssignment::All,
+        created_by_me: false,
         query: String::new(),
         label: String::new(),
         milestone: Some("Roadmap \\\"2026\\\"".to_string()),
@@ -432,6 +459,7 @@ fn issue_search_filters_closed_issues_by_the_selected_reason() {
     let filters = GitHubIssueFilters {
         state: GitHubIssueState::Closed,
         assignment: GitHubIssueAssignment::All,
+        created_by_me: false,
         query: String::new(),
         label: String::new(),
         milestone: None,
@@ -463,6 +491,7 @@ fn issue_search_uses_github_reason_qualifiers_for_each_close_reason() {
         let filters = GitHubIssueFilters {
             state: GitHubIssueState::Closed,
             assignment: GitHubIssueAssignment::All,
+            created_by_me: false,
             query: String::new(),
             label: String::new(),
             milestone: None,
@@ -481,6 +510,7 @@ fn issue_search_removes_scope_changing_user_qualifiers() {
     let filters = GitHubIssueFilters {
         state: GitHubIssueState::Open,
         assignment: GitHubIssueAssignment::All,
+        created_by_me: false,
         query: "repo:another/project crash".to_string(),
         label: String::new(),
         milestone: None,

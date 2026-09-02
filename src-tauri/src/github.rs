@@ -2980,6 +2980,7 @@ mod tests {
         let issue_filters = GitHubIssueFilters {
             state: GitHubIssueState::Open,
             assignment: GitHubIssueAssignment::All,
+            created_by_me: false,
             query: String::new(),
             label: String::new(),
             milestone: None,

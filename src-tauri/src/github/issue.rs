@@ -91,6 +91,7 @@ impl GitHubIssueCloseReasonFilter {
 pub struct GitHubIssueFilters {
     pub state: GitHubIssueState,
     pub assignment: GitHubIssueAssignment,
+    pub created_by_me: bool,
     pub query: String,
     pub label: String,
     pub milestone: Option<String>,
@@ -699,7 +700,7 @@ fn issue_search_query(owner: &str, repository: &str, filters: &GitHubIssueFilter
         GitHubIssueState::Closed => "closed",
     };
     let mut query = vec![
-        issue_search_terms(&filters.query),
+        issue_search_terms(&filters.query, filters.created_by_me),
         format!("repo:{owner}/{repository}"),
         "is:issue".to_string(),
         format!("is:{state}"),
@@ -708,6 +709,9 @@ fn issue_search_query(owner: &str, repository: &str, filters: &GitHubIssueFilter
         GitHubIssueAssignment::All => {}
         GitHubIssueAssignment::AssignedToMe => query.push("assignee:@me".to_string()),
         GitHubIssueAssignment::Unassigned => query.push("no:assignee".to_string()),
+    }
+    if filters.created_by_me {
+        query.push("author:@me".to_string());
     }
     if !filters.label.is_empty() {
         let label = filters.label.replace('\\', "\\\\").replace('"', "\\\"");
@@ -784,12 +788,12 @@ fn issue_inbox_search_terms(query: &str) -> String {
         .join(" ")
 }
 
-fn issue_search_terms(query: &str) -> String {
+fn issue_search_terms(query: &str, selected_created_by_me: bool) -> String {
     query
         .split_whitespace()
         .filter(|term| {
-            let term = term.to_ascii_lowercase();
-            ![
+            let term = term.trim_matches(['-', '(', ')']).to_ascii_lowercase();
+            !([
                 "repo:",
                 "org:",
                 "user:",
@@ -801,6 +805,7 @@ fn issue_search_terms(query: &str) -> String {
             ]
             .iter()
             .any(|prefix| term.starts_with(prefix))
+                || selected_created_by_me && term.starts_with("author:"))
         })
         .collect::<Vec<_>>()
         .join(" ")

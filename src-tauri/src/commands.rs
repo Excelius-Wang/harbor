@@ -1553,6 +1553,7 @@ pub async fn github_list_repository_issues(
     repository: String,
     issue_state: GitHubIssueState,
     assignment: GitHubIssueAssignment,
+    created_by_me: Option<bool>,
     query: String,
     label: String,
     milestone: Option<String>,
@@ -1568,6 +1569,7 @@ pub async fn github_list_repository_issues(
     let filters = GitHubIssueFilters {
         state: issue_state,
         assignment,
+        created_by_me: created_by_me.unwrap_or(false),
         query: validate_issue_query(query)?,
         label: validate_issue_label(label)?,
         milestone: validate_issue_milestone(milestone)?,
