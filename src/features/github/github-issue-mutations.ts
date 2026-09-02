@@ -18,14 +18,15 @@ import { githubQueryKeys } from "./github-queries";
 const GITHUB_ISSUE_PAGE_SIZE = 30;
 const REPOSITORY_ISSUE_QUERY_KEY_INDEX = {
   assignment: 6,
-  query: 7,
-  label: 8,
-  closeReason: 9,
-  sort: 10,
-  page: 11,
-  milestone: 12,
-  linkedPullRequest: 13,
-  issueType: 14,
+  createdByMe: 7,
+  query: 8,
+  label: 9,
+  closeReason: 10,
+  sort: 11,
+  page: 12,
+  milestone: 13,
+  linkedPullRequest: 14,
+  issueType: 15,
 } as const;
 
 function reconcileUpdatedPageItems<T>(
@@ -291,6 +292,7 @@ function updateRepositoryIssuePages(
     const closeReasonMatches = repositoryIssueCloseReasonMatches(queryKey, issue);
     const milestoneMatches = repositoryIssueMilestoneMatches(queryKey, issue);
     const assignmentFilter = queryKey[REPOSITORY_ISSUE_QUERY_KEY_INDEX.assignment];
+    const createdByMeFilter = repositoryIssueCreatedByMeEnabled(queryKey);
     const linkedPullRequestFilter = repositoryIssueLinkedPullRequestEnabled(queryKey);
     const issueTypeFilter = repositoryIssueTypeEnabled(queryKey);
     const exactDestination = repositoryIssuePageAccepts(queryKey, issue);
@@ -298,7 +300,10 @@ function updateRepositoryIssuePages(
     if (
       matches.length &&
       cachedState === issue.state &&
-      (linkedPullRequestFilter || issueTypeFilter || assignmentFilter === "assignedToMe")
+      (linkedPullRequestFilter ||
+        issueTypeFilter ||
+        assignmentFilter === "assignedToMe" ||
+        createdByMeFilter)
     ) {
       void queryClient.invalidateQueries({ queryKey, exact: true });
       continue;
@@ -382,6 +387,7 @@ function repositoryIssuePageAccepts(queryKey: QueryKey, issue: GitHubIssue) {
     page === 1 &&
     sort === "updated" &&
     (assignment === "all" || (assignment === "unassigned" && !issue.assignees.length)) &&
+    !repositoryIssueCreatedByMeEnabled(queryKey) &&
     query === "" &&
     (label === "" || issue.labels.some((item) => item.name === label)) &&
     repositoryIssueCloseReasonMatches(queryKey, issue) &&
@@ -389,6 +395,10 @@ function repositoryIssuePageAccepts(queryKey: QueryKey, issue: GitHubIssue) {
     !repositoryIssueLinkedPullRequestEnabled(queryKey) &&
     !repositoryIssueTypeEnabled(queryKey)
   );
+}
+
+function repositoryIssueCreatedByMeEnabled(queryKey: QueryKey) {
+  return queryKey[REPOSITORY_ISSUE_QUERY_KEY_INDEX.createdByMe] === true;
 }
 
 function repositoryIssueCloseReasonMatches(queryKey: QueryKey, issue: GitHubIssue) {

@@ -55,6 +55,7 @@ import {
 } from "./github-queries";
 
 const ALL_LABELS = "__all__";
+const ALL_CREATED_BY_ME = "__all_created_by_me__";
 const ALL_CLOSE_REASONS = "__all_close_reasons__";
 const ALL_MILESTONES = "__all_milestones__";
 const ALL_LINKED_PULL_REQUESTS = "__all_linked_pull_requests__";
@@ -94,6 +95,7 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
   const queryClient = useQueryClient();
   const [state, setState] = useState<GitHubIssueState>("open");
   const [assignment, setAssignment] = useState<GitHubIssueAssignment>("all");
+  const [createdByMe, setCreatedByMe] = useState(false);
   const [draftQuery, setDraftQuery] = useState("");
   const [query, setQuery] = useState("");
   const [label, setLabel] = useState("");
@@ -112,6 +114,7 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
       repository: repository.name,
       state,
       assignment,
+      createdByMe,
       query,
       label,
       milestone,
@@ -157,6 +160,7 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
   useEffect(() => {
     setState("open");
     setAssignment("all");
+    setCreatedByMe(false);
     setDraftQuery("");
     setQuery("");
     setLabel("");
@@ -280,8 +284,8 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
           className={cn(
             "grid min-w-0 grid-cols-1 gap-2 @min-[480px]/issues:grid-cols-3",
             state === "closed"
-              ? "@min-[1180px]/issues:grid-cols-[minmax(180px,1fr)_repeat(7,minmax(128px,144px))]"
-              : "@min-[1040px]/issues:grid-cols-[minmax(180px,1fr)_repeat(6,minmax(128px,144px))]"
+              ? "@min-[1320px]/issues:grid-cols-[minmax(180px,1fr)_repeat(8,minmax(128px,144px))]"
+              : "@min-[1180px]/issues:grid-cols-[minmax(180px,1fr)_repeat(7,minmax(128px,144px))]"
           )}
           onSubmit={(event) => {
             event.preventDefault();
@@ -327,6 +331,28 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
                 </SelectItem>
                 <SelectItem value="unassigned">
                   {t("workspace.repositories.unassignedIssues")}
+                </SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <Select
+            value={createdByMe ? "created" : ALL_CREATED_BY_ME}
+            onValueChange={(value) => resetPage(() => setCreatedByMe(value === "created"))}
+          >
+            <SelectTrigger
+              size="sm"
+              className="w-full min-w-0"
+              aria-label={t("workspace.repositories.issueAuthorFilter")}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value={ALL_CREATED_BY_ME}>
+                  {t("workspace.repositories.allIssueAuthors")}
+                </SelectItem>
+                <SelectItem value="created">
+                  {t("workspace.repositories.createdByMeIssues")}
                 </SelectItem>
               </SelectGroup>
             </SelectContent>
