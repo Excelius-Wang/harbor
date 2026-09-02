@@ -145,10 +145,12 @@ describe("GitHub Issue close-reason filter", () => {
       expect(screen.queryByText("workspace.repositories.allIssueCloseReasons")).toBeNull()
     );
     await waitFor(() => {
-      expect(invoke).toHaveBeenCalledWith(
-        "github_list_repository_issues",
-        expect.not.objectContaining({ closeReason: expect.anything() })
-      );
+      const issueRequests = vi
+        .mocked(invoke)
+        .mock.calls.filter(([command]) => command === "github_list_repository_issues")
+        .map(([, request]) => request as Record<string, unknown>);
+      expect(issueRequests.length).toBeGreaterThan(0);
+      expect(issueRequests[issueRequests.length - 1]).not.toHaveProperty("closeReason");
     });
   });
 });
