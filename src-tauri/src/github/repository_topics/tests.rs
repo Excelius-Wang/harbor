@@ -270,7 +270,7 @@ async fn a_stale_topics_snapshot_stops_before_replace() {
             .expect_err("stale snapshot");
     server.await.expect("mock server");
 
-    assert!(matches!(error, AppError::GitHubRepositoryTopicsConflict(_)));
+    assert!(matches!(error, AppError::GitHubRepositoryTopicsStale(_)));
     assert_eq!(requests.lock().expect("requests").len(), 2);
 }
 

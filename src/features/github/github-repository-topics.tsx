@@ -76,9 +76,11 @@ export function GitHubRepositoryTopicsCard({ repository }: { repository: GitHubR
         description:
           parsedError.code === "githubPermission"
             ? t("workspace.repositories.settings.topicsPermissionDenied")
-            : parsedError.code === "githubRepositoryTopicsConflict"
-              ? t("workspace.repositories.settings.topicsSaveUncertain")
-              : parsedError.message,
+            : parsedError.code === "githubRepositoryTopicsStale"
+              ? t("workspace.repositories.settings.topicsStale")
+              : parsedError.code === "githubRepositoryTopicsConflict"
+                ? t("workspace.repositories.settings.topicsSaveUncertain")
+                : parsedError.message,
       });
     },
   });

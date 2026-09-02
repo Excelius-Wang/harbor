@@ -122,7 +122,7 @@ pub(super) async fn replace_repository_topics_with_clients(
     ensure_personal_repository_owner(read_client, owner).await?;
     let current = load_topics_with_client(read_client, owner, repository).await?;
     if current.names != expected_names {
-        return Err(AppError::GitHubRepositoryTopicsConflict(
+        return Err(AppError::GitHubRepositoryTopicsStale(
             "repository topics changed; refresh before saving".to_string(),
         ));
     }

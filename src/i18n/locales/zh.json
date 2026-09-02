@@ -931,6 +931,7 @@
         "topicsLoadFailed": "仓库主题没有加载成功",
         "topicsSaveFailed": "仓库主题没有更新成功",
         "topicsPermissionDenied": "只有仓库所有者可以修改主题。",
+        "topicsStale": "你编辑期间主题已经发生变化。请先刷新，再保存。",
         "topicsSaveUncertain": "这次更新可能已经生效。请先刷新主题，再决定是否重试。",
         "topicValidation": {
           "invalid": "主题只能使用小写字母、数字和连字符，长度不能超过 50 个字符。",

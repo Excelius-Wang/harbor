@@ -112,9 +112,12 @@ describe("GitHub repository topics", () => {
     await user.clear(input);
     await user.type(input, "rust, desktop-app");
     await act(async () => {
-      queryClient.setQueryData(githubQueryKeys.repositoryTopics(repository), {
-        names: ["external-change"],
-      });
+      queryClient.setQueryData(
+        githubQueryKeys.repositoryTopics({ owner: repository.owner, repository: repository.name }),
+        {
+          names: ["external-change"],
+        }
+      );
     });
     await user.click(
       screen.getByRole("button", { name: "workspace.repositories.settings.saveTopics" })
@@ -158,6 +161,38 @@ describe("GitHub repository topics", () => {
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith("workspace.repositories.settings.topicsSaveFailed", {
         description: "workspace.repositories.settings.topicsSaveUncertain",
+      })
+    );
+  });
+
+  it("distinguishes a stale snapshot from an uncertain write", async () => {
+    const user = userEvent.setup();
+    vi.mocked(invoke).mockImplementation((command) => {
+      if (command === "github_get_personal_repository_topics") {
+        return Promise.resolve({ names: ["rust", "tauri"] });
+      }
+      if (command === "github_update_personal_repository_topics") {
+        return Promise.reject({
+          code: "githubRepositoryTopicsStale",
+          message: "repository topics changed before saving",
+        });
+      }
+      return Promise.reject(new Error(`unexpected command ${command}`));
+    });
+    renderCard();
+
+    const input = await screen.findByRole("textbox", {
+      name: "workspace.repositories.settings.topicList",
+    });
+    await user.clear(input);
+    await user.type(input, "rust, desktop-app");
+    await user.click(
+      screen.getByRole("button", { name: "workspace.repositories.settings.saveTopics" })
+    );
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("workspace.repositories.settings.topicsSaveFailed", {
+        description: "workspace.repositories.settings.topicsStale",
       })
     );
   });

@@ -937,6 +937,7 @@
         "topicsLoadFailed": "Harbor could not load repository topics",
         "topicsSaveFailed": "Harbor could not update repository topics",
         "topicsPermissionDenied": "Only the repository owner can update topics.",
+        "topicsStale": "The topics changed while you were editing. Refresh them before saving again.",
         "topicsSaveUncertain": "The update may have succeeded. Refresh the topics before trying again.",
         "topicValidation": {
           "invalid": "Use lowercase letters, numbers, and hyphens; each topic can be 50 characters at most.",
