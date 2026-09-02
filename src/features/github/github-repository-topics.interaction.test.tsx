@@ -167,15 +167,23 @@ describe("GitHub repository topics", () => {
 
   it("distinguishes a stale snapshot from an uncertain write", async () => {
     const user = userEvent.setup();
+    let readCount = 0;
+    let writeCount = 0;
     vi.mocked(invoke).mockImplementation((command) => {
       if (command === "github_get_personal_repository_topics") {
-        return Promise.resolve({ names: ["rust", "tauri"] });
+        readCount += 1;
+        return Promise.resolve({
+          names: readCount === 1 ? ["rust", "tauri"] : ["external-change"],
+        });
       }
       if (command === "github_update_personal_repository_topics") {
-        return Promise.reject({
-          code: "githubRepositoryTopicsStale",
-          message: "repository topics changed before saving",
-        });
+        writeCount += 1;
+        return writeCount === 1
+          ? Promise.reject({
+              code: "githubRepositoryTopicsStale",
+              message: "repository topics changed before saving",
+            })
+          : Promise.resolve({ names: ["rust", "desktop-app"] });
       }
       return Promise.reject(new Error(`unexpected command ${command}`));
     });
@@ -193,6 +201,21 @@ describe("GitHub repository topics", () => {
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith("workspace.repositories.settings.topicsSaveFailed", {
         description: "workspace.repositories.settings.topicsStale",
+      })
+    );
+    const saveButton = screen.getByRole("button", {
+      name: "workspace.repositories.settings.saveTopics",
+    });
+    await waitFor(() => expect((saveButton as HTMLButtonElement).disabled).toBe(false));
+    await user.click(saveButton);
+    await waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith("github_update_personal_repository_topics", {
+        owner: "octocat",
+        repository: "harbor",
+        mutation: {
+          names: ["rust", "desktop-app"],
+          expectedNames: ["external-change"],
+        },
       })
     );
   });

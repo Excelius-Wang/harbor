@@ -36,6 +36,7 @@ export function GitHubRepositoryTopicsCard({ repository }: { repository: GitHubR
   };
   const result = useQuery(personalRepositoryTopicsQueryOptions(target));
   const [draft, setDraft] = useState<string | null>(null);
+  const [refreshingAfterStale, setRefreshingAfterStale] = useState(false);
   const editBaselineRef = useRef<string[] | null>(null);
   const value = draft ?? (result.data ? formatTopics(result.data.names) : "");
   const parsed = parseRepositoryTopics(value);
@@ -44,10 +45,12 @@ export function GitHubRepositoryTopicsCard({ repository }: { repository: GitHubR
     !repository.isArchived &&
     parsed.names !== null &&
     !sameTopics(parsed.names, currentNames) &&
-    !result.isPending;
+    !result.isPending &&
+    !refreshingAfterStale;
 
   useEffect(() => {
     setDraft(null);
+    setRefreshingAfterStale(false);
     editBaselineRef.current = null;
   }, [repository.id]);
 
@@ -56,6 +59,18 @@ export function GitHubRepositoryTopicsCard({ repository }: { repository: GitHubR
       editBaselineRef.current = [...result.data.names];
     }
   }, [draft, result.data]);
+
+  const refreshTopics = async () => {
+    try {
+      const refreshed = await result.refetch();
+      if (refreshed.data && !refreshed.error) {
+        editBaselineRef.current = [...refreshed.data.names];
+        setRefreshingAfterStale(false);
+      }
+    } catch {
+      // The query's error state provides the retry affordance when refresh fails.
+    }
+  };
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -71,7 +86,12 @@ export function GitHubRepositoryTopicsCard({ repository }: { repository: GitHubR
     },
     onError: (error) => {
       const parsedError = parseIpcError(error);
-      void queryClient.invalidateQueries({ queryKey: githubQueryKeys.repositoryTopics(target) });
+      if (parsedError.code === "githubRepositoryTopicsStale") {
+        setRefreshingAfterStale(true);
+        void refreshTopics();
+      } else {
+        void queryClient.invalidateQueries({ queryKey: githubQueryKeys.repositoryTopics(target) });
+      }
       toast.error(t("workspace.repositories.settings.topicsSaveFailed"), {
         description:
           parsedError.code === "githubPermission"
@@ -114,7 +134,7 @@ export function GitHubRepositoryTopicsCard({ repository }: { repository: GitHubR
             <AlertTitle>{t("workspace.repositories.settings.topicsLoadFailed")}</AlertTitle>
             <AlertDescription className="flex flex-col items-start gap-2">
               <span>{error?.message}</span>
-              <Button variant="outline" size="sm" onClick={() => void result.refetch()}>
+              <Button variant="outline" size="sm" onClick={() => void refreshTopics()}>
                 {t("common.retry")}
               </Button>
             </AlertDescription>
@@ -143,7 +163,7 @@ export function GitHubRepositoryTopicsCard({ repository }: { repository: GitHubR
             <AlertTitle>{t("workspace.repositories.settings.topicsLoadFailed")}</AlertTitle>
             <AlertDescription className="flex flex-col items-start gap-2">
               <span>{parseIpcError(result.error).message}</span>
-              <Button variant="outline" size="sm" onClick={() => void result.refetch()}>
+              <Button variant="outline" size="sm" onClick={() => void refreshTopics()}>
                 {t("common.retry")}
               </Button>
             </AlertDescription>
