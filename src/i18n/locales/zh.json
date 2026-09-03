@@ -760,6 +760,7 @@
       "refresh": "刷新",
       "authored": "我创建的",
       "assigned": "分配给我的",
+      "involved": "与我相关",
       "reviewRequested": "等待我评审",
       "count": "{{count}} 个拉取请求",
       "search": "搜索标题、仓库或 GitHub 限定词…",
@@ -772,6 +773,7 @@
       "emptyDescriptions": {
         "authored": "你创建的拉取请求里，没有符合当前条件的内容。",
         "assigned": "目前没有符合条件且分配给你的拉取请求。",
+        "involved": "与你相关的拉取请求里，没有符合当前条件的内容。",
         "reviewRequested": "目前没有需要你评审且符合当前条件的拉取请求。"
       },
       "pagination": "拉取请求收件箱分页"

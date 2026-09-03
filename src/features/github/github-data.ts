@@ -1703,7 +1703,7 @@ export type GitHubPullRequestReviewFilter = "none" | "required" | "approved" | "
 export type GitHubPullRequestMergeFilter = "merged" | "unmerged";
 export type GitHubPullRequestStatusFilter = "success" | "failure" | "pending";
 export type GitHubPullRequestDraftFilter = "draft";
-export type GitHubPullRequestInboxScope = "authored" | "assigned" | "reviewRequested";
+export type GitHubPullRequestInboxScope = "authored" | "assigned" | "involved" | "reviewRequested";
 export type GitHubPullRequestMergeMethod = "merge" | "squash" | "rebase";
 export type GitHubPullRequestAutoMergeState =
   | "enabled"

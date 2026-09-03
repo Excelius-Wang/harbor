@@ -1190,7 +1190,7 @@ describe("GitHub repository queries", () => {
     });
   });
 
-  it("keys and invokes account pull request inbox pages by scope", async () => {
+  it("keys and invokes involved account pull request inbox pages", async () => {
     const client = createTestQueryClient();
     vi.mocked(invoke).mockResolvedValueOnce({
       pullRequests: [],
@@ -1200,7 +1200,7 @@ describe("GitHub repository queries", () => {
       hasMore: false,
     });
     const options = pullRequestInboxQueryOptions({
-      scope: "reviewRequested",
+      scope: "involved",
       state: "open",
       query: "label:bug render",
       sort: "updated",
@@ -1212,14 +1212,14 @@ describe("GitHub repository queries", () => {
     expect(options.queryKey).toEqual([
       "github",
       "pull-request-inbox",
-      "reviewRequested",
+      "involved",
       "open",
       "label:bug render",
       "updated",
       3,
     ]);
     expect(invoke).toHaveBeenCalledWith("github_list_pull_request_inbox", {
-      scope: "reviewRequested",
+      scope: "involved",
       pullRequestState: "open",
       query: "label:bug render",
       sort: "updated",
