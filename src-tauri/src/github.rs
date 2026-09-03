@@ -364,6 +364,7 @@ impl GitHubPullRequestStatusFilter {
 pub enum GitHubPullRequestInboxScope {
     Authored,
     Assigned,
+    Involved,
     ReviewRequested,
 }
 
@@ -1948,6 +1949,7 @@ fn pull_request_inbox_search_query(filters: &GitHubPullRequestInboxFilters) -> S
     let scope = match filters.scope {
         GitHubPullRequestInboxScope::Authored => "author:@me",
         GitHubPullRequestInboxScope::Assigned => "assignee:@me",
+        GitHubPullRequestInboxScope::Involved => "involves:@me",
         GitHubPullRequestInboxScope::ReviewRequested => "review-requested:@me",
     };
     [
@@ -1967,10 +1969,7 @@ fn pull_request_inbox_search_terms(query: &str) -> String {
     query
         .split_whitespace()
         .filter(|term| {
-            let term = term
-                .trim_matches(['(', ')'])
-                .trim_start_matches('-')
-                .to_ascii_lowercase();
+            let term = term.trim_matches(['-', '(', ')']).to_ascii_lowercase();
             ![
                 "repo:",
                 "org:",
@@ -1980,6 +1979,7 @@ fn pull_request_inbox_search_terms(query: &str) -> String {
                 "state:",
                 "author:",
                 "assignee:",
+                "involves:",
                 "review-requested:",
                 "user-review-requested:",
                 "team-review-requested:",
@@ -4631,16 +4631,17 @@ mod tests {
     #[test]
     fn pull_request_inbox_enforces_the_selected_account_scope() {
         let filters = GitHubPullRequestInboxFilters {
-            scope: GitHubPullRequestInboxScope::ReviewRequested,
+            scope: GitHubPullRequestInboxScope::Involved,
             state: GitHubPullRequestState::Open,
-            query: "author:someone repo:other/project label:bug render".to_string(),
+            query: "author:someone -(involves:hubot) repo:other/project label:bug render"
+                .to_string(),
             sort: GitHubPullRequestSort::Updated,
             page: 2,
         };
 
         assert_eq!(
             pull_request_inbox_search_query(&filters),
-            "label:bug render is:pr is:open review-requested:@me archived:false"
+            "label:bug render is:pr is:open involves:@me archived:false"
         );
     }
 
@@ -4658,6 +4659,7 @@ mod tests {
 
         assert!(query_for(GitHubPullRequestInboxScope::Authored).contains("author:@me"));
         assert!(query_for(GitHubPullRequestInboxScope::Assigned).contains("assignee:@me"));
+        assert!(query_for(GitHubPullRequestInboxScope::Involved).contains("involves:@me"));
         assert!(query_for(GitHubPullRequestInboxScope::ReviewRequested)
             .contains("review-requested:@me"));
     }

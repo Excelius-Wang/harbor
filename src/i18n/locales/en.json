@@ -766,6 +766,7 @@
       "refresh": "Refresh",
       "authored": "Created",
       "assigned": "Assigned",
+      "involved": "Involves me",
       "reviewRequested": "Review requests",
       "count": "{{count}} pull requests",
       "search": "Search titles, repositories, or qualifiers…",
@@ -778,6 +779,7 @@
       "emptyDescriptions": {
         "authored": "You have not created a pull request matching these filters.",
         "assigned": "No pull request matching these filters is assigned to you.",
+        "involved": "No pull request involving you matches these filters.",
         "reviewRequested": "You have no review request matching these filters."
       },
       "pagination": "Pull request inbox pages"

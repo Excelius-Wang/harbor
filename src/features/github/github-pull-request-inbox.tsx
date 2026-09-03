@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   TriangleAlert,
   UserCheck,
+  UsersRound,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -179,6 +180,9 @@ export function GitHubPullRequestInbox({
               </TabsTrigger>
               <TabsTrigger value="assigned" className="px-1.5 text-xs">
                 <UserCheck /> {t("workspace.pullRequests.assigned")}
+              </TabsTrigger>
+              <TabsTrigger value="involved" className="px-1.5 text-xs">
+                <UsersRound /> {t("workspace.pullRequests.involved")}
               </TabsTrigger>
               <TabsTrigger value="reviewRequested" className="px-1.5 text-xs">
                 <ShieldCheck /> {t("workspace.pullRequests.reviewRequested")}
