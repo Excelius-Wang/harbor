@@ -1483,6 +1483,12 @@
       "pullRequestAuthorFilter": "作者",
       "allPullRequestAuthors": "全部作者",
       "createdByMePullRequests": "我创建的",
+      "pullRequestAssigneeFilter": "负责人",
+      "allPullRequestAssignees": "全部负责人",
+      "assignedToMePullRequests": "分配给我的",
+      "pullRequestMentionedFilter": "提及我",
+      "allPullRequestMentionStates": "全部提及状态",
+      "mentionedToMePullRequests": "提到我",
       "pullRequestMergeFilter": "合入状态",
       "allPullRequestMerges": "全部合入状态",
       "pullRequestMergeFilters": {

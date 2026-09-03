@@ -379,6 +379,8 @@ pub struct GitHubPullRequestFilters {
     pub linked_issue: bool,
     pub review_requested: bool,
     pub created_by_me: bool,
+    pub assigned_to_me: bool,
+    pub mentioned_to_me: bool,
     pub sort: GitHubPullRequestSort,
     pub page: u32,
 }
@@ -1895,14 +1897,7 @@ fn pull_request_search_query(
         GitHubPullRequestState::Closed => "closed",
     };
     let mut query = vec![
-        pull_request_search_terms(
-            &filters.query,
-            filters.review,
-            filters.draft,
-            filters.linked_issue,
-            filters.review_requested,
-            filters.created_by_me,
-        ),
+        pull_request_search_terms(filters),
         format!("repo:{owner}/{repository}"),
         "is:pr".to_string(),
         format!("is:{state}"),
@@ -1931,6 +1926,12 @@ fn pull_request_search_query(
     }
     if filters.created_by_me {
         query.push("author:@me".to_string());
+    }
+    if filters.assigned_to_me {
+        query.push("assignee:@me".to_string());
+    }
+    if filters.mentioned_to_me {
+        query.push("mentions:@me".to_string());
     }
     query
         .into_iter()
@@ -1991,25 +1992,19 @@ fn pull_request_inbox_search_terms(query: &str) -> String {
         .join(" ")
 }
 
-fn pull_request_search_terms(
-    query: &str,
-    selected_review: Option<GitHubPullRequestReviewFilter>,
-    selected_draft: Option<GitHubPullRequestDraftFilter>,
-    selected_linked_issue: bool,
-    selected_review_requested: bool,
-    selected_created_by_me: bool,
-) -> String {
-    query
+fn pull_request_search_terms(filters: &GitHubPullRequestFilters) -> String {
+    filters
+        .query
         .split_whitespace()
         .filter(|term| {
             let term = term.trim_matches(['-', '(', ')']).to_ascii_lowercase();
             !(["repo:", "org:", "user:", "is:", "type:", "state:"]
                 .iter()
                 .any(|prefix| term.starts_with(prefix))
-                || selected_review.is_some() && term.starts_with("review:")
-                || selected_draft.is_some() && term.starts_with("is:draft")
-                || selected_linked_issue && term.starts_with("linked:")
-                || selected_review_requested
+                || filters.review.is_some() && term.starts_with("review:")
+                || filters.draft.is_some() && term.starts_with("is:draft")
+                || filters.linked_issue && term.starts_with("linked:")
+                || filters.review_requested
                     && [
                         "review-requested:",
                         "user-review-requested:",
@@ -2017,7 +2012,10 @@ fn pull_request_search_terms(
                     ]
                     .iter()
                     .any(|prefix| term.starts_with(prefix))
-                || selected_created_by_me && term.starts_with("author:"))
+                || filters.created_by_me && term.starts_with("author:")
+                || filters.assigned_to_me
+                    && (term.starts_with("assignee:") || term == "no:assignee")
+                || filters.mentioned_to_me && term.starts_with("mentions:"))
         })
         .collect::<Vec<_>>()
         .join(" ")
@@ -4317,6 +4315,25 @@ mod tests {
         assert!(page.repositories[0].is_fork);
     }
 
+    fn pull_request_filters_with_query(query: &str) -> GitHubPullRequestFilters {
+        GitHubPullRequestFilters {
+            state: GitHubPullRequestState::Open,
+            query: query.to_string(),
+            label: String::new(),
+            review: None,
+            merge: None,
+            status: None,
+            draft: None,
+            linked_issue: false,
+            review_requested: false,
+            created_by_me: false,
+            assigned_to_me: false,
+            mentioned_to_me: false,
+            sort: GitHubPullRequestSort::Updated,
+            page: 1,
+        }
+    }
+
     #[test]
     fn selected_pull_request_review_filter_owns_the_review_qualifier() {
         let filters = GitHubPullRequestFilters {
@@ -4330,6 +4347,8 @@ mod tests {
             linked_issue: false,
             review_requested: false,
             created_by_me: false,
+            assigned_to_me: false,
+            mentioned_to_me: false,
             sort: GitHubPullRequestSort::Updated,
             page: 1,
         };
@@ -4342,10 +4361,8 @@ mod tests {
 
     #[test]
     fn pull_request_review_filters_use_github_search_values() {
-        assert_eq!(
-            pull_request_search_terms("review:approved crash", None, None, false, false, false),
-            "review:approved crash"
-        );
+        let filters = pull_request_filters_with_query("review:approved crash");
+        assert_eq!(pull_request_search_terms(&filters), "review:approved crash");
         assert_eq!(
             GitHubPullRequestReviewFilter::None.search_qualifier(),
             "review:none"
@@ -4374,25 +4391,17 @@ mod tests {
 
     #[test]
     fn pull_request_draft_filter_owns_the_draft_qualifier() {
+        let filters = pull_request_filters_with_query("is:draft -is:draft crash");
+        let selected_filters = GitHubPullRequestFilters {
+            draft: Some(GitHubPullRequestDraftFilter::Draft),
+            ..filters.clone()
+        };
         assert_eq!(
             GitHubPullRequestDraftFilter::Draft.search_qualifier(),
             "is:draft"
         );
-        assert_eq!(
-            pull_request_search_terms("is:draft -is:draft crash", None, None, false, false, false),
-            "crash"
-        );
-        assert_eq!(
-            pull_request_search_terms(
-                "is:draft -is:draft crash",
-                None,
-                Some(GitHubPullRequestDraftFilter::Draft),
-                false,
-                false,
-                false,
-            ),
-            "crash"
-        );
+        assert_eq!(pull_request_search_terms(&filters), "crash");
+        assert_eq!(pull_request_search_terms(&selected_filters), "crash");
     }
 
     #[test]
@@ -4408,6 +4417,8 @@ mod tests {
             linked_issue: false,
             review_requested: false,
             created_by_me: false,
+            assigned_to_me: false,
+            mentioned_to_me: false,
             sort: GitHubPullRequestSort::Updated,
             page: 1,
         };
@@ -4431,6 +4442,8 @@ mod tests {
             linked_issue: true,
             review_requested: false,
             created_by_me: false,
+            assigned_to_me: false,
+            mentioned_to_me: false,
             sort: GitHubPullRequestSort::Updated,
             page: 1,
         };
@@ -4454,6 +4467,8 @@ mod tests {
             linked_issue: false,
             review_requested: true,
             created_by_me: false,
+            assigned_to_me: false,
+            mentioned_to_me: false,
             sort: GitHubPullRequestSort::Updated,
             page: 1,
         };
@@ -4477,6 +4492,8 @@ mod tests {
             linked_issue: false,
             review_requested: false,
             created_by_me: true,
+            assigned_to_me: false,
+            mentioned_to_me: false,
             sort: GitHubPullRequestSort::Updated,
             page: 1,
         };
@@ -4484,6 +4501,57 @@ mod tests {
         assert_eq!(
             pull_request_search_query("octocat", "hello-world", &filters),
             "crash repo:octocat/hello-world is:pr is:open author:@me"
+        );
+    }
+
+    #[test]
+    fn selected_pull_request_assigned_to_me_filter_owns_assignee_qualifiers() {
+        let filters = GitHubPullRequestFilters {
+            state: GitHubPullRequestState::Open,
+            query: "assignee:someone -(assignee:another) no:assignee -(no:assignee) crash"
+                .to_string(),
+            label: String::new(),
+            review: None,
+            merge: None,
+            status: None,
+            draft: None,
+            linked_issue: false,
+            review_requested: false,
+            created_by_me: false,
+            assigned_to_me: true,
+            mentioned_to_me: false,
+            sort: GitHubPullRequestSort::Updated,
+            page: 1,
+        };
+
+        assert_eq!(
+            pull_request_search_query("octocat", "hello-world", &filters),
+            "crash repo:octocat/hello-world is:pr is:open assignee:@me"
+        );
+    }
+
+    #[test]
+    fn selected_pull_request_mentioned_to_me_filter_owns_mentions_qualifiers() {
+        let filters = GitHubPullRequestFilters {
+            state: GitHubPullRequestState::Open,
+            query: "mentions:someone -(mentions:another) crash".to_string(),
+            label: String::new(),
+            review: None,
+            merge: None,
+            status: None,
+            draft: None,
+            linked_issue: false,
+            review_requested: false,
+            created_by_me: false,
+            assigned_to_me: false,
+            mentioned_to_me: true,
+            sort: GitHubPullRequestSort::Updated,
+            page: 1,
+        };
+
+        assert_eq!(
+            pull_request_search_query("octocat", "hello-world", &filters),
+            "crash repo:octocat/hello-world is:pr is:open mentions:@me"
         );
     }
 
@@ -4532,6 +4600,8 @@ mod tests {
             linked_issue: false,
             review_requested: false,
             created_by_me: false,
+            assigned_to_me: false,
+            mentioned_to_me: false,
             sort: GitHubPullRequestSort::Updated,
             page: 1,
         };
