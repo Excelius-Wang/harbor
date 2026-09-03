@@ -249,6 +249,8 @@ export type GitHubPullRequestsTarget = GitHubRepositoryTarget & {
   linkedIssue?: boolean;
   reviewRequested?: boolean;
   createdByMe?: boolean;
+  assignedToMe?: boolean;
+  mentionedToMe?: boolean;
   sort: GitHubPullRequestSort;
   page: number;
 };
@@ -768,6 +770,8 @@ export const githubQueryKeys = {
     linkedIssue,
     reviewRequested,
     createdByMe,
+    assignedToMe,
+    mentionedToMe,
     sort,
     page,
   }: GitHubPullRequestsTarget) =>
@@ -787,6 +791,8 @@ export const githubQueryKeys = {
       linkedIssue ?? false,
       reviewRequested ?? false,
       createdByMe ?? false,
+      assignedToMe ?? false,
+      mentionedToMe ?? false,
       sort,
       page,
     ] as const,
@@ -1882,6 +1888,8 @@ export function repositoryPullRequestsQueryOptions(target: GitHubPullRequestsTar
         ...(target.linkedIssue ? { linkedIssue: true } : {}),
         ...(target.reviewRequested ? { reviewRequested: true } : {}),
         ...(target.createdByMe ? { createdByMe: true } : {}),
+        ...(target.assignedToMe ? { assignedToMe: true } : {}),
+        ...(target.mentionedToMe ? { mentionedToMe: true } : {}),
         sort: target.sort,
         page: target.page,
       }),

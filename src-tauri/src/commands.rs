@@ -2601,6 +2601,8 @@ pub async fn github_list_repository_pull_requests(
     linked_issue: Option<bool>,
     review_requested: Option<bool>,
     created_by_me: Option<bool>,
+    assigned_to_me: Option<bool>,
+    mentioned_to_me: Option<bool>,
     sort: GitHubPullRequestSort,
     page: u32,
     state: State<'_, AppState>,
@@ -2617,6 +2619,8 @@ pub async fn github_list_repository_pull_requests(
         linked_issue: linked_issue.unwrap_or(false),
         review_requested: review_requested.unwrap_or(false),
         created_by_me: created_by_me.unwrap_or(false),
+        assigned_to_me: assigned_to_me.unwrap_or(false),
+        mentioned_to_me: mentioned_to_me.unwrap_or(false),
         sort,
         page: validate_issue_page(page)?,
     };

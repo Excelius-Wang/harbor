@@ -1143,6 +1143,8 @@ describe("GitHub repository queries", () => {
       status: "success",
       reviewRequested: true,
       createdByMe: true,
+      assignedToMe: true,
+      mentionedToMe: true,
       sort: "comments",
       page: 2,
     });
@@ -1165,6 +1167,8 @@ describe("GitHub repository queries", () => {
       false,
       true,
       true,
+      true,
+      true,
       "comments",
       2,
     ]);
@@ -1179,6 +1183,8 @@ describe("GitHub repository queries", () => {
       status: "success",
       reviewRequested: true,
       createdByMe: true,
+      assignedToMe: true,
+      mentionedToMe: true,
       sort: "comments",
       page: 2,
     });

@@ -1489,6 +1489,12 @@
       "pullRequestAuthorFilter": "Author",
       "allPullRequestAuthors": "All authors",
       "createdByMePullRequests": "Created by me",
+      "pullRequestAssigneeFilter": "Assignee",
+      "allPullRequestAssignees": "All assignees",
+      "assignedToMePullRequests": "Assigned to me",
+      "pullRequestMentionedFilter": "Mentions",
+      "allPullRequestMentionStates": "All mention states",
+      "mentionedToMePullRequests": "Mentioning me",
       "pullRequestMergeFilter": "Merge status",
       "allPullRequestMerges": "All merge statuses",
       "pullRequestMergeFilters": {

@@ -62,6 +62,24 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe("GitHub Pull Request list filters", () => {
+  it("keeps search full-width until the complete wide filter grid activates", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <GitHubPullRequestView repository={repository} />
+      </QueryClientProvider>
+    );
+
+    const search = await screen.findByRole("textbox", {
+      name: "workspace.repositories.searchPullRequests",
+    });
+    const searchContainer = search.parentElement;
+    const filterForm = searchContainer?.parentElement;
+
+    expect(filterForm?.className).toContain("@min-[1640px]/pulls:grid-cols-");
+    expect(searchContainer?.className).toContain("@min-[1640px]/pulls:col-span-1");
+  });
+
   it("sends the direct review-requested filter", async () => {
     const user = userEvent.setup();
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -122,6 +140,72 @@ describe("GitHub Pull Request list filters", () => {
         query: "",
         label: "",
         createdByMe: true,
+        sort: "updated",
+        page: 1,
+      });
+    });
+  });
+
+  it("sends the assigned-to-me filter", async () => {
+    const user = userEvent.setup();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <GitHubPullRequestView repository={repository} />
+      </QueryClientProvider>
+    );
+
+    const assigneeTrigger = await screen.findByRole("combobox", {
+      name: "workspace.repositories.pullRequestAssigneeFilter",
+    });
+    await user.click(assigneeTrigger);
+    await user.click(
+      await screen.findByRole("option", {
+        name: "workspace.repositories.assignedToMePullRequests",
+      })
+    );
+
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith("github_list_repository_pull_requests", {
+        owner: "octocat",
+        repository: "hello-world",
+        pullRequestState: "open",
+        query: "",
+        label: "",
+        assignedToMe: true,
+        sort: "updated",
+        page: 1,
+      });
+    });
+  });
+
+  it("sends the mentioning-me filter", async () => {
+    const user = userEvent.setup();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <GitHubPullRequestView repository={repository} />
+      </QueryClientProvider>
+    );
+
+    const mentionedTrigger = await screen.findByRole("combobox", {
+      name: "workspace.repositories.pullRequestMentionedFilter",
+    });
+    await user.click(mentionedTrigger);
+    await user.click(
+      await screen.findByRole("option", {
+        name: "workspace.repositories.mentionedToMePullRequests",
+      })
+    );
+
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith("github_list_repository_pull_requests", {
+        owner: "octocat",
+        repository: "hello-world",
+        pullRequestState: "open",
+        query: "",
+        label: "",
+        mentionedToMe: true,
         sort: "updated",
         page: 1,
       });
