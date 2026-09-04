@@ -265,11 +265,9 @@ pub fn run() {
             commands::repository_context_ask,
         ]);
 
-    // Only enable updater in release mode
+    // Only enable update checks in release mode
     #[cfg(all(desktop, not(debug_assertions)))]
-    let builder = builder
-        .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(tauri_plugin_process::init());
+    let builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
 
     builder
         .run(tauri::generate_context!())

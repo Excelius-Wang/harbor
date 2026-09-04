@@ -2907,20 +2907,10 @@
     "checkFailed": "Failed to check for updates.",
     "upToDate": "You're using the latest version!",
     "updateAvailable": "Update Available",
-    "downloading": "Downloading Update",
-    "installingVersion": "Installing version {{version}}...",
     "versionAvailable": "Version {{version}} is available.",
     "releaseNotes": "Release Notes:",
     "later": "Later",
-    "installNow": "Install Now",
-    "installFailed": "Update Failed",
-    "installFailedDescription": "Harbor couldn't install version {{version}}. Check your connection and try again.",
-    "retry": "Retry",
-    "restarting": "Restarting Harbor",
-    "restartingDescription": "Version {{version}} is installed. Harbor is restarting...",
-    "relaunchFailed": "Restart Failed",
-    "relaunchFailedDescription": "Version {{version}} is installed, but Harbor couldn't restart. Try again or reopen Harbor manually.",
-    "retryRestart": "Restart Now"
+    "viewRelease": "View Release"
   },
   "settings": {
     "title": "Settings",

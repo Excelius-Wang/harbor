@@ -18,16 +18,16 @@ const tauriConfig = JSON.parse(
 );
 
 describe("Tauri updater contract", () => {
-  it("keeps matching frontend and Rust plugins for update installation and relaunch", () => {
+  it("keeps the updater plugin without enabling in-app relaunch", () => {
     expect(packageJson.dependencies["@tauri-apps/plugin-updater"]).toBeDefined();
-    expect(packageJson.dependencies["@tauri-apps/plugin-process"]).toBeDefined();
+    expect("@tauri-apps/plugin-process" in packageJson.dependencies).toBe(false);
     expect(cargoToml).toContain('tauri-plugin-updater = "2"');
-    expect(cargoToml).toContain('tauri-plugin-process = "2"');
+    expect(cargoToml).not.toContain("tauri-plugin-process");
     expect(cargoLock).toContain('name = "tauri-plugin-updater"');
-    expect(cargoLock).toContain('name = "tauri-plugin-process"');
+    expect(cargoLock).not.toContain('name = "tauri-plugin-process"');
   });
 
-  it("registers updater and process together for release builds", () => {
+  it("registers only the updater plugin for release builds", () => {
     const releasePluginBlock = tauriLib.match(
       /#\[cfg\(all\(desktop,\s*not\(debug_assertions\)\)\)\]\s*let\s+builder\s*=\s*builder(?<plugins>[\s\S]*?);/
     );
@@ -35,10 +35,10 @@ describe("Tauri updater contract", () => {
 
     expect(releasePluginBlock).not.toBeNull();
     expect(releasePlugins).toContain("tauri_plugin_updater::Builder::new().build()");
-    expect(releasePlugins).toContain("tauri_plugin_process::init()");
+    expect(releasePlugins).not.toContain("tauri_plugin_process::init()");
   });
 
-  it("grants only the process capability needed to relaunch after installation", () => {
+  it("grants check-only updater access to main and about", () => {
     expect(defaultCapability.windows).toEqual(["main", "about", "settings"]);
     expect(
       defaultCapability.permissions.some(
@@ -51,11 +51,7 @@ describe("Tauri updater contract", () => {
       readFileSync(path.join(projectRoot, "src-tauri", "capabilities", "updater-main.json"), "utf8")
     );
     expect(mainCapability.windows).toEqual(["main"]);
-    expect(mainCapability.permissions).toEqual([
-      "updater:allow-check",
-      "updater:allow-download-and-install",
-      "process:allow-restart",
-    ]);
+    expect(mainCapability.permissions).toEqual(["updater:allow-check"]);
 
     const aboutCapability = JSON.parse(
       readFileSync(

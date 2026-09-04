@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { TitleBar } from "@/components/title-bar";
 import { WindowFrame } from "@/components/window-frame";
+import { Toaster } from "@/components/ui/sonner";
 import { useAppTranslation } from "@/hooks/use-app-translation";
 import { cancelDestroyWindow, destroyWindow, openExternalUrl } from "@/lib/window";
-import { useManualUpdateCheck } from "@/components/updater-dialog";
+import { UpdaterAvailableDialog, useManualUpdateCheck } from "@/components/updater-dialog";
 import packageJson from "../../package.json";
 
 const techVersions = {
@@ -22,7 +23,7 @@ const projectSourceUrl = packageJson.repository.url.replace(/\.git$/, "");
 export default function AboutPage() {
   const [appVersion, setAppVersion] = useState("");
   const { t } = useAppTranslation();
-  const { checkUpdate, checking, showNoUpdate } = useManualUpdateCheck();
+  const { update, checkUpdate, checking, showNoUpdate } = useManualUpdateCheck();
 
   useEffect(() => {
     void getVersion().then(setAppVersion);
@@ -54,6 +55,8 @@ export default function AboutPage() {
       titleBar={<TitleBar title={t("about.title")} showMinimize={false} showMaximize={false} />}
       contentClassName="flex flex-1 items-center justify-center overflow-hidden"
     >
+      <UpdaterAvailableDialog update={update} />
+      <Toaster />
       <div className="flex w-full max-w-xs flex-col gap-6">
         <div className="text-center">
           <h2 className="text-2xl font-bold">{t("about.appName")}</h2>
