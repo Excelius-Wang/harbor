@@ -26,7 +26,7 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --breakpoint-workspace-wide: 73.75rem;
+  --breakpoint-workspace-wide: 80rem;
 }
 
 :root {
@@ -57,13 +57,14 @@
   --chart-4: var(--destructive);
   --harbor-chrome: oklch(0.985 0.013 236);
   --harbor-canvas-edge: oklch(0.965 0.014 238);
-  --harbor-window-fill: rgb(238 245 250 / 68%);
-  --harbor-glass-fill: rgb(250 252 255 / 58%);
-  --harbor-content-fill: rgb(247 250 253 / 80%);
-  --harbor-elevated-fill: rgb(250 252 255 / 90%);
+  --harbor-window-fill: rgb(232 239 244 / 76%);
+  --harbor-glass-fill: rgb(247 250 252 / 54%);
+  --harbor-content-fill: rgb(248 250 252 / 64%);
+  --harbor-surface-fill: rgb(247 250 252 / 12%);
+  --harbor-elevated-fill: rgb(249 251 253 / 86%);
   --harbor-glass-edge: rgb(255 255 255 / 66%);
-  --harbor-glass-shadow: rgb(36 58 78 / 20%);
-  --radius: 0.55rem;
+  --harbor-glass-shadow: rgb(31 47 61 / 24%);
+  --radius: 0.625rem;
   color-scheme: light;
 }
 
@@ -91,13 +92,13 @@
   --ring: #528bff;
   --harbor-chrome: #1e2227;
   --harbor-canvas-edge: #181a1f;
-  /* Window and pane fills stack, so keep the base translucent enough for native vibrancy to read. */
-  --harbor-window-fill: rgb(3 7 12 / 40%);
-  --harbor-glass-fill: rgb(10 15 22 / 52%);
-  --harbor-content-fill: rgb(12 17 25 / 66%);
-  --harbor-elevated-fill: rgb(12 16 23 / 90%);
-  --harbor-glass-edge: rgb(255 255 255 / 12%);
-  --harbor-glass-shadow: rgb(2 6 12 / 52%);
+  --harbor-window-fill: rgb(5 10 16 / 38%);
+  --harbor-glass-fill: rgb(17 24 32 / 46%);
+  --harbor-content-fill: rgb(12 18 26 / 30%);
+  --harbor-surface-fill: rgb(17 24 32 / 8%);
+  --harbor-elevated-fill: rgb(21 28 37 / 76%);
+  --harbor-glass-edge: rgb(255 255 255 / 18%);
+  --harbor-glass-shadow: rgb(0 4 10 / 56%);
   color-scheme: dark;
 }
 
@@ -109,7 +110,7 @@
   html,
   body,
   #root {
-    height: 100vh;
+    height: 100dvh;
     margin: 0;
     padding: 0;
     overflow: hidden;
@@ -137,7 +138,7 @@
 
 @layer utilities {
   .title-bar-btn {
-    @apply text-muted-foreground hover:text-foreground focus-visible:ring-primary/60 flex h-7 w-7 cursor-pointer items-center justify-center rounded-md transition-colors outline-none hover:bg-white/[0.055] focus-visible:ring-2;
+    @apply text-muted-foreground hover:text-foreground focus-visible:ring-primary/60 flex size-8 cursor-pointer items-center justify-center rounded-md transition-colors outline-none hover:bg-white/[0.055] focus-visible:ring-2;
   }
 
   .title-bar-control {
@@ -155,30 +156,99 @@
   }
 
   .harbor-glass {
-    border-color: color-mix(in srgb, var(--harbor-glass-edge) 72%, transparent);
+    border-color: color-mix(in srgb, var(--harbor-glass-edge) 58%, transparent);
     background: var(--harbor-glass-fill);
     box-shadow:
-      inset 0 1px 0 color-mix(in srgb, white 10%, transparent),
+      inset 0 1px 0 color-mix(in srgb, white 16%, transparent),
       inset 0 -1px 0 color-mix(in srgb, black 7%, transparent);
-    backdrop-filter: saturate(145%) blur(30px);
-    -webkit-backdrop-filter: saturate(145%) blur(30px);
+    backdrop-filter: saturate(112%) blur(34px);
+    -webkit-backdrop-filter: saturate(112%) blur(34px);
   }
 
   .harbor-content {
     background: var(--harbor-content-fill);
-    box-shadow: inset 0 1px 0 color-mix(in srgb, white 4%, transparent);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, white 7%, transparent);
+    backdrop-filter: saturate(108%) blur(26px);
+    -webkit-backdrop-filter: saturate(108%) blur(26px);
+  }
+
+  .harbor-pane {
+    background: transparent;
+  }
+
+  .harbor-surface {
+    border: 1px solid color-mix(in srgb, var(--harbor-glass-edge) 42%, transparent);
+    background: var(--harbor-surface-fill);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, white 9%, transparent),
+      inset 0 -1px 0 color-mix(in srgb, black 4%, transparent);
+  }
+
+  .harbor-workspace-shell {
+    border-color: color-mix(in srgb, var(--harbor-glass-edge) 72%, transparent);
+    background: var(--harbor-glass-fill);
+    box-shadow:
+      0 24px 64px color-mix(in srgb, var(--harbor-glass-shadow) 52%, transparent),
+      inset 0 1px 0 color-mix(in srgb, white 18%, transparent),
+      inset 0 0 0 1px color-mix(in srgb, var(--harbor-glass-edge) 18%, transparent);
+    backdrop-filter: saturate(114%) blur(38px);
+    -webkit-backdrop-filter: saturate(114%) blur(38px);
+  }
+
+  .harbor-workspace-shell .harbor-content {
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .harbor-subtle-divider {
+    border-color: color-mix(in srgb, var(--border) 48%, transparent);
   }
 
   .harbor-popover,
   .harbor-command,
   .harbor-sheet {
-    border-color: color-mix(in srgb, var(--harbor-glass-edge) 84%, transparent);
+    border-color: color-mix(in srgb, var(--harbor-glass-edge) 92%, transparent);
     background: var(--harbor-elevated-fill);
     box-shadow:
-      0 24px 70px var(--harbor-glass-shadow),
-      inset 0 1px 0 color-mix(in srgb, white 12%, transparent);
-    backdrop-filter: saturate(150%) blur(36px);
-    -webkit-backdrop-filter: saturate(150%) blur(36px);
+      0 22px 58px var(--harbor-glass-shadow),
+      inset 0 1px 0 color-mix(in srgb, white 16%, transparent),
+      inset 0 0 0 1px color-mix(in srgb, var(--harbor-glass-edge) 26%, transparent);
+    backdrop-filter: saturate(120%) blur(34px);
+    -webkit-backdrop-filter: saturate(120%) blur(34px);
+  }
+
+  .harbor-nav-item {
+    color: var(--muted-foreground);
+    box-shadow: inset 0 0 0 1px transparent;
+  }
+
+  .harbor-nav-item:hover {
+    background: color-mix(in srgb, var(--foreground) 5%, transparent);
+    color: var(--foreground);
+  }
+
+  .harbor-nav-item[aria-current="page"] {
+    background: color-mix(in srgb, var(--foreground) 88%, transparent);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, white 18%, transparent),
+      0 8px 22px color-mix(in srgb, var(--harbor-glass-shadow) 24%, transparent);
+    color: var(--background);
+  }
+
+  .harbor-segmented [data-slot="tabs-trigger"][data-state="active"] {
+    border-color: transparent;
+    background: color-mix(in srgb, var(--foreground) 88%, transparent);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, white 18%, transparent),
+      0 6px 18px color-mix(in srgb, var(--harbor-glass-shadow) 22%, transparent);
+    color: var(--background);
+  }
+
+  .harbor-rail-item[data-active="true"] {
+    background: color-mix(in srgb, var(--foreground) 88%, transparent);
+    color: var(--background);
   }
 
   .harbor-progress-indeterminate {
@@ -202,31 +272,11 @@
 .harbor-window {
   position: relative;
   isolation: isolate;
-  background:
-    radial-gradient(
-      880px 520px at 7% -14%,
-      color-mix(in srgb, var(--primary) 12%, transparent),
-      transparent 60%
-    ),
-    radial-gradient(
-      760px 520px at 104% 112%,
-      color-mix(in srgb, var(--primary) 5%, transparent),
-      transparent 68%
-    );
   background-color: var(--harbor-window-fill);
   box-shadow:
-    0 34px 90px var(--harbor-glass-shadow),
-    inset 0 1px 0 color-mix(in srgb, white 12%, transparent),
-    inset 0 0 0 1px color-mix(in srgb, var(--harbor-glass-edge) 64%, transparent);
-}
-
-.light .harbor-window {
-  background: radial-gradient(
-    880px 520px at 7% -14%,
-    color-mix(in srgb, var(--primary) 10%, transparent),
-    transparent 60%
-  );
-  background-color: var(--harbor-window-fill);
+    0 34px 86px var(--harbor-glass-shadow),
+    inset 0 1px 0 color-mix(in srgb, white 18%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--harbor-glass-edge) 62%, transparent);
 }
 
 .harbor-diff {
@@ -480,6 +530,8 @@ button {
   .harbor-window,
   .harbor-glass,
   .harbor-content,
+  .harbor-surface,
+  .harbor-workspace-shell,
   .harbor-popover,
   .harbor-command,
   .harbor-sheet {

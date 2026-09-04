@@ -43,18 +43,20 @@
       "packages": "Packages",
       "profile": "Profile",
       "repositories": "Repositories",
-      "discover": "Discover"
+      "discover": "Discover",
+      "more": "More"
     },
     "discovery": {
-      "eyebrow": "GitHub index",
-      "trendingEyebrow": "Open-source momentum",
       "searchLabel": "Search GitHub",
       "searchPlaceholder": "Search or enter qualifiers, for example language:rust stars:>100",
       "search": "Search",
+      "searchKind": "Search category",
+      "searchSort": "Sort search results",
       "desktopOnly": "GitHub discovery is available in the Harbor desktop runtime.",
       "tabs": {
         "trending": "Trending",
         "feed": "Following",
+        "search": "Search",
         "repositories": "Repositories",
         "code": "Code",
         "issues": "Issues",

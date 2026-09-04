@@ -1,56 +1,59 @@
-# Frosted glass workspace
+# Frosted acrylic workspace
 
 ## Goal
 
-Create a reviewable macOS-first frosted-glass version of Harbor that includes the code and content
-areas, reuses the existing theme and shadcn/Tauri infrastructure, preserves information architecture
-and interaction behavior, and remains readable with reduced-transparency and light-theme fallbacks.
+Keep Harbor's existing cold dark-blue palette while translating the supplied references' design
+language into the GitHub workspace: an inset floating shell, continuous acrylic planes, compact
+high-contrast selection states, restrained separators, softer spacing, and clear material depth.
+Use a precise small-radius system instead of large curves or capsules. Preserve the focused
+navigation, and keep Discovery's primary content single-column at every width; repository details
+open only after explicit selection. Do not add directional light beams, spotlights, ambient glows,
+or decorative background gradients.
 
 ## Current state
 
-The glass workspace and follow-up fixes are committed through `4f24d5b` on branch
-`feat/glass-workspace-20260904`. Stacked PR #80 targets the
-adaptive-window branch at `https://github.com/Excelius-Wang/harbor/pull/80`. The implementation uses
-Tauri's native macOS `underWindowBackground` material for main and child windows, synchronizes the
-native material with Harbor's resolved theme, and makes the shared `WindowFrame` glass by default. Existing
-`harbor-glass`, popover, command, and sheet utilities now share calibrated translucent tokens, while
-the new `harbor-content` surface gives code and content areas a deeper tint for readability. Major
-GitHub views and Settings use these shared surfaces without changing information architecture,
-components, icon family, copy, or behavior.
+Work continues in the uncommitted working tree on branch `feat/github-trending-20260905`. The first
+iteration already reduced navigation choices, separated GitHub search from the command field, added
+a responsive repository master-detail layout, and made the repository rail contextual. Visual
+review showed that its small-radius, outlined, edge-to-edge dark panels still read as a conventional
+developer tool rather than the supplied rounded acrylic design language.
 
-The first pass looked too light over white desktop content. Reproducing it against the same white
-browser background showed that `underWindowBackground` was only a secondary factor: the main lift
-came from compositing the original blue-gray dark tokens over a bright source. Dark mode now reapplies
-the native `hudWindow` effect after theme resolution and uses smoke-black window, chrome, content,
-and overlay tokens. The window and pane layers previously composed to roughly 92% opacity, which
-made the native material look solid; the current deep-color/lower-alpha calibration composes the
-content surface to roughly 80% so the material reads again without returning to the washed-out first
-pass. Light mode is unchanged.
+The current pass keeps the cold dark-blue palette and uses the approved small-radius system. The
+window frame is 12px; the inset workspace shell and continuous Discovery surface are 10px;
+navigation, selection states, fields, buttons, rows, avatars, and metric groups are 8px; segmented
+tab triggers use 6px. Full circles remain only for identity imagery and rare icon-only controls.
 
-The primary-navigation separator is also contained within the sidebar. Its shadcn base class applies
-an orientation-scoped `w-full`, so the earlier plain `w-auto` did not win and its horizontal margins
-made the line cross the sidebar border. The call site now overrides width in the same orientation
-variant, preserving the shared Separator component and both compact and expanded layouts.
+Discovery is now single-column at every width. The repository preview component, media-query hook,
+preview state, selected-row semantics, preview translations, and wide grid branch were removed.
+Selecting a repository opens the existing full detail view and only then supplies repository context
+to the Harbor rail. The content and header are constrained to 1120px for readable line length.
+
+The workspace shell now owns the only tint and backdrop blur inside the inset workspace. Primary
+navigation, page content, and the contextual rail sit directly on that acrylic plane without their
+own fill or backdrop filter. The inner Discovery surface uses the same dark-glass RGB value at 8%
+opacity with a fine edge and inner highlight; it no longer adds another blur or contact shadow.
+High-contrast selection and restrained separators preserve hierarchy. No decorative background
+gradient or directional light is present.
+
+Representative renders are stored as ignored QA artifacts at
+`output/playwright/harbor-acrylic-unified-plane.png` and
+`output/playwright/harbor-acrylic-unified-plane-material-test.png`; the second uses an injected
+two-tone test backdrop and confirms continuous material participation across navigation and content.
 
 ## Next action
 
-Review PR #80 and collect final visual feedback on the balanced dark glass calibration.
+Collect user visual feedback on the unified acrylic-plane render before further tuning.
 
 ## Verification
 
-`pnpm check` passes 95 frontend files and 431 tests plus the production build. `cargo check
---manifest-path src-tauri/Cargo.toml` passes. Focused glass, theme synchronization, and Discovery
-tests pass 3/3. The macOS runtime was reviewed over both dark and light desktop content at the
-adaptive default size, and the browser-rendered light theme was reviewed separately. The too-light
-dark-mode reproduction was rerun against the same white desktop background after the correction;
-the content now stays deep gray while retaining the native frosted material. A high-contrast gradient
-backdrop stress test confirms distinct translucent title, navigation, content, and rail layers after
-the final alpha correction. The native-effect test
-failed before the correction and passes afterward. The sidebar-separator regression test also failed
-before its fix and passes afterward. Browser layout measurements confirm that the separator ends at
-204px inside the expanded sidebar's 217px right edge and at 46px inside the compact sidebar's 55px
-right edge.
+`pnpm check` passes formatting, ESLint, 97 frontend test files with 441 tests, TypeScript, and the
+production Vite build. `cargo check --manifest-path src-tauri/Cargo.toml` and `git diff --check` pass.
+The repository-selection test verifies that no preview appears before selection and that selection
+opens full detail while providing repository context. New workspace tests verify that the primary
+navigation and contextual rail use the transparent pane contract instead of independent glass.
+Playwright computed styles confirm that the workspace shell alone has a 38px backdrop blur while the
+navigation and content are transparent with no filter; the material stress backdrop stays continuous
+across both regions.
 
-Success: the desktop background reads through every major workspace region without compromising
-text, list, focus, or light-theme readability; code and diff surfaces inherit the same deeper
-content material, and reduced transparency falls back to the solid semantic background.
+Success: the existing color identity remains recognizable, and the workspace now renders as one
+continuous acrylic plane without the previous blue-black center patch.

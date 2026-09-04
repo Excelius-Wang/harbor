@@ -104,8 +104,12 @@ export function TitleBar({
     <div
       className={cn(
         "harbor-glass relative flex items-center justify-between border-b select-none",
-        size === "workspace" ? "h-12" : "h-8",
-        showMaximize && isMaximized ? "" : "rounded-t-lg",
+        size === "workspace" ? "h-[52px]" : "h-8",
+        showMaximize && isMaximized
+          ? ""
+          : size === "workspace"
+            ? "rounded-t-[12px]"
+            : "rounded-t-lg",
         className
       )}
     >

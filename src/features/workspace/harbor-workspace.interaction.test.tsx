@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 
 import type { ReactNode } from "react";
-import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
+import { cleanup, render, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -61,6 +62,18 @@ afterEach(() => {
 });
 
 describe("HarborWorkspace navigation", () => {
+  it("keeps the primary navigation on the workspace acrylic plane", () => {
+    const { container } = render(
+      <TooltipProvider>
+        <HarborWorkspace />
+      </TooltipProvider>
+    );
+    const primaryNavigation = container.querySelector(".harbor-primary-nav");
+
+    expect(primaryNavigation?.classList.contains("harbor-pane")).toBe(true);
+    expect(primaryNavigation?.classList.contains("harbor-glass")).toBe(false);
+  });
+
   it("keeps the inset separator inside the primary navigation", () => {
     const { container } = render(
       <TooltipProvider>
@@ -74,13 +87,15 @@ describe("HarborWorkspace navigation", () => {
 
   it("keeps the content surface and page structure while a lazy module loads", async () => {
     lazyModuleState.suspendGists = true;
-    const { container, getByRole } = render(
+    const user = userEvent.setup();
+    const { container, findByRole, getByRole } = render(
       <TooltipProvider>
         <HarborWorkspace />
       </TooltipProvider>
     );
 
-    fireEvent.click(getByRole("button", { name: "workspace.nav.gists" }));
+    await user.click(getByRole("button", { name: "workspace.nav.more" }));
+    await user.click(await findByRole("menuitem", { name: "workspace.nav.gists" }));
 
     await waitFor(() => {
       expect(container.querySelector(".harbor-content")).not.toBeNull();
@@ -90,5 +105,24 @@ describe("HarborWorkspace navigation", () => {
     );
     expect(container.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThanOrEqual(18);
     expect(container.querySelector('[data-slot="spinner"]')).toBeNull();
+  });
+
+  it("keeps secondary destinations in one More menu", async () => {
+    const user = userEvent.setup();
+    const { findByRole, getByRole, queryByRole } = render(
+      <TooltipProvider>
+        <HarborWorkspace />
+      </TooltipProvider>
+    );
+
+    expect(queryByRole("button", { name: "workspace.nav.projects" })).toBeNull();
+    expect(queryByRole("button", { name: "workspace.nav.gists" })).toBeNull();
+    expect(queryByRole("button", { name: "workspace.nav.packages" })).toBeNull();
+
+    await user.click(getByRole("button", { name: "workspace.nav.more" }));
+
+    expect(await findByRole("menuitem", { name: "workspace.nav.projects" })).toBeTruthy();
+    expect(getByRole("menuitem", { name: "workspace.nav.gists" })).toBeTruthy();
+    expect(getByRole("menuitem", { name: "workspace.nav.packages" })).toBeTruthy();
   });
 });

@@ -43,18 +43,20 @@
       "packages": "Packages",
       "profile": "个人主页",
       "repositories": "仓库",
-      "discover": "发现"
+      "discover": "发现",
+      "more": "更多"
     },
     "discovery": {
-      "eyebrow": "GitHub 全局索引",
-      "trendingEyebrow": "开源趋势",
       "searchLabel": "搜索 GitHub",
       "searchPlaceholder": "输入关键词或限定词，例如 language:rust stars:>100",
       "search": "搜索",
+      "searchKind": "搜索类型",
+      "searchSort": "搜索结果排序",
       "desktopOnly": "GitHub 发现页需要在 Harbor 桌面端使用。",
       "tabs": {
         "trending": "热门",
         "feed": "关注动态",
+        "search": "搜索",
         "repositories": "仓库",
         "code": "代码",
         "issues": "Issues",
