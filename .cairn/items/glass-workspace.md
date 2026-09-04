@@ -8,7 +8,8 @@ and interaction behavior, and remains readable with reduced-transparency and lig
 
 ## Current state
 
-Commit `d12cde0` is pushed on branch `feat/glass-workspace-20260904`. Stacked PR #80 targets the
+The glass workspace and follow-up fixes are committed through `fe23e8e` on branch
+`feat/glass-workspace-20260904`. Stacked PR #80 targets the
 adaptive-window branch at `https://github.com/Excelius-Wang/harbor/pull/80`. The implementation uses
 Tauri's native macOS `underWindowBackground` material for main and child windows, synchronizes the
 native material with Harbor's resolved theme, and makes the shared `WindowFrame` glass by default. Existing
@@ -23,19 +24,27 @@ came from compositing the original blue-gray dark tokens over a bright source. D
 the native `hudWindow` effect after theme resolution and uses deeper smoke-black window, chrome,
 content, and overlay tokens. Light mode is unchanged.
 
+The primary-navigation separator is also contained within the sidebar. Its shadcn base class applies
+an orientation-scoped `w-full`, so the earlier plain `w-auto` did not win and its horizontal margins
+made the line cross the sidebar border. The call site now overrides width in the same orientation
+variant, preserving the shared Separator component and both compact and expanded layouts.
+
 ## Next action
 
-Collect visual feedback on the first glass pass and adjust the shared opacity tokens if requested.
+Collect further visual feedback on the glass workspace and address any remaining layout details.
 
 ## Verification
 
-`pnpm check` passes 94 frontend files and 430 tests plus the production build. `cargo check
+`pnpm check` passes 95 frontend files and 431 tests plus the production build. `cargo check
 --manifest-path src-tauri/Cargo.toml` passes. Focused glass, theme synchronization, and Discovery
 tests pass 3/3. The macOS runtime was reviewed over both dark and light desktop content at the
 adaptive default size, and the browser-rendered light theme was reviewed separately. The too-light
 dark-mode reproduction was rerun against the same white desktop background after the correction;
 the content now stays deep gray while retaining the native frosted material. The native-effect test
-failed before the correction and passes afterward.
+failed before the correction and passes afterward. The sidebar-separator regression test also failed
+before its fix and passes afterward. Browser layout measurements confirm that the separator ends at
+204px inside the expanded sidebar's 217px right edge and at 46px inside the compact sidebar's 55px
+right edge.
 
 Success: the desktop background reads through every major workspace region without compromising
 text, list, focus, or light-theme readability; code and diff surfaces inherit the same deeper
