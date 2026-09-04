@@ -30,13 +30,10 @@ export async function checkForUpdates(): Promise<UpdateCheckResult> {
   }
 }
 
-export async function downloadAndInstall(onProgress?: (progress: UpdateProgress) => void) {
-  const update = await check();
-
-  if (!update) {
-    return false;
-  }
-
+export async function downloadAndInstall(
+  update: Update,
+  onProgress?: (progress: UpdateProgress) => void
+) {
   console.log(`Found update ${update.version} from ${update.date} with notes: ${update.body}`);
 
   let downloaded = 0;
