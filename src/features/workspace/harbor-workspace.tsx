@@ -148,7 +148,7 @@ function PrimaryNavigation({
         })}
       </nav>
 
-      <Separator className="workspace-wide:mx-3 mx-2 w-auto bg-white/8" />
+      <Separator className="workspace-wide:mx-3 mx-2 bg-white/8 data-[orientation=horizontal]:w-auto!" />
       <div className="flex-1" />
 
       <div className="flex flex-col gap-0.5 p-2">
