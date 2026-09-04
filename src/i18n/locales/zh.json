@@ -22,6 +22,7 @@
   },
   "workspace": {
     "primaryNavigation": "主导航",
+    "loading": "正在加载工作区",
     "pinned": "已固定",
     "account": "账户",
     "accountMenu": "打开账户菜单",

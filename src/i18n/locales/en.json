@@ -22,6 +22,7 @@
   },
   "workspace": {
     "primaryNavigation": "Primary navigation",
+    "loading": "Loading workspace",
     "pinned": "Pinned",
     "account": "Account",
     "accountMenu": "Open account menu",

@@ -27,7 +27,7 @@ import {
   CommandShortcut,
 } from "@/components/ui/command";
 import { Separator } from "@/components/ui/separator";
-import { Spinner } from "@/components/ui/spinner";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { GitHubDiscoveryRepositoryTarget } from "@/features/github/github-discovery-view";
 import type {
@@ -89,10 +89,51 @@ const navItems: Array<{
 ];
 
 function WorkspaceFallback() {
+  const { t } = useTranslation();
+
   return (
-    <div className="flex min-w-0 flex-1 items-center justify-center">
-      <Spinner className="text-muted-foreground" />
-    </div>
+    <section
+      role="status"
+      aria-busy="true"
+      aria-label={t("workspace.loading")}
+      className="harbor-content flex min-h-0 min-w-0 flex-1 flex-col"
+    >
+      <header className="flex h-[74px] shrink-0 items-center justify-between gap-4 border-b px-5">
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-2.5 w-20" />
+          <Skeleton className="h-5 w-28" />
+        </div>
+        <Skeleton className="h-8 w-24" />
+      </header>
+
+      <div className="flex min-h-0 flex-1">
+        <aside className="workspace-wide:w-[320px] flex min-h-0 w-full shrink-0 flex-col border-r">
+          <div className="border-b p-3">
+            <Skeleton className="h-9 w-full" />
+          </div>
+          <div className="flex flex-col gap-1.5 p-2">
+            {Array.from({ length: 7 }, (_, index) => (
+              <div key={index} className="flex items-center gap-3 rounded-lg p-3">
+                <Skeleton className="size-8 shrink-0" />
+                <div className="flex min-w-0 flex-1 flex-col gap-2">
+                  <Skeleton className="h-3.5 w-4/5" />
+                  <Skeleton className="h-3 w-3/5" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </aside>
+
+        <div className="workspace-wide:flex hidden min-h-0 min-w-0 flex-1 flex-col gap-4 p-5">
+          <div className="flex flex-col gap-2 border-b pb-4">
+            <Skeleton className="h-6 w-2/5" />
+            <Skeleton className="h-3 w-3/5" />
+          </div>
+          <Skeleton className="h-28 w-full" />
+          <Skeleton className="h-44 w-full" />
+        </div>
+      </div>
+    </section>
   );
 }
 
