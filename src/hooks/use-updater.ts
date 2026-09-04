@@ -25,16 +25,20 @@ export function useUpdater() {
   }, []);
 
   const installUpdate = useCallback(async () => {
+    if (!update) {
+      return;
+    }
+
     setDownloading(true);
     try {
-      await downloadAndInstall((progressEvent) => {
+      await downloadAndInstall(update, (progressEvent) => {
         setProgress(progressEvent);
       });
     } catch (error) {
       console.error("Failed to install update:", error);
       setDownloading(false);
     }
-  }, []);
+  }, [update]);
 
   return {
     update,
