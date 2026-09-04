@@ -64,7 +64,11 @@ describe("Tauri updater contract", () => {
       )
     );
     expect(aboutCapability.windows).toEqual(["about"]);
-    expect(aboutCapability.permissions).toEqual(["updater:allow-check"]);
+    expect(aboutCapability.permissions).toEqual([
+      "updater:allow-check",
+      "updater:allow-download-and-install",
+      "process:allow-restart",
+    ]);
   });
 
   it("keeps the updater placeholders while limiting bundle configuration to macOS DMG", () => {

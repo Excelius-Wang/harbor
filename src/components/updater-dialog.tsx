@@ -16,9 +16,8 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { CircleAlert } from "lucide-react";
 
-interface UpdaterDialogProps {
-  manualCheck?: boolean;
-  onCheckComplete?: () => void;
+interface UpdaterInstallDialogProps {
+  updater: ReturnType<typeof useUpdater>;
 }
 
 interface InstallPresentation {
@@ -30,33 +29,27 @@ interface InstallPresentation {
   } | null;
 }
 
-export function UpdaterDialog({ manualCheck = false, onCheckComplete }: UpdaterDialogProps) {
-  const {
-    update,
-    checking,
-    installStatus,
-    progress,
-    checkUpdate,
-    installUpdate,
-    relaunchAfterUpdate,
-  } = useUpdater();
+export function UpdaterDialog() {
+  const updater = useUpdater();
+  const { checkUpdate } = updater;
+
+  useEffect(() => {
+    void checkUpdate();
+  }, [checkUpdate]);
+
+  return <UpdaterInstallDialog updater={updater} />;
+}
+
+export function UpdaterInstallDialog({ updater }: UpdaterInstallDialogProps) {
+  const { update, installStatus, progress, installUpdate, relaunchAfterUpdate } = updater;
   const [open, setOpen] = useState(false);
   const { t } = useTranslation();
 
   useEffect(() => {
-    if (!manualCheck) {
-      void checkUpdate();
-    }
-  }, [manualCheck, checkUpdate]);
-
-  useEffect(() => {
     if (update) {
       setOpen(true);
-      onCheckComplete?.();
-    } else if (manualCheck && !checking) {
-      onCheckComplete?.();
     }
-  }, [update, checking, manualCheck, onCheckComplete]);
+  }, [update]);
 
   const handleCancel = () => {
     setOpen(false);
@@ -165,7 +158,8 @@ export function UpdaterDialog({ manualCheck = false, onCheckComplete }: UpdaterD
 }
 
 export function useManualUpdateCheck() {
-  const { checkUpdate, checking, update } = useUpdater();
+  const updater = useUpdater();
+  const { checkUpdate, checking } = updater;
   const [showNoUpdate, setShowNoUpdate] = useState(false);
   const { t } = useTranslation();
 
@@ -184,10 +178,9 @@ export function useManualUpdateCheck() {
   };
 
   return {
+    updater,
     checkUpdate: handleCheckUpdate,
     checking,
-    hasUpdate: !!update,
     showNoUpdate,
-    dismissNoUpdate: () => setShowNoUpdate(false),
   };
 }
