@@ -1,28 +1,15 @@
-name: 'publish'
+name: publish
 
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 jobs:
   publish-tauri:
     permissions:
       contents: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-#          - platform: 'macos-latest' # for Arm based macs (M1 and above).
-#            args: '--target aarch64-apple-darwin'
-#          - platform: 'macos-latest' # for Intel based macs.
-#            args: '--target x86_64-apple-darwin'
-#          - platform: 'ubuntu-22.04'
-#            args: ''
-          - platform: 'windows-latest'
-            args: '--bundles nsis,updater'
-
-    runs-on: ${{ matrix.platform }}
+    runs-on: macos-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -41,40 +28,85 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: './src-tauri -> target'
+          workspaces: "./src-tauri -> target"
 
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Validate release inputs
+        env:
+          TAURI_SIGNING_PUBLIC_KEY: ${{ secrets.TAURI_SIGNING_PUBLIC_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: pnpm release:preflight
+
       - name: Configure updater
         shell: bash
+        env:
+          TAURI_SIGNING_PUBLIC_KEY: ${{ secrets.TAURI_SIGNING_PUBLIC_KEY }}
         run: |
-          REPO="${{ github.repository }}"
-          ENDPOINT="https://github.com/${REPO}/releases/latest/download/latest.json"
-          PUBKEY="${{ secrets.TAURI_SIGNING_PUBLIC_KEY }}"
-
-          # Replace placeholders in tauri.conf.json
+          ENDPOINT="https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/latest.json"
           sed -i.bak "s|__TAURI_UPDATER_ENDPOINT__|${ENDPOINT}|g" src-tauri/tauri.conf.json
-          sed -i.bak "s|__TAURI_UPDATER_PUBKEY__|${PUBKEY}|g" src-tauri/tauri.conf.json
-
+          sed -i.bak "s|__TAURI_UPDATER_PUBKEY__|${TAURI_SIGNING_PUBLIC_KEY}|g" src-tauri/tauri.conf.json
+          rm src-tauri/tauri.conf.json.bak
           echo "Updater configured with endpoint: ${ENDPOINT}"
 
-      - name: Build the project
+      - name: Import Apple Developer certificate
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          CERTIFICATE_PATH="${RUNNER_TEMP}/harbor-signing.p12"
+          KEYCHAIN_PATH="${RUNNER_TEMP}/harbor-signing.keychain-db"
+          printf '%s' "${APPLE_CERTIFICATE}" | base64 --decode > "${CERTIFICATE_PATH}"
+          security create-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_PATH}"
+          security default-keychain -s "${KEYCHAIN_PATH}"
+          security unlock-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_PATH}"
+          security set-keychain-settings -lut 21600 "${KEYCHAIN_PATH}"
+          security import "${CERTIFICATE_PATH}" -k "${KEYCHAIN_PATH}" -P "${APPLE_CERTIFICATE_PASSWORD}" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_PATH}"
+          APPLE_SIGNING_IDENTITY="$(security find-identity -v -p codesigning "${KEYCHAIN_PATH}" | awk -F '"' 'NR == 1 { print $2 }')"
+          if [ -z "${APPLE_SIGNING_IDENTITY}" ]; then
+            echo "No Apple code-signing identity found in the release keychain." >&2
+            exit 1
+          fi
+          printf 'APPLE_SIGNING_IDENTITY=%s\n' "${APPLE_SIGNING_IDENTITY}" >> "${GITHUB_ENV}"
+          echo "Apple signing identity imported."
+
+      - name: Build signed universal macOS release
         uses: tauri-apps/tauri-action@v0
-        id: tauri-action
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ env.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           tagName: v__VERSION__
-          releaseName: 'App v__VERSION__'
-          releaseBody: 'See the assets to download this version and install.'
-          releaseDraft: false
-          prerelease: false
-          args: ${{ matrix.args }}
+          releaseName: "Harbor v__VERSION__"
+          releaseBody: "Download the signed macOS disk image below."
+          releaseDraft: true
+          prerelease: ${{ contains(github.ref_name, '-beta.') }}
+          args: "--target universal-apple-darwin --bundles dmg"
+
+      - name: Delete Apple signing keychain
+        if: always()
+        run: |
+          security delete-keychain "${RUNNER_TEMP}/harbor-signing.keychain-db" || true
+          rm -f "${RUNNER_TEMP}/harbor-signing.p12"
