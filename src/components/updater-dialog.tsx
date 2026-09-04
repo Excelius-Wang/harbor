@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useUpdater } from "@/hooks/use-updater";
+import { useEffect, useState, type ReactNode } from "react";
+import { useUpdater, type UpdateInstallStatus } from "@/hooks/use-updater";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,16 +10,36 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Spinner } from "@/components/ui/spinner";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { CircleAlert } from "lucide-react";
 
 interface UpdaterDialogProps {
   manualCheck?: boolean;
   onCheckComplete?: () => void;
 }
 
+interface InstallPresentation {
+  titleKey: string;
+  description: ReactNode;
+  action: {
+    labelKey: string;
+    run: () => void;
+  } | null;
+}
+
 export function UpdaterDialog({ manualCheck = false, onCheckComplete }: UpdaterDialogProps) {
-  const { update, checking, downloading, progress, checkUpdate, installUpdate } = useUpdater();
+  const {
+    update,
+    checking,
+    installStatus,
+    progress,
+    checkUpdate,
+    installUpdate,
+    relaunchAfterUpdate,
+  } = useUpdater();
   const [open, setOpen] = useState(false);
   const { t } = useTranslation();
 
@@ -38,10 +58,6 @@ export function UpdaterDialog({ manualCheck = false, onCheckComplete }: UpdaterD
     }
   }, [update, checking, manualCheck, onCheckComplete]);
 
-  const handleInstall = () => {
-    void installUpdate();
-  };
-
   const handleCancel = () => {
     setOpen(false);
   };
@@ -54,38 +70,93 @@ export function UpdaterDialog({ manualCheck = false, onCheckComplete }: UpdaterD
     return Math.round(((downloaded ?? 0) / contentLength) * 100);
   };
 
+  const presentations: Record<UpdateInstallStatus, InstallPresentation> = {
+    idle: {
+      titleKey: "updater.updateAvailable",
+      description: (
+        <div className="flex flex-col gap-2">
+          <p>{t("updater.versionAvailable", { version: update?.version })}</p>
+          {update?.body && (
+            <div className="bg-muted mt-2 rounded-md p-3 text-sm">
+              <p className="font-semibold">{t("updater.releaseNotes")}</p>
+              <p className="mt-1 whitespace-pre-wrap">{update.body}</p>
+            </div>
+          )}
+        </div>
+      ),
+      action: {
+        labelKey: "updater.installNow",
+        run: () => void installUpdate(),
+      },
+    },
+    downloading: {
+      titleKey: "updater.downloading",
+      description: (
+        <div className="flex flex-col gap-2">
+          <p>{t("updater.installingVersion", { version: update?.version })}</p>
+          <Progress value={getProgressPercentage()} />
+        </div>
+      ),
+      action: null,
+    },
+    failed: {
+      titleKey: "updater.installFailed",
+      description: (
+        <Alert variant="destructive">
+          <CircleAlert />
+          <AlertDescription>
+            {t("updater.installFailedDescription", { version: update?.version })}
+          </AlertDescription>
+        </Alert>
+      ),
+      action: {
+        labelKey: "updater.retry",
+        run: () => void installUpdate(),
+      },
+    },
+    restarting: {
+      titleKey: "updater.restarting",
+      description: (
+        <div className="flex items-center gap-2">
+          <Spinner />
+          <p>{t("updater.restartingDescription", { version: update?.version })}</p>
+        </div>
+      ),
+      action: null,
+    },
+    "relaunch-failed": {
+      titleKey: "updater.relaunchFailed",
+      description: (
+        <Alert variant="destructive">
+          <CircleAlert />
+          <AlertDescription>
+            {t("updater.relaunchFailedDescription", { version: update?.version })}
+          </AlertDescription>
+        </Alert>
+      ),
+      action: {
+        labelKey: "updater.retryRestart",
+        run: () => void relaunchAfterUpdate(),
+      },
+    },
+  };
+  const presentation = presentations[installStatus];
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>
-            {downloading ? t("updater.downloading") : t("updater.updateAvailable")}
-          </DialogTitle>
-          <DialogDescription>
-            {downloading ? (
-              <div className="space-y-2">
-                <p>{t("updater.installingVersion", { version: update?.version })}</p>
-                <Progress value={getProgressPercentage()} />
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <p>{t("updater.versionAvailable", { version: update?.version })}</p>
-                {update?.body && (
-                  <div className="bg-muted mt-2 rounded-md p-3 text-sm">
-                    <p className="font-semibold">{t("updater.releaseNotes")}</p>
-                    <p className="mt-1 whitespace-pre-wrap">{update.body}</p>
-                  </div>
-                )}
-              </div>
-            )}
+          <DialogTitle>{t(presentation.titleKey)}</DialogTitle>
+          <DialogDescription asChild>
+            <div>{presentation.description}</div>
           </DialogDescription>
         </DialogHeader>
-        {!downloading && (
+        {presentation.action && (
           <DialogFooter>
             <Button variant="outline" onClick={handleCancel}>
               {t("updater.later")}
             </Button>
-            <Button onClick={handleInstall}>{t("updater.installNow")}</Button>
+            <Button onClick={presentation.action.run}>{t(presentation.action.labelKey)}</Button>
           </DialogFooter>
         )}
       </DialogContent>
