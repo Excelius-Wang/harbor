@@ -8,10 +8,10 @@ and interaction behavior, and remains readable with reduced-transparency and lig
 
 ## Current state
 
-Branch `feat/glass-workspace-20260904` is based on the adaptive-window PR branch. Harbor already has
-transparent Tauri windows and semantic glass utilities. The implementation now uses Tauri's native
-macOS `underWindowBackground` material for main and child windows, synchronizes the native material
-with Harbor's resolved theme, and makes the shared `WindowFrame` glass by default. Existing
+Commit `d12cde0` is pushed on branch `feat/glass-workspace-20260904`. Stacked PR #80 targets the
+adaptive-window branch at `https://github.com/Excelius-Wang/harbor/pull/80`. The implementation uses
+Tauri's native macOS `underWindowBackground` material for main and child windows, synchronizes the
+native material with Harbor's resolved theme, and makes the shared `WindowFrame` glass by default. Existing
 `harbor-glass`, popover, command, and sheet utilities now share calibrated translucent tokens, while
 the new `harbor-content` surface gives code and content areas a deeper tint for readability. Major
 GitHub views and Settings use these shared surfaces without changing information architecture,
@@ -19,7 +19,7 @@ components, icon family, copy, or behavior.
 
 ## Next action
 
-Commit and push the verified implementation, then open a stacked pull request for review.
+Collect visual feedback on the first glass pass and adjust the shared opacity tokens if requested.
 
 ## Verification
 
