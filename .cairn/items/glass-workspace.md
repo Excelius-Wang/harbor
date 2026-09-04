@@ -8,7 +8,7 @@ and interaction behavior, and remains readable with reduced-transparency and lig
 
 ## Current state
 
-The glass workspace and follow-up fixes are committed through `fe23e8e` on branch
+The glass workspace and follow-up fixes are committed through `4f24d5b` on branch
 `feat/glass-workspace-20260904`. Stacked PR #80 targets the
 adaptive-window branch at `https://github.com/Excelius-Wang/harbor/pull/80`. The implementation uses
 Tauri's native macOS `underWindowBackground` material for main and child windows, synchronizes the
@@ -21,8 +21,11 @@ components, icon family, copy, or behavior.
 The first pass looked too light over white desktop content. Reproducing it against the same white
 browser background showed that `underWindowBackground` was only a secondary factor: the main lift
 came from compositing the original blue-gray dark tokens over a bright source. Dark mode now reapplies
-the native `hudWindow` effect after theme resolution and uses deeper smoke-black window, chrome,
-content, and overlay tokens. Light mode is unchanged.
+the native `hudWindow` effect after theme resolution and uses smoke-black window, chrome, content,
+and overlay tokens. The window and pane layers previously composed to roughly 92% opacity, which
+made the native material look solid; the current deep-color/lower-alpha calibration composes the
+content surface to roughly 80% so the material reads again without returning to the washed-out first
+pass. Light mode is unchanged.
 
 The primary-navigation separator is also contained within the sidebar. Its shadcn base class applies
 an orientation-scoped `w-full`, so the earlier plain `w-auto` did not win and its horizontal margins
@@ -31,7 +34,7 @@ variant, preserving the shared Separator component and both compact and expanded
 
 ## Next action
 
-Collect further visual feedback on the glass workspace and address any remaining layout details.
+Review PR #80 and collect final visual feedback on the balanced dark glass calibration.
 
 ## Verification
 
@@ -40,7 +43,9 @@ Collect further visual feedback on the glass workspace and address any remaining
 tests pass 3/3. The macOS runtime was reviewed over both dark and light desktop content at the
 adaptive default size, and the browser-rendered light theme was reviewed separately. The too-light
 dark-mode reproduction was rerun against the same white desktop background after the correction;
-the content now stays deep gray while retaining the native frosted material. The native-effect test
+the content now stays deep gray while retaining the native frosted material. A high-contrast gradient
+backdrop stress test confirms distinct translucent title, navigation, content, and rail layers after
+the final alpha correction. The native-effect test
 failed before the correction and passes afterward. The sidebar-separator regression test also failed
 before its fix and passes afterward. Browser layout measurements confirm that the separator ends at
 204px inside the expanded sidebar's 217px right edge and at 46px inside the compact sidebar's 55px
