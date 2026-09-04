@@ -11,7 +11,7 @@ const destroyTimers: Record<string, number> = {};
 const destroyVersions: Record<string, number> = {};
 
 const DEFAULT_GLASS_WINDOW_EFFECTS: Effects = {
-  effects: [Effect.UnderWindowBackground],
+  effects: [Effect.HudWindow],
   state: EffectState.FollowsWindowActiveState,
   radius: 10,
 };

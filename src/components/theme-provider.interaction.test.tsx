@@ -5,11 +5,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ThemeProvider } from "./theme-provider";
 
 const nativeWindow = vi.hoisted(() => ({
+  setEffects: vi.fn().mockResolvedValue(undefined),
   setTheme: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("@tauri-apps/api/core", () => ({ isTauri: () => true }));
-vi.mock("@tauri-apps/api/window", () => ({ getCurrentWindow: () => nativeWindow }));
+vi.mock("@tauri-apps/api/window", () => ({
+  Effect: {
+    HudWindow: "hudWindow",
+    UnderWindowBackground: "underWindowBackground",
+  },
+  EffectState: { FollowsWindowActiveState: "followsWindowActiveState" },
+  getCurrentWindow: () => nativeWindow,
+}));
 
 beforeEach(() => {
   localStorage.clear();
@@ -40,5 +48,10 @@ describe("ThemeProvider", () => {
 
     expect(document.documentElement.classList.contains("dark")).toBe(true);
     await waitFor(() => expect(nativeWindow.setTheme).toHaveBeenCalledWith("dark"));
+    expect(nativeWindow.setEffects).toHaveBeenCalledWith({
+      effects: ["hudWindow"],
+      state: "followsWindowActiveState",
+      radius: 10,
+    });
   });
 });

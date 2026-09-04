@@ -29,7 +29,7 @@
         "decorations": false,
         "transparent": true,
         "windowEffects": {
-          "effects": ["underWindowBackground"],
+          "effects": ["hudWindow"],
           "state": "followsWindowActiveState",
           "radius": 10
         },
