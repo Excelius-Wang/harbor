@@ -5,6 +5,7 @@ mod github;
 mod github_oauth;
 mod plugins;
 mod repository_context;
+mod window_layout;
 
 use tauri::Manager;
 
@@ -21,6 +22,15 @@ fn update_tray_menu(
 pub fn run() {
     let builder = tauri::Builder::default()
         .manage(app_state::AppState::default())
+        .setup(|app| {
+            if let Some(window) = app.get_webview_window("main") {
+                if let Err(error) = window_layout::fit_to_current_monitor(&window) {
+                    eprintln!("failed to fit main window to monitor: {error}");
+                }
+            }
+
+            Ok(())
+        })
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             // When attempting to start a second instance, focus the existing main window
             if let Some(window) = app.get_webview_window("main") {
