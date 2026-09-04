@@ -12,7 +12,7 @@ const processPlugin = vi.hoisted(() => ({
 vi.mock("@tauri-apps/plugin-updater", () => updaterPlugin);
 vi.mock("@tauri-apps/plugin-process", () => processPlugin);
 
-import { checkForUpdates, downloadAndInstall } from "./updater";
+import { checkForUpdates, downloadAndInstall, restartApplication } from "./updater";
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -39,6 +39,9 @@ describe("desktop updater", () => {
 
     expect(updaterPlugin.check).toHaveBeenCalledTimes(1);
     expect(reviewedUpdate.downloadAndInstall).toHaveBeenCalledTimes(1);
+
+    await restartApplication();
+
     expect(processPlugin.relaunch).toHaveBeenCalledTimes(1);
   });
 });

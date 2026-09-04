@@ -62,6 +62,9 @@ export async function downloadAndInstall(
   });
 
   console.log("Update installed");
-  await relaunch();
   return true;
+}
+
+export async function restartApplication() {
+  await relaunch();
 }

@@ -2912,7 +2912,15 @@
     "versionAvailable": "Version {{version}} is available.",
     "releaseNotes": "Release Notes:",
     "later": "Later",
-    "installNow": "Install Now"
+    "installNow": "Install Now",
+    "installFailed": "Update Failed",
+    "installFailedDescription": "Harbor couldn't install version {{version}}. Check your connection and try again.",
+    "retry": "Retry",
+    "restarting": "Restarting Harbor",
+    "restartingDescription": "Version {{version}} is installed. Harbor is restarting...",
+    "relaunchFailed": "Restart Failed",
+    "relaunchFailedDescription": "Version {{version}} is installed, but Harbor couldn't restart. Try again or reopen Harbor manually.",
+    "retryRestart": "Restart Now"
   },
   "settings": {
     "title": "Settings",
