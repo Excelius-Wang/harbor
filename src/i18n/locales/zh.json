@@ -46,11 +46,13 @@
     },
     "discovery": {
       "eyebrow": "GitHub 全局索引",
+      "trendingEyebrow": "开源趋势",
       "searchLabel": "搜索 GitHub",
       "searchPlaceholder": "输入关键词或限定词，例如 language:rust stars:>100",
       "search": "搜索",
       "desktopOnly": "GitHub 发现页需要在 Harbor 桌面端使用。",
       "tabs": {
+        "trending": "热门",
         "feed": "关注动态",
         "repositories": "仓库",
         "code": "代码",
@@ -58,6 +60,16 @@
         "pullRequests": "拉取请求",
         "users": "用户"
       },
+      "trendingPeriod": "热门时间范围",
+      "period": {
+        "daily": "今天",
+        "weekly": "本周",
+        "monthly": "本月"
+      },
+      "openTrendingOnGitHub": "GitHub 热门",
+      "trendingMethod": "所选时间内新建的公开仓库，按星标数排序",
+      "emptyTrending": "没有找到热门仓库",
+      "emptyTrendingDescription": "可以扩大时间范围，或者打开 GitHub 热门页查看。",
       "sort": {
         "bestMatch": "最匹配",
         "updated": "最近更新",
@@ -746,14 +758,6 @@
     "history": {
       "back": "后退",
       "forward": "前进"
-    },
-    "discover": {
-      "eyebrow": "开源趋势",
-      "tabs": {
-        "trending": "热门",
-        "forYou": "为你推荐",
-        "collections": "精选集合"
-      }
     },
     "pullRequests": {
       "eyebrow": "GitHub 评审队列",

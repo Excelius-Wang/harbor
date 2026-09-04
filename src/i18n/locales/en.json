@@ -46,11 +46,13 @@
     },
     "discovery": {
       "eyebrow": "GitHub index",
+      "trendingEyebrow": "Open-source momentum",
       "searchLabel": "Search GitHub",
       "searchPlaceholder": "Search or enter qualifiers, for example language:rust stars:>100",
       "search": "Search",
       "desktopOnly": "GitHub discovery is available in the Harbor desktop runtime.",
       "tabs": {
+        "trending": "Trending",
         "feed": "Following",
         "repositories": "Repositories",
         "code": "Code",
@@ -58,6 +60,16 @@
         "pullRequests": "Pull requests",
         "users": "People"
       },
+      "trendingPeriod": "Trending period",
+      "period": {
+        "daily": "Today",
+        "weekly": "This week",
+        "monthly": "This month"
+      },
+      "openTrendingOnGitHub": "GitHub Trending",
+      "trendingMethod": "Public repositories created in this period, ranked by stars",
+      "emptyTrending": "No trending repositories found",
+      "emptyTrendingDescription": "Try a wider time range or open GitHub Trending.",
       "sort": {
         "bestMatch": "Best match",
         "updated": "Recently updated",
@@ -752,14 +764,6 @@
     "history": {
       "back": "Go back",
       "forward": "Go forward"
-    },
-    "discover": {
-      "eyebrow": "Open-source pulse",
-      "tabs": {
-        "trending": "Trending",
-        "forYou": "For you",
-        "collections": "Collections"
-      }
     },
     "pullRequests": {
       "eyebrow": "GitHub review queue",

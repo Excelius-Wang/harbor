@@ -8,6 +8,7 @@ import {
   Code2,
   ExternalLink,
   FileCode2,
+  Flame,
   FolderGit2,
   GitCommitHorizontal,
   GitFork,
@@ -87,7 +88,8 @@ const GitHubProfileView = lazy(() =>
   import("./github-profile-view").then((module) => ({ default: module.GitHubProfileView }))
 );
 
-type DiscoveryTab = "feed" | GitHubDiscoverySearchKind;
+type DiscoveryTab = "trending" | "feed" | GitHubDiscoverySearchKind;
+type TrendingPeriod = "daily" | "weekly" | "monthly";
 
 type DiscoverySelection =
   | { kind: "repository"; repository: GitHubRepository }
@@ -110,6 +112,18 @@ const SEARCH_TABS: GitHubDiscoverySearchKind[] = [
   "pullRequests",
   "users",
 ];
+
+const TRENDING_PERIOD_DAYS: Record<TrendingPeriod, number> = {
+  daily: 1,
+  weekly: 7,
+  monthly: 30,
+};
+
+function trendingSearchQuery(period: TrendingPeriod, now = new Date()) {
+  const start = new Date(now);
+  start.setUTCDate(start.getUTCDate() - TRENDING_PERIOD_DAYS[period]);
+  return `created:>=${start.toISOString().slice(0, 10)} fork:false archived:false`;
+}
 
 const SORTS: Record<
   GitHubDiscoverySearchKind,
@@ -624,16 +638,23 @@ export function GitHubDiscoveryView({
 }) {
   const { t, i18n } = useTranslation();
   const desktopRuntime = isTauri();
-  const [tab, setTab] = useState<DiscoveryTab>("feed");
+  const [tab, setTab] = useState<DiscoveryTab>("trending");
+  const [trendingPeriod, setTrendingPeriod] = useState<TrendingPeriod>("weekly");
   const [draftQuery, setDraftQuery] = useState("");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<GitHubDiscoverySearchSort>("bestMatch");
   const [page, setPage] = useState(1);
   const [selection, setSelection] = useState<DiscoverySelection | null>(null);
-  const kind = tab === "feed" ? "repositories" : tab;
+  const kind = tab === "feed" || tab === "trending" ? "repositories" : tab;
+  const activeQuery = tab === "trending" ? trendingSearchQuery(trendingPeriod) : query;
+  const activeSort = tab === "trending" ? "stars" : sort;
   const search = useQuery({
-    ...discoverySearchQueryOptions({ kind, query, sort, page }),
-    enabled: desktopRuntime && tab !== "feed" && query.length > 0 && selection === null,
+    ...discoverySearchQueryOptions({ kind, query: activeQuery, sort: activeSort, page }),
+    enabled:
+      desktopRuntime &&
+      tab !== "feed" &&
+      (tab === "trending" || query.length > 0) &&
+      selection === null,
     placeholderData: (previous) => previous,
   });
   const data = search.data;
@@ -668,7 +689,7 @@ export function GitHubDiscoveryView({
     if (!nextQuery) return;
     setQuery(nextQuery);
     setPage(1);
-    if (tab === "feed") setTab("repositories");
+    if (tab === "feed" || tab === "trending") setTab("repositories");
   };
 
   const changeTab = (value: string) => {
@@ -684,7 +705,11 @@ export function GitHubDiscoveryView({
           <div className="flex items-end justify-between gap-5 max-[760px]:items-start">
             <div className="shrink-0">
               <p className="text-primary/80 text-[10px] font-medium tracking-[0.14em] uppercase">
-                {t("workspace.discovery.eyebrow")}
+                {t(
+                  tab === "trending"
+                    ? "workspace.discovery.trendingEyebrow"
+                    : "workspace.discovery.eyebrow"
+                )}
               </p>
               <h1 className="mt-0.5 text-xl font-semibold tracking-[-0.03em]">
                 {t("workspace.nav.discover")}
@@ -717,6 +742,9 @@ export function GitHubDiscoveryView({
                 variant="line"
                 className="scrollbar-none h-9 max-w-full justify-start gap-4 overflow-x-auto overflow-y-hidden p-0"
               >
+                <TabsTrigger value="trending" className="px-1.5 text-xs after:bottom-0!">
+                  <Flame /> {t("workspace.discovery.tabs.trending")}
+                </TabsTrigger>
                 <TabsTrigger value="feed" className="px-1.5 text-xs after:bottom-0!">
                   <UsersRound /> {t("workspace.discovery.tabs.feed")}
                 </TabsTrigger>
@@ -743,7 +771,44 @@ export function GitHubDiscoveryView({
                 })}
               </TabsList>
             </Tabs>
-            {tab === "feed" ? (
+            {tab === "trending" ? (
+              <div className="flex shrink-0 items-center gap-2 pb-1">
+                <Select
+                  value={trendingPeriod}
+                  onValueChange={(value) => {
+                    setTrendingPeriod(value as TrendingPeriod);
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger
+                    size="sm"
+                    className="w-28"
+                    aria-label={t("workspace.discovery.trendingPeriod")}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {(["daily", "weekly", "monthly"] as const).map((period) => (
+                        <SelectItem key={period} value={period}>
+                          {t(`workspace.discovery.period.${period}`)}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    void openExternalUrl(`https://github.com/trending?since=${trendingPeriod}`)
+                  }
+                >
+                  <ExternalLink data-icon="inline-start" />
+                  {t("workspace.discovery.openTrendingOnGitHub")}
+                </Button>
+              </div>
+            ) : tab === "feed" ? (
               <span className="text-muted-foreground hidden pb-2 text-[10px] min-[1240px]:block">
                 {t("workspace.discovery.feedWindow")}
               </span>
@@ -778,7 +843,7 @@ export function GitHubDiscoveryView({
           <ScrollArea className="min-h-0 flex-1" constrainContentWidth>
             <DeveloperFeed onSelect={setSelection} />
           </ScrollArea>
-        ) : !query ? (
+        ) : tab !== "trending" && !query ? (
           <Empty className="min-h-[420px]">
             <EmptyHeader>
               <EmptyMedia variant="icon">
@@ -810,29 +875,35 @@ export function GitHubDiscoveryView({
           <>
             <div className="flex min-h-0 flex-1 flex-col">
               <div className="text-muted-foreground flex min-h-9 shrink-0 items-center gap-3 border-b px-4 text-[10px]">
-                <span>
-                  {t("workspace.discovery.resultCount", {
-                    count: data.totalCount,
-                  })}
-                </span>
-                <code className="bg-muted/50 min-w-0 truncate rounded px-1.5 py-0.5 font-mono">
-                  {query}
-                </code>
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  className="ml-auto"
-                  aria-label={t("workspace.discovery.openSearchOnGitHub")}
-                  onClick={() =>
-                    void openExternalUrl(
-                      `https://github.com/search?q=${encodeURIComponent(query)}&type=${
-                        tab === "pullRequests" ? "pullrequests" : tab
-                      }`
-                    )
-                  }
-                >
-                  <ExternalLink />
-                </Button>
+                {tab === "trending" ? (
+                  <span className="truncate">{t("workspace.discovery.trendingMethod")}</span>
+                ) : (
+                  <>
+                    <span>
+                      {t("workspace.discovery.resultCount", {
+                        count: data.totalCount,
+                      })}
+                    </span>
+                    <code className="bg-muted/50 min-w-0 truncate rounded px-1.5 py-0.5 font-mono">
+                      {query}
+                    </code>
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      className="ml-auto"
+                      aria-label={t("workspace.discovery.openSearchOnGitHub")}
+                      onClick={() =>
+                        void openExternalUrl(
+                          `https://github.com/search?q=${encodeURIComponent(query)}&type=${
+                            tab === "pullRequests" ? "pullrequests" : tab
+                          }`
+                        )
+                      }
+                    >
+                      <ExternalLink />
+                    </Button>
+                  </>
+                )}
               </div>
               {data.incompleteResults ? (
                 <Alert className="m-3 mb-0">
@@ -850,11 +921,21 @@ export function GitHubDiscoveryView({
                   <Empty className="min-h-[340px]">
                     <EmptyHeader>
                       <EmptyMedia variant="icon">
-                        <Search />
+                        {tab === "trending" ? <Flame /> : <Search />}
                       </EmptyMedia>
-                      <EmptyTitle>{t("workspace.discovery.noResults")}</EmptyTitle>
+                      <EmptyTitle>
+                        {t(
+                          tab === "trending"
+                            ? "workspace.discovery.emptyTrending"
+                            : "workspace.discovery.noResults"
+                        )}
+                      </EmptyTitle>
                       <EmptyDescription>
-                        {t("workspace.discovery.noResultsDescription")}
+                        {t(
+                          tab === "trending"
+                            ? "workspace.discovery.emptyTrendingDescription"
+                            : "workspace.discovery.noResultsDescription"
+                        )}
                       </EmptyDescription>
                     </EmptyHeader>
                   </Empty>
