@@ -27,7 +27,7 @@ window edits were split into three commits and pushed to recovery branch
 
 ## Next action
 
-Monitor PR #79 checks and address any failures before merge review.
+Review and merge PR #79. All CodeQL and CodeRabbit checks passed on commit `cb16133`.
 
 ## Verification
 

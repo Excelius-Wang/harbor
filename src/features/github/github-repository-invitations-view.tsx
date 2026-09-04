@@ -172,7 +172,7 @@ export function GitHubRepositoryInvitations({
   };
 
   return (
-    <section className="flex min-w-0 flex-1 flex-col bg-[color-mix(in_srgb,var(--background)_95%,transparent)]">
+    <section className="harbor-content flex min-w-0 flex-1 flex-col">
       <header className="h-[74px] shrink-0 border-b px-4 sm:px-5">
         <div className="mx-auto flex h-full w-full max-w-[960px] items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">

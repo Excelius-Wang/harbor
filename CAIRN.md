@@ -4,4 +4,4 @@
 
 ## Current item
 
-`.cairn/items/adaptive-main-window.md`
+`.cairn/items/glass-workspace.md`

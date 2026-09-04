@@ -261,7 +261,6 @@ export function HarborWorkspace() {
   return (
     <WindowFrame
       titleBar={<MainTitleBar onOpenCommand={() => setCommandOpen(true)} />}
-      className="harbor-window"
       contentClassName="flex min-h-0 flex-1 overflow-hidden"
     >
       <PrimaryNavigation activeSection={activeSection} onSectionChange={setActiveSection} />

@@ -167,7 +167,7 @@ export function GitHubGists() {
   }, [gists, selectedId, wideLayout]);
 
   return (
-    <section className="@container/gists flex min-w-0 flex-1 flex-col bg-[color-mix(in_srgb,var(--background)_95%,transparent)]">
+    <section className="harbor-content @container/gists flex min-w-0 flex-1 flex-col">
       <header className="flex h-[74px] shrink-0 items-center justify-between gap-4 border-b px-5">
         <div>
           <p className="text-primary/80 text-[10px] font-medium tracking-[0.14em] uppercase">

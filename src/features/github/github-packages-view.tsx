@@ -738,7 +738,7 @@ export function GitHubPackagesView() {
   };
 
   return (
-    <section className="@container/packages flex min-w-0 flex-1 flex-col bg-[color-mix(in_srgb,var(--background)_95%,transparent)]">
+    <section className="harbor-content @container/packages flex min-w-0 flex-1 flex-col">
       <header className="flex min-h-[74px] shrink-0 items-center justify-between gap-4 border-b px-5 py-3">
         <div>
           <p className="text-primary/80 text-[10px] font-medium tracking-[0.14em] uppercase">

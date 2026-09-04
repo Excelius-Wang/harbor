@@ -67,7 +67,7 @@ export function MainTitleBar({ onOpenCommand }: MainTitleBarProps) {
       minimizable: false,
       decorations: false,
       transparent: true,
-      shadow: false,
+      shadow: true,
       alwaysOnTop: true,
       parent: "main",
     });

@@ -28,8 +28,13 @@
         "minHeight": 620,
         "decorations": false,
         "transparent": true,
+        "windowEffects": {
+          "effects": ["underWindowBackground"],
+          "state": "followsWindowActiveState",
+          "radius": 10
+        },
         "center": true,
-        "shadow": false,
+        "shadow": true,
         "visible": false
       }
     ],

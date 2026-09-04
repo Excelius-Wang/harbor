@@ -1,6 +1,7 @@
 import { isTauri } from "@tauri-apps/api/core";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { LogicalPosition } from "@tauri-apps/api/dpi";
+import { Effect, EffectState, type Effects } from "@tauri-apps/api/window";
 import { emit, once } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { isSafeExternalUrl } from "./url-policy";
@@ -8,6 +9,12 @@ import { isSafeExternalUrl } from "./url-policy";
 const createWindowLoading: Record<string, boolean> = {};
 const destroyTimers: Record<string, number> = {};
 const destroyVersions: Record<string, number> = {};
+
+const DEFAULT_GLASS_WINDOW_EFFECTS: Effects = {
+  effects: [Effect.UnderWindowBackground],
+  state: EffectState.FollowsWindowActiveState,
+  radius: 10,
+};
 
 export async function openExternalUrl(url: string) {
   if (!isSafeExternalUrl(url)) return;
@@ -195,6 +202,7 @@ export async function createWindow(
     y?: number;
     decorations?: boolean;
     transparent?: boolean;
+    windowEffects?: Effects;
     alwaysOnTop?: boolean;
     skipTaskbar?: boolean;
     shadow?: boolean;
@@ -244,7 +252,10 @@ export async function createWindow(
     }
 
     // Create new window with centered position
-    const finalOptions = { ...options };
+    const finalOptions = {
+      windowEffects: DEFAULT_GLASS_WINDOW_EFFECTS,
+      ...options,
+    };
     if (options.parent && !options.x && !options.y) {
       const width = options.width || 500;
       const height = options.height || 400;
@@ -292,7 +303,7 @@ export async function openSettingsWindow(title: string) {
     minimizable: false,
     decorations: false,
     transparent: true,
-    shadow: false,
+    shadow: true,
     parent: "main",
   });
 }

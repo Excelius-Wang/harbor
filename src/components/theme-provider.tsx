@@ -1,4 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import { isTauri } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 
 type Theme = "dark" | "light" | "system";
 
@@ -32,17 +34,28 @@ export function ThemeProvider({
 
   useEffect(() => {
     const root = window.document.documentElement;
-    root.classList.remove("light", "dark");
+    const colorScheme = window.matchMedia("(prefers-color-scheme: dark)");
 
-    if (theme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light";
-      root.classList.add(systemTheme);
-      return;
-    }
+    const applyTheme = () => {
+      const resolvedTheme = theme === "system" ? (colorScheme.matches ? "dark" : "light") : theme;
 
-    root.classList.add(theme);
+      root.classList.remove("light", "dark");
+      root.classList.add(resolvedTheme);
+
+      if (isTauri()) {
+        void getCurrentWindow()
+          .setTheme(resolvedTheme)
+          .catch((error) => {
+            console.warn("Failed to synchronize the native window theme:", error);
+          });
+      }
+    };
+
+    applyTheme();
+    if (theme !== "system") return;
+
+    colorScheme.addEventListener("change", applyTheme);
+    return () => colorScheme.removeEventListener("change", applyTheme);
   }, [theme]);
 
   // Listen for localStorage changes to sync theme across windows
