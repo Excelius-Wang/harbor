@@ -8,7 +8,8 @@ data.
 
 ## Current state
 
-Branch `feat/github-trending-20260905` is stacked on the glass-workspace branch. The original shell's
+Commit `0893d9b` is pushed on branch `feat/github-trending-20260905`. Stacked PR #81 targets the
+glass-workspace branch at `https://github.com/Excelius-Wang/harbor/pull/81`. The original shell's
 Trending, For You, and Collections tabs were backed only by deleted `mock-data.ts`; commit `52b89cd`
 replaced that shell with real GitHub developer-feed and global-search workflows but left the old
 translation keys unused. GitHub documents the Trending web page without publishing a corresponding
