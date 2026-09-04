@@ -7,18 +7,18 @@ results, honest ranking semantics, native repository navigation, and clear loadi
 
 ## Current state
 
-Commit `0893d9b` is pushed on branch `feat/github-trending-20260905`. Stacked PR #81 targets the
-glass-workspace branch at `https://github.com/Excelius-Wang/harbor/pull/81`. Discovery opens on a real
-Trending tab that uses Harbor's repository-search interface with Today, This week, and This month
-ranges. Background queries retain prior data through `placeholderData` and now surface `isFetching`
-as an accessible 2px progress line at the top of the results pane, while first loads retain their
-content-shaped skeletons. The shared shadcn Progress wrapper now supports Radix's indeterminate state
-instead of translating an unspecified value fully offscreen. Its animation uses transform only and
-becomes a static line under reduced motion.
+Changes are pushed through commit `dcc14c9` on branch `feat/github-trending-20260905`. Stacked PR #81
+targets the glass-workspace branch at `https://github.com/Excelius-Wang/harbor/pull/81`. Discovery
+opens on a real Trending tab that uses Harbor's repository-search interface with Today, This week,
+and This month ranges. Background queries retain prior data through `placeholderData` and now surface
+`isFetching` as an accessible 2px progress line at the top of the results pane, while first loads
+retain their content-shaped skeletons. The shared shadcn Progress wrapper now supports Radix's
+indeterminate state instead of translating an unspecified value fully offscreen. Its animation uses
+transform only and becomes a static line under reduced motion.
 
 ## Next action
 
-Commit and push the verified loading-feedback follow-up to PR #81.
+None — complete.
 
 ## Verification
 

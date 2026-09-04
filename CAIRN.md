@@ -4,4 +4,4 @@
 
 ## Current item
 
-`.cairn/items/github-trending.md`
+`.cairn/items/glass-workspace.md`
