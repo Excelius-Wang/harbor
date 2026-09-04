@@ -1,5 +1,5 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { useUpdater, type UpdateInstallStatus } from "@/hooks/use-updater";
+import { useEffect, useState } from "react";
+import { useUpdater } from "@/hooks/use-updater";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,24 +9,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Progress } from "@/components/ui/progress";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Spinner } from "@/components/ui/spinner";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { CircleAlert } from "lucide-react";
+import { openExternalUrl } from "@/lib/window";
+import packageJson from "../../package.json";
+import type { Update } from "@tauri-apps/plugin-updater";
 
-interface UpdaterInstallDialogProps {
-  updater: ReturnType<typeof useUpdater>;
+interface UpdaterAvailableDialogProps {
+  update: Update | null;
 }
 
-interface InstallPresentation {
-  titleKey: string;
-  description: ReactNode;
-  action: {
-    labelKey: string;
-    run: () => void;
-  } | null;
+const projectSourceUrl = packageJson.repository.url.replace(/\.git$/, "");
+
+function getReleaseUrl(version: string) {
+  return `${projectSourceUrl}/releases/tag/v${encodeURIComponent(version)}`;
 }
 
 export function UpdaterDialog() {
@@ -37,11 +33,10 @@ export function UpdaterDialog() {
     void checkUpdate();
   }, [checkUpdate]);
 
-  return <UpdaterInstallDialog updater={updater} />;
+  return <UpdaterAvailableDialog update={updater.update} />;
 }
 
-export function UpdaterInstallDialog({ updater }: UpdaterInstallDialogProps) {
-  const { update, installStatus, progress, installUpdate, relaunchAfterUpdate } = updater;
+export function UpdaterAvailableDialog({ update }: UpdaterAvailableDialogProps) {
   const [open, setOpen] = useState(false);
   const { t } = useTranslation();
 
@@ -55,103 +50,35 @@ export function UpdaterInstallDialog({ updater }: UpdaterInstallDialogProps) {
     setOpen(false);
   };
 
-  const getProgressPercentage = () => {
-    if (!progress || progress.event === "Started") return 0;
-    const { downloaded, contentLength } = progress.data || {};
-    if (!contentLength) return 0;
-    if (progress.event === "Finished") return 100;
-    return Math.round(((downloaded ?? 0) / contentLength) * 100);
-  };
-
-  const presentations: Record<UpdateInstallStatus, InstallPresentation> = {
-    idle: {
-      titleKey: "updater.updateAvailable",
-      description: (
-        <div className="flex flex-col gap-2">
-          <p>{t("updater.versionAvailable", { version: update?.version })}</p>
-          {update?.body && (
-            <div className="bg-muted mt-2 rounded-md p-3 text-sm">
-              <p className="font-semibold">{t("updater.releaseNotes")}</p>
-              <p className="mt-1 whitespace-pre-wrap">{update.body}</p>
-            </div>
-          )}
-        </div>
-      ),
-      action: {
-        labelKey: "updater.installNow",
-        run: () => void installUpdate(),
-      },
-    },
-    downloading: {
-      titleKey: "updater.downloading",
-      description: (
-        <div className="flex flex-col gap-2">
-          <p>{t("updater.installingVersion", { version: update?.version })}</p>
-          <Progress value={getProgressPercentage()} />
-        </div>
-      ),
-      action: null,
-    },
-    failed: {
-      titleKey: "updater.installFailed",
-      description: (
-        <Alert variant="destructive">
-          <CircleAlert />
-          <AlertDescription>
-            {t("updater.installFailedDescription", { version: update?.version })}
-          </AlertDescription>
-        </Alert>
-      ),
-      action: {
-        labelKey: "updater.retry",
-        run: () => void installUpdate(),
-      },
-    },
-    restarting: {
-      titleKey: "updater.restarting",
-      description: (
-        <div className="flex items-center gap-2">
-          <Spinner />
-          <p>{t("updater.restartingDescription", { version: update?.version })}</p>
-        </div>
-      ),
-      action: null,
-    },
-    "relaunch-failed": {
-      titleKey: "updater.relaunchFailed",
-      description: (
-        <Alert variant="destructive">
-          <CircleAlert />
-          <AlertDescription>
-            {t("updater.relaunchFailedDescription", { version: update?.version })}
-          </AlertDescription>
-        </Alert>
-      ),
-      action: {
-        labelKey: "updater.retryRestart",
-        run: () => void relaunchAfterUpdate(),
-      },
-    },
-  };
-  const presentation = presentations[installStatus];
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t(presentation.titleKey)}</DialogTitle>
+          <DialogTitle>{t("updater.updateAvailable")}</DialogTitle>
           <DialogDescription asChild>
-            <div>{presentation.description}</div>
+            <div className="flex flex-col gap-2">
+              <p>{t("updater.versionAvailable", { version: update?.version })}</p>
+              {update?.body && (
+                <div className="bg-muted mt-2 rounded-md p-3 text-sm">
+                  <p className="font-semibold">{t("updater.releaseNotes")}</p>
+                  <p className="mt-1 whitespace-pre-wrap">{update.body}</p>
+                </div>
+              )}
+            </div>
           </DialogDescription>
         </DialogHeader>
-        {presentation.action && (
-          <DialogFooter>
-            <Button variant="outline" onClick={handleCancel}>
-              {t("updater.later")}
-            </Button>
-            <Button onClick={presentation.action.run}>{t(presentation.action.labelKey)}</Button>
-          </DialogFooter>
-        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={handleCancel}>
+            {t("updater.later")}
+          </Button>
+          <Button
+            onClick={() => {
+              if (update) void openExternalUrl(getReleaseUrl(update.version));
+            }}
+          >
+            {t("updater.viewRelease")}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -159,7 +86,7 @@ export function UpdaterInstallDialog({ updater }: UpdaterInstallDialogProps) {
 
 export function useManualUpdateCheck() {
   const updater = useUpdater();
-  const { checkUpdate, checking } = updater;
+  const { update, checkUpdate, checking } = updater;
   const [showNoUpdate, setShowNoUpdate] = useState(false);
   const { t } = useTranslation();
 
@@ -178,7 +105,7 @@ export function useManualUpdateCheck() {
   };
 
   return {
-    updater,
+    update,
     checkUpdate: handleCheckUpdate,
     checking,
     showNoUpdate,

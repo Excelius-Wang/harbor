@@ -2900,20 +2900,10 @@
     "checkFailed": "检查更新失败。",
     "upToDate": "您正在使用最新版本！",
     "updateAvailable": "发现新版本",
-    "downloading": "正在下载更新",
-    "installingVersion": "正在安装版本 {{version}}...",
     "versionAvailable": "版本 {{version}} 可用。",
     "releaseNotes": "更新说明：",
     "later": "稍后",
-    "installNow": "立即安装",
-    "installFailed": "更新失败",
-    "installFailedDescription": "Harbor 无法安装版本 {{version}}。请检查网络连接后重试。",
-    "retry": "重试",
-    "restarting": "正在重启 Harbor",
-    "restartingDescription": "版本 {{version}} 已安装，Harbor 正在重启...",
-    "relaunchFailed": "重启失败",
-    "relaunchFailedDescription": "版本 {{version}} 已安装，但 Harbor 无法自动重启。请重试，或手动退出并重新打开 Harbor。",
-    "retryRestart": "立即重启"
+    "viewRelease": "查看发布页面"
   },
   "settings": {
     "title": "设置",
