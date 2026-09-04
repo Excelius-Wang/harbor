@@ -19,6 +19,7 @@ describe("desktop updater", () => {
       version: "0.2.0",
       date: "2026-09-04",
       body: "Reviewed release notes",
+      close: vi.fn().mockResolvedValue(undefined),
     } as unknown as Update;
     updaterPlugin.check.mockResolvedValueOnce(reviewedUpdate).mockResolvedValueOnce(null);
 
@@ -29,7 +30,13 @@ describe("desktop updater", () => {
       throw new Error("Expected an available update");
     }
 
-    expect(result.update).toBe(reviewedUpdate);
+    expect(result.update).toEqual({
+      version: "0.2.0",
+      date: "2026-09-04",
+      body: "Reviewed release notes",
+    });
+    expect(result.update).not.toBe(reviewedUpdate);
+    expect(reviewedUpdate.close).toHaveBeenCalledTimes(1);
     expect(updaterPlugin.check).toHaveBeenCalledTimes(1);
   });
 });

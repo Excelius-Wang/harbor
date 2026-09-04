@@ -1,9 +1,8 @@
 import { useCallback, useState } from "react";
-import { checkForUpdates, type UpdateCheckResult } from "@/lib/updater";
-import type { Update } from "@tauri-apps/plugin-updater";
+import { checkForUpdates, type AvailableUpdate, type UpdateCheckResult } from "@/lib/updater";
 
 export function useUpdater() {
-  const [update, setUpdate] = useState<Update | null>(null);
+  const [update, setUpdate] = useState<AvailableUpdate | null>(null);
   const [checking, setChecking] = useState(false);
 
   const checkUpdate = useCallback(async (): Promise<UpdateCheckResult> => {

@@ -29,6 +29,7 @@ function reviewedUpdate() {
     version: "0.2.0",
     date: "2026-09-04",
     body: "Reviewed release notes",
+    close: vi.fn().mockResolvedValue(undefined),
   } as unknown as Update;
 }
 
@@ -53,6 +54,7 @@ describe("UpdaterDialog", () => {
     expect(windowApi.openExternalUrl).toHaveBeenCalledWith(
       "https://github.com/Excelius-Wang/harbor/releases/tag/v0.2.0"
     );
+    expect(update.close).toHaveBeenCalledTimes(1);
     expect(updaterPlugin.check).toHaveBeenCalledTimes(1);
   });
 });

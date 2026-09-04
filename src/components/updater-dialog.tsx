@@ -12,11 +12,11 @@ import {
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { openExternalUrl } from "@/lib/window";
+import type { AvailableUpdate } from "@/lib/updater";
 import packageJson from "../../package.json";
-import type { Update } from "@tauri-apps/plugin-updater";
 
 interface UpdaterAvailableDialogProps {
-  update: Update | null;
+  update: AvailableUpdate | null;
 }
 
 const projectSourceUrl = packageJson.repository.url.replace(/\.git$/, "");
