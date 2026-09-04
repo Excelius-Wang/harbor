@@ -266,8 +266,10 @@ pub fn run() {
         ]);
 
     // Only enable updater in release mode
-    #[cfg(not(debug_assertions))]
-    let builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
+    #[cfg(all(desktop, not(debug_assertions)))]
+    let builder = builder
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init());
 
     builder
         .run(tauri::generate_context!())
