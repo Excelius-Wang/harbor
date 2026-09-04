@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { GitHubDiscoveryView } from "./github-discovery-view";
@@ -175,14 +175,68 @@ describe("GitHub discovery navigation", () => {
       </QueryClientProvider>
     );
 
-    const repositoryName = await screen.findByText("octocat/hello-world");
-    expect(repositoryName.closest("button")?.hasAttribute("aria-pressed")).toBe(false);
+    const repositoryRow = await screen.findByRole("button", { name: "octocat/hello-world" });
+    expect(repositoryRow.hasAttribute("aria-pressed")).toBe(false);
     act(() => {
       void client.invalidateQueries({ queryKey: ["github", "discovery", "search"] });
     });
 
     expect(await screen.findByRole("status", { name: "workspace.discovery.loading" })).toBeTruthy();
-    expect(screen.getByText("octocat/hello-world")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "octocat/hello-world" })).toBeTruthy();
+  });
+
+  it("gives repository identity and metrics distinct visual semantics", async () => {
+    tauriApi.isTauri.mockReturnValue(true);
+    tauriApi.invoke.mockResolvedValue({
+      kind: "repositories",
+      results: [
+        {
+          id: 1,
+          owner: "octocat",
+          name: "hello-world",
+          fullName: "octocat/hello-world",
+          description: "A trending repository",
+          url: "https://github.com/octocat/hello-world",
+          language: "TypeScript",
+          stars: 321,
+          forks: 12,
+          openIssues: 3,
+          defaultBranch: "main",
+          isPrivate: false,
+          isFork: false,
+          isArchived: false,
+          updatedAt: "2026-09-05T02:41:00Z",
+        },
+      ],
+      totalCount: 1,
+      incompleteResults: false,
+      page: 1,
+      hasPrevious: false,
+      hasMore: false,
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    render(
+      <QueryClientProvider client={client}>
+        <GitHubDiscoveryView onSelectRepository={() => {}} />
+      </QueryClientProvider>
+    );
+
+    const row = await screen.findByRole("button", { name: "octocat/hello-world" });
+    expect(within(row).getByText("octocat/").className).not.toContain("font-mono");
+    expect(within(row).getByText("hello-world").className).toContain("harbor-repository-name");
+    expect(row.querySelector("img")).toBeNull();
+    const language = row.querySelector('[data-language="TypeScript"]');
+    expect(language?.className).toContain("harbor-language-badge");
+    expect(language?.className).toContain("font-medium");
+    expect(language?.className).toContain("text-[11px]");
+    expect(within(row).getByText("A trending repository").className).toContain("text-foreground");
+    expect(row.querySelector('[data-metric="stars"]')?.className).toContain("text-foreground");
+    expect(row.querySelector('[data-metric="stars"]')?.className).toContain("font-normal");
+    expect(row.querySelector('[data-metric="forks"]')?.className).toContain(
+      "text-muted-foreground"
+    );
+    expect(row.querySelector("time")).toBeNull();
   });
 
   it("opens a selected repository as full detail without a wide preview", async () => {
@@ -239,11 +293,11 @@ describe("GitHub discovery navigation", () => {
       </QueryClientProvider>
     );
 
-    expect(await screen.findByText("octocat/hello-world")).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "octocat/hello-world" })).toBeTruthy();
     expect(screen.queryByRole("region", { name: "repository detail" })).toBeNull();
     expect(onSelectRepository).toHaveBeenLastCalledWith(null);
 
-    await user.click(screen.getByText("github/second-repository"));
+    await user.click(screen.getByRole("button", { name: "github/second-repository" }));
 
     expect(await screen.findByRole("region", { name: "repository detail" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "github/second-repository" })).toBeTruthy();

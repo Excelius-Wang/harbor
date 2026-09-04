@@ -31,18 +31,18 @@ export function GitHubIssueRow({
     >
       <span className="flex min-w-0 items-start gap-2.5">
         {issue.state === "open" ? (
-          <CircleDot className="text-primary mt-0.5 shrink-0" />
+          <CircleDot className="text-success mt-0.5 shrink-0" />
         ) : (
-          <CheckCircle2 className="text-muted-foreground mt-0.5 shrink-0" />
+          <CheckCircle2 className="text-destructive mt-0.5 shrink-0" />
         )}
         <span className="min-w-0 flex-1">
           {showRepository && repository ? (
-            <span className="text-muted-foreground mb-0.5 flex min-w-0 items-center gap-1.5 text-[10px] font-normal">
+            <span className="text-muted-foreground mb-0.5 flex min-w-0 items-center gap-1.5 font-mono text-[10px] font-normal">
               <span className="truncate font-medium">{repository.fullName}</span>
               <span className="shrink-0">#{issue.number}</span>
             </span>
           ) : null}
-          <span className="text-foreground/95 block text-[13px] leading-5 font-medium">
+          <span className="text-card-foreground block text-[13px] leading-5 font-semibold">
             {issue.title}
           </span>
           <span className="text-muted-foreground mt-1 line-clamp-2 block text-[11px] leading-5 font-normal">
@@ -50,7 +50,7 @@ export function GitHubIssueRow({
           </span>
         </span>
         {!showRepository ? (
-          <span className="text-muted-foreground shrink-0 text-[10px] font-normal">
+          <span className="text-muted-foreground shrink-0 font-mono text-[10px] font-normal tabular-nums">
             #{issue.number}
           </span>
         ) : null}
@@ -63,17 +63,17 @@ export function GitHubIssueRow({
         </span>
       ) : null}
       <span className="text-muted-foreground flex flex-wrap items-center gap-3 pl-6 text-[10px] font-normal">
-        <span>@{issue.author}</span>
-        <span className="flex items-center gap-1">
+        <span className="text-card-foreground/70 font-medium">@{issue.author}</span>
+        <span className="flex items-center gap-1 font-mono tabular-nums">
           <UserRound />
           {issue.assignees.length
             ? issue.assignees.map((assignee) => `@${assignee}`).join(", ")
             : t("workspace.repositories.unassigned")}
         </span>
-        <span className="flex items-center gap-1">
+        <span className="flex items-center gap-1 font-mono tabular-nums">
           <MessageSquare /> {issue.comments}
         </span>
-        <span>
+        <span className="font-mono tabular-nums">
           {t("workspace.repositories.updated", {
             date: formatIssueDate(issue.updatedAt, locale),
           })}

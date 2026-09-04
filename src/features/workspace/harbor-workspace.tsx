@@ -354,7 +354,7 @@ export function HarborWorkspace() {
   return (
     <WindowFrame
       titleBar={<MainTitleBar onOpenCommand={() => setCommandOpen(true)} />}
-      contentClassName="harbor-workspace-shell mx-3 mt-1.5 mb-3 flex min-h-0 flex-1 overflow-hidden rounded-[10px] border"
+      contentClassName="harbor-workspace-shell flex min-h-0 flex-1 overflow-hidden"
     >
       <PrimaryNavigation activeSection={activeSection} onSectionChange={setActiveSection} />
       {activeSection === "discover" ? (

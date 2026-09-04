@@ -38,8 +38,8 @@ export function GitHubIssueStateBadge({
       className={cn(
         "h-6 rounded-md px-2 font-medium",
         state === "open"
-          ? "border-primary/30 bg-primary/10 text-primary"
-          : "bg-secondary text-secondary-foreground"
+          ? "border-success/30 bg-success/10 text-success"
+          : "border-destructive/30 bg-destructive/10 text-destructive"
       )}
     >
       <Icon />

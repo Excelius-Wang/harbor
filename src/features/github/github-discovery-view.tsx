@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState, type FormEvent } from "react";
+import { lazy, Suspense, useEffect, useState, type CSSProperties, type FormEvent } from "react";
 import { isTauri } from "@tauri-apps/api/core";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -66,6 +66,7 @@ import type {
 } from "./github-data";
 import { GitHubIssueRow } from "./github-issue-row";
 import { formatIssueDate, GitHubPagination } from "./github-issue-shared";
+import { repositoryLanguageColor } from "./github-language-color";
 import { GitHubPullRequestRow } from "./github-pull-request-row";
 import {
   developerFeedQueryOptions,
@@ -386,39 +387,56 @@ function RepositoryResultRow({
     <Button
       variant="ghost"
       onClick={onSelect}
-      className="harbor-result-row h-auto w-full items-start justify-start gap-3 rounded-[8px] px-4 py-4 text-left whitespace-normal transition-[background-color,box-shadow,transform] active:scale-[0.99]"
+      aria-label={repository.fullName}
+      className="harbor-result-row h-auto w-full items-start justify-start rounded-none px-4 py-4 text-left whitespace-normal transition-[background-color,color]"
     >
-      <Avatar className="size-10 shrink-0 rounded-[8px] border border-white/[0.08]">
-        <AvatarImage
-          src={`https://github.com/${encodeURIComponent(repository.owner)}.png?size=80`}
-          alt={`@${repository.owner}`}
-        />
-        <AvatarFallback className="rounded-[8px]">{initials(repository.owner)}</AvatarFallback>
-      </Avatar>
       <span className="flex min-w-0 flex-1 flex-col gap-1.5">
         <span className="flex min-w-0 items-center gap-2">
-          <span className="truncate text-sm font-medium">{repository.fullName}</span>
+          <span className="flex min-w-0 items-baseline text-[14px] leading-5 tracking-[-0.015em]">
+            <span className="text-muted-foreground shrink-0 font-normal">{repository.owner}/</span>
+            <span className="harbor-repository-name text-primary truncate font-semibold">
+              {repository.name}
+            </span>
+          </span>
           {repository.isPrivate ? <LockKeyhole className="text-muted-foreground" /> : null}
           {repository.isArchived ? (
-            <Badge variant="secondary" className="h-5 px-1.5 font-normal">
+            <Badge variant="secondary" className="h-5 rounded-[4px] px-1.5 font-normal">
               <Archive /> {t("workspace.repositories.archived")}
             </Badge>
           ) : null}
         </span>
-        <span className="text-muted-foreground line-clamp-2 text-xs leading-5 font-normal">
+        <span className="text-foreground line-clamp-2 text-xs leading-5 font-normal">
           {repository.description ?? t("workspace.repositories.noDescription")}
         </span>
         <span className="text-muted-foreground flex flex-wrap items-center gap-3 text-[11px] font-normal">
-          {repository.language ? <span>{repository.language}</span> : null}
-          <span className="flex items-center gap-1">
-            <Star /> {repository.stars.toLocaleString(i18n.language)}
-          </span>
-          <span className="flex items-center gap-1">
-            <GitFork /> {repository.forks.toLocaleString(i18n.language)}
-          </span>
-          {repository.updatedAt ? (
-            <span>{formatIssueDate(repository.updatedAt, i18n.language)}</span>
+          {repository.language ? (
+            <Badge
+              variant="outline"
+              className="harbor-language-badge h-5 rounded-[4px] px-1.5 text-[11px] font-medium"
+              style={
+                {
+                  "--harbor-language-color": repositoryLanguageColor(repository.language),
+                } as CSSProperties
+              }
+              data-language={repository.language}
+            >
+              {repository.language}
+            </Badge>
           ) : null}
+          <span
+            className="text-foreground flex h-5 items-center gap-1.5 font-mono font-normal tabular-nums"
+            data-metric="stars"
+          >
+            <Star className="text-attention/85" />
+            {repository.stars.toLocaleString(i18n.language)}
+          </span>
+          <span
+            className="text-muted-foreground flex h-5 items-center gap-1.5 font-mono font-normal tabular-nums"
+            data-metric="forks"
+          >
+            <GitFork className="text-muted-foreground" />
+            {repository.forks.toLocaleString(i18n.language)}
+          </span>
         </span>
       </span>
     </Button>
@@ -486,7 +504,7 @@ function SearchResults({
   switch (data.kind) {
     case "repositories":
       return (
-        <div className="flex flex-col gap-1.5 p-2">
+        <div className="flex flex-col p-2">
           {data.results.map((repository) => (
             <RepositoryResultRow
               key={repository.id}
@@ -865,10 +883,10 @@ export function GitHubDiscoveryView({
       </header>
 
       <div
-        className="relative mx-auto flex min-h-0 w-full max-w-[1120px] flex-1 p-4"
+        className="relative mx-auto flex min-h-0 w-full max-w-[1120px] flex-1 px-4"
         aria-busy={backgroundLoading}
       >
-        <div className="harbor-surface relative flex min-h-0 w-full flex-1 overflow-hidden rounded-[10px]">
+        <div className="relative flex min-h-0 w-full flex-1 overflow-hidden">
           <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
             {mode === "feed" ? (
               <ScrollArea className="min-h-0 flex-1" constrainContentWidth>

@@ -18,7 +18,13 @@ vi.mock("@/components/main-title-bar", () => ({
   MainTitleBar: () => null,
 }));
 vi.mock("@/components/window-frame", () => ({
-  WindowFrame: ({ children }: { children: ReactNode }) => <>{children}</>,
+  WindowFrame: ({
+    children,
+    contentClassName,
+  }: {
+    children: ReactNode;
+    contentClassName?: string;
+  }) => <main className={contentClassName}>{children}</main>,
 }));
 vi.mock("@/features/github/github-discovery-view", () => ({
   GitHubDiscoveryView: () => null,
@@ -62,6 +68,20 @@ afterEach(() => {
 });
 
 describe("HarborWorkspace navigation", () => {
+  it("places the workspace directly on the outer window plane", () => {
+    const { container } = render(
+      <TooltipProvider>
+        <HarborWorkspace />
+      </TooltipProvider>
+    );
+    const workspace = container.querySelector(".harbor-workspace-shell");
+
+    expect(workspace).not.toBeNull();
+    expect(workspace?.classList.contains("border")).toBe(false);
+    expect(workspace?.classList.contains("rounded-[10px]")).toBe(false);
+    expect(workspace?.classList.contains("mx-3")).toBe(false);
+  });
+
   it("keeps the primary navigation on the workspace acrylic plane", () => {
     const { container } = render(
       <TooltipProvider>
