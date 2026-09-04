@@ -36,6 +36,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
@@ -658,6 +659,7 @@ export function GitHubDiscoveryView({
     placeholderData: (previous) => previous,
   });
   const data = search.data;
+  const backgroundLoading = search.isFetching && Boolean(data);
   const searchError = !desktopRuntime
     ? { code: "desktopOnly", message: t("workspace.discovery.desktopOnly") }
     : !data && search.error
@@ -838,7 +840,10 @@ export function GitHubDiscoveryView({
         </div>
       </header>
 
-      <div className="mx-auto flex min-h-0 w-full max-w-[1180px] flex-1 flex-col border-x border-white/[0.055]">
+      <div
+        className="relative mx-auto flex min-h-0 w-full max-w-[1180px] flex-1 flex-col border-x border-white/[0.055]"
+        aria-busy={backgroundLoading}
+      >
         {tab === "feed" ? (
           <ScrollArea className="min-h-0 flex-1" constrainContentWidth>
             <DeveloperFeed onSelect={setSelection} />
@@ -951,6 +956,15 @@ export function GitHubDiscoveryView({
             />
           </>
         )}
+        {backgroundLoading ? (
+          <div
+            role="status"
+            aria-label={t("workspace.discovery.loading")}
+            className="pointer-events-none absolute inset-x-0 top-0"
+          >
+            <Progress aria-hidden="true" className="h-0.5 rounded-none bg-transparent" />
+          </div>
+        ) : null}
       </div>
     </section>
   );

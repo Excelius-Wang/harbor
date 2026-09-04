@@ -70,6 +70,7 @@
       "trendingMethod": "Public repositories created in this period, ranked by stars",
       "emptyTrending": "No trending repositories found",
       "emptyTrendingDescription": "Try a wider time range or open GitHub Trending.",
+      "loading": "Loading updated discovery results",
       "sort": {
         "bestMatch": "Best match",
         "updated": "Recently updated",

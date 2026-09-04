@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { GitHubDiscoveryView } from "./github-discovery-view";
@@ -12,6 +12,9 @@ const tauriApi = vi.hoisted(() => ({
 }));
 
 vi.mock("@tauri-apps/api/core", () => tauriApi);
+vi.mock("@tauri-apps/api/event", () => ({
+  listen: vi.fn().mockResolvedValue(() => {}),
+}));
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }),
 }));
@@ -102,5 +105,56 @@ describe("GitHub discovery navigation", () => {
         })
       );
     });
+  });
+
+  it("announces background loading while keeping the previous repository list visible", async () => {
+    tauriApi.isTauri.mockReturnValue(true);
+    let searchCount = 0;
+    tauriApi.invoke.mockImplementation((command: string) => {
+      if (command !== "github_search_discovery") return Promise.resolve(undefined);
+      searchCount += 1;
+      if (searchCount > 1) return new Promise(() => {});
+      return Promise.resolve({
+        kind: "repositories",
+        results: [
+          {
+            id: 1,
+            owner: "octocat",
+            name: "hello-world",
+            fullName: "octocat/hello-world",
+            description: "A trending repository",
+            url: "https://github.com/octocat/hello-world",
+            language: "TypeScript",
+            stars: 321,
+            forks: 12,
+            openIssues: 3,
+            defaultBranch: "main",
+            isPrivate: false,
+            isFork: false,
+            isArchived: false,
+          },
+        ],
+        totalCount: 1,
+        incompleteResults: false,
+        page: 1,
+        hasPrevious: false,
+        hasMore: false,
+      });
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    render(
+      <QueryClientProvider client={client}>
+        <GitHubDiscoveryView onSelectRepository={() => {}} />
+      </QueryClientProvider>
+    );
+
+    expect(await screen.findByText("octocat/hello-world")).toBeTruthy();
+    act(() => {
+      void client.invalidateQueries({ queryKey: ["github", "discovery", "search"] });
+    });
+
+    expect(await screen.findByRole("status", { name: "workspace.discovery.loading" })).toBeTruthy();
+    expect(screen.getByText("octocat/hello-world")).toBeTruthy();
   });
 });
