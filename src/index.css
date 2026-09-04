@@ -91,12 +91,13 @@
   --ring: #528bff;
   --harbor-chrome: #1e2227;
   --harbor-canvas-edge: #181a1f;
-  --harbor-window-fill: rgb(5 9 15 / 62%);
-  --harbor-glass-fill: rgb(13 18 25 / 68%);
-  --harbor-content-fill: rgb(17 22 30 / 78%);
-  --harbor-elevated-fill: rgb(14 18 25 / 92%);
-  --harbor-glass-edge: rgb(255 255 255 / 10%);
-  --harbor-glass-shadow: rgb(2 6 12 / 58%);
+  /* Window and pane fills stack, so keep the base translucent enough for native vibrancy to read. */
+  --harbor-window-fill: rgb(3 7 12 / 40%);
+  --harbor-glass-fill: rgb(10 15 22 / 52%);
+  --harbor-content-fill: rgb(12 17 25 / 66%);
+  --harbor-elevated-fill: rgb(12 16 23 / 90%);
+  --harbor-glass-edge: rgb(255 255 255 / 12%);
+  --harbor-glass-shadow: rgb(2 6 12 / 52%);
   color-scheme: dark;
 }
 
