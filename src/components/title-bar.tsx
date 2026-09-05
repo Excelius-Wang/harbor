@@ -31,7 +31,6 @@ function TrafficLight({ kind, label, onPress, children }: TrafficLightProps) {
       className="title-bar-traffic-control"
       data-window-control={kind}
       aria-label={label}
-      tabIndex={-1}
       onClick={() => void onPress()}
     >
       <span className="title-bar-traffic-dot">{children}</span>

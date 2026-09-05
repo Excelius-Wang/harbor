@@ -57,6 +57,16 @@ describe("TitleBar window controls", () => {
     expect(tauriWindow.toggleMaximize).toHaveBeenCalledOnce();
   });
 
+  it("keeps every window control in the keyboard tab order", async () => {
+    const user = userEvent.setup();
+    render(<TitleBar />);
+
+    for (const label of ["Close", "Minimize", "Maximize"]) {
+      await user.tab();
+      expect(document.activeElement).toBe(screen.getByRole("button", { name: label }));
+    }
+  });
+
   it("shows restore when the window is maximized and honors hidden controls", async () => {
     tauriWindow.isMaximized.mockResolvedValue(true);
     const { rerender } = render(<TitleBar />);
