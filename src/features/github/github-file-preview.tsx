@@ -33,8 +33,8 @@ function fileExtension(name: string) {
 
 export function GitHubFilePreviewSkeleton() {
   return (
-    <section className="overflow-hidden rounded-lg border border-white/[0.075] bg-white/[0.018]">
-      <div className="flex h-12 items-center gap-2.5 border-b border-white/[0.065] px-3">
+    <section className="harbor-reading harbor-subtle-divider overflow-hidden rounded-lg border">
+      <div className="flex h-12 items-center gap-2.5 border-b px-3">
         <Skeleton className="size-7 rounded-md" />
         <Skeleton className="h-3 w-36" />
         <Skeleton className="ml-auto h-6 w-24" />
@@ -56,6 +56,7 @@ export function GitHubFilePreviewPanel({
   sizeLabel,
   externalUrl,
   onBack,
+  backLabel,
   onOpenExternal,
   onShowBlame,
   onEdit,
@@ -68,6 +69,7 @@ export function GitHubFilePreviewPanel({
   sizeLabel: string;
   externalUrl: string;
   onBack: () => void;
+  backLabel?: string;
   onOpenExternal: (url: string) => void;
   onShowBlame: () => void;
   onEdit: () => void;
@@ -86,35 +88,35 @@ export function GitHubFilePreviewPanel({
   });
 
   return (
-    <section className="overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.018] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--primary)_12%,transparent)]">
-      <header className="flex min-h-12 flex-wrap items-center gap-2 border-b border-white/[0.07] px-2.5 py-2">
+    <section className="harbor-reading harbor-subtle-divider overflow-hidden rounded-lg border">
+      <header className="flex min-h-12 flex-wrap items-center gap-2 border-b px-2.5 py-2">
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
               type="button"
               variant="ghost"
               size="icon-sm"
-              aria-label={t("workspace.repositories.backToFiles")}
+              aria-label={backLabel ?? t("workspace.repositories.backToFiles")}
               onClick={onBack}
             >
               <ArrowLeft />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{t("workspace.repositories.backToFiles")}</TooltipContent>
+          <TooltipContent>{backLabel ?? t("workspace.repositories.backToFiles")}</TooltipContent>
         </Tooltip>
-        <div className="flex min-w-0 flex-1 items-center gap-2">
+        <div className="flex min-w-0 flex-1 basis-52 items-center gap-2">
           <FileCode2 className="text-primary size-4 shrink-0" />
-          <span className="truncate text-xs font-semibold">{preview.name}</span>
+          <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">{preview.name}</span>
           {extension || syntaxLanguage !== "text" ? (
             <Badge
               variant="outline"
-              className="border-primary/20 bg-primary/[0.045] text-primary h-5 rounded px-1.5 font-mono text-[9px]"
+              className="border-primary/20 bg-primary/[0.045] text-primary h-5 rounded px-1.5 font-mono text-[11px]"
             >
               {syntaxLanguage === "text" ? extension : syntaxLanguage.toUpperCase()}
             </Badge>
           ) : null}
         </div>
-        <div className="text-muted-foreground flex items-center gap-2 text-[10px] tabular-nums">
+        <div className="text-muted-foreground flex shrink-0 items-center gap-2 text-[11px] tabular-nums">
           <span>{sizeLabel}</span>
           {preview.kind === "text" && lines.length ? (
             <span>{t("workspace.repositories.lineCount", { count: lines.length })}</span>
@@ -188,7 +190,7 @@ export function GitHubFilePreviewPanel({
         <div
           role="table"
           aria-label={t("workspace.repositories.fileSource", { name: preview.name })}
-          className="overflow-x-auto py-2 font-mono text-xs leading-5"
+          className="overflow-x-auto py-2 font-mono text-[13px] leading-5"
         >
           {lines.map((tokens, index) => (
             <div
@@ -198,7 +200,7 @@ export function GitHubFilePreviewPanel({
             >
               <span
                 role="rowheader"
-                className="text-muted-foreground/55 border-r border-white/[0.045] pr-3 text-right tabular-nums select-none"
+                className="text-muted-foreground border-r pr-3 text-right tabular-nums select-none"
               >
                 {index + 1}
               </span>

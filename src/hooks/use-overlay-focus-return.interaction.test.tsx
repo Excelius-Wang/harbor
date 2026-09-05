@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +19,20 @@ import {
   AlertDialogDescription,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+beforeAll(() => {
+  HTMLElement.prototype.hasPointerCapture = () => false;
+  HTMLElement.prototype.setPointerCapture = () => {};
+  HTMLElement.prototype.releasePointerCapture = () => {};
+  HTMLElement.prototype.scrollIntoView = () => {};
+});
 
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 afterEach(cleanup);
@@ -71,6 +85,27 @@ function ControlledOverlay({
   );
 }
 
+function MenuOverlay() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger>Manage branches</DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuItem onSelect={() => setOpen(true)}>Create branch</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogTitle>Create branch</DialogTitle>
+          <DialogDescription>Choose a source branch.</DialogDescription>
+          <input aria-label="Branch name" />
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 describe("shared overlay focus return", () => {
   it.each(["dialog", "sheet", "alert"] as const)(
     "restores a controlled %s opener after Escape",
@@ -106,6 +141,16 @@ describe("shared overlay focus return", () => {
     );
     const trigger = screen.getByRole("button", { name: "Open editor" });
     await user.click(trigger);
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+  });
+  it("returns to a menu trigger after its opening menu item unmounts", async () => {
+    const user = userEvent.setup();
+    render(<MenuOverlay />);
+    const trigger = screen.getByRole("button", { name: "Manage branches" });
+    await user.click(trigger);
+    await user.click(await screen.findByRole("menuitem", { name: "Create branch" }));
+    await screen.findByRole("dialog");
     await user.keyboard("{Escape}");
     await waitFor(() => expect(document.activeElement).toBe(trigger));
   });

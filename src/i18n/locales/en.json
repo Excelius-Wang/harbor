@@ -2823,7 +2823,10 @@
       },
       "repositoryPath": "Repository path",
       "upvoteDiscussion": "Upvote discussion",
-      "upvoteDiscussionComment": "Upvote comment"
+      "upvoteDiscussionComment": "Upvote comment",
+      "backToCodeSearch": "Back to search results",
+      "diffView": "Diff layout",
+      "codeReference": "Branch or tag"
     },
     "filters": {
       "period": "Time range",

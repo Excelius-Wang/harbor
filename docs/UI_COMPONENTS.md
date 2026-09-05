@@ -76,3 +76,7 @@ Chart tick labels target Recharts' actual `recharts-cartesian-axis-tick-value` n
 `harbor-adaptive-table` is for workspace tables with actions that must stay visible in a narrow pane. Place the table inside a CSS container; below 720 px, its first two cells stack above metadata and actions. Table headings remain available to screen readers. Labels and milestones are the current production examples.
 
 `src/dev/administration-fixtures.ts` supplies repository settings/access/Pages and Discussions read data. Fixture edits reload the preview entry so the mocked bridge and React root start together. These fixtures exercise production components; they do not validate live GitHub operations.
+
+Code/source lines use 13 px monospace, and the shared `harbor-diff` uses 12 px. File and commit panels reuse `harbor-reading`; syntax colors remain the highlighter's responsibility. `GitHubCodeView` owns search input/query/page and history pages per reference/path, so those values survive detail views. The outer ScrollArea uses `useListScroll` for each surface/query.
+
+`useOverlayFocusReturn` captures the opening element plus its linked menu-trigger chain. If the menu item has unmounted when a Dialog/AlertDialog/Sheet closes, the first connected focusable trigger receives focus. Custom close-focus handlers still take precedence.

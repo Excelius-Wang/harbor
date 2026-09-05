@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, GitCommitHorizontal, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -12,6 +11,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { parseIpcError } from "@/lib/ipc-error";
 import { GitHubCommitList } from "./github-commit-list";
 import type { GitHubRepository } from "./github-data";
@@ -22,17 +22,20 @@ export function GitHubCodeHistory({
   repository,
   reference,
   path,
+  page,
+  onPageChange,
   onBack,
   onSelectCommit,
 }: {
   repository: GitHubRepository;
   reference: string;
   path: string;
+  page: number;
+  onPageChange: (page: number) => void;
   onBack: () => void;
   onSelectCommit: (sha: string) => void;
 }) {
   const { t } = useTranslation();
-  const [page, setPage] = useState(1);
   const result = useQuery({
     ...repositoryCommitsQueryOptions({
       owner: repository.owner,
@@ -54,21 +57,29 @@ export function GitHubCodeHistory({
           variant="ghost"
           size="icon-sm"
           aria-label={t("workspace.repositories.backToCode")}
+          title={t("workspace.repositories.backToCode")}
           onClick={onBack}
         >
           <ArrowLeft />
         </Button>
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-sm font-semibold">
+          <h3 className="text-2xl leading-8 font-semibold tracking-tight">
             {path
               ? t("workspace.repositories.fileHistory", { path })
               : t("workspace.repositories.commitHistory")}
           </h3>
-          <p className="text-muted-foreground mt-0.5 truncate text-[10px]">
+          <p className="text-muted-foreground mt-1 text-[11px] break-words">
             {t("workspace.repositories.historyReference", { reference })}
           </p>
         </div>
       </header>
+
+      {result.data && result.error ? (
+        <WorkspaceStaleNotice
+          message={parseIpcError(result.error).message}
+          onRetry={() => void result.refetch()}
+        />
+      ) : null}
 
       {result.isPending ? (
         <div className="flex flex-col gap-3">
@@ -115,7 +126,7 @@ export function GitHubCodeHistory({
           page={data.page}
           hasPrevious={data.hasPrevious}
           hasMore={data.hasMore}
-          onPageChange={setPage}
+          onPageChange={onPageChange}
           ariaLabel={t("workspace.repositories.commitHistoryPagination")}
         />
       ) : null}

@@ -75,6 +75,23 @@ Supplementary checks produced 48 captures: `ui-admin-{discussion-closed,discussi
 
 Remaining advanced variants include nested discussion replies, pending/successful mutation feedback, archived repository settings and additional Pages health/deployment conditions; these stay in the final action audit. No live repository, invitation, poll or comment was changed by this preview.
 
+## Code, history, commits and file actions
+
+Code history, tags, search, file/Blame reading, commit metadata and comment surfaces now share the workspace materials and readable type sizes. Code is 13 px; the shared Diff is 12 px. Existing syntax colors remain owned by the highlighter. File headers wrap identity, metadata and actions without hiding the filename at 900 px.
+
+| Check | Evidence / result |
+| --- | --- |
+| Before views | `ui-before-code-{history,commit,tags,search,file,blame}-dark-1440.png`, captured before feature changes using typed read fixtures. Initial file syntax highlighting was not yet settled; do not treat the plain before capture as a syntax-color comparison. |
+| Core matrix | 56 captures: `ui-code-{history,commit,diff,split-diff,tags,tag-archive,search,file,blame,file-edit,file-delete,search-return,file-create,markdown-create-preview}-{light,dark}-{900,1440}.png`. File/Blame captures wait for actual highlighted tokens; the matrix was refreshed after correcting the compact file header. |
+| Chinese states | 48 captures: `ui-code-{history,commit,tags,search,file,blame}-{loading,empty,error,stale}-zh-{light,dark}-900.png`. Empty file mode is a real empty text DTO. Query invalidation triggers retained-data errors in panes without a dedicated Refresh action. |
+| Actions | 24 captures: `ui-code-{branch-create,branch-delete,commit-comment-edit,commit-comment-delete,commit-comment-minimize,inline-comment}-{light,dark}-{900,1440}.png`. Real menus, forms and inline comment controls were opened. Tall forms remain scrollable; the images do not claim every field fits in one viewport. |
+| Return behavior | Reproduced `workspace` search → file → return → empty search input before the fix (`ui-before-code-search-return-reset-dark-1440.png`). Search input, submitted query and page now live in the parent; history page is retained per reference/path. Four integration tests cover unsubmitted search text, paginated history through a commit/source-file excursion, and history/tag retry recovery. Browser cache fixtures with 20 rows verify equal nonzero search/history scroll positions after detail return: `ui-code-{search,history}-scroll-return-light-900.png`. |
+| Menu focus | The opening menu item is detached when a branch dialog opens. The shared focus hook now retains the linked menu trigger as a fallback, including ancestor menu triggers. A real DropdownMenu/Dialog regression passes alongside the five existing overlay tests. Browser branch-dialog checks wait for Radix's close-focus lifecycle and verify return to Manage branches. |
+| File fallbacks / shared Diff | Eight `ui-code-file-{binary,tooLarge}-{light,dark}-{900,1440}.png` captures use controlled cache DTOs. Four `ui-pull-files-after-code-{light,dark}-{900,1440}.png` captures verify the shared Diff size in the PR workspace. |
+| Checks | `pnpm check`: 482 tests in 106 files, complete-source lint, formatting, TypeScript and production build pass. Separate `tsc -b` passes. Logs `/private/tmp/harbor-code-check.log` and `/private/tmp/harbor-code-tsc.log`. The existing comment-refresh test was updated for the shared notice/Retry wording while retaining its write-lock and recovery assertions. |
+
+The fixture handler still rejects unknown business writes. Live GitHub mutation success is not established by these images. Broader pending/success/error action variants, primary workspace/window controls and native/external gates remain in the project checklist.
+
 ## Shared behavior
 
 `WorkspacePageHeader` owns the 24 px list title and header spacing. `WorkspaceStaleNotice` explicitly labels retained data after failure. `useListScroll` stays in the parent view and passes `viewportRef`/`onViewportScroll` to the production ScrollArea; it stores positions by query only for that parent lifetime. This does not persist page state across an app restart or across unmounted primary workspaces.

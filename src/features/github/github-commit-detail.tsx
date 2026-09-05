@@ -43,6 +43,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAppTranslation } from "@/hooks/use-app-translation";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { parseIpcError } from "@/lib/ipc-error";
 import { openExternalUrl } from "@/lib/window";
 import { GitHubCommitCommentFileDiff } from "./github-commit-comment-diff";
@@ -81,14 +82,14 @@ function CommitActor({
         </AvatarFallback>
       </Avatar>
       <div className="min-w-0">
-        <p className="text-muted-foreground text-[9px] font-medium tracking-[0.08em] uppercase">
+        <p className="text-muted-foreground text-[11px] font-medium tracking-[0.08em] uppercase">
           {label}
         </p>
         <p className="truncate text-[11px] font-medium">
           {actor?.login ? `@${actor.login}` : name}
         </p>
         {actor?.date ? (
-          <p className="text-muted-foreground truncate text-[9px]">
+          <p className="text-muted-foreground truncate text-[11px]">
             {formatIssueDate(actor.date, locale)}
           </p>
         ) : null}
@@ -119,7 +120,7 @@ function CommitFile({
   const { t } = useAppTranslation();
   return (
     <Collapsible defaultOpen={index < 2} className="overflow-hidden rounded-lg border">
-      <div className="bg-card/45 flex min-w-0 items-center gap-2 border-b px-2 py-1.5">
+      <div className="flex min-w-0 items-center gap-2 border-b bg-transparent px-2 py-1.5">
         <CollapsibleTrigger asChild>
           <Button
             type="button"
@@ -131,13 +132,13 @@ function CommitFile({
             <span className="truncate font-mono text-[11px]">{file.path}</span>
           </Button>
         </CollapsibleTrigger>
-        <Badge variant="outline" className="shrink-0 rounded-md text-[9px]">
+        <Badge variant="outline" className="shrink-0 rounded-md text-[11px]">
           {t(`workspace.repositories.fileStatuses.${file.status}`, {
             defaultValue: file.status,
           })}
         </Badge>
-        <span className="text-success text-[10px]">+{file.additions}</span>
-        <span className="text-destructive text-[10px]">-{file.deletions}</span>
+        <span className="text-success text-[11px]">+{file.additions}</span>
+        <span className="text-destructive text-[11px]">-{file.deletions}</span>
         {onOpenFile || file.blobUrl ? (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -159,7 +160,7 @@ function CommitFile({
         ) : null}
       </div>
       {file.previousPath ? (
-        <p className="text-muted-foreground border-b px-3 py-2 font-mono text-[9px]">
+        <p className="text-muted-foreground border-b px-3 py-2 font-mono text-[11px]">
           {t("workspace.repositories.commitFileRenamed", {
             previousPath: file.previousPath,
             path: file.path,
@@ -278,13 +279,19 @@ export function GitHubCommitDetail({
 
   return (
     <div className="flex min-w-0 flex-col gap-4">
-      <header className="overflow-hidden rounded-lg border">
-        <div className="bg-card/40 flex min-w-0 flex-wrap items-center gap-2 border-b px-3 py-2">
+      {result.isRefetchError && !result.isFetchNextPageError ? (
+        <WorkspaceStaleNotice
+          message={parseIpcError(result.error).message}
+          onRetry={() => void result.refetch()}
+        />
+      ) : null}
+      <header className="harbor-reading overflow-hidden rounded-lg border">
+        <div className="flex min-w-0 flex-wrap items-center gap-2 border-b bg-transparent px-3 py-2">
           <Button type="button" variant="ghost" size="sm" onClick={onBack}>
             <ArrowLeft data-icon="inline-start" />
             {backLabel ?? t("workspace.repositories.backToCommits")}
           </Button>
-          <span className="text-muted-foreground min-w-0 flex-1 truncate font-mono text-[10px]">
+          <span className="text-muted-foreground min-w-0 flex-1 truncate font-mono text-[11px]">
             {commit.sha}
           </span>
           <Tooltip>
@@ -314,7 +321,7 @@ export function GitHubCommitDetail({
         <div className="flex min-w-0 flex-col gap-4 px-4 py-4 sm:px-5">
           <div className="min-w-0">
             <div className="flex flex-wrap items-start gap-2">
-              <h3 className="min-w-0 flex-1 text-base leading-6 font-semibold tracking-[-0.015em]">
+              <h3 className="min-w-0 flex-1 text-2xl leading-8 font-semibold tracking-tight">
                 {headline}
               </h3>
               {commit.verification?.verified ? (
@@ -349,7 +356,7 @@ export function GitHubCommitDetail({
               locale={i18n.language}
             />
           </div>
-          <div className="flex min-w-0 flex-wrap items-center gap-2 text-[10px]">
+          <div className="flex min-w-0 flex-wrap items-center gap-2 text-[11px]">
             {commit.stats ? (
               <>
                 <Badge variant="secondary" className="rounded-md">
@@ -368,7 +375,7 @@ export function GitHubCommitDetail({
             </span>
           </div>
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <span className="text-muted-foreground text-[9px] font-medium tracking-[0.08em] uppercase">
+            <span className="text-muted-foreground text-[11px] font-medium tracking-[0.08em] uppercase">
               {t("workspace.repositories.commitParents")}
             </span>
             {commit.parents.length ? (
@@ -385,7 +392,7 @@ export function GitHubCommitDetail({
                 </Button>
               ))
             ) : (
-              <span className="text-muted-foreground text-[10px]">
+              <span className="text-muted-foreground text-[11px]">
                 {t("workspace.repositories.rootCommit")}
               </span>
             )}
@@ -406,12 +413,16 @@ export function GitHubCommitDetail({
                 <h4 className="text-sm font-semibold">
                   {t("workspace.repositories.commitChanges")}
                 </h4>
-                <p className="text-muted-foreground text-[10px]">
+                <p className="text-muted-foreground text-[11px]">
                   {t("workspace.repositories.commitChangesDescription")}
                 </p>
               </div>
               <Select value={viewType} onValueChange={(value) => setViewType(value as ViewType)}>
-                <SelectTrigger size="sm" className="w-[140px]">
+                <SelectTrigger
+                  size="sm"
+                  className="w-[140px]"
+                  aria-label={t("workspace.repositories.diffView")}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

@@ -49,6 +49,8 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
+import { useListScroll } from "@/hooks/use-list-scroll";
 import {
   Select,
   SelectContent,
@@ -77,7 +79,7 @@ import {
 } from "./github-code-mutations";
 import { GitHubCommitDetail } from "./github-commit-detail";
 import { GitHubCodeHistory } from "./github-code-history";
-import { GitHubCodeSearch } from "./github-code-search";
+import { GitHubCodeSearch, type GitHubCodeSearchState } from "./github-code-search";
 import { GitHubCodeTags } from "./github-code-tags";
 import type {
   GitHubCodeSearchResult,
@@ -194,6 +196,15 @@ export function GitHubCodeView({
   const [commitReturnSurface, setCommitReturnSurface] = useState<"browser" | "history" | "blame">(
     "browser"
   );
+  const [commitReturnPath, setCommitReturnPath] = useState("");
+  const [fileReturnSurface, setFileReturnSurface] = useState<"browser" | "search">("browser");
+  const [searchState, setSearchState] = useState<GitHubCodeSearchState>({
+    input: "",
+    query: "",
+    page: 1,
+  });
+  const [historyPages, setHistoryPages] = useState<Record<string, number>>({});
+  const [searchOrigin, setSearchOrigin] = useState({ reference: initialReference, path: "" });
   const [commitReturnReference, setCommitReturnReference] = useState(initialReference);
   const [commitReturnFile, setCommitReturnFile] = useState<GitHubContentEntry | null>(null);
   const [surface, setSurface] = useState<CodeSurface>(
@@ -203,6 +214,20 @@ export function GitHubCodeView({
   const [deleteFileDialogOpen, setDeleteFileDialogOpen] = useState(false);
   const [createBranchDialogOpen, setCreateBranchDialogOpen] = useState(false);
   const [deleteBranchDialogOpen, setDeleteBranchDialogOpen] = useState(false);
+  const historyKey = JSON.stringify([reference, selectedFile?.path ?? path]);
+  const historyPage = historyPages[historyKey] ?? 1;
+  const scrollKey =
+    surface === "search"
+      ? [repository.id, surface, searchState.query, searchState.page]
+      : [
+          repository.id,
+          surface,
+          reference,
+          path,
+          selectedFile?.path,
+          surface === "history" ? historyPage : selectedCommitSha,
+        ];
+  const listScroll = useListScroll(JSON.stringify(scrollKey));
   const target = { owner: repository.owner, repository: repository.name, reference };
   const overviewResult = useQuery(repositoryCodeQueryOptions(target));
   const contentsResult = useQuery(repositoryContentsQueryOptions({ ...target, path }));
@@ -244,6 +269,15 @@ export function GitHubCodeView({
         ? contentsError
         : null);
 
+  const retainedError =
+    overview && overviewResult.error
+      ? overviewResult.error
+      : (surface === "file" || surface === "blame") && filePreview && fileResult.error
+        ? fileResult.error
+        : surface === "browser" && listing && contentsResult.error
+          ? contentsResult.error
+          : null;
+
   const downloadMutation = useMutation({
     mutationFn: (filePath: string) =>
       invoke<GitHubFileDownloadResult>("github_download_repository_file", {
@@ -267,6 +301,7 @@ export function GitHubCodeView({
   });
 
   const selectBranch = (nextReference: string) => {
+    setFileReturnSurface("browser");
     setPath("");
     setSelectedFile(null);
     setSelectedCommitSha(null);
@@ -275,6 +310,7 @@ export function GitHubCodeView({
   };
 
   const navigateToPath = (nextPath: string) => {
+    setFileReturnSurface("browser");
     setSelectedFile(null);
     setSelectedCommitSha(null);
     setPath(nextPath);
@@ -282,6 +318,7 @@ export function GitHubCodeView({
   };
 
   const openEntry = (entry: GitHubContentEntry) => {
+    setFileReturnSurface("browser");
     setSelectedCommitSha(null);
     if (entry.kind === "dir") {
       navigateToPath(entry.path);
@@ -296,6 +333,7 @@ export function GitHubCodeView({
   };
 
   const openCommit = (sha: string, returnSurface: "browser" | "history" | "blame") => {
+    setCommitReturnPath(path);
     setCommitReturnReference(reference);
     setCommitReturnSurface(returnSurface);
     setCommitReturnFile(selectedFile);
@@ -309,6 +347,7 @@ export function GitHubCodeView({
       return;
     }
     setSelectedCommitSha(null);
+    setPath(commitReturnPath);
     setSelectedFile(commitReturnFile);
     setReference(commitReturnReference);
     setSurface(commitReturnSurface);
@@ -339,6 +378,8 @@ export function GitHubCodeView({
     : repository.url;
 
   const openSearchResult = (result: GitHubCodeSearchResult) => {
+    setSelectedCommitSha(null);
+    setFileReturnSurface("search");
     const segments = result.path.split("/");
     const name = segments.pop() ?? result.name;
     setReference(repository.defaultBranch);
@@ -410,7 +451,7 @@ export function GitHubCodeView({
   if (overviewLoading && !overview && contentsLoading && !listing) return <CodeSkeleton />;
 
   return (
-    <ScrollArea className="min-h-0 min-w-0 flex-1" constrainContentWidth>
+    <ScrollArea className="min-h-0 min-w-0 flex-1" constrainContentWidth {...listScroll}>
       <div className="mx-auto flex w-full max-w-[1360px] flex-col gap-4 p-4 pb-10">
         <div className="flex flex-wrap items-center gap-2">
           {onBack ? (
@@ -426,7 +467,11 @@ export function GitHubCodeView({
             </Button>
           ) : null}
           <Select value={reference} onValueChange={selectBranch}>
-            <SelectTrigger size="sm" className="harbor-filter-trigger min-w-40">
+            <SelectTrigger
+              size="sm"
+              className="harbor-filter-trigger min-w-40"
+              aria-label={t("workspace.repositories.codeReference")}
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="harbor-popover">
@@ -577,7 +622,10 @@ export function GitHubCodeView({
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => setFileDialogOpen(true)}
+              onClick={() => {
+                setFileReturnSurface("browser");
+                setFileDialogOpen(true);
+              }}
             >
               <FilePlus2 data-icon="inline-start" />
               {t("workspace.repositories.createRepositoryFile")}
@@ -587,7 +635,15 @@ export function GitHubCodeView({
             <Tags data-icon="inline-start" />
             {t("workspace.repositories.tags")}
           </Button>
-          <Button type="button" variant="outline" size="sm" onClick={() => setSurface("search")}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              if (surface !== "search") setSearchOrigin({ reference, path });
+              setSurface("search");
+            }}
+          >
             <Search data-icon="inline-start" />
             {t("workspace.repositories.searchAction")}
           </Button>
@@ -624,8 +680,18 @@ export function GitHubCodeView({
           ) : null}
         </div>
 
+        {retainedError ? (
+          <WorkspaceStaleNotice
+            message={parseIpcError(retainedError).message}
+            onRetry={() => {
+              void overviewResult.refetch();
+              if (selectedFile) void fileResult.refetch();
+              else void contentsResult.refetch();
+            }}
+          />
+        ) : null}
         {activeError ? (
-          <Empty className="bg-muted/10 min-h-56 border">
+          <Empty className="harbor-reading min-h-56 border">
             <EmptyHeader>
               <EmptyMedia variant="icon">
                 <Box />
@@ -665,6 +731,8 @@ export function GitHubCodeView({
             repository={repository}
             reference={reference}
             path={selectedFile?.path ?? path}
+            page={historyPage}
+            onPageChange={(page) => setHistoryPages((pages) => ({ ...pages, [historyKey]: page }))}
             onBack={() => setSurface(selectedFile ? "file" : "browser")}
             onSelectCommit={(sha) => openCommit(sha, "history")}
           />
@@ -677,7 +745,14 @@ export function GitHubCodeView({
         ) : surface === "search" ? (
           <GitHubCodeSearch
             repository={repository}
-            onBack={() => setSurface("browser")}
+            state={searchState}
+            onStateChange={setSearchState}
+            onBack={() => {
+              setReference(searchOrigin.reference);
+              setPath(searchOrigin.path);
+              setSelectedFile(null);
+              setSurface("browser");
+            }}
             onOpenResult={openSearchResult}
           />
         ) : surface === "blame" && filePreview?.kind === "text" ? (
@@ -696,13 +771,21 @@ export function GitHubCodeView({
               preview={filePreview}
               sizeLabel={formatBytes(filePreview.size, i18n.language)}
               externalUrl={selectedFileUrl}
+              backLabel={
+                selectedCommitSha
+                  ? t("workspace.repositories.backToCommits")
+                  : fileReturnSurface === "search"
+                    ? t("workspace.repositories.backToCodeSearch")
+                    : undefined
+              }
               onBack={() => {
                 setSelectedFile(null);
                 if (selectedCommitSha) {
+                  setPath(commitReturnPath);
                   setReference(commitReturnReference);
                   setSurface("commit");
                 } else {
-                  setSurface("browser");
+                  setSurface(fileReturnSurface);
                 }
               }}
               onOpenExternal={(url) => void openExternalUrl(url)}
@@ -728,10 +811,10 @@ export function GitHubCodeView({
                     <span className="min-w-0 flex-1 truncate text-xs font-medium">
                       {latestCommit.title}
                     </span>
-                    <span className="text-muted-foreground hidden text-[10px] sm:inline">
+                    <span className="text-muted-foreground hidden text-[11px] sm:inline">
                       {latestCommit.author ?? t("workspace.repositories.unknownAuthor")}
                     </span>
-                    <code className="text-primary/80 text-[10px]">{latestCommit.shortSha}</code>
+                    <code className="text-primary/80 text-[11px]">{latestCommit.shortSha}</code>
                     <ChevronRight className="text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                   </button>
                   <Button
@@ -766,14 +849,14 @@ export function GitHubCodeView({
             </section>
 
             {path === "" && overview?.commits.length ? (
-              <section className="bg-muted/10 overflow-hidden rounded-lg border">
+              <section className="harbor-reading overflow-hidden rounded-lg border">
                 <div className="flex h-10 items-center justify-between border-b px-3">
                   <div className="flex items-center gap-2 text-xs font-semibold">
                     <GitCommitHorizontal className="text-primary" />
                     {t("workspace.repositories.recentCommits")}
                   </div>
                   {overview.commitsHaveMore ? (
-                    <span className="text-muted-foreground text-[10px]">
+                    <span className="text-muted-foreground text-[11px]">
                       {t("workspace.repositories.latestCommitsOnly")}
                     </span>
                   ) : null}
@@ -790,10 +873,10 @@ export function GitHubCodeView({
                         className="focus-visible:ring-ring flex min-w-0 flex-1 items-center gap-3 rounded-sm px-1 py-1 text-left outline-none focus-visible:ring-2"
                       >
                         <span className="min-w-0 flex-1 truncate text-[11px]">{commit.title}</span>
-                        <span className="text-muted-foreground hidden text-[10px] sm:inline">
+                        <span className="text-muted-foreground hidden text-[11px] sm:inline">
                           {commit.author ?? t("workspace.repositories.unknownAuthor")}
                         </span>
-                        <code className="text-primary/75 text-[10px]">{commit.shortSha}</code>
+                        <code className="text-primary/75 text-[11px]">{commit.shortSha}</code>
                       </button>
                       <Button
                         type="button"
@@ -812,7 +895,7 @@ export function GitHubCodeView({
             ) : null}
 
             {path === "" && overview?.readme ? (
-              <section className="bg-muted/10 overflow-hidden rounded-lg border">
+              <section className="harbor-reading overflow-hidden rounded-lg border">
                 <div className="flex h-11 items-center justify-between border-b px-4">
                   <div className="flex items-center gap-2 text-xs font-semibold">
                     <BookOpenText className="text-primary" />

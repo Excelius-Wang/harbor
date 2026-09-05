@@ -10,18 +10,32 @@ export function useOverlayFocusReturn({
   onOpenAutoFocus?: AutoFocusHandler;
   onCloseAutoFocus?: AutoFocusHandler;
 }) {
-  const opener = useRef<HTMLElement | null>(null);
+  const openers = useRef<HTMLElement[]>([]);
   return {
     onOpenAutoFocus(event: Event) {
       const active = document.activeElement;
-      opener.current = active instanceof HTMLElement && active !== document.body ? active : null;
+      openers.current = [];
+      let opener = active instanceof HTMLElement && active !== document.body ? active : null;
+      while (opener && !openers.current.includes(opener)) {
+        openers.current.push(opener);
+        // A menu item disappears when it opens another overlay. Retain its trigger too.
+        const menu = opener.closest('[role="menu"][aria-labelledby]');
+        const triggerId = menu?.getAttribute("aria-labelledby")?.split(/\s+/)[0];
+        const trigger = triggerId ? document.getElementById(triggerId) : null;
+        opener = trigger instanceof HTMLElement ? trigger : null;
+      }
       onOpenAutoFocus?.(event);
     },
     onCloseAutoFocus(event: Event) {
       onCloseAutoFocus?.(event);
-      if (!event.defaultPrevented && opener.current?.isConnected) {
-        opener.current.focus({ preventScroll: true });
-        if (document.activeElement === opener.current) event.preventDefault();
+      if (event.defaultPrevented) return;
+      for (const opener of openers.current) {
+        if (!opener.isConnected) continue;
+        opener.focus({ preventScroll: true });
+        if (document.activeElement === opener) {
+          event.preventDefault();
+          break;
+        }
       }
     },
   };

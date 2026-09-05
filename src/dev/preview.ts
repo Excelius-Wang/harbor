@@ -11,6 +11,7 @@ import { workspaceFixture } from "./workspace-fixtures";
 import { moreFixture } from "./more-fixtures";
 import { repositoryFixture } from "./repository-fixtures";
 import { administrationFixture } from "./administration-fixtures";
+import { codeFixture } from "./code-fixtures";
 
 export const previewCalls: string[] = [];
 let previewHandler:
@@ -203,6 +204,8 @@ export function installPreview() {
       commandState === "empty"
     );
     if (administrationResult !== undefined) return administrationResult;
+    const codeResult = codeFixture(command, args, commandState === "empty");
+    if (codeResult !== undefined) return codeResult;
     // Missing fixtures fail visibly. Never fall through to a real GitHub write.
     throw { code: "previewFixtureMissing", message: `No UI preview fixture for ${command}` };
   };

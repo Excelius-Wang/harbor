@@ -208,9 +208,10 @@ export function workspaceFixture(
         name: String(args.path),
         path: String(args.path),
         sha,
-        size: 150,
-        content:
-          'export function workspaceTitle(name: string) {\n  return name.trim() || "Harbor";\n}\n',
+        size: empty ? 0 : 150,
+        content: empty
+          ? ""
+          : 'export function workspaceTitle(name: string) {\n  return name.trim() || "Harbor";\n}\n',
       };
     case "github_list_issue_inbox":
       return { ...pagination, issues: items.map((issue) => ({ repository, issue })) };
@@ -284,16 +285,18 @@ export function workspaceFixture(
     case "github_list_repository_commits":
       return {
         ...pagination,
-        commits: [
-          {
-            ...overview.commits[0],
-            message: "Unify workspace surfaces",
-            authorLogin: "harbor-preview",
-            authorAvatarUrl: null,
-            committedAt: timestamp,
-            verified: true,
-          },
-        ],
+        commits: empty
+          ? []
+          : [
+              {
+                ...overview.commits[0],
+                message: "Unify workspace surfaces",
+                authorLogin: "harbor-preview",
+                authorAvatarUrl: null,
+                committedAt: timestamp,
+                verified: true,
+              },
+            ],
       } satisfies GitHubData.GitHubRepositoryCommitPage;
     case "github_list_pull_request_files":
       return {

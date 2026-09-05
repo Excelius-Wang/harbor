@@ -12,6 +12,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { parseIpcError } from "@/lib/ipc-error";
 import type { GitHubBlameRange, GitHubFilePreview, GitHubRepository } from "./github-data";
 import { formatIssueDate } from "./github-issue-shared";
@@ -60,13 +61,14 @@ export function GitHubFileBlame({
   const error = !result.data && result.error ? parseIpcError(result.error) : null;
 
   return (
-    <section className="bg-muted/10 overflow-hidden rounded-lg border">
+    <section className="harbor-reading overflow-hidden rounded-lg border">
       <header className="flex min-h-12 items-center gap-2 border-b px-2.5 py-2">
         <Button
           type="button"
           variant="ghost"
           size="icon-sm"
           aria-label={t("workspace.repositories.backToFile")}
+          title={t("workspace.repositories.backToFile")}
           onClick={onBack}
         >
           <ArrowLeft />
@@ -76,11 +78,18 @@ export function GitHubFileBlame({
           <h3 className="truncate text-xs font-semibold">
             {t("workspace.repositories.blameFor", { path: preview.path })}
           </h3>
-          <p className="text-muted-foreground mt-0.5 truncate text-[10px]">
+          <p className="text-muted-foreground mt-0.5 truncate text-[11px]">
             {t("workspace.repositories.historyReference", { reference })}
           </p>
         </div>
       </header>
+
+      {result.data && result.error ? (
+        <WorkspaceStaleNotice
+          message={parseIpcError(result.error).message}
+          onRetry={() => void result.refetch()}
+        />
+      ) : null}
 
       {result.isPending ? (
         <div className="flex flex-col gap-2 p-4">
@@ -108,7 +117,7 @@ export function GitHubFileBlame({
         <div
           role="table"
           aria-label={t("workspace.repositories.blameFor", { path: preview.path })}
-          className="overflow-x-auto py-2 font-mono text-[11px] leading-5"
+          className="overflow-x-auto py-2 font-mono text-[13px] leading-5"
         >
           {lines.map((tokens, index) => {
             const range = lineRanges[index];
@@ -119,7 +128,7 @@ export function GitHubFileBlame({
                 role="row"
                 className="hover:bg-primary/[0.025] grid min-w-[860px] grid-cols-[15rem_3.75rem_minmax(max-content,1fr)]"
               >
-                <span role="cell" className="border-r px-2 text-[10px] leading-5 whitespace-nowrap">
+                <span role="cell" className="border-r px-2 text-[11px] leading-5 whitespace-nowrap">
                   {startsRange && range ? (
                     <BlameAttribution
                       range={range}
@@ -130,7 +139,7 @@ export function GitHubFileBlame({
                 </span>
                 <span
                   role="rowheader"
-                  className="text-muted-foreground/55 border-r pr-3 text-right tabular-nums select-none"
+                  className="text-muted-foreground border-r pr-3 text-right tabular-nums select-none"
                 >
                   {index + 1}
                 </span>

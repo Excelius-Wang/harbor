@@ -515,7 +515,7 @@
   --diff-code-selected-background-color: color-mix(in srgb, var(--primary) 12%, transparent);
   --diff-gutter-selected-background-color: color-mix(in srgb, var(--primary) 16%, transparent);
   --diff-omit-gutter-line-color: var(--muted-foreground);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.55;
 }
 

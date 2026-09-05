@@ -32,7 +32,7 @@ Status: in progress. A source inventory is not visual acceptance. Every row belo
 | Pull requests | Inbox/repository lists, details, commits, files/diff, reviews, checks, merge/lifecycle forms | Inbox/conversation/checks/files/review dialog captured; advanced review/lifecycle pending |
 | Repositories | Owned/starred lists, create/access/invitations, repository shell and tabs | Core browser, code and create-form capture done; other tabs/actions pending |
 | Discovery | Trending repositories/developers, developer feed, search and result/detail returns | Pending |
-| Code | Tree, file/preview/blame, history/commits/comments, branches/tags/search and edit dialogs | Pending |
+| Code | Tree, file/preview/blame, history/commits/comments, branches/tags/search and edit dialogs | Core/read/action/state matrices, focus and list/detail return verified; broader mutation audit remains |
 | Wiki | Page list, reading/editing/history and dialogs | Page/read/editor/history and core state matrix verified; comparison/revert/offline variants pending |
 | Releases | Lists/details/create/edit and assets | List/detail/create/edit/delete/asset-delete and return/state matrix verified; artifact transfer states pending |
 | Discussions | Lists/details, comments/reactions/polls and forms | List/detail/forms/poll, comment dialogs and return/state matrices verified; nested replies and mutation variants pending |
@@ -128,21 +128,21 @@ Generated from existing JSX-bearing production files at task start. Each file mu
 | `src/features/github/github-actions-workflow-controls.tsx` | Audited; shared material/metadata/feedback applied where needed | Repository-tab matrix and listed states/actions in UI_VERIFICATION.md; advanced variants are recorded there |
 | `src/features/github/github-actions-workflow-navigation.tsx` | Audited; shared material/metadata/feedback applied where needed | Repository-tab matrix and listed states/actions in UI_VERIFICATION.md; advanced variants are recorded there |
 | `src/features/github/github-check-suite-detail.tsx` | Pending | Pending |
-| `src/features/github/github-code-branch-dialogs.tsx` | Pending | Pending |
-| `src/features/github/github-code-delete-file-dialog.tsx` | Pending | Pending |
-| `src/features/github/github-code-file-dialog.tsx` | Pending | Pending |
-| `src/features/github/github-code-history.tsx` | Pending | Pending |
-| `src/features/github/github-code-search.tsx` | Pending | Pending |
-| `src/features/github/github-code-tags.tsx` | Pending | Pending |
-| `src/features/github/github-code-view.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
-| `src/features/github/github-comment-actions.tsx` | Pending | Pending |
+| `src/features/github/github-code-branch-dialogs.tsx` | Audited; shared source/reading/metadata/feedback applied where needed | Code core/state/action/return matrices in UI_VERIFICATION.md; broader mutation audit remains |
+| `src/features/github/github-code-delete-file-dialog.tsx` | Audited; shared source/reading/metadata/feedback applied where needed | Code core/state/action/return matrices in UI_VERIFICATION.md; broader mutation audit remains |
+| `src/features/github/github-code-file-dialog.tsx` | Audited; shared source/reading/metadata/feedback applied where needed | Code core/state/action/return matrices in UI_VERIFICATION.md; broader mutation audit remains |
+| `src/features/github/github-code-history.tsx` | Audited; shared source/reading/metadata/feedback applied where needed | Code core/state/action/return matrices in UI_VERIFICATION.md; broader mutation audit remains |
+| `src/features/github/github-code-search.tsx` | Audited; shared source/reading/metadata/feedback applied where needed | Code core/state/action/return matrices in UI_VERIFICATION.md; broader mutation audit remains |
+| `src/features/github/github-code-tags.tsx` | Audited; shared source/reading/metadata/feedback applied where needed | Code core/state/action/return matrices in UI_VERIFICATION.md; broader mutation audit remains |
+| `src/features/github/github-code-view.tsx` | Shared surfaces plus parent-owned query state and scroll recovery | Code, history, search, file, Blame and action matrix verified |
+| `src/features/github/github-comment-actions.tsx` | Audited; shared source/reading/metadata/feedback applied where needed | Code core/state/action/return matrices in UI_VERIFICATION.md; broader mutation audit remains |
 | `src/features/github/github-comment-form.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
-| `src/features/github/github-commit-comment-card.tsx` | Pending | Pending |
-| `src/features/github/github-commit-comment-composer.tsx` | Pending | Pending |
-| `src/features/github/github-commit-comment-diff.tsx` | Pending | Pending |
-| `src/features/github/github-commit-comments-workspace.tsx` | Pending | Pending |
-| `src/features/github/github-commit-detail.tsx` | Pending | Pending |
-| `src/features/github/github-commit-list.tsx` | Pending | Pending |
+| `src/features/github/github-commit-comment-card.tsx` | Audited; shared source/reading/metadata/feedback applied where needed | Code core/state/action/return matrices in UI_VERIFICATION.md; broader mutation audit remains |
+| `src/features/github/github-commit-comment-composer.tsx` | Audited; shared source/reading/metadata/feedback applied where needed | Code core/state/action/return matrices in UI_VERIFICATION.md; broader mutation audit remains |
+| `src/features/github/github-commit-comment-diff.tsx` | Audited; shared source/reading/metadata/feedback applied where needed | Code core/state/action/return matrices in UI_VERIFICATION.md; broader mutation audit remains |
+| `src/features/github/github-commit-comments-workspace.tsx` | Audited; shared source/reading/metadata/feedback applied where needed | Code core/state/action/return matrices in UI_VERIFICATION.md; broader mutation audit remains |
+| `src/features/github/github-commit-detail.tsx` | Audited; shared source/reading/metadata/feedback applied where needed | Code core/state/action/return matrices in UI_VERIFICATION.md; broader mutation audit remains |
+| `src/features/github/github-commit-list.tsx` | Audited; shared source/reading/metadata/feedback applied where needed | Code core/state/action/return matrices in UI_VERIFICATION.md; broader mutation audit remains |
 | `src/features/github/github-connection-dialog.tsx` | Pending | Pending |
 | `src/features/github/github-conversation-comment-actions.tsx` | Pending | Pending |
 | `src/features/github/github-conversation-controls.tsx` | Pending | Pending |
@@ -154,9 +154,9 @@ Generated from existing JSX-bearing production files at task start. Each file mu
 | `src/features/github/github-discussion-poll.tsx` | Audited; shared surfaces, readable metadata and retained-data feedback applied where needed | Administration core/state and supplemental dialog/return matrices verified; remaining variants explicit in UI_VERIFICATION.md |
 | `src/features/github/github-discussion-view.tsx` | Audited; shared surfaces, readable metadata and retained-data feedback applied where needed | Administration core/state and supplemental dialog/return matrices verified; remaining variants explicit in UI_VERIFICATION.md |
 | `src/features/github/github-execution-status.tsx` | Pending | Pending |
-| `src/features/github/github-file-blame.tsx` | Pending | Pending |
-| `src/features/github/github-file-diff.tsx` | Pending | Pending |
-| `src/features/github/github-file-preview.tsx` | Pending | Pending |
+| `src/features/github/github-file-blame.tsx` | Audited; shared source/reading/metadata/feedback applied where needed | Code core/state/action/return matrices in UI_VERIFICATION.md; broader mutation audit remains |
+| `src/features/github/github-file-diff.tsx` | Audited; shared source/reading/metadata/feedback applied where needed | Code core/state/action/return matrices in UI_VERIFICATION.md; broader mutation audit remains |
+| `src/features/github/github-file-preview.tsx` | Audited; shared source/reading/metadata/feedback applied where needed | Code core/state/action/return matrices in UI_VERIFICATION.md; broader mutation audit remains |
 | `src/features/github/github-gist-detail.tsx` | Audited and migrated in Notifications/More batch | Core matrix and listed dialogs/states in UI_VERIFICATION.md; advanced variants remain explicit there |
 | `src/features/github/github-gist-editor-dialog.tsx` | Audited and migrated in Notifications/More batch | Core matrix and listed dialogs/states in UI_VERIFICATION.md; advanced variants remain explicit there |
 | `src/features/github/github-gist-view.tsx` | Audited and migrated in Notifications/More batch | Core matrix and listed dialogs/states in UI_VERIFICATION.md; advanced variants remain explicit there |
@@ -244,7 +244,7 @@ Generated from existing JSX-bearing production files at task start. Each file mu
 | `src/features/github/github-security-detail.tsx` | Audited; shared material/metadata/feedback applied where needed | Repository-tab matrix and listed states/actions in UI_VERIFICATION.md; advanced variants are recorded there |
 | `src/features/github/github-security-shared.tsx` | Audited; shared material/metadata/feedback applied where needed | Repository-tab matrix and listed states/actions in UI_VERIFICATION.md; advanced variants are recorded there |
 | `src/features/github/github-security-view.tsx` | Audited; shared material/metadata/feedback applied where needed | Repository-tab matrix and listed states/actions in UI_VERIFICATION.md; advanced variants are recorded there |
-| `src/features/github/github-source-code.tsx` | Pending | Pending |
+| `src/features/github/github-source-code.tsx` | Audited; shared source/reading/metadata/feedback applied where needed | Code core/state/action/return matrices in UI_VERIFICATION.md; broader mutation audit remains |
 | `src/features/github/github-trending-developers.tsx` | Pending | Pending |
 | `src/features/github/github-trending-filters.tsx` | Pending | Pending |
 | `src/features/github/github-wiki-history-dialog.tsx` | Audited; shared material/metadata/feedback applied where needed | Repository-tab matrix and listed states/actions in UI_VERIFICATION.md; advanced variants are recorded there |

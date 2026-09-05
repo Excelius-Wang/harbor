@@ -186,9 +186,7 @@ describe("GitHub commit comments workspace", () => {
     expect(await screen.findByText("General feedback")).toBeDefined();
     await client.invalidateQueries({ queryKey: githubQueryKeys.commitComments(target) });
 
-    expect(
-      await screen.findByText("workspace.repositories.commitCommentsRefreshFailed")
-    ).toBeDefined();
+    expect(await screen.findByText("common.staleResults")).toBeDefined();
     expect((screen.getByRole("button", { name: "composer" }) as HTMLButtonElement).disabled).toBe(
       true
     );
@@ -197,10 +195,8 @@ describe("GitHub commit comments workspace", () => {
     ).toBe(true);
     expect(screen.getByTestId("child-state").textContent).toBe("1:false");
 
-    await user.click(screen.getByRole("button", { name: "workspace.repositories.retry" }));
-    await waitFor(() =>
-      expect(screen.queryByText("workspace.repositories.commitCommentsRefreshFailed")).toBeNull()
-    );
+    await user.click(screen.getByRole("button", { name: "common.retry" }));
+    await waitFor(() => expect(screen.queryByText("common.staleResults")).toBeNull());
     expect((screen.getByRole("button", { name: "composer" }) as HTMLButtonElement).disabled).toBe(
       false
     );

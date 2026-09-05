@@ -19,6 +19,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { parseIpcError } from "@/lib/ipc-error";
 import { openExternalUrl } from "@/lib/window";
 import type { GitHubRepository } from "./github-data";
@@ -55,17 +56,27 @@ export function GitHubCodeTags({
           variant="ghost"
           size="icon-sm"
           aria-label={t("workspace.repositories.backToCode")}
+          title={t("workspace.repositories.backToCode")}
           onClick={onBack}
         >
           <ArrowLeft />
         </Button>
         <div>
-          <h3 className="text-sm font-semibold">{t("workspace.repositories.tags")}</h3>
-          <p className="text-muted-foreground mt-0.5 text-[10px]">
+          <h3 className="text-2xl leading-8 font-semibold tracking-tight">
+            {t("workspace.repositories.tags")}
+          </h3>
+          <p className="text-muted-foreground mt-0.5 text-[11px]">
             {t("workspace.repositories.tagsDescription")}
           </p>
         </div>
       </header>
+
+      {result.data && result.error ? (
+        <WorkspaceStaleNotice
+          message={parseIpcError(result.error).message}
+          onRetry={() => void result.refetch()}
+        />
+      ) : null}
 
       {result.isPending ? (
         <div className="flex flex-col gap-2">
@@ -94,16 +105,16 @@ export function GitHubCodeTags({
           {data.tags.map((tag) => (
             <article
               key={`${tag.name}:${tag.sha}`}
-              className="hover:bg-accent/30 flex min-w-0 items-center gap-3 border-b px-3 py-2.5 last:border-b-0"
+              className="harbor-result-row harbor-subtle-divider flex min-w-0 items-center gap-3 border-b px-3 py-2.5 last:border-b-0"
             >
               <Tags className="text-primary shrink-0" />
               <button
                 type="button"
-                className="min-w-0 flex-1 text-left"
+                className="focus-visible:ring-ring min-w-0 flex-1 rounded-sm text-left outline-none focus-visible:ring-2"
                 onClick={() => onSelectTag(tag.name)}
               >
                 <span className="block truncate text-xs font-medium">{tag.name}</span>
-                <code className="text-muted-foreground mt-0.5 block text-[10px]">
+                <code className="text-muted-foreground mt-0.5 block text-[11px]">
                   {tag.sha.slice(0, 7)}
                 </code>
               </button>
