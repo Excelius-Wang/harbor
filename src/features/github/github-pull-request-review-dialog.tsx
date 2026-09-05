@@ -147,7 +147,7 @@ function GitHubPullRequestReviewForm({
     >
       <FieldGroup className="gap-5">
         {commentCount ? (
-          <div className="bg-muted/35 flex items-center gap-2 rounded-md border px-3 py-2.5">
+          <div className="harbor-reading flex items-center gap-2 rounded-md border px-3 py-2.5">
             <MessageSquareText className="text-primary size-4 shrink-0" />
             <p className="text-foreground/85 text-xs">
               {t("workspace.repositories.pendingReviewCommentCount", {
@@ -350,7 +350,10 @@ export function GitHubPullRequestReviewDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-[680px]">
+      <DialogContent
+        showCloseButton={!pending}
+        className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-[680px]"
+      >
         <DialogHeader>
           <DialogTitle>{t("workspace.repositories.reviewChanges")}</DialogTitle>
           <DialogDescription>

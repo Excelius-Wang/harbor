@@ -227,7 +227,7 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
             </TabsList>
           </Tabs>
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground flex items-center gap-2 text-[10px]">
+            <span className="text-muted-foreground flex items-center gap-2 text-[11px]">
               {pullRequestsResult.isFetching ? <RefreshCw className="size-3 animate-spin" /> : null}
               {pullRequestPage
                 ? t("workspace.repositories.pullRequestCount", {

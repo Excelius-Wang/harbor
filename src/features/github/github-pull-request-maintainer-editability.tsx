@@ -4,6 +4,7 @@ import { CircleAlert, RefreshCw, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -219,7 +220,7 @@ export function GitHubPullRequestMaintainerEditability({
     <>
       <Separator />
       <section className="flex flex-col gap-2.5" aria-busy={mutation.isPending || refreshing}>
-        <p className="text-muted-foreground text-[10px] font-medium tracking-[0.08em] uppercase">
+        <p className="text-muted-foreground text-[11px] font-medium tracking-[0.08em] uppercase">
           {t("workspace.repositories.pullRequestMaintainerEditability")}
         </p>
         <div className="flex items-start gap-2">
@@ -272,9 +273,8 @@ export function GitHubPullRequestMaintainerEditability({
           </p>
         ) : null}
         {refreshError ? (
-          <MaintainerEditabilityLoadError
+          <WorkspaceStaleNotice
             message={refreshError.message}
-            className="py-2.5 text-[11px]"
             onRetry={() => void result.refetch()}
           />
         ) : null}

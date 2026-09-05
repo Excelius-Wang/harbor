@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import {
   Command,
   CommandEmpty,
@@ -66,9 +67,18 @@ function sameName(left: string, right: string) {
   return left.localeCompare(right, undefined, { sensitivity: "accent" }) === 0;
 }
 
-function ReviewerOptionsError({ error, onRetry }: { error: unknown; onRetry: () => void }) {
+function ReviewerOptionsError({
+  error,
+  onRetry,
+  stale = false,
+}: {
+  error: unknown;
+  onRetry: () => void;
+  stale?: boolean;
+}) {
   const { t } = useTranslation();
   const parsed = parseIpcError(error);
+  if (stale) return <WorkspaceStaleNotice message={parsed.message} onRetry={onRetry} />;
   return (
     <Alert variant="destructive">
       <CircleAlert />
@@ -99,7 +109,14 @@ function ReviewerOptionList({
   const { t } = useTranslation();
 
   return (
-    <Command className="min-h-0 rounded-md border">
+    <Command
+      label={t(
+        kind === "team"
+          ? "workspace.repositories.searchReviewTeams"
+          : "workspace.repositories.searchReviewers"
+      )}
+      className="min-h-0 rounded-md border"
+    >
       <CommandInput
         placeholder={t(
           kind === "team"
@@ -150,7 +167,7 @@ function ReviewerOptionList({
                   <span className="truncate">
                     {option.kind === "user" ? `@${option.label}` : option.label}
                   </span>
-                  <span className="text-muted-foreground truncate text-[10px]">{status}</span>
+                  <span className="text-muted-foreground truncate text-[11px]">{status}</span>
                 </span>
                 {isPending ? (
                   <Spinner />
@@ -262,7 +279,10 @@ function GitHubPullRequestReviewerDialog({
 
   return (
     <Dialog open onOpenChange={(open) => !mutation.isPending && onOpenChange(open)}>
-      <DialogContent className="max-h-[calc(100vh-2rem)] gap-0 overflow-hidden p-0 sm:max-w-[620px]">
+      <DialogContent
+        showCloseButton={!mutation.isPending}
+        className="max-h-[calc(100vh-2rem)] gap-0 overflow-y-auto p-0 sm:max-w-[620px]"
+      >
         <DialogHeader className="p-5 pb-3">
           <DialogTitle>{t("workspace.repositories.manageReviewers")}</DialogTitle>
           <DialogDescription>
@@ -283,6 +303,7 @@ function GitHubPullRequestReviewerDialog({
           <TabsContent value="users" className="flex min-h-0 flex-col gap-3 p-5 pt-3">
             {assignees.error ? (
               <ReviewerOptionsError
+                stale={Boolean(assignees.data)}
                 error={assignees.error}
                 onRetry={() => void assignees.refetch()}
               />
@@ -303,7 +324,11 @@ function GitHubPullRequestReviewerDialog({
           </TabsContent>
           <TabsContent value="teams" className="flex min-h-0 flex-col gap-3 p-5 pt-3">
             {teams.error ? (
-              <ReviewerOptionsError error={teams.error} onRetry={() => void teams.refetch()} />
+              <ReviewerOptionsError
+                stale={Boolean(teams.data)}
+                error={teams.error}
+                onRetry={() => void teams.refetch()}
+              />
             ) : null}
             {teams.isPending && !teamOptions.length ? (
               <div className="flex min-h-28 items-center justify-center">
@@ -402,7 +427,7 @@ export function GitHubPullRequestReviewers({
     <>
       <div>
         <div className="mb-2 flex items-center justify-between gap-2">
-          <p className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-[10px] font-medium tracking-[0.08em] uppercase">
+          <p className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-[11px] font-medium tracking-[0.08em] uppercase [&>svg]:size-3.5">
             <UserRound /> {t("workspace.repositories.reviewers")}
           </p>
           <Button
@@ -428,7 +453,7 @@ export function GitHubPullRequestReviewers({
                 <AvatarFallback>{reviewer.slice(0, 1).toUpperCase()}</AvatarFallback>
               </Avatar>
               <span className="truncate">@{reviewer}</span>
-              <span className="text-muted-foreground ml-auto text-[9px]">
+              <span className="text-muted-foreground ml-auto text-[11px]">
                 {t("workspace.repositories.reviewRequested")}
               </span>
             </div>
@@ -441,7 +466,7 @@ export function GitHubPullRequestReviewers({
                 </AvatarFallback>
               </Avatar>
               <span className="truncate">{team.name}</span>
-              <span className="text-muted-foreground ml-auto text-[9px]">
+              <span className="text-muted-foreground ml-auto text-[11px]">
                 {t("workspace.repositories.reviewRequested")}
               </span>
             </div>
@@ -452,11 +477,10 @@ export function GitHubPullRequestReviewers({
             </span>
           ) : null}
           {reviewsQuery.error ? (
-            <Alert variant="destructive">
-              <CircleAlert />
-              <AlertTitle>{t("workspace.repositories.reviewsLoadFailed")}</AlertTitle>
-              <AlertDescription>{parseIpcError(reviewsQuery.error).message}</AlertDescription>
-            </Alert>
+            <WorkspaceStaleNotice
+              message={parseIpcError(reviewsQuery.error).message}
+              onRetry={() => void reviewsQuery.refetch()}
+            />
           ) : null}
           {reviewsQuery.hasNextPage ? (
             <Button
@@ -503,7 +527,7 @@ function ReviewerState({
     <div className="flex min-w-0 items-center gap-2 text-xs">
       <ReviewStateIcon state={review.state} />
       <span className="truncate">@{review.author}</span>
-      <span className="text-muted-foreground ml-auto text-[9px]">
+      <span className="text-muted-foreground ml-auto text-[11px]">
         {t(`workspace.repositories.reviewStates.${review.state}`)}
       </span>
       <GitHubPullRequestReviewDismissalAction target={target} review={review} />

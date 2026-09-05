@@ -14,6 +14,7 @@ import {
 } from "./github-pull-request-maintainer-editability";
 import { githubQueryKeys } from "./github-queries";
 
+vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn() } }));
 vi.mock("@/hooks/use-app-translation", () => ({
@@ -346,9 +347,10 @@ describe("pull request maintainer editability", () => {
     void client.invalidateQueries({ queryKey: statusKey, exact: true });
 
     expect(await screen.findByText(/refresh failed/)).toBeDefined();
+    expect(screen.getByText("common.staleResults")).toBeDefined();
     expect(screen.getByRole("checkbox")).toBe(checkbox);
     expect((checkbox as HTMLButtonElement).disabled).toBe(true);
-    await user.click(screen.getByRole("button", { name: "workspace.repositories.retry" }));
+    await user.click(screen.getByRole("button", { name: "common.retry" }));
     await waitFor(() => expect((checkbox as HTMLButtonElement).disabled).toBe(false));
     expect(invoke).toHaveBeenCalledTimes(3);
     view.unmount();

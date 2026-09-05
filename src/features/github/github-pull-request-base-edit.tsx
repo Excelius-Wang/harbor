@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import {
   Command,
   CommandEmpty,
@@ -125,12 +126,22 @@ export function BaseBranchLoadError({
   error,
   disabled,
   onRetry,
+  stale = false,
 }: {
   error: unknown;
   disabled: boolean;
   onRetry: () => void;
+  stale?: boolean;
 }) {
   const { t } = useAppTranslation();
+  if (stale)
+    return (
+      <WorkspaceStaleNotice
+        message={parseIpcError(error).message}
+        retryDisabled={disabled}
+        onRetry={onRetry}
+      />
+    );
   return (
     <Alert variant="destructive">
       <CircleAlert />
@@ -168,7 +179,7 @@ export function BaseBranchRangeSummary({
   currentLabel: string;
 }) {
   return (
-    <p aria-live="polite" className="bg-muted/45 rounded-md border px-3 py-2 text-xs">
+    <p aria-live="polite" className="harbor-reading rounded-md border px-3 py-2 text-xs">
       <span className="text-muted-foreground mr-2">{currentLabel}</span>
       <code>{currentBase}</code>
       {targetBase ? (
@@ -316,6 +327,7 @@ export function GitHubPullRequestBaseEdit({
           <BaseBranchLoading label={t("workspace.repositories.loadingBaseBranches")} />
         ) : branchesError ? (
           <BaseBranchLoadError
+            stale={Boolean(snapshot)}
             error={branchesError}
             disabled={mutation.isPending}
             onRetry={() => {
@@ -346,7 +358,10 @@ export function GitHubPullRequestBaseEdit({
             </AlertDescription>
           </Alert>
         ) : (
-          <Command className="rounded-md border">
+          <Command
+            label={t("workspace.repositories.searchBaseBranches")}
+            className="rounded-md border"
+          >
             <CommandInput
               placeholder={t("workspace.repositories.searchBaseBranches")}
               disabled={mutation.isPending}

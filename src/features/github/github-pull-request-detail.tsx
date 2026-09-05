@@ -266,7 +266,7 @@ export function GitHubPullRequestDetail({
                   </span>
                   <Badge
                     variant="outline"
-                    className="h-6 max-w-full rounded-md font-mono text-[10px]"
+                    className="h-6 max-w-full rounded-md font-mono text-[11px]"
                   >
                     <span className="truncate">
                       {detail.pullRequest.headLabel ?? detail.pullRequest.headRef}
@@ -385,7 +385,7 @@ export function GitHubPullRequestDetail({
                       />
                       <Separator />
                       <div>
-                        <p className="text-muted-foreground mb-2 text-[10px] font-medium tracking-[0.08em] uppercase">
+                        <p className="text-muted-foreground mb-2 text-[11px] font-medium tracking-[0.08em] uppercase">
                           {t("workspace.repositories.changeSummary")}
                         </p>
                         <p className="text-muted-foreground flex flex-wrap gap-2 text-[11px]">

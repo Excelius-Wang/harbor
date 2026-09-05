@@ -184,7 +184,13 @@ export function installPreview() {
     }
     if (command === "github_list_developer_feed")
       return { events: [], page: 1, hasPrevious: false, hasMore: false };
-    const workspaceResult = workspaceFixture(command, args, repositories, commandState === "empty");
+    const workspaceResult = workspaceFixture(
+      command,
+      args,
+      repositories,
+      commandState === "empty",
+      parameters.get("pr")
+    );
     const fixture =
       workspaceResult === undefined
         ? moreFixture(command, args, repositories, commandState === "empty")

@@ -29,7 +29,7 @@ Status: in progress. A source inventory is not visual acceptance. Every row belo
 | Workspace | Window/title bar, primary navigation, More menu, command palette, context rail and Agent sheet | Pending |
 | Notifications | Inbox, filters, retained results, target detail | Inbox matrix, stale notice and mark-all dialog verified; destination variants/invitations pending |
 | Issues | Inbox/repository lists, details, timeline, metadata, relationships, all actions/forms | Inbox/detail/edit/preview and return checks done; advanced actions still pending |
-| Pull requests | Inbox/repository lists, details, commits, files/diff, reviews, checks, merge/lifecycle forms | Inbox/conversation/checks/files/review dialog captured; advanced review/lifecycle pending |
+| Pull requests | Inbox/repository lists, details, commits, files/diff, reviews, checks, merge/lifecycle forms | Inbox/detail/commits/files, lifecycle dialogs, creation drafts and review variants verified; native/final delivery gates remain |
 | Repositories | Owned/starred lists, create/access/invitations, repository shell and tabs | Core browser, code and create-form capture done; other tabs/actions pending |
 | Discovery | Trending repositories/developers, developer feed, search and result/detail returns | Pending |
 | Code | Tree, file/preview/blame, history/commits/comments, branches/tags/search and edit dialogs | Core/read/action/state matrices, focus and list/detail return verified; broader mutation audit remains |
@@ -200,31 +200,31 @@ Generated from existing JSX-bearing production files at task start. Each file mu
 | `src/features/github/github-project-dialogs.tsx` | Audited and migrated in Notifications/More batch | Core matrix and listed dialogs/states in UI_VERIFICATION.md; advanced variants remain explicit there |
 | `src/features/github/github-project-shared.tsx` | Audited; existing semantic option colors retained | Board/table/roadmap and field-edit captures |
 | `src/features/github/github-project-view.tsx` | Audited and migrated in Notifications/More batch | Core matrix and listed dialogs/states in UI_VERIFICATION.md; advanced variants remain explicit there |
-| `src/features/github/github-pull-request-auto-merge.tsx` | Pending | Pending |
-| `src/features/github/github-pull-request-base-edit.tsx` | Pending | Pending |
-| `src/features/github/github-pull-request-branch-update.tsx` | Pending | Pending |
-| `src/features/github/github-pull-request-checks.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
-| `src/features/github/github-pull-request-commits.tsx` | Pending | Pending |
-| `src/features/github/github-pull-request-create.tsx` | Pending | Pending |
-| `src/features/github/github-pull-request-detail.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
-| `src/features/github/github-pull-request-edit-dialog.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
-| `src/features/github/github-pull-request-file-view-state.tsx` | Pending | Pending |
-| `src/features/github/github-pull-request-files-error.tsx` | Pending | Pending |
-| `src/features/github/github-pull-request-files.tsx` | Pending | Pending |
+| `src/features/github/github-pull-request-auto-merge.tsx` | Audited shared materials, metadata and retained-state feedback | PR lifecycle/review matrix in UI_VERIFICATION.md; native material gate remains |
+| `src/features/github/github-pull-request-base-edit.tsx` | Audited shared materials, metadata and retained-state feedback | PR lifecycle/review matrix in UI_VERIFICATION.md; native material gate remains |
+| `src/features/github/github-pull-request-branch-update.tsx` | Audited shared materials, metadata and retained-state feedback | PR lifecycle/review matrix in UI_VERIFICATION.md; native material gate remains |
+| `src/features/github/github-pull-request-checks.tsx` | Audited shared PR surfaces, controls and readable metadata | PR core/lifecycle/review/inline matrices and applicable state checks in UI_VERIFICATION.md |
+| `src/features/github/github-pull-request-commits.tsx` | Audited shared materials, metadata and retained-state feedback | PR lifecycle/review matrix in UI_VERIFICATION.md; native material gate remains |
+| `src/features/github/github-pull-request-create.tsx` | Audited shared materials, metadata and retained-state feedback | PR lifecycle/review matrix in UI_VERIFICATION.md; native material gate remains |
+| `src/features/github/github-pull-request-detail.tsx` | Audited shared PR surfaces, controls and readable metadata | PR core/lifecycle/review/inline matrices and applicable state checks in UI_VERIFICATION.md |
+| `src/features/github/github-pull-request-edit-dialog.tsx` | Audited shared PR surfaces, controls and readable metadata | PR core/lifecycle/review/inline matrices and applicable state checks in UI_VERIFICATION.md |
+| `src/features/github/github-pull-request-file-view-state.tsx` | Audited shared materials, metadata and retained-state feedback | PR lifecycle/review matrix in UI_VERIFICATION.md; native material gate remains |
+| `src/features/github/github-pull-request-files-error.tsx` | Audited shared materials, metadata and retained-state feedback | PR lifecycle/review matrix in UI_VERIFICATION.md; native material gate remains |
+| `src/features/github/github-pull-request-files.tsx` | Audited shared materials, metadata and retained-state feedback | PR lifecycle/review matrix in UI_VERIFICATION.md; native material gate remains |
 | `src/features/github/github-pull-request-inbox.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
-| `src/features/github/github-pull-request-inline-comment.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
-| `src/features/github/github-pull-request-lifecycle.tsx` | Pending | Pending |
-| `src/features/github/github-pull-request-maintainer-editability.tsx` | Pending | Pending |
-| `src/features/github/github-pull-request-merge-panel.tsx` | Pending | Pending |
-| `src/features/github/github-pull-request-merge-queue.tsx` | Pending | Pending |
-| `src/features/github/github-pull-request-metadata.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
-| `src/features/github/github-pull-request-review-dialog.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
-| `src/features/github/github-pull-request-review-dismissal.tsx` | Pending | Pending |
-| `src/features/github/github-pull-request-review-thread.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
-| `src/features/github/github-pull-request-reviewers.tsx` | Pending | Pending |
-| `src/features/github/github-pull-request-row.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
-| `src/features/github/github-pull-request-shared.tsx` | Pending | Pending |
-| `src/features/github/github-pull-request-view.tsx` | Query-specific scroll recovery integrated | Repository Issue list captured; remaining filter/action states pending |
+| `src/features/github/github-pull-request-inline-comment.tsx` | Audited shared PR surfaces, controls and readable metadata | PR core/lifecycle/review/inline matrices and applicable state checks in UI_VERIFICATION.md |
+| `src/features/github/github-pull-request-lifecycle.tsx` | Audited shared materials, metadata and retained-state feedback | PR lifecycle/review matrix in UI_VERIFICATION.md; native material gate remains |
+| `src/features/github/github-pull-request-maintainer-editability.tsx` | Audited shared materials, metadata and retained-state feedback | PR lifecycle/review matrix in UI_VERIFICATION.md; native material gate remains |
+| `src/features/github/github-pull-request-merge-panel.tsx` | Audited shared materials, metadata and retained-state feedback | PR lifecycle/review matrix in UI_VERIFICATION.md; native material gate remains |
+| `src/features/github/github-pull-request-merge-queue.tsx` | Audited shared materials, metadata and retained-state feedback | PR lifecycle/review matrix in UI_VERIFICATION.md; native material gate remains |
+| `src/features/github/github-pull-request-metadata.tsx` | Audited shared PR surfaces, controls and readable metadata | PR core/lifecycle/review/inline matrices and applicable state checks in UI_VERIFICATION.md |
+| `src/features/github/github-pull-request-review-dialog.tsx` | Audited shared PR surfaces, controls and readable metadata | PR core/lifecycle/review/inline matrices and applicable state checks in UI_VERIFICATION.md |
+| `src/features/github/github-pull-request-review-dismissal.tsx` | Audited shared materials, metadata and retained-state feedback | PR lifecycle/review matrix in UI_VERIFICATION.md; native material gate remains |
+| `src/features/github/github-pull-request-review-thread.tsx` | Audited shared PR surfaces, controls and readable metadata | PR core/lifecycle/review/inline matrices and applicable state checks in UI_VERIFICATION.md |
+| `src/features/github/github-pull-request-reviewers.tsx` | Audited shared materials, metadata and retained-state feedback | PR lifecycle/review matrix in UI_VERIFICATION.md; native material gate remains |
+| `src/features/github/github-pull-request-row.tsx` | Audited shared PR surfaces, controls and readable metadata | PR core/lifecycle/review/inline matrices and applicable state checks in UI_VERIFICATION.md |
+| `src/features/github/github-pull-request-shared.tsx` | Audited shared materials, metadata and retained-state feedback | PR lifecycle/review matrix in UI_VERIFICATION.md; native material gate remains |
+| `src/features/github/github-pull-request-view.tsx` | Audited shared PR surfaces, controls and readable metadata | PR core/lifecycle/review/inline matrices and applicable state checks in UI_VERIFICATION.md |
 | `src/features/github/github-reaction-bar.tsx` | Pending | Pending |
 | `src/features/github/github-reactions-provider.tsx` | Pending | Pending |
 | `src/features/github/github-readme.tsx` | Pending | Pending |

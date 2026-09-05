@@ -222,11 +222,11 @@ function GitHubChecksResult({
                     />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[12px] font-medium">{check.name}</p>
-                      <p className="text-muted-foreground mt-0.5 line-clamp-1 text-[10px]">
+                      <p className="text-muted-foreground mt-0.5 text-[11px] leading-5">
                         {check.description ?? t(`workspace.repositories.checkBuckets.${bucket}`)}
                       </p>
                     </div>
-                    <Badge variant="outline" className="shrink-0 rounded-md text-[9px]">
+                    <Badge variant="outline" className="shrink-0 rounded-md text-[11px]">
                       {t(`workspace.repositories.checkBuckets.${bucket}`)}
                     </Badge>
                     {check.url ? (

@@ -84,3 +84,9 @@ Code/source lines use 13 px monospace, and the shared `harbor-diff` uses 12 px. 
 Issue relationships use `GitHubIssueRelatedIssueRow` with a shrinking, wrapping button so sibling controls stay inside the section. `GitHubIssueRelationLoadError` accepts `stale` for retained records and delegates that state to `WorkspaceStaleNotice`. `GitHubTitleBodyForm.submitDisabled` blocks submission without discarding or disabling draft inputs; `pending` remains the actual mutation state.
 
 `CardHeader` uses implicit grid rows and caller-supplied border padding. Small `AlertDialog` footers stack primary/cancel actions and allow long labels to wrap. Auto-focusing forms should connect their opener with `DialogTrigger asChild`; the shared close-focus hook covers controlled openers when focus has not already moved into the dialog before Radix's mount event.
+
+PR creation reuses `GitHubTitleBodyForm.submitDisabled` to retain input after a failed branch/comparison refresh. Keep its key tied to the selected branch pair, not refreshed title suggestions. `WorkspaceStaleNotice.retryDisabled` preserves an existing pending-action lock when a consumer needs one.
+
+The cmdk 1.1.1 patch in `patches/` maintains an item-id registry for asynchronous option selection. It changes no component API. `Command` roots in the base-branch/reviewer dialogs supply a localized search label; keyboard tests assert `aria-activedescendant` points to the selected option. See `patches/README.md` for upstream attribution and removal criteria.
+
+`?pr=` selects controlled PR read states in ui-preview: draft/closed/merged/conflicts/unknown, queue-available/queue-waiting/queue-queued/queue-unavailable, auto-enabled, branch-conflicts, maintainer-available/maintainer-risk, pending-review/outdated-review, thread-resolved/thread-outdated, view-dismissed and reviewed. Scoped `state=loading|error&commands=<mutation>` safely exercises pending/error controls without reaching business IPC.

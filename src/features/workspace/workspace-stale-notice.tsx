@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 export function WorkspaceStaleNotice({
   message,
   onRetry,
+  retryDisabled = false,
 }: {
   message: string;
   onRetry: () => void;
+  retryDisabled?: boolean;
 }) {
   const { t } = useTranslation();
   return (
@@ -17,7 +19,7 @@ export function WorkspaceStaleNotice({
       <AlertTitle>{t("common.staleResults")}</AlertTitle>
       <AlertDescription className="flex min-w-0 flex-wrap items-center gap-3">
         <span className="min-w-0 flex-1 break-words">{message}</span>
-        <Button variant="outline" size="xs" onClick={onRetry}>
+        <Button variant="outline" size="xs" onClick={onRetry} disabled={retryDisabled}>
           {t("common.retry")}
         </Button>
       </AlertDescription>

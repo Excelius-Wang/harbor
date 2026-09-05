@@ -140,12 +140,60 @@ export function workspaceFixture(
   command: string,
   args: Record<string, unknown>,
   repositories: GitHubRepository[],
-  empty: boolean
+  empty: boolean,
+  pullRequestScenario: string | null = null
 ): unknown {
   const repository = repositories.find((repo) => repo.name === args.repository) ?? repositories[0];
   const number = Number(args.issueNumber ?? args.pullRequestNumber ?? args.number ?? 1);
   const currentIssue = issue(number, repository);
-  const currentPull = pullRequest(number, repository);
+  const pullOverrides: Record<string, Partial<GitHubPullRequest>> = {
+    reviewed: { requestedReviewers: [] },
+    draft: { draft: true },
+    closed: { state: "closed", closedAt: timestamp },
+    merged: { state: "closed", merged: true, mergedBy: "harbor-preview", mergedAt: timestamp },
+    conflicts: { mergeable: false, mergeableState: "dirty" },
+    unknown: { mergeable: null, mergeableState: "unknown" },
+  };
+  const currentPull = {
+    ...pullRequest(number, repository),
+    ...pullOverrides[pullRequestScenario ?? ""],
+  };
+  const queueStates: Record<string, GitHubData.GitHubPullRequestMergeQueueState> = {
+    "queue-available": "available",
+    "queue-waiting": "waiting",
+    "queue-queued": "queued",
+    "queue-unavailable": "unavailable",
+  };
+  const queueState = queueStates[pullRequestScenario ?? ""] ?? "notConfigured";
+  const autoMergeEnabled = pullRequestScenario === "auto-enabled";
+  const maintainerAvailable = pullRequestScenario?.startsWith("maintainer-") ?? false;
+  const reviews: GitHubData.GitHubPullRequestReview[] = empty
+    ? []
+    : [
+        {
+          id: 501,
+          nodeId: "PRR_preview_501",
+          author: "alex-morgan",
+          authorAssociation: "MEMBER",
+          state: "changesRequested",
+          body: "Keep the review controls reachable when the pane is narrow.",
+          url: `${repository.url}/pull/${number}#pullrequestreview-501`,
+          commitId: sha,
+          submittedAt: timestamp,
+        },
+      ];
+  const commits: GitHubData.GitHubCommit[] = empty
+    ? []
+    : [
+        {
+          ...overview.commits[0],
+          message: "Unify workspace surfaces",
+          authorLogin: "harbor-preview",
+          authorAvatarUrl: null,
+          committedAt: timestamp,
+          verified: true,
+        },
+      ];
   const items = empty
     ? []
     : Array.from({ length: 6 }, (_, index) =>
@@ -192,7 +240,7 @@ export function workspaceFixture(
         viewerOwnsRepository: true,
       };
     case "github_get_repository_code_overview":
-      return overview;
+      return empty ? { ...overview, branches: [], commits: [], tags: [] } : overview;
     case "github_list_repository_contents":
       return { entries: empty ? [] : args.path ? entries.slice(2) : entries };
     case "github_get_repository_file":
@@ -225,7 +273,7 @@ export function workspaceFixture(
       return {
         pullRequest: currentPull,
         timeline,
-        reviews: [],
+        reviews,
         reviewsHaveMore: false,
         timelinePage: 1,
         timelineHasPrevious: false,
@@ -233,31 +281,46 @@ export function workspaceFixture(
       };
     case "github_get_repository_pull_request_branch_update_status":
       return {
-        state: "upToDate",
+        state: pullRequestScenario === "branch-conflicts" ? "conflicts" : "available",
         headSha: sha,
-        behindBy: 0,
+        behindBy: 3,
       } satisfies GitHubData.GitHubPullRequestBranchUpdateStatus;
     case "github_get_repository_pull_request_merge_queue_status":
       return {
-        state: "notConfigured",
+        state: queueState,
         headSha: sha,
         baseRef: "main",
-        viewerCanEnqueue: false,
-        viewerCanDequeue: false,
+        viewerCanEnqueue: queueState === "available",
+        viewerCanDequeue: queueState === "queued",
+        entry:
+          queueState === "queued"
+            ? {
+                id: "MQE_preview",
+                position: 2,
+                state: "awaitingChecks",
+                enqueuedAt: timestamp,
+                enqueuedBy: "alex-morgan",
+                estimatedTimeToMergeSeconds: 240,
+                headSha: sha,
+                jump: false,
+              }
+            : undefined,
       } satisfies GitHubData.GitHubPullRequestMergeQueueStatus;
     case "github_get_repository_pull_request_auto_merge_status":
       return {
-        state: "available",
+        state: autoMergeEnabled ? "enabled" : "available",
         headSha: sha,
         allowedMergeMethods: ["merge", "squash", "rebase"],
-        viewerCanEnable: true,
-        viewerCanDisable: false,
+        viewerCanEnable: !autoMergeEnabled,
+        viewerCanDisable: autoMergeEnabled,
+        mergeMethod: autoMergeEnabled ? "squash" : undefined,
+        enabledBy: autoMergeEnabled ? "alex-morgan" : undefined,
       } satisfies GitHubData.GitHubPullRequestAutoMergeStatus;
     case "github_get_repository_pull_request_maintainer_editability":
       return {
         pullRequest: currentPull,
-        state: "sameRepository",
-        workflowRisk: "absent",
+        state: maintainerAvailable ? "available" : "sameRepository",
+        workflowRisk: pullRequestScenario === "maintainer-risk" ? "present" : "absent",
         pullRequestId: number,
         pullRequestNodeId: `PR_preview_${number}`,
         pullRequestNumber: number,
@@ -265,12 +328,15 @@ export function workspaceFixture(
         authorLogin: "harbor-preview",
         viewerId: 1,
         currentValue: false,
-        draft: false,
-        merged: false,
+        draft: currentPull.draft,
+        merged: currentPull.merged,
         baseRepositoryId: repository.id,
         baseRepository: repository.fullName,
-        headRepositoryId: repository.id,
-        headRepository: repository.fullName,
+        headRepositoryId: maintainerAvailable ? 100 : repository.id,
+        headRepository: maintainerAvailable ? "contributor/harbor" : repository.fullName,
+        headRepositoryOwnerType: "User",
+        headRepositoryFork: maintainerAvailable,
+        headRepositoryPrivate: false,
         headRef: currentPull.headRef,
         headSha: sha,
       } satisfies GitHubData.GitHubPullRequestMaintainerEditability;
@@ -278,44 +344,144 @@ export function workspaceFixture(
     case "github_list_repository_commits":
       return {
         ...pagination,
-        commits: empty
+        commits,
+      } satisfies GitHubData.GitHubRepositoryCommitPage;
+    case "github_list_repository_pull_request_reviews":
+      return {
+        reviews,
+        page: 1,
+        hasPrevious: false,
+        hasMore: false,
+      } satisfies GitHubData.GitHubPullRequestReviewPage;
+    case "github_list_repository_pull_request_review_teams":
+      return {
+        teams: empty
           ? []
           : [
               {
-                ...overview.commits[0],
-                message: "Unify workspace surfaces",
-                authorLogin: "harbor-preview",
-                authorAvatarUrl: null,
-                committedAt: timestamp,
-                verified: true,
+                name: "Workspace maintainers",
+                slug: "workspace-maintainers",
+                description: "Review workspace behavior and accessibility.",
               },
             ],
-      } satisfies GitHubData.GitHubRepositoryCommitPage;
+      } satisfies GitHubData.GitHubPullRequestReviewTeamPage;
+    case "github_list_repository_pull_request_base_branches":
+      return {
+        pullRequestNumber: number,
+        currentBase: "main",
+        currentBaseSha: sha,
+        headSha: sha,
+        branches: empty
+          ? []
+          : [...overview.branches, { name: "release/0.2", sha, protected: true }],
+        page: 1,
+        hasPrevious: false,
+        hasMore: false,
+      } satisfies GitHubData.GitHubPullRequestBaseBranchPage;
+    case "github_compare_repository_pull_request_branches":
+      return {
+        base: String(args.base ?? "main"),
+        head: String(args.head ?? "feature/workspace-surfaces"),
+        status: empty ? "identical" : "ahead",
+        aheadBy: commits.length,
+        behindBy: 0,
+        totalCommits: commits.length,
+        changedFiles: empty ? 0 : 1,
+        additions: empty ? 0 : 18,
+        deletions: empty ? 0 : 7,
+        commits,
+        suggestedTitle: "Unify workspace surfaces",
+      } satisfies GitHubData.GitHubPullRequestComparison;
     case "github_list_pull_request_files":
       return {
         ...pagination,
-        files: [
-          {
-            path: "src/workspace.ts",
-            sha,
-            status: "modified",
-            additions: 2,
-            deletions: 1,
-            changes: 3,
-            patch:
-              '@@ -1,3 +1,4 @@\n export function workspaceTitle(name: string) {\n-  return name;\n+  const title = name.trim();\n+  return title || "Harbor";\n }',
-          },
-        ],
+        files: empty
+          ? []
+          : [
+              {
+                path: "src/workspace.ts",
+                sha,
+                status: "modified",
+                additions: 2,
+                deletions: 1,
+                changes: 3,
+                patch:
+                  '@@ -1,3 +1,4 @@\n export function workspaceTitle(name: string) {\n-  return name;\n+  const title = name.trim();\n+  return title || "Harbor";\n }',
+              },
+            ],
       } satisfies GitHubData.GitHubPullRequestFilePage;
     case "github_get_repository_pull_request_file_view_states":
       return {
         pullRequestId: `PR_preview_${number}`,
-        files: [{ path: "src/workspace.ts", state: "unviewed" }],
+        files: [
+          {
+            path: "src/workspace.ts",
+            state: pullRequestScenario === "view-dismissed" ? "dismissed" : "unviewed",
+          },
+        ],
       } satisfies GitHubData.GitHubPullRequestFileViewStateSnapshot;
     case "github_list_pull_request_review_threads":
-      return { threads: [], hasMore: false } satisfies GitHubData.GitHubPullRequestReviewThreadPage;
+      return {
+        threads: empty
+          ? []
+          : [
+              {
+                id: "PRRT_preview_1",
+                path: "src/workspace.ts",
+                line: 3,
+                originalLine: 3,
+                side: "right",
+                subjectType: "line",
+                isResolved: pullRequestScenario === "thread-resolved",
+                isOutdated: pullRequestScenario === "thread-outdated",
+                isCollapsed: false,
+                resolvedBy: pullRequestScenario === "thread-resolved" ? "alex-morgan" : undefined,
+                viewerCanReply: true,
+                viewerCanResolve: pullRequestScenario !== "thread-resolved",
+                viewerCanUnresolve: pullRequestScenario === "thread-resolved",
+                comments: [
+                  {
+                    id: "PRRC_preview_1",
+                    databaseId: 701,
+                    author: "alex-morgan",
+                    authorAssociation: "MEMBER",
+                    body: "Please preserve the original title when the request fails.",
+                    url: `${repository.url}/pull/${number}#discussion_r701`,
+                    createdAt: timestamp,
+                    updatedAt: timestamp,
+                    pending: false,
+                    viewerCanUpdate: true,
+                    viewerCanDelete: true,
+                    viewerCanMinimize: true,
+                    isMinimized: false,
+                    outdated: pullRequestScenario === "thread-outdated",
+                  },
+                ],
+                commentsHaveMore: false,
+              },
+            ],
+        hasMore: false,
+      } satisfies GitHubData.GitHubPullRequestReviewThreadPage;
     case "github_get_pending_repository_pull_request_review":
-      return null;
+      return pullRequestScenario === "pending-review" || pullRequestScenario === "outdated-review"
+        ? ({
+            id: 601,
+            nodeId: "PRR_preview_pending",
+            body: "A saved review draft with an inline comment.",
+            commitId: pullRequestScenario === "outdated-review" ? "a".repeat(40) : sha,
+            comments: [
+              {
+                id: "PRRC_preview_pending",
+                databaseId: 801,
+                path: "src/workspace.ts",
+                line: 3,
+                side: "right",
+                body: "Keep this inline draft while reviewing the surrounding change.",
+              },
+            ],
+            uneditableCommentCount: 0,
+          } satisfies GitHubData.GitHubPendingPullRequestReview)
+        : null;
     case "github_list_repository_checks":
       return {
         ...pagination,
