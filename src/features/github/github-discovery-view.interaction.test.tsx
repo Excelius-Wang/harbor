@@ -10,11 +10,15 @@ const tauriApi = vi.hoisted(() => ({
   invoke: vi.fn(),
   isTauri: vi.fn(() => false),
 }));
+const windowApi = vi.hoisted(() => ({
+  openExternalUrl: vi.fn(),
+}));
 
 vi.mock("@tauri-apps/api/core", () => tauriApi);
 vi.mock("@tauri-apps/api/event", () => ({
   listen: vi.fn().mockResolvedValue(() => {}),
 }));
+vi.mock("@/lib/window", () => windowApi);
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }),
 }));
@@ -79,9 +83,20 @@ describe("GitHub discovery navigation", () => {
     expect(
       screen.getByRole("combobox", { name: "workspace.discovery.trendingPeriod" })
     ).toBeTruthy();
+    const discoveryHeader = document.querySelector("header");
+    expect(discoveryHeader).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "workspace.discovery.openTrendingOnGitHub" })
-    ).toBeTruthy();
+      within(discoveryHeader!).queryByRole("button", {
+        name: "workspace.discovery.viewTrendingOnGitHub",
+      })
+    ).toBeNull();
+    const fallback = screen.getByRole("button", {
+      name: "workspace.discovery.viewTrendingOnGitHub",
+    });
+    await user.click(fallback);
+    expect(windowApi.openExternalUrl).toHaveBeenCalledWith(
+      "https://github.com/trending?since=weekly"
+    );
 
     await user.click(screen.getByRole("tab", { name: "workspace.discovery.tabs.feed" }));
     expect(

@@ -744,6 +744,9 @@ export function GitHubDiscoveryView({
     setSelection(nextSelection);
   };
 
+  const openTrendingOnGitHub = () =>
+    openExternalUrl(`https://github.com/trending?since=${trendingPeriod}`);
+
   return (
     <section className="harbor-content flex min-w-0 flex-1 flex-col">
       <header className="harbor-subtle-divider shrink-0 border-b px-6 py-4">
@@ -767,7 +770,7 @@ export function GitHubDiscoveryView({
             </Tabs>
 
             {mode === "trending" ? (
-              <div className="ml-auto flex shrink-0 items-center gap-2">
+              <div className="ml-auto shrink-0">
                 <Select
                   value={trendingPeriod}
                   onValueChange={(value) => {
@@ -792,17 +795,6 @@ export function GitHubDiscoveryView({
                     </SelectGroup>
                   </SelectContent>
                 </Select>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="rounded-[8px] px-3.5"
-                  onClick={() =>
-                    void openExternalUrl(`https://github.com/trending?since=${trendingPeriod}`)
-                  }
-                >
-                  <ExternalLink data-icon="inline-start" />
-                  {t("workspace.discovery.openTrendingOnGitHub")}
-                </Button>
               </div>
             ) : null}
           </div>
@@ -912,10 +904,18 @@ export function GitHubDiscoveryView({
                   <EmptyDescription>{searchError.message}</EmptyDescription>
                 </EmptyHeader>
                 <EmptyContent>
-                  <Button variant="outline" size="sm" onClick={() => void search.refetch()}>
-                    <RefreshCw data-icon="inline-start" />
-                    {t("common.retry")}
-                  </Button>
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    <Button variant="outline" size="sm" onClick={() => void search.refetch()}>
+                      <RefreshCw data-icon="inline-start" />
+                      {t("common.retry")}
+                    </Button>
+                    {mode === "trending" ? (
+                      <Button variant="ghost" size="sm" onClick={() => void openTrendingOnGitHub()}>
+                        <ExternalLink data-icon="inline-start" />
+                        {t("workspace.discovery.viewTrendingOnGitHub")}
+                      </Button>
+                    ) : null}
+                  </div>
                 </EmptyContent>
               </Empty>
             ) : search.isPending || !data ? (
@@ -987,6 +987,18 @@ export function GitHubDiscoveryView({
                             )}
                           </EmptyDescription>
                         </EmptyHeader>
+                        {mode === "trending" ? (
+                          <EmptyContent>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => void openTrendingOnGitHub()}
+                            >
+                              <ExternalLink data-icon="inline-start" />
+                              {t("workspace.discovery.viewTrendingOnGitHub")}
+                            </Button>
+                          </EmptyContent>
+                        ) : null}
                       </Empty>
                     )}
                   </ScrollArea>

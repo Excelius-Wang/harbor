@@ -69,10 +69,10 @@
         "weekly": "This week",
         "monthly": "This month"
       },
-      "openTrendingOnGitHub": "GitHub Trending",
+      "viewTrendingOnGitHub": "View on GitHub",
       "trendingMethod": "Public repositories created in this period, ranked by stars",
       "emptyTrending": "No trending repositories found",
-      "emptyTrendingDescription": "Try a wider time range or open GitHub Trending.",
+      "emptyTrendingDescription": "Try a wider time range or continue on GitHub.",
       "loading": "Loading updated discovery results",
       "sort": {
         "bestMatch": "Best match",

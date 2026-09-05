@@ -69,10 +69,10 @@
         "weekly": "本周",
         "monthly": "本月"
       },
-      "openTrendingOnGitHub": "GitHub 热门",
+      "viewTrendingOnGitHub": "在 GitHub 查看",
       "trendingMethod": "所选时间内新建的公开仓库，按星标数排序",
       "emptyTrending": "没有找到热门仓库",
-      "emptyTrendingDescription": "可以扩大时间范围，或者打开 GitHub 热门页查看。",
+      "emptyTrendingDescription": "可以扩大时间范围，或者前往 GitHub 继续查看。",
       "loading": "正在加载新的发现结果",
       "sort": {
         "bestMatch": "最匹配",
