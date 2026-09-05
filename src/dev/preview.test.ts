@@ -25,6 +25,12 @@ describe("UI preview isolation", () => {
     });
   });
 
+  it("keeps a known null response distinct from a missing fixture", async () => {
+    vi.stubGlobal("isTauri", false);
+    installPreview();
+    await expect(invoke("github_get_pending_repository_pull_request_review")).resolves.toBeNull();
+  });
+
   it("forwards native window calls while keeping business calls inside the preview", async () => {
     const nativeIPC = vi.fn().mockResolvedValue(false);
     vi.stubGlobal("isTauri", true);

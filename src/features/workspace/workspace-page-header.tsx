@@ -4,11 +4,13 @@ import { cn } from "@/lib/utils";
 export function WorkspacePageHeader({
   title,
   description,
+  leading,
   children,
   contained = false,
 }: {
   title: string;
   description?: string;
+  leading?: ReactNode;
   children?: ReactNode;
   contained?: boolean;
 }) {
@@ -20,11 +22,14 @@ export function WorkspacePageHeader({
           contained && "mx-auto w-full max-w-[1120px]"
         )}
       >
-        <div className="min-w-0">
-          <h1 className="text-2xl leading-7 font-semibold tracking-tight">{title}</h1>
-          {description ? (
-            <p className="text-muted-foreground mt-1 text-[11px] leading-4">{description}</p>
-          ) : null}
+        <div className="flex min-w-0 items-center gap-3">
+          {leading}
+          <div className="min-w-0">
+            <h1 className="text-2xl leading-7 font-semibold tracking-tight">{title}</h1>
+            {description ? (
+              <p className="text-muted-foreground mt-1 text-[11px] leading-4">{description}</p>
+            ) : null}
+          </div>
         </div>
         {children ? (
           <div className="flex shrink-0 flex-wrap items-center gap-2">{children}</div>

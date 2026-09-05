@@ -6,6 +6,7 @@ import { XIcon } from "lucide-react"
 import { Dialog as SheetPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
+import { useOverlayFocusReturn } from "@/hooks/use-overlay-focus-return"
 
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />
@@ -47,6 +48,8 @@ function SheetOverlay({
 
 function SheetContent({
   className,
+  onOpenAutoFocus,
+  onCloseAutoFocus,
   children,
   side = "right",
   showCloseButton = true,
@@ -56,6 +59,7 @@ function SheetContent({
   showCloseButton?: boolean
 }) {
   const { t } = useTranslation()
+  const focusReturn = useOverlayFocusReturn({ onOpenAutoFocus, onCloseAutoFocus })
   return (
     <SheetPortal>
       <SheetOverlay />
@@ -74,6 +78,7 @@ function SheetContent({
           className
         )}
         {...props}
+        {...focusReturn}
       >
         {children}
         {showCloseButton && (

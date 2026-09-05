@@ -102,7 +102,7 @@ export function GitHubProfileEditorDialog({
                 disabled={pending}
                 onChange={(event) => update("bio", event.currentTarget.value)}
               />
-              <span className="text-muted-foreground text-right text-[10px] tabular-nums">
+              <span className="text-muted-foreground text-right text-[11px] tabular-nums">
                 {form.bio.length}/160
               </span>
             </Field>

@@ -224,8 +224,8 @@ export function GitHubGistEditorDialog({
 
           <div className="space-y-3">
             {activeFiles.map((file, index) => (
-              <section key={file.key} className="overflow-hidden rounded-lg border">
-                <header className="bg-muted/25 flex items-center gap-2 border-b p-2">
+              <section key={file.key} className="harbor-reading overflow-hidden rounded-lg border">
+                <header className="harbor-subtle-divider flex items-center gap-2 border-b p-2">
                   <FilePlus2 className="text-muted-foreground size-4 shrink-0" />
                   <Input
                     aria-label={t("workspace.gists.fileName", { number: index + 1 })}
@@ -242,6 +242,7 @@ export function GitHubGistEditorDialog({
                     variant="ghost"
                     size="icon-sm"
                     aria-label={t("workspace.gists.removeFile", { name: file.filename })}
+                    title={t("workspace.gists.removeFile", { name: file.filename })}
                     disabled={pending || activeFiles.length <= 1}
                     onClick={() => removeFile(file)}
                   >
@@ -252,7 +253,7 @@ export function GitHubGistEditorDialog({
                   aria-label={t("workspace.gists.fileContent", { name: file.filename })}
                   value={file.content}
                   disabled={pending}
-                  className="min-h-44 resize-y rounded-none border-0 bg-transparent font-mono text-xs shadow-none focus-visible:ring-0"
+                  className="min-h-44 resize-y rounded-none border-0 bg-transparent font-mono text-[13px] shadow-none focus-visible:ring-inset"
                   onChange={(event) => updateFile(file.key, { content: event.currentTarget.value })}
                 />
               </section>

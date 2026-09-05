@@ -487,9 +487,9 @@ function ProjectFieldControl({
     return (
       <FieldGroup>
         <Field>
-          <FieldLabel>{field.name}</FieldLabel>
+          <FieldLabel htmlFor={`project-field-${field.id}`}>{field.name}</FieldLabel>
           <Select value={selected[0]} onValueChange={(next) => onSelectedChange([next])}>
-            <SelectTrigger>
+            <SelectTrigger id={`project-field-${field.id}`}>
               <SelectValue placeholder={t("workspace.projects.selectValue")} />
             </SelectTrigger>
             <SelectContent>

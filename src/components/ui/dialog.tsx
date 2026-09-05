@@ -6,6 +6,7 @@ import { XIcon } from "lucide-react"
 import { Dialog as DialogPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
+import { useOverlayFocusReturn } from "@/hooks/use-overlay-focus-return"
 import { Button } from "@/components/ui/button"
 
 function Dialog({
@@ -50,6 +51,8 @@ function DialogOverlay({
 
 function DialogContent({
   className,
+  onOpenAutoFocus,
+  onCloseAutoFocus,
   children,
   showCloseButton = true,
   ...props
@@ -57,6 +60,7 @@ function DialogContent({
   showCloseButton?: boolean
 }) {
   const { t } = useTranslation()
+  const focusReturn = useOverlayFocusReturn({ onOpenAutoFocus, onCloseAutoFocus })
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
@@ -67,6 +71,7 @@ function DialogContent({
           className
         )}
         {...props}
+        {...focusReturn}
       >
         {children}
         {showCloseButton && (
@@ -101,6 +106,7 @@ function DialogFooter({
 }: React.ComponentProps<"div"> & {
   showCloseButton?: boolean
 }) {
+  const { t } = useTranslation()
   return (
     <div
       data-slot="dialog-footer"
@@ -113,7 +119,7 @@ function DialogFooter({
       {children}
       {showCloseButton && (
         <DialogPrimitive.Close asChild>
-          <Button variant="outline">Close</Button>
+          <Button variant="outline">{t("common.close")}</Button>
         </DialogPrimitive.Close>
       )}
     </div>

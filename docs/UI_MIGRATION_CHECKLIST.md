@@ -27,7 +27,7 @@ Status: in progress. A source inventory is not visual acceptance. Every row belo
 | Entry | Owned scope | Migration / visual evidence |
 | --- | --- | --- |
 | Workspace | Window/title bar, primary navigation, More menu, command palette, context rail and Agent sheet | Pending |
-| Notifications | Inbox, filters, retained results, target detail | Pending |
+| Notifications | Inbox, filters, retained results, target detail | Inbox matrix, stale notice and mark-all dialog verified; destination variants/invitations pending |
 | Issues | Inbox/repository lists, details, timeline, metadata, relationships, all actions/forms | Inbox/detail/edit/preview and return checks done; advanced actions still pending |
 | Pull requests | Inbox/repository lists, details, commits, files/diff, reviews, checks, merge/lifecycle forms | Inbox/conversation/checks/files/review dialog captured; advanced review/lifecycle pending |
 | Repositories | Owned/starred lists, create/access/invitations, repository shell and tabs | Core browser, code and create-form capture done; other tabs/actions pending |
@@ -40,10 +40,10 @@ Status: in progress. A source inventory is not visual acceptance. Every row belo
 | Security | Alert lists/details and actions | Pending |
 | Insights | Charts, summaries, loading/empty/error | Pending |
 | Repository settings | General/access/topics/taxonomy/pages/invitations and forms | Pending |
-| Projects | Lists/detail fields/items and dialogs | Pending |
-| Gists | Lists/detail/editor and files/comments | Pending |
-| Packages | Lists/details and actions | Pending |
-| Profile/account | Profile data/edit, connection/authentication dialogs | Pending |
+| Projects | Lists/detail fields/items and dialogs | Table/board/roadmap and create/add/settings/status dialogs verified; remaining field/draft action variants pending |
+| Gists | Lists/detail/editor and files/comments | List/files/revisions/comments, editor/delete and stale/return matrix verified; mutation state variants pending |
+| Packages | Lists/details and actions | List/detail/version-delete dialog and stale matrix verified; restore/mutation variants pending |
+| Profile/account | Profile data/edit, connection/authentication dialogs | Profile/read/edit matrix verified; authentication and follow-failure feedback pending |
 | Settings window | Theme/language/shortcut/account controls | Pending |
 | About/update | Version/release info, progress, error, update dialogs/toasts | Pending |
 | Third-party web | Preserve third-party presentation; inspect Harbor launch/switch controls | Pending |
@@ -157,9 +157,9 @@ Generated from existing JSX-bearing production files at task start. Each file mu
 | `src/features/github/github-file-blame.tsx` | Pending | Pending |
 | `src/features/github/github-file-diff.tsx` | Pending | Pending |
 | `src/features/github/github-file-preview.tsx` | Pending | Pending |
-| `src/features/github/github-gist-detail.tsx` | Pending | Pending |
-| `src/features/github/github-gist-editor-dialog.tsx` | Pending | Pending |
-| `src/features/github/github-gist-view.tsx` | Pending | Pending |
+| `src/features/github/github-gist-detail.tsx` | Audited and migrated in Notifications/More batch | Core matrix and listed dialogs/states in UI_VERIFICATION.md; advanced variants remain explicit there |
+| `src/features/github/github-gist-editor-dialog.tsx` | Audited and migrated in Notifications/More batch | Core matrix and listed dialogs/states in UI_VERIFICATION.md; advanced variants remain explicit there |
+| `src/features/github/github-gist-view.tsx` | Audited and migrated in Notifications/More batch | Core matrix and listed dialogs/states in UI_VERIFICATION.md; advanced variants remain explicit there |
 | `src/features/github/github-insights-view.tsx` | Pending | Pending |
 | `src/features/github/github-issue-clone-action.tsx` | Pending | Pending |
 | `src/features/github/github-issue-convert-discussion-action.tsx` | Pending | Pending |
@@ -192,14 +192,14 @@ Generated from existing JSX-bearing production files at task start. Each file mu
 | `src/features/github/github-issue-type-action.tsx` | Pending | Pending |
 | `src/features/github/github-issue-view.tsx` | Query-specific scroll recovery integrated | Repository Issue list captured; remaining filter/action states pending |
 | `src/features/github/github-markdown-editor.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
-| `src/features/github/github-notifications.tsx` | Pending | Pending |
-| `src/features/github/github-packages-view.tsx` | Pending | Pending |
+| `src/features/github/github-notifications.tsx` | Audited and migrated in Notifications/More batch | Core matrix and listed dialogs/states in UI_VERIFICATION.md; advanced variants remain explicit there |
+| `src/features/github/github-packages-view.tsx` | Audited and migrated in Notifications/More batch | Core matrix and listed dialogs/states in UI_VERIFICATION.md; advanced variants remain explicit there |
 | `src/features/github/github-pinned-issues.tsx` | Pending | Pending |
-| `src/features/github/github-profile-editor-dialog.tsx` | Pending | Pending |
-| `src/features/github/github-profile-view.tsx` | Pending | Pending |
-| `src/features/github/github-project-dialogs.tsx` | Pending | Pending |
-| `src/features/github/github-project-shared.tsx` | Pending | Pending |
-| `src/features/github/github-project-view.tsx` | Pending | Pending |
+| `src/features/github/github-profile-editor-dialog.tsx` | Audited and migrated in Notifications/More batch | Core matrix and listed dialogs/states in UI_VERIFICATION.md; advanced variants remain explicit there |
+| `src/features/github/github-profile-view.tsx` | Audited and migrated in Notifications/More batch | Core matrix and listed dialogs/states in UI_VERIFICATION.md; advanced variants remain explicit there |
+| `src/features/github/github-project-dialogs.tsx` | Audited and migrated in Notifications/More batch | Core matrix and listed dialogs/states in UI_VERIFICATION.md; advanced variants remain explicit there |
+| `src/features/github/github-project-shared.tsx` | Audited; existing semantic option colors retained | Board/table/roadmap and field-edit captures |
+| `src/features/github/github-project-view.tsx` | Audited and migrated in Notifications/More batch | Core matrix and listed dialogs/states in UI_VERIFICATION.md; advanced variants remain explicit there |
 | `src/features/github/github-pull-request-auto-merge.tsx` | Pending | Pending |
 | `src/features/github/github-pull-request-base-edit.tsx` | Pending | Pending |
 | `src/features/github/github-pull-request-branch-update.tsx` | Pending | Pending |
@@ -258,3 +258,7 @@ Generated from existing JSX-bearing production files at task start. Each file mu
 ## Repository batch evidence
 
 See [UI_VERIFICATION.md](UI_VERIFICATION.md) for exact captures and scope limits. `pnpm check` passes 458 tests. Core lists use shared page headers and result rows; body/editor surfaces use stable cool fills. Issue/PR inbox stale results are explicitly labeled. Returning from details now restores scroll per query, with browser and integration regression evidence. Remaining pages/actions must still be checked individually.
+
+## Notifications and More batch
+
+The five entry pages and 48 core view captures, 40 action-dialog captures, 15 Chinese state captures and five stale captures are recorded in [UI_VERIFICATION.md](UI_VERIFICATION.md). Shared controlled-overlay focus return was fixed after a real keyboard reproduction. These checks do not close the native, authentication, advanced repository/action or external review gates.

@@ -1,3 +1,5 @@
+import { WorkspacePageHeader } from "@/features/workspace/workspace-page-header";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { useEffect, useMemo, useState } from "react";
 import { isTauri } from "@tauri-apps/api/core";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -174,11 +176,10 @@ function ProjectListRow({
       type="button"
       variant="ghost"
       onClick={onSelect}
+      aria-current={selected ? "true" : undefined}
       className={cn(
-        "h-auto w-full justify-start rounded-lg border px-3 py-3 text-left whitespace-normal",
-        selected
-          ? "border-primary/30 bg-primary/8 hover:bg-primary/10"
-          : "hover:border-border hover:bg-muted/35 border-transparent"
+        "harbor-result-row h-auto w-full justify-start rounded-md border border-transparent px-3 py-3 text-left whitespace-normal",
+        selected && "harbor-row-selected"
       )}
     >
       <span className="flex min-w-0 flex-1 flex-col items-start gap-2">
@@ -190,10 +191,10 @@ function ProjectListRow({
             </Badge>
           ) : null}
         </span>
-        <span className="text-muted-foreground line-clamp-2 text-xs leading-5">
+        <span className="text-muted-foreground text-[13px] leading-5 font-normal">
           {project.shortDescription || t("workspace.projects.noDescription")}
         </span>
-        <span className="text-muted-foreground flex flex-wrap items-center gap-2 text-[10px]">
+        <span className="text-muted-foreground flex flex-wrap items-center gap-2 text-[11px]">
           <span>{t("workspace.projects.itemCount", { count: project.itemCount })}</span>
           <ProjectVisibilityBadge isPublic={project.public} />
           <span>{formatIssueDate(project.updatedAt, locale)}</span>
@@ -222,7 +223,7 @@ export function GitHubProjects() {
   const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [wideLayout, setWideLayout] = useState(
-    () => window.matchMedia("(min-width: 1180px)").matches
+    () => window.matchMedia("(min-width: 80rem)").matches
   );
   const result = useInfiniteQuery({
     ...personalProjectsQueryOptions({ state, query, sort }),
@@ -248,7 +249,7 @@ export function GitHubProjects() {
       : null;
 
   useEffect(() => {
-    const media = window.matchMedia("(min-width: 1180px)");
+    const media = window.matchMedia("(min-width: 80rem)");
     const updateLayout = () => setWideLayout(media.matches);
     updateLayout();
     media.addEventListener("change", updateLayout);
@@ -265,35 +266,28 @@ export function GitHubProjects() {
 
   return (
     <section className="harbor-content @container/projects flex min-w-0 flex-1 flex-col">
-      <header className="flex h-[74px] shrink-0 items-center justify-between gap-4 border-b px-5">
-        <div>
-          <p className="text-primary/80 text-[10px] font-medium tracking-[0.14em] uppercase">
-            {t("workspace.projects.eyebrow")}
-          </p>
-          <h1 className="mt-0.5 text-xl font-semibold tracking-[-0.03em]">
-            {t("workspace.nav.projects")}
-          </h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => void result.refetch()}
-            disabled={!desktopRuntime || result.isFetching}
-          >
-            {result.isFetching ? (
-              <Spinner data-icon="inline-start" />
-            ) : (
-              <RefreshCw data-icon="inline-start" />
-            )}
-            {t("common.refresh")}
-          </Button>
-          <Button size="sm" onClick={() => setCreateOpen(true)} disabled={!desktopRuntime}>
-            <Plus data-icon="inline-start" />
-            {t("workspace.projects.newProject")}
-          </Button>
-        </div>
-      </header>
+      <WorkspacePageHeader
+        title={t("workspace.nav.projects")}
+        description={t("workspace.projects.eyebrow")}
+      >
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => void result.refetch()}
+          disabled={!desktopRuntime || result.isFetching}
+        >
+          {result.isFetching ? (
+            <Spinner data-icon="inline-start" />
+          ) : (
+            <RefreshCw data-icon="inline-start" />
+          )}
+          {t("common.refresh")}
+        </Button>
+        <Button size="sm" onClick={() => setCreateOpen(true)} disabled={!desktopRuntime}>
+          <Plus data-icon="inline-start" />
+          {t("workspace.projects.newProject")}
+        </Button>
+      </WorkspacePageHeader>
 
       <div className="flex min-h-0 flex-1">
         <aside
@@ -354,6 +348,12 @@ export function GitHubProjects() {
           </form>
 
           <ScrollArea className="min-h-0 flex-1" constrainContentWidth>
+            {result.data && result.error ? (
+              <WorkspaceStaleNotice
+                message={parseIpcError(result.error).message}
+                onRetry={() => void result.refetch()}
+              />
+            ) : null}
             {result.isPending ? (
               <ProjectsListSkeleton />
             ) : error ? (
@@ -610,7 +610,7 @@ function ProjectDetailWorkspace({
   }
 
   const rawError = metadataResult.error ?? result.error;
-  if (!detail || rawError) {
+  if (!detail) {
     const error = parseIpcError(rawError);
     return (
       <Empty className="flex-1">
@@ -650,6 +650,15 @@ function ProjectDetailWorkspace({
 
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col">
+      {rawError ? (
+        <WorkspaceStaleNotice
+          message={parseIpcError(rawError).message}
+          onRetry={() => {
+            void metadataResult.refetch();
+            void result.refetch();
+          }}
+        />
+      ) : null}
       <header className="flex shrink-0 flex-wrap items-start justify-between gap-3 border-b px-4 py-3">
         <div className="flex min-w-0 items-start gap-2.5">
           <Button
@@ -657,6 +666,7 @@ function ProjectDetailWorkspace({
             variant="ghost"
             size="icon-sm"
             aria-label={t("workspace.projects.back")}
+            title={t("workspace.projects.back")}
             onClick={onBack}
             className="workspace-wide:hidden"
           >
@@ -664,9 +674,7 @@ function ProjectDetailWorkspace({
           </Button>
           <div className="flex min-w-0 flex-col gap-1.5">
             <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-              <h2 className="truncate text-base font-semibold tracking-[-0.02em]">
-                {project.title}
-              </h2>
+              <h2 className="text-2xl leading-7 font-semibold tracking-tight">{project.title}</h2>
               <ProjectVisibilityBadge isPublic={project.public} />
               {project.closed ? (
                 <Badge variant="secondary">{t("workspace.projects.closed")}</Badge>
@@ -694,6 +702,7 @@ function ProjectDetailWorkspace({
             variant="outline"
             size="icon-sm"
             aria-label={t("workspace.projects.openOnGitHub")}
+            title={t("workspace.projects.openOnGitHub")}
             onClick={() => void openExternalUrl(project.url)}
           >
             <ExternalLink />
@@ -704,6 +713,7 @@ function ProjectDetailWorkspace({
                 variant="outline"
                 size="icon-sm"
                 aria-label={t("workspace.projects.projectActions")}
+                title={t("workspace.projects.projectActions")}
               >
                 <MoreHorizontal />
               </Button>
@@ -791,7 +801,7 @@ function ProjectDetailWorkspace({
             </SelectGroup>
           </SelectContent>
         </Select>
-        <span className="text-muted-foreground text-[10px] tabular-nums">
+        <span className="text-muted-foreground text-[11px] tabular-nums">
           {t("workspace.projects.itemCount", { count: detail.items.totalCount })}
         </span>
       </form>
@@ -1011,15 +1021,15 @@ function ProjectTable({
                     variant="ghost"
                     onClick={() => onOpenItem(item)}
                     disabled={item.content.kind === "redacted"}
-                    className="h-auto w-full justify-start gap-2 px-1 py-1 text-left whitespace-normal"
+                    className="harbor-result-row h-auto w-full justify-start gap-2 px-1 py-1 text-left whitespace-normal"
                   >
                     <Icon data-icon="inline-start" />
                     <span className="flex min-w-0 flex-col items-start gap-0.5">
-                      <span className="line-clamp-2 font-medium">
+                      <span className="text-[13px] font-medium">
                         {projectItemTitle(item) || t("workspace.projects.restrictedItem")}
                       </span>
                       {projectItemRepository(item) ? (
-                        <span className="text-muted-foreground text-[10px]">
+                        <span className="text-muted-foreground text-[11px]">
                           {projectItemRepository(item)}
                         </span>
                       ) : null}
@@ -1097,7 +1107,7 @@ function ProjectBoard({
               <div className="flex items-center gap-2 px-1">
                 <span className={cn("h-3 w-1 rounded-full", projectOptionRail(group.color))} />
                 <h3 className="min-w-0 flex-1 truncate text-xs font-semibold">{group.name}</h3>
-                <span className="text-muted-foreground text-[10px] tabular-nums">
+                <span className="text-muted-foreground text-[11px] tabular-nums">
                   {groupItems.length}
                 </span>
               </div>
@@ -1110,22 +1120,25 @@ function ProjectBoard({
                   groupItems.map((item) => {
                     const Icon = projectItemIcon(item);
                     return (
-                      <Card key={item.id} className="bg-card/85 gap-2 rounded-lg py-3 shadow-none">
+                      <Card
+                        key={item.id}
+                        className="harbor-reading gap-2 rounded-lg py-3 shadow-none"
+                      >
                         <CardHeader className="px-3">
                           <CardTitle className="text-xs leading-5 font-medium">
                             <Button
                               variant="ghost"
                               onClick={() => onOpenItem(item)}
                               disabled={item.content.kind === "redacted"}
-                              className="h-auto w-full justify-start gap-2 px-0 py-0 text-left whitespace-normal hover:bg-transparent"
+                              className="harbor-result-row h-auto w-full justify-start gap-2 px-0 py-0 text-left whitespace-normal hover:bg-transparent"
                             >
                               <Icon data-icon="inline-start" />
-                              <span className="line-clamp-3">
+                              <span className="break-words">
                                 {projectItemTitle(item) || t("workspace.projects.restrictedItem")}
                               </span>
                             </Button>
                           </CardTitle>
-                          <CardDescription className="truncate text-[10px]">
+                          <CardDescription className="truncate text-[11px]">
                             {projectItemRepository(item) || t("workspace.projects.draftIssue")}
                           </CardDescription>
                           <CardAction>
@@ -1217,7 +1230,7 @@ function ProjectRoadmap({ detail, view, items, onOpenItem, onAction }: ProjectIt
                     {projectItemTitle(item) || t("workspace.projects.restrictedItem")}
                   </span>
                   {projectItemRepository(item) ? (
-                    <span className="text-muted-foreground text-[10px]">
+                    <span className="text-muted-foreground text-[11px]">
                       {projectItemRepository(item)}
                     </span>
                   ) : null}
@@ -1310,7 +1323,12 @@ function ProjectItemMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon-xs" aria-label={t("workspace.projects.itemActions")}>
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          aria-label={t("workspace.projects.itemActions")}
+          title={t("workspace.projects.itemActions")}
+        >
           <MoreHorizontal />
         </Button>
       </DropdownMenuTrigger>

@@ -1,3 +1,5 @@
+import { WorkspacePageHeader } from "@/features/workspace/workspace-page-header";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { useEffect, useMemo, useState } from "react";
 import { isTauri } from "@tauri-apps/api/core";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -72,25 +74,24 @@ function GistRow({
       type="button"
       variant="ghost"
       onClick={onSelect}
+      aria-current={selected ? "true" : undefined}
       className={cn(
-        "h-auto w-full justify-start gap-3 rounded-lg border px-3 py-3 text-left whitespace-normal",
-        selected
-          ? "border-primary/30 bg-primary/8 hover:bg-primary/10"
-          : "border-transparent hover:border-white/8"
+        "harbor-result-row h-auto w-full justify-start gap-3 rounded-md border border-transparent px-3 py-3 text-left whitespace-normal",
+        selected && "harbor-row-selected"
       )}
     >
-      <span className="border-primary/20 bg-primary/[0.06] text-primary grid size-8 shrink-0 place-items-center rounded-md border">
+      <span className="border-border bg-muted/25 text-muted-foreground grid size-8 shrink-0 place-items-center rounded-md border">
         <Code2 className="size-4" />
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-1">
-        <span className="line-clamp-2 text-[12px] leading-4 font-medium">{title}</span>
-        <span className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-[10px]">
+        <span className="text-[13px] leading-5 font-medium">{title}</span>
+        <span className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-[11px]">
           <span className="truncate">{gist.owner ?? t("workspace.gists.anonymous")}</span>
           <span>·</span>
           <span>{t("workspace.gists.fileCount", { count: gist.files.length })}</span>
-          {gist.starred ? <Star className="size-3 fill-current text-amber-400" /> : null}
+          {gist.starred ? <Star className="text-attention size-3 fill-current" /> : null}
         </span>
-        <span className="text-muted-foreground/80 text-[10px]">
+        <span className="text-muted-foreground/80 text-[11px]">
           {formatIssueDate(gist.updatedAt, locale)}
         </span>
       </span>
@@ -120,7 +121,7 @@ export function GitHubGists() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [wideLayout, setWideLayout] = useState(
-    () => window.matchMedia("(min-width: 1180px)").matches
+    () => window.matchMedia("(min-width: 80rem)").matches
   );
   const result = useInfiniteQuery({
     ...gistsQueryOptions({ source }),
@@ -155,7 +156,7 @@ export function GitHubGists() {
       : null;
 
   useEffect(() => {
-    const media = window.matchMedia("(min-width: 1180px)");
+    const media = window.matchMedia("(min-width: 80rem)");
     const updateLayout = () => setWideLayout(media.matches);
     updateLayout();
     media.addEventListener("change", updateLayout);
@@ -168,35 +169,28 @@ export function GitHubGists() {
 
   return (
     <section className="harbor-content @container/gists flex min-w-0 flex-1 flex-col">
-      <header className="flex h-[74px] shrink-0 items-center justify-between gap-4 border-b px-5">
-        <div>
-          <p className="text-primary/80 text-[10px] font-medium tracking-[0.14em] uppercase">
-            {t("workspace.gists.eyebrow")}
-          </p>
-          <h1 className="mt-0.5 text-xl font-semibold tracking-[-0.03em]">
-            {t("workspace.nav.gists")}
-          </h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!desktopRuntime || result.isFetching}
-            onClick={() => void result.refetch()}
-          >
-            {result.isFetching ? (
-              <Spinner data-icon="inline-start" />
-            ) : (
-              <RefreshCw data-icon="inline-start" />
-            )}
-            {t("common.refresh")}
-          </Button>
-          <Button size="sm" disabled={!desktopRuntime} onClick={() => setCreateOpen(true)}>
-            <Plus data-icon="inline-start" />
-            {t("workspace.gists.newGist")}
-          </Button>
-        </div>
-      </header>
+      <WorkspacePageHeader
+        title={t("workspace.nav.gists")}
+        description={t("workspace.gists.eyebrow")}
+      >
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={!desktopRuntime || result.isFetching}
+          onClick={() => void result.refetch()}
+        >
+          {result.isFetching ? (
+            <Spinner data-icon="inline-start" />
+          ) : (
+            <RefreshCw data-icon="inline-start" />
+          )}
+          {t("common.refresh")}
+        </Button>
+        <Button size="sm" disabled={!desktopRuntime} onClick={() => setCreateOpen(true)}>
+          <Plus data-icon="inline-start" />
+          {t("workspace.gists.newGist")}
+        </Button>
+      </WorkspacePageHeader>
 
       <div className="flex min-h-0 flex-1">
         <aside
@@ -231,6 +225,12 @@ export function GitHubGists() {
           </div>
 
           <ScrollArea className="min-h-0 flex-1" constrainContentWidth>
+            {result.data && result.error ? (
+              <WorkspaceStaleNotice
+                message={parseIpcError(result.error).message}
+                onRetry={() => void result.refetch()}
+              />
+            ) : null}
             {error ? (
               <Empty className="min-h-64">
                 <EmptyHeader>
@@ -282,7 +282,7 @@ export function GitHubGists() {
             ) : (
               <div className="space-y-1.5 p-2">
                 <div className="flex items-center justify-between px-2 py-1">
-                  <span className="text-muted-foreground text-[10px]">
+                  <span className="text-muted-foreground text-[11px]">
                     {t("workspace.gists.loadedCount", { count: gists.length })}
                   </span>
                   <Badge variant="outline" className="font-normal">

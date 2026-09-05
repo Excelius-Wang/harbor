@@ -1,3 +1,4 @@
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -172,11 +173,11 @@ function GistFilePanel({ gist, file }: { gist: GitHubGist; file: GitHubGistFile 
           <div
             key={index}
             role="row"
-            className="hover:bg-primary/[0.025] grid min-w-max grid-cols-[3.75rem_minmax(max-content,1fr)]"
+            className="harbor-result-row grid min-w-max grid-cols-[3.75rem_minmax(max-content,1fr)]"
           >
             <span
               role="rowheader"
-              className="text-muted-foreground/55 border-r border-white/[0.045] pr-3 text-right tabular-nums select-none"
+              className="harbor-subtle-divider text-muted-foreground border-r pr-3 text-right tabular-nums select-none"
             >
               {index + 1}
             </span>
@@ -198,14 +199,14 @@ function GistFilePanel({ gist, file }: { gist: GitHubGist; file: GitHubGistFile 
     );
 
   return (
-    <section className="overflow-hidden rounded-lg border bg-white/[0.015]">
+    <section className="harbor-reading overflow-hidden rounded-lg border">
       <header className="flex min-h-11 items-center gap-2 border-b px-3 py-2">
         <FileCode2 className="text-primary size-4 shrink-0" />
         <span className="min-w-0 flex-1 truncate font-mono text-xs font-medium">
           {file.filename}
         </span>
         {file.language ? <Badge variant="outline">{file.language}</Badge> : null}
-        <span className="text-muted-foreground text-[10px] tabular-nums">
+        <span className="text-muted-foreground text-[11px] tabular-nums">
           {t("workspace.gists.bytes", { count: file.size })}
         </span>
         {file.rawUrl ? (
@@ -280,7 +281,7 @@ function GistComments({ gist }: { gist: GitHubGist }) {
       </div>
     );
   }
-  if (result.error) {
+  if (result.error && !result.data) {
     const error = parseIpcError(result.error);
     return (
       <Empty className="min-h-64">
@@ -303,6 +304,12 @@ function GistComments({ gist }: { gist: GitHubGist }) {
 
   return (
     <div className="mx-auto flex w-full max-w-[920px] flex-col gap-4 p-4">
+      {result.data && result.error ? (
+        <WorkspaceStaleNotice
+          message={parseIpcError(result.error).message}
+          onRetry={() => void result.refetch()}
+        />
+      ) : null}
       {comments.length === 0 ? (
         <Empty className="min-h-40">
           <EmptyHeader>
@@ -315,8 +322,8 @@ function GistComments({ gist }: { gist: GitHubGist }) {
         </Empty>
       ) : (
         comments.map((comment) => (
-          <article key={comment.id} className="overflow-hidden rounded-lg border">
-            <header className="bg-muted/20 flex items-center gap-2 border-b px-3 py-2">
+          <article key={comment.id} className="harbor-reading overflow-hidden rounded-lg border">
+            <header className="harbor-subtle-divider flex flex-wrap items-center gap-2 border-b px-3 py-2">
               <Avatar className="size-6">
                 <AvatarImage src={comment.authorAvatarUrl} alt="" />
                 <AvatarFallback>{comment.author?.slice(0, 1).toUpperCase() ?? "?"}</AvatarFallback>
@@ -324,7 +331,7 @@ function GistComments({ gist }: { gist: GitHubGist }) {
               <span className="text-xs font-medium">
                 {comment.author ?? t("workspace.gists.anonymous")}
               </span>
-              <time className="text-muted-foreground text-[10px]">
+              <time className="text-muted-foreground text-[11px]">
                 {formatIssueDate(comment.createdAt, i18n.language)}
               </time>
               <span className="flex-1" />
@@ -340,6 +347,7 @@ function GistComments({ gist }: { gist: GitHubGist }) {
                   size="icon-xs"
                   onClick={() => setDeleteTarget(comment)}
                   aria-label={t("workspace.gists.deleteComment")}
+                  title={t("workspace.gists.deleteComment")}
                 >
                   <Trash2 />
                 </Button>
@@ -571,7 +579,7 @@ export function GitHubGistDetail({
       </div>
     );
   }
-  if (!gist || result.error) {
+  if (!gist) {
     const error = parseIpcError(result.error);
     return (
       <Empty className="flex-1">
@@ -601,6 +609,12 @@ export function GitHubGistDetail({
 
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col">
+      {result.error ? (
+        <WorkspaceStaleNotice
+          message={parseIpcError(result.error).message}
+          onRetry={() => void result.refetch()}
+        />
+      ) : null}
       <header className="shrink-0 border-b px-4 py-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-2.5">
@@ -609,6 +623,7 @@ export function GitHubGistDetail({
               size="icon-sm"
               className="workspace-wide:hidden"
               aria-label={t("workspace.gists.back")}
+              title={t("workspace.gists.back")}
               onClick={onBack}
             >
               <ArrowLeft />
@@ -619,7 +634,7 @@ export function GitHubGistDetail({
             </Avatar>
             <div className="min-w-0">
               <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                <h2 className="max-w-[64ch] truncate text-base font-semibold tracking-[-0.02em]">
+                <h2 className="max-w-[64ch] text-2xl leading-7 font-semibold tracking-tight">
                   {gist.description ?? gist.files[0]?.filename ?? gist.id}
                 </h2>
                 <Badge variant="outline" className="gap-1 font-normal">
@@ -647,7 +662,7 @@ export function GitHubGistDetail({
                 <Spinner data-icon="inline-start" />
               ) : (
                 <Star
-                  className={gist.starred ? "fill-current text-amber-400" : ""}
+                  className={gist.starred ? "text-attention fill-current" : ""}
                   data-icon="inline-start"
                 />
               )}
@@ -767,7 +782,16 @@ export function GitHubGistDetail({
               {revisionResult.error ? (
                 <Alert variant="destructive">
                   <CircleAlert />
-                  <AlertDescription>{parseIpcError(revisionResult.error).message}</AlertDescription>
+                  <AlertDescription>
+                    {parseIpcError(revisionResult.error).message}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void revisionResult.refetch()}
+                    >
+                      {t("common.retry")}
+                    </Button>
+                  </AlertDescription>
                 </Alert>
               ) : null}
             </div>
@@ -775,6 +799,12 @@ export function GitHubGistDetail({
         </TabsContent>
 
         <TabsContent value="revisions" className="min-h-0 flex-1">
+          {revisionsResult.data && revisionsResult.error ? (
+            <WorkspaceStaleNotice
+              message={parseIpcError(revisionsResult.error).message}
+              onRetry={() => void revisionsResult.refetch()}
+            />
+          ) : null}
           <ScrollArea className="h-full">
             {revisionsResult.isPending ? (
               <div className="space-y-2 p-4">
@@ -782,7 +812,7 @@ export function GitHubGistDetail({
                   <Skeleton key={index} className="h-16 w-full" />
                 ))}
               </div>
-            ) : revisionsResult.error ? (
+            ) : revisionsResult.error && !revisionsResult.data ? (
               <Empty className="min-h-64">
                 <EmptyHeader>
                   <EmptyMedia variant="icon">
@@ -793,6 +823,11 @@ export function GitHubGistDetail({
                     {parseIpcError(revisionsResult.error).message}
                   </EmptyDescription>
                 </EmptyHeader>
+                <EmptyContent>
+                  <Button variant="outline" onClick={() => void revisionsResult.refetch()}>
+                    {t("common.retry")}
+                  </Button>
+                </EmptyContent>
               </Empty>
             ) : (
               <div className="mx-auto flex w-full max-w-[920px] flex-col gap-2 p-4">
@@ -800,7 +835,7 @@ export function GitHubGistDetail({
                   <button
                     key={revision.version}
                     type="button"
-                    className="hover:bg-muted/25 flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors"
+                    className="harbor-result-row focus-visible:ring-ring/50 flex w-full items-center gap-3 rounded-md border p-3 text-left outline-none focus-visible:ring-2"
                     onClick={() => {
                       setSelectedVersion(revision.version);
                       setActiveTab("files");
@@ -811,14 +846,14 @@ export function GitHubGistDetail({
                       <span className="block font-mono text-xs font-medium">
                         {revision.version.slice(0, 12)}
                       </span>
-                      <span className="text-muted-foreground mt-1 block text-[10px]">
+                      <span className="text-muted-foreground mt-1 block text-[11px]">
                         {revision.author ?? t("workspace.gists.anonymous")} ·{" "}
                         {formatIssueDate(revision.committedAt, i18n.language)}
                       </span>
                     </span>
-                    <span className="text-[10px] tabular-nums">
-                      <span className="text-emerald-400">+{revision.additions}</span>{" "}
-                      <span className="text-rose-400">−{revision.deletions}</span>
+                    <span className="text-[11px] tabular-nums">
+                      <span className="text-success">+{revision.additions}</span>{" "}
+                      <span className="text-destructive">−{revision.deletions}</span>
                     </span>
                   </button>
                 ))}

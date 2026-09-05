@@ -55,8 +55,12 @@ Native compilation succeeded, but the computer-control tool has not yet exposed 
 
 ## Page composition and return behavior
 
-Use `WorkspacePageHeader` from `src/features/workspace/workspace-page-header.tsx` for list-page titles and actions, with `contained` for a centered 1120 px workspace. Use `WorkspaceStaleNotice` when a failed refresh retains existing results. Both are shown in the gallery.
+Use `WorkspacePageHeader` from `src/features/workspace/workspace-page-header.tsx` for list-page titles and actions, with `contained` for a centered 1120 px workspace and optional `leading` for a back control beside the title. Use `WorkspaceStaleNotice` when a failed refresh retains existing results. Both are shown in the gallery.
 
 Keep `useListScroll(JSON.stringify(queryParameters))` in the parent view that swaps between list and detail. Spread its return value onto the list ScrollArea. Positions stay local to that parent and separate for each query; filters/query caches remain owned by the feature.
 
 Markdown code blocks use `--harbor-code-fill` (`#e1e8f1` light / `#172335` dark), avoiding hue changes from mixing black into a cool palette in OKLCH. See [the verification record](UI_VERIFICATION.md) for current evidence and remaining limits.
+
+Controlled Dialog, AlertDialog and Sheet consumers may open from ordinary page actions. Their shared content primitives restore a still-connected opener after close. `onOpenAutoFocus` and `onCloseAutoFocus` remain available; calling `preventDefault()` in a custom close handler takes precedence. Continue using Radix Trigger when it naturally belongs in the same component.
+
+`src/dev/more-fixtures.ts` adds typed read scenarios for Notifications, profile and More pages. Fixture lookup must distinguish `undefined` (unimplemented) from valid `null` data. These fixtures never fall through to business IPC.

@@ -3,6 +3,7 @@ import { mockIPC, mockWindows } from "@tauri-apps/api/mocks";
 import type { GitHubRepository } from "@/features/github/github-data";
 import "./preview.css";
 import { workspaceFixture } from "./workspace-fixtures";
+import { moreFixture } from "./more-fixtures";
 
 export const previewCalls: string[] = [];
 
@@ -165,7 +166,11 @@ export function installPreview() {
       }
       if (command === "github_list_developer_feed")
         return { events: [], page: 1, hasPrevious: false, hasMore: false };
-      const fixture = workspaceFixture(command, args, repositories, state === "empty");
+      const workspaceResult = workspaceFixture(command, args, repositories, state === "empty");
+      const fixture =
+        workspaceResult === undefined
+          ? moreFixture(command, args, repositories, state === "empty")
+          : workspaceResult;
       if (fixture !== undefined) return fixture;
       // Missing fixtures fail visibly. Never fall through to a real GitHub write.
       throw { code: "previewFixtureMissing", message: `No UI preview fixture for ${command}` };
