@@ -143,6 +143,25 @@ pub async fn github_disconnect(state: State<'_, AppState>) -> Result<GitHubConne
 }
 
 #[tauri::command]
+pub async fn github_list_trending_developers(
+    period: crate::github::trending::GitHubTrendingPeriod,
+    language: Option<String>,
+    sponsorable: Option<bool>,
+    state: State<'_, AppState>,
+) -> Result<crate::github::trending::GitHubTrendingDeveloperPage, AppError> {
+    state
+        .github
+        .trending_developers(
+            period,
+            crate::github::trending::GitHubTrendingFilters {
+                language,
+                sponsorable: sponsorable.unwrap_or(false),
+            },
+        )
+        .await
+}
+
+#[tauri::command]
 pub async fn github_search_discovery(
     kind: GitHubDiscoverySearchKind,
     query: String,

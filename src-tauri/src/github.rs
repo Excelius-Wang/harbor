@@ -54,6 +54,7 @@ pub(crate) mod repository_relationships;
 pub(crate) mod repository_settings;
 pub(crate) mod repository_topics;
 pub(crate) mod security;
+pub(crate) mod trending;
 pub(crate) mod wiki;
 pub use actions::{
     GitHubWorkflow, GitHubWorkflowArtifactPage, GitHubWorkflowDispatchConfig,
@@ -804,6 +805,7 @@ pub(crate) trait GitHubClient:
     + repository_settings::GitHubRepositorySettingsClient
     + repository_topics::GitHubRepositoryTopicsClient
     + security::GitHubSecurityClient
+    + trending::GitHubTrendingClient
     + wiki::GitHubWikiClient
     + Send
     + Sync

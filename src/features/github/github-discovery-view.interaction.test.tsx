@@ -5,6 +5,7 @@ import { act, cleanup, render, screen, waitFor, within } from "@testing-library/
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { GitHubDiscoveryView } from "./github-discovery-view";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const tauriApi = vi.hoisted(() => ({
   invoke: vi.fn(),
@@ -31,6 +32,7 @@ vi.mock("./github-code-view", () => ({
 }));
 
 beforeAll(() => {
+  HTMLElement.prototype.scrollIntoView = vi.fn();
   class ResizeObserverMock implements ResizeObserver {
     observe() {}
     unobserve() {}
@@ -39,6 +41,21 @@ beforeAll(() => {
 
   vi.stubGlobal("ResizeObserver", ResizeObserverMock);
 });
+
+vi.mock("./github-profile-view", () => ({
+  GitHubProfileView: ({
+    initialUsername,
+    onBack,
+  }: {
+    initialUsername: string;
+    onBack: () => void;
+  }) => (
+    <section aria-label="developer profile">
+      <h2>{initialUsername}</h2>
+      <button onClick={onBack}>Back to discovery</button>
+    </section>
+  ),
+}));
 
 beforeEach(() => {
   tauriApi.isTauri.mockReturnValue(false);
@@ -64,6 +81,103 @@ afterEach(() => {
 });
 
 describe("GitHub discovery navigation", () => {
+  it("opens developers only on demand and returns from their profile to the cached ranking", async () => {
+    tauriApi.isTauri.mockReturnValue(true);
+    const searchResponse = {
+      kind: "repositories",
+      results: [],
+      totalCount: 0,
+      incompleteResults: false,
+      page: 1,
+      hasPrevious: false,
+      hasMore: false,
+    };
+    tauriApi.invoke.mockImplementation((command: string) =>
+      Promise.resolve(
+        command === "github_list_developer_feed"
+          ? { events: [], page: 1, hasPrevious: false, hasMore: false }
+          : command === "github_list_trending_developers"
+            ? {
+                period: "weekly",
+                languages: [{ slug: "python", name: "Python" }],
+                developers: [
+                  {
+                    rank: 1,
+                    login: "octocat",
+                    name: "The Octocat",
+                    avatarUrl: null,
+                    popularRepository: null,
+                  },
+                ],
+              }
+            : searchResponse
+      )
+    );
+    const user = userEvent.setup();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <TooltipProvider>
+          <GitHubDiscoveryView onSelectRepository={() => {}} />
+        </TooltipProvider>
+      </QueryClientProvider>
+    );
+    await waitFor(() =>
+      expect(tauriApi.invoke).toHaveBeenCalledWith("github_search_discovery", expect.anything())
+    );
+    expect(tauriApi.invoke).not.toHaveBeenCalledWith(
+      "github_list_trending_developers",
+      expect.anything()
+    );
+
+    await user.click(screen.getByRole("tab", { name: "workspace.discovery.tabs.repositories" }));
+    await user.keyboard("{ArrowRight}");
+    await screen.findByRole("button", { name: "The Octocat (@octocat)" });
+    expect(screen.getByRole("tabpanel").getAttribute("data-state")).toBe("active");
+    expect(tauriApi.invoke).toHaveBeenCalledWith("github_list_trending_developers", {
+      period: "weekly",
+      language: null,
+      sponsorable: false,
+    });
+    await user.click(
+      screen.getByRole("combobox", { name: "workspace.discovery.developers.language" })
+    );
+    await user.click(screen.getByRole("option", { name: "Python" }));
+    await screen.findByRole("button", { name: "The Octocat (@octocat)" });
+    await user.click(
+      screen.getByRole("checkbox", { name: "workspace.discovery.developers.sponsorable" })
+    );
+    await screen.findByRole("button", { name: "The Octocat (@octocat)" });
+    await user.click(screen.getByRole("button", { name: "The Octocat (@octocat)" }));
+    expect(await screen.findByRole("region", { name: "developer profile" })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Back to discovery" }));
+    expect(await screen.findByRole("button", { name: "The Octocat (@octocat)" })).toBeTruthy();
+    expect(
+      screen.getByRole("combobox", { name: "workspace.discovery.developers.language" }).textContent
+    ).toContain("Python");
+    expect(
+      screen
+        .getByRole("checkbox", { name: "workspace.discovery.developers.sponsorable" })
+        .getAttribute("data-state")
+    ).toBe("checked");
+    expect(
+      screen
+        .getByRole("tab", { name: "workspace.discovery.developers.tab" })
+        .getAttribute("aria-selected")
+    ).toBe("true");
+    expect(
+      tauriApi.invoke.mock.calls.filter(
+        ([command]) => command === "github_list_trending_developers"
+      )
+    ).toHaveLength(3);
+
+    await user.click(screen.getByRole("tab", { name: "workspace.discovery.tabs.feed" }));
+    expect(screen.queryByRole("tab", { name: "workspace.discovery.developers.tab" })).toBeNull();
+    await user.click(screen.getByRole("tab", { name: "workspace.discovery.tabs.trending" }));
+    expect(await screen.findByRole("button", { name: "The Octocat (@octocat)" })).toBeTruthy();
+    client.clear();
+  });
+
   it("keeps the top-level discovery modes focused", async () => {
     const user = userEvent.setup();
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -74,11 +188,11 @@ describe("GitHub discovery navigation", () => {
       </QueryClientProvider>
     );
 
-    const tabList = screen.getByRole("tablist");
+    const tabList = screen.getByRole("tablist", { name: "workspace.discovery.modes" });
     const activeTab = screen.getByRole("tab", { name: "workspace.discovery.tabs.trending" });
 
     expect(tabList.closest("section")?.className).toContain("harbor-content");
-    expect(screen.getAllByRole("tab")).toHaveLength(3);
+    expect(within(tabList).getAllByRole("tab")).toHaveLength(3);
     expect(activeTab.getAttribute("aria-selected")).toBe("true");
     expect(
       screen.getByRole("combobox", { name: "workspace.discovery.trendingPeriod" })

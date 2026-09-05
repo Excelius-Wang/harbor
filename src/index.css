@@ -64,6 +64,7 @@
   --harbor-content-fill: rgb(248 250 252 / 64%);
   --harbor-surface-fill: rgb(247 250 252 / 12%);
   --harbor-elevated-fill: rgb(249 251 253 / 86%);
+  --harbor-filter-glass-fill: color-mix(in srgb, var(--card) 62%, transparent);
   --harbor-glass-edge: rgb(255 255 255 / 66%);
   --harbor-glass-shadow: rgb(31 47 61 / 24%);
   --harbor-window-close: #ff5f57;
@@ -103,6 +104,11 @@
   --harbor-content-fill: rgb(12 18 26 / 30%);
   --harbor-surface-fill: rgb(17 24 32 / 8%);
   --harbor-elevated-fill: rgb(21 28 37 / 76%);
+  --harbor-filter-glass-fill: color-mix(
+    in srgb,
+    color-mix(in srgb, var(--background) 82%, var(--foreground)) 58%,
+    transparent
+  );
   --harbor-glass-edge: rgb(255 255 255 / 18%);
   --harbor-glass-shadow: rgb(0 4 10 / 56%);
   color-scheme: dark;
@@ -301,6 +307,83 @@
   .harbor-nav-item {
     color: var(--muted-foreground);
     box-shadow: inset 0 0 0 1px transparent;
+  }
+
+  .harbor-filter-trigger {
+    border-radius: 8px;
+    background: transparent;
+    padding-inline: 12px;
+    font-size: 13px;
+    font-weight: 400;
+  }
+
+  .harbor-filter-trigger > svg {
+    width: 14px;
+    height: 14px;
+    color: var(--muted-foreground);
+    opacity: 0.65;
+  }
+
+  .harbor-filter-menu {
+    border-color: color-mix(in srgb, var(--foreground) 14%, transparent);
+    background: var(--harbor-filter-glass-fill);
+    box-shadow:
+      0 8px 24px color-mix(in srgb, var(--harbor-glass-shadow) 42%, transparent),
+      inset 0 1px 0 color-mix(in srgb, white 12%, transparent);
+    backdrop-filter: saturate(108%) blur(24px);
+    -webkit-backdrop-filter: saturate(108%) blur(24px);
+  }
+
+  .harbor-filter-menu [data-slot="command"] {
+    background: transparent;
+    border-radius: inherit;
+  }
+
+  .harbor-filter-menu [data-slot="command-input-wrapper"] {
+    height: 36px;
+    padding-inline: 10px;
+    border-color: color-mix(in srgb, var(--border) 58%, transparent);
+  }
+
+  .harbor-filter-menu [data-slot="command-input"] {
+    height: 36px;
+    padding-block: 0;
+    font-size: 13px;
+    line-height: 20px;
+    font-weight: 400;
+  }
+
+  .harbor-filter-menu [data-slot="command-input-wrapper"] > svg,
+  .harbor-filter-menu [data-slot="command-item"] > svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .harbor-filter-menu [data-slot="command-list"] {
+    max-height: min(240px, calc(var(--radix-popover-content-available-height) - 38px));
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--muted-foreground) 25%, transparent) transparent;
+  }
+
+  .harbor-filter-menu [data-slot="command-item"] {
+    min-height: 28px;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 13px;
+    line-height: 20px;
+    font-weight: 400;
+  }
+
+  .harbor-filter-menu [data-slot="command-item"][data-selected="true"] {
+    background: color-mix(in srgb, var(--foreground) 8%, transparent);
+    color: var(--foreground);
+  }
+
+  .harbor-filter-menu [data-slot="command-empty"] {
+    padding-block: 20px;
+    color: var(--muted-foreground);
+    font-size: 12px;
   }
 
   .harbor-nav-item:hover {
@@ -592,6 +675,14 @@ kbd {
 
 ::-webkit-scrollbar-corner {
   background-color: transparent;
+}
+
+.harbor-filter-menu [data-slot="command-list"]::-webkit-scrollbar {
+  width: 4px;
+}
+
+.harbor-filter-menu [data-slot="command-list"]::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 button {

@@ -47,6 +47,27 @@
       "more": "更多"
     },
     "discovery": {
+      "modes": "发现导航",
+      "trendingKind": "热门内容",
+      "developers": {
+        "tab": "开发者",
+        "source": "来自 GitHub 热门开发者榜单",
+        "popularRepository": "热门项目",
+        "list": "热门开发者",
+        "refresh": "刷新开发者榜单",
+        "loading": "正在加载热门开发者",
+        "failed": "暂时无法加载热门开发者",
+        "refreshFailed": "刷新失败，仍显示上次加载的榜单",
+        "empty": "暂无热门开发者",
+        "emptyDescription": "可以换一种编程语言、取消赞助筛选，或调整时间范围。",
+        "language": "编程语言",
+        "allLanguages": "全部语言",
+        "unknownLanguage": "未识别语言",
+        "searchLanguages": "搜索编程语言…",
+        "noLanguages": "没有找到匹配的语言",
+        "sponsorable": "只看可赞助作者",
+        "clearFilters": "清除筛选"
+      },
       "searchLabel": "搜索 GitHub",
       "searchPlaceholder": "输入关键词或限定词，例如 language:rust stars:>100",
       "search": "搜索",

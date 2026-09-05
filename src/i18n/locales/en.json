@@ -47,6 +47,27 @@
       "more": "More"
     },
     "discovery": {
+      "modes": "Discover navigation",
+      "trendingKind": "Trending content",
+      "developers": {
+        "tab": "Developers",
+        "source": "From GitHub Trending Developers",
+        "popularRepository": "Popular repository",
+        "list": "Trending developers",
+        "refresh": "Refresh trending developers",
+        "loading": "Loading trending developers",
+        "failed": "Could not load trending developers",
+        "refreshFailed": "Refresh failed. Showing the previously loaded ranking.",
+        "empty": "No trending developers yet",
+        "emptyDescription": "Try another language, turn off the sponsorship filter, or change the time range.",
+        "language": "Programming language",
+        "allLanguages": "All languages",
+        "unknownLanguage": "Unknown languages",
+        "searchLanguages": "Search languages…",
+        "noLanguages": "No matching languages",
+        "sponsorable": "Sponsorable developers only",
+        "clearFilters": "Clear filters"
+      },
       "searchLabel": "Search GitHub",
       "searchPlaceholder": "Search or enter qualifiers, for example language:rust stars:>100",
       "search": "Search",
