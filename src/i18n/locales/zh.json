@@ -18,7 +18,9 @@
     "save": "保存",
     "loadMore": "加载更多",
     "edit": "编辑",
-    "delete": "删除"
+    "delete": "删除",
+    "close": "关闭",
+    "loading": "加载中"
   },
   "workspace": {
     "primaryNavigation": "主导航",
@@ -1414,7 +1416,7 @@
       "repositoryFileConflictTitle": "提交前仓库内容发生了变化",
       "repositoryFileCommitFailed": "这个文件没有提交成功",
       "committingRepositoryFile": "正在提交改动…",
-      "commitChanges": "提交改动",
+      "commitChanges": "变更文件",
       "repositoryFileCommitted": "改动已提交",
       "repositoryFileCommittedDescription": "{{branch}} 已包含提交 {{sha}}。",
       "deleteRepositoryFile": "删除",
@@ -1874,11 +1876,21 @@
         }
       },
       "pullRequestMergeQueueEntryStates": {
-        "awaitingChecks": { "title": "正在运行合并队列检查" },
-        "locked": { "title": "当前队列项已经锁定" },
-        "mergeable": { "title": "已经可以从队列合并" },
-        "queued": { "title": "拉取请求已进入合并队列" },
-        "unmergeable": { "title": "GitHub 暂时无法合并这个队列项" }
+        "awaitingChecks": {
+          "title": "正在运行合并队列检查"
+        },
+        "locked": {
+          "title": "当前队列项已经锁定"
+        },
+        "mergeable": {
+          "title": "已经可以从队列合并"
+        },
+        "queued": {
+          "title": "拉取请求已进入合并队列"
+        },
+        "unmergeable": {
+          "title": "GitHub 暂时无法合并这个队列项"
+        }
       },
       "pullRequestMergeQueueWait": {
         "minute_one": "预计还要约 {{count}} 分钟。",
@@ -2009,7 +2021,6 @@
       "unplacedCommitCommentsLoadingFiles": "继续加载变更文件后，这些评论可能会回到对应的 Diff 行。",
       "commitCommentLine": "第 {{line}} 行",
       "commitCommentPosition": "Diff 位置 {{position}}",
-      "commitChanges": "变更文件",
       "commitChangesDescription": "较大的提交会按每页 100 个文件从 GitHub 分批加载。",
       "commitFileRenamed": "从 {{previousPath}} 重命名为 {{path}}",
       "commitPatchUnavailable": "GitHub 没有返回文本补丁。这个文件可能是二进制文件、生成文件，或者体积太大。",
@@ -2493,7 +2504,6 @@
       "milestoneCreated": "里程碑已创建",
       "milestoneUpdated": "里程碑已更新",
       "milestoneDeleted": "里程碑已删除",
-      "editMilestone": "编辑里程碑",
       "closeMilestone": "关闭里程碑",
       "reopenMilestone": "重新打开里程碑",
       "deleteMilestone": "删除里程碑",
@@ -2724,7 +2734,6 @@
       "noDiscussionCommentsDescription": "来发表第一条评论吧。",
       "loadMoreDiscussionComments": "加载更多评论",
       "reply": "回复",
-      "edit": "编辑",
       "discussionAnswer": "答案",
       "markDiscussionAnswer": "设为答案",
       "unmarkDiscussionAnswer": "取消答案",
@@ -2759,7 +2768,6 @@
         "duplicate": "重复讨论"
       },
       "discussionStateChangeFailed": "讨论状态没有更新成功",
-      "delete": "删除",
       "deleteDiscussion": "删除讨论",
       "deletingDiscussion": "正在删除…",
       "discussionDeleted": "讨论已删除",
@@ -3006,5 +3014,38 @@
       "tauriVersionInvalid": "src-tauri/tauri.conf.json 中的版本号缺失或无效",
       "invalidLang": "无效的 --lang 参数，请使用 zh 或 en。"
     }
+  },
+  "uiGallery": {
+    "title": "Harbor 组件",
+    "description": "使用生产组件与正式主题。预览数据用于界面和键盘验收。",
+    "theme": "切换主题",
+    "actions": "操作",
+    "primary": "主要操作",
+    "outline": "边框按钮",
+    "secondary": "次要操作",
+    "ghost": "轻量按钮",
+    "link": "在 GitHub 查看",
+    "destructive": "删除",
+    "disabled": "已禁用",
+    "loading": "加载中",
+    "forms": "表单",
+    "search": "搜索",
+    "placeholder": "搜索仓库…",
+    "invalid": "无效内容",
+    "body": "描述",
+    "longText": "长描述自然换行，在紧凑窗口内保持名称、操作和辅助信息清楚可读。",
+    "checked": "包含归档仓库",
+    "navigation": "导航",
+    "menus": "菜单与筛选",
+    "branch": "分支",
+    "menu": "打开菜单",
+    "command": "命令面板",
+    "overlays": "浮层",
+    "dialog": "打开对话框",
+    "sheet": "打开侧边面板",
+    "states": "反馈与状态",
+    "error": "刷新失败",
+    "retry": "当前显示上次结果，可重试刷新。",
+    "empty": "没有结果"
   }
 }

@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { cleanup, render, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 const lazyModuleState = vi.hoisted(() => ({
@@ -62,7 +62,19 @@ vi.mock("./harbor-rail", () => ({
 
 import { HarborWorkspace } from "./harbor-workspace";
 
+beforeEach(() => {
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+  );
+});
+
 afterEach(() => {
+  vi.unstubAllGlobals();
   lazyModuleState.suspendGists = false;
   cleanup();
 });

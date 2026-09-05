@@ -16,6 +16,7 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-solid: var(--destructive-solid);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
   --color-merged: var(--merged);
@@ -31,42 +32,47 @@
 }
 
 :root {
-  --background: oklch(0.975 0.01 238);
-  --foreground: oklch(0.23 0.025 242);
-  --card: oklch(0.995 0.006 238);
-  --card-foreground: oklch(0.23 0.025 242);
-  --popover: oklch(0.99 0.009 238);
-  --popover-foreground: oklch(0.23 0.025 242);
-  --primary: oklch(0.58 0.145 236);
-  --primary-foreground: oklch(0.99 0.005 235);
-  --secondary: oklch(0.935 0.02 238);
-  --secondary-foreground: oklch(0.27 0.03 242);
-  --muted: oklch(0.94 0.015 238);
-  --muted-foreground: oklch(0.52 0.03 242);
-  --accent: oklch(0.925 0.028 235);
-  --accent-foreground: oklch(0.27 0.035 242);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --success: oklch(0.55 0.15 145);
-  --merged: oklch(0.55 0.16 305);
-  --attention: #9a6700;
-  --border: oklch(0.88 0.022 238);
-  --input: oklch(0.88 0.022 238);
-  --ring: oklch(0.58 0.145 236);
+  --background: #edf2f8;
+  --foreground: #202e40;
+  --card: #f6f9fd;
+  --card-foreground: var(--foreground);
+  --popover: #f3f7fc;
+  --popover-foreground: var(--foreground);
+  --primary: #2358aa;
+  --primary-foreground: #ffffff;
+  --secondary: #dfe8f2;
+  --secondary-foreground: #28384c;
+  --muted: #e3ebf3;
+  --muted-foreground: #4b5e75;
+  --accent: #dce5ef;
+  --accent-foreground: var(--foreground);
+  --destructive: #b73345;
+  --destructive-solid: #b73345;
+  --destructive-foreground: #ffffff;
+  --success: #1d6e3f;
+  --merged: #7847a8;
+  --attention: #865b0e;
+  --border: rgb(50 73 101 / 18%);
+  --input: rgb(50 73 101 / 28%);
+  --ring: var(--primary);
   --chart-1: var(--primary);
   --chart-2: var(--success);
   --chart-3: var(--merged);
   --chart-4: var(--destructive);
-  --harbor-chrome: oklch(0.985 0.013 236);
-  --harbor-canvas-edge: oklch(0.965 0.014 238);
-  --harbor-window-fill: rgb(239 242 245 / 86%);
-  --harbor-glass-fill: rgb(247 250 252 / 54%);
-  --harbor-content-fill: rgb(248 250 252 / 64%);
-  --harbor-surface-fill: rgb(247 250 252 / 12%);
-  --harbor-elevated-fill: rgb(249 251 253 / 86%);
-  --harbor-filter-glass-fill: color-mix(in srgb, var(--card) 62%, transparent);
-  --harbor-glass-edge: rgb(255 255 255 / 66%);
-  --harbor-glass-shadow: rgb(31 47 61 / 24%);
+  --harbor-chrome: #e5edf5;
+  --harbor-canvas-edge: #d8e3ee;
+  --harbor-window-fill: rgb(233 241 249 / 82%);
+  --harbor-glass-fill: rgb(239 245 252 / 48%);
+  --harbor-content-fill: rgb(246 249 253 / 42%);
+  --harbor-surface-fill: rgb(255 255 255 / 22%);
+  --harbor-elevated-fill: rgb(243 248 253 / 86%);
+  --harbor-filter-glass-fill: var(--harbor-elevated-fill);
+  --harbor-reading-fill: rgb(246 249 253 / 82%);
+  --harbor-control-fill: rgb(255 255 255 / 22%);
+  --harbor-selected-fill: rgb(255 255 255 / 76%);
+  --harbor-glass-edge: rgb(255 255 255 / 70%);
+  --harbor-glass-shadow: rgb(24 43 65 / 19%);
+  --harbor-scrim: rgb(24 38 57 / 24%);
   --harbor-window-close: #ff5f57;
   --harbor-window-minimize: #febc2e;
   --harbor-window-maximize: #28c840;
@@ -75,42 +81,42 @@
 }
 
 .dark {
-  --background: #23272e;
-  --foreground: #d2d6de;
-  --card: #282c34;
-  --card-foreground: #eef0f4;
-  --popover: #1e2227;
-  --popover-foreground: #d2d6de;
-  --primary: #6cb6f2;
-  --primary-foreground: #15181e;
-  --secondary: #30333d;
-  --secondary-foreground: #d8dbe1;
-  --muted: #2c313c;
-  --muted-foreground: #aeb5bf;
-  --accent: #2c313a;
-  --accent-foreground: #eef0f4;
-  --destructive: #c24038;
+  --background: #1b2636;
+  --foreground: #edf3fa;
+  --card: #28374b;
+  --card-foreground: var(--foreground);
+  --popover: #304158;
+  --popover-foreground: var(--foreground);
+  --primary: #80b8ff;
+  --primary-foreground: #15263b;
+  --secondary: #35465c;
+  --secondary-foreground: var(--foreground);
+  --muted: #304157;
+  --muted-foreground: #b4c2d5;
+  --accent: #3a4a60;
+  --accent-foreground: var(--foreground);
+  --destructive: #f08e99;
+  --destructive-solid: #ac3446;
   --destructive-foreground: #ffffff;
-  --success: #98c379;
-  --merged: #c678dd;
-  --attention: #e5c07b;
-  --border: #4b5260;
-  --input: #4d5563;
-  --ring: #528bff;
-  --harbor-chrome: #1e2227;
-  --harbor-canvas-edge: #181a1f;
-  --harbor-window-fill: rgb(29 32 37 / 84%);
-  --harbor-glass-fill: rgb(17 24 32 / 46%);
-  --harbor-content-fill: rgb(12 18 26 / 30%);
-  --harbor-surface-fill: rgb(17 24 32 / 8%);
-  --harbor-elevated-fill: rgb(21 28 37 / 76%);
-  --harbor-filter-glass-fill: color-mix(
-    in srgb,
-    color-mix(in srgb, var(--background) 82%, var(--foreground)) 58%,
-    transparent
-  );
-  --harbor-glass-edge: rgb(255 255 255 / 18%);
-  --harbor-glass-shadow: rgb(0 4 10 / 56%);
+  --success: #78d398;
+  --merged: #c3a3f0;
+  --attention: #eac17d;
+  --border: rgb(213 229 251 / 15%);
+  --input: rgb(213 229 251 / 27%);
+  --ring: var(--primary);
+  --harbor-chrome: #25354b;
+  --harbor-canvas-edge: #142031;
+  --harbor-window-fill: rgb(29 43 62 / 76%);
+  --harbor-glass-fill: rgb(40 57 79 / 48%);
+  --harbor-content-fill: rgb(33 47 67 / 28%);
+  --harbor-surface-fill: rgb(220 232 255 / 5%);
+  --harbor-elevated-fill: rgb(43 59 81 / 90%);
+  --harbor-reading-fill: rgb(28 41 60 / 86%);
+  --harbor-control-fill: rgb(220 232 255 / 5%);
+  --harbor-selected-fill: rgb(220 232 255 / 13%);
+  --harbor-glass-edge: rgb(225 237 255 / 21%);
+  --harbor-glass-shadow: rgb(6 15 30 / 32%);
+  --harbor-scrim: rgb(8 17 31 / 34%);
   color-scheme: dark;
 }
 
@@ -151,7 +157,7 @@
 
 @layer utilities {
   .title-bar-btn {
-    @apply text-muted-foreground hover:text-foreground focus-visible:ring-primary/60 flex size-8 cursor-pointer items-center justify-center rounded-md transition-colors outline-none hover:bg-white/[0.055] focus-visible:ring-2;
+    @apply text-muted-foreground hover:text-foreground focus-visible:ring-primary/60 hover:bg-accent/60 flex size-8 cursor-pointer items-center justify-center rounded-md transition-colors outline-none focus-visible:ring-2;
   }
 
   .title-bar-traffic-control {
@@ -294,14 +300,27 @@
   .harbor-popover,
   .harbor-command,
   .harbor-sheet {
-    border-color: color-mix(in srgb, var(--harbor-glass-edge) 92%, transparent);
+    border-color: var(--harbor-glass-edge);
     background: var(--harbor-elevated-fill);
+    color: var(--popover-foreground);
     box-shadow:
-      0 22px 58px var(--harbor-glass-shadow),
-      inset 0 1px 0 color-mix(in srgb, white 16%, transparent),
-      inset 0 0 0 1px color-mix(in srgb, var(--harbor-glass-edge) 26%, transparent);
-    backdrop-filter: saturate(120%) blur(34px);
-    -webkit-backdrop-filter: saturate(120%) blur(34px);
+      0 12px 36px var(--harbor-glass-shadow),
+      inset 0 1px 0 var(--harbor-glass-edge);
+    backdrop-filter: saturate(112%) blur(28px);
+    -webkit-backdrop-filter: saturate(112%) blur(28px);
+  }
+
+  .harbor-control {
+    background: var(--harbor-control-fill);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--harbor-glass-edge) 35%, transparent);
+  }
+
+  .harbor-reading {
+    background: var(--harbor-reading-fill);
+  }
+
+  .harbor-overlay-scrim {
+    background: var(--harbor-scrim);
   }
 
   .harbor-nav-item {
@@ -325,13 +344,7 @@
   }
 
   .harbor-filter-menu {
-    border-color: color-mix(in srgb, var(--foreground) 14%, transparent);
-    background: var(--harbor-filter-glass-fill);
-    box-shadow:
-      0 8px 24px color-mix(in srgb, var(--harbor-glass-shadow) 42%, transparent),
-      inset 0 1px 0 color-mix(in srgb, white 12%, transparent);
-    backdrop-filter: saturate(108%) blur(24px);
-    -webkit-backdrop-filter: saturate(108%) blur(24px);
+    border-radius: 12px;
   }
 
   .harbor-filter-menu [data-slot="command"] {
@@ -391,26 +404,20 @@
     color: var(--foreground);
   }
 
-  .harbor-nav-item[aria-current="page"] {
-    background: color-mix(in srgb, var(--foreground) 88%, transparent);
+  .harbor-nav-item[aria-current="page"],
+  .harbor-rail-item[data-active="true"] {
+    background: var(--harbor-selected-fill);
     box-shadow:
-      inset 0 1px 0 color-mix(in srgb, white 18%, transparent),
-      0 8px 22px color-mix(in srgb, var(--harbor-glass-shadow) 24%, transparent);
-    color: var(--background);
+      inset 0 0 0 1px color-mix(in srgb, var(--harbor-glass-edge) 65%, transparent),
+      inset 0 1px 0 var(--harbor-glass-edge);
+    color: var(--foreground);
   }
 
   .harbor-segmented [data-slot="tabs-trigger"][data-state="active"] {
     border-color: transparent;
-    background: color-mix(in srgb, var(--foreground) 88%, transparent);
-    box-shadow:
-      inset 0 1px 0 color-mix(in srgb, white 18%, transparent),
-      0 6px 18px color-mix(in srgb, var(--harbor-glass-shadow) 22%, transparent);
-    color: var(--background);
-  }
-
-  .harbor-rail-item[data-active="true"] {
-    background: color-mix(in srgb, var(--foreground) 88%, transparent);
-    color: var(--background);
+    background: var(--harbor-selected-fill);
+    box-shadow: inset 0 1px 0 var(--harbor-glass-edge);
+    color: var(--foreground);
   }
 
   .harbor-progress-indeterminate {
@@ -714,7 +721,8 @@ button {
   .harbor-workspace-shell,
   .harbor-popover,
   .harbor-command,
-  .harbor-sheet {
+  .harbor-sheet,
+  .harbor-filter-menu {
     background: var(--background);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;

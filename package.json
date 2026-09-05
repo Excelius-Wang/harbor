@@ -23,7 +23,8 @@
     "lint": "eslint src/**/*.{ts,tsx} vite.config.ts",
     "lint:fix": "eslint src/**/*.{ts,tsx} vite.config.ts --fix",
     "test": "vitest run",
-    "check": "pnpm format:check && pnpm lint && pnpm test && pnpm build"
+    "check": "pnpm format:check && pnpm lint && pnpm test && pnpm build",
+    "dev:ui": "vite --mode ui-preview"
   },
   "dependencies": {
     "@shikijs/core": "4.4.3",

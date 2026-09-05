@@ -35,8 +35,11 @@ export function ThemeProvider({
   useEffect(() => {
     const root = window.document.documentElement;
     const colorScheme = window.matchMedia("(prefers-color-scheme: dark)");
+    const transparency = window.matchMedia("(prefers-reduced-transparency: reduce)");
+    let appearanceVersion = 0;
 
     const applyTheme = () => {
+      const version = ++appearanceVersion;
       const resolvedTheme = theme === "system" ? (colorScheme.matches ? "dark" : "light") : theme;
 
       root.classList.remove("light", "dark");
@@ -49,13 +52,14 @@ export function ThemeProvider({
 
         void appWindow
           .setTheme(resolvedTheme)
-          .then(() =>
-            appWindow.setEffects({
-              effects: [glassEffect],
+          .then(() => {
+            if (version !== appearanceVersion) return;
+            return appWindow.setEffects({
+              effects: transparency.matches ? [] : [glassEffect],
               state: EffectState.FollowsWindowActiveState,
               radius: 10,
-            })
-          )
+            });
+          })
           .catch((error) => {
             console.warn("Failed to synchronize the native window appearance:", error);
           });
@@ -63,10 +67,13 @@ export function ThemeProvider({
     };
 
     applyTheme();
-    if (theme !== "system") return;
-
-    colorScheme.addEventListener("change", applyTheme);
-    return () => colorScheme.removeEventListener("change", applyTheme);
+    if (theme === "system") colorScheme.addEventListener("change", applyTheme);
+    transparency.addEventListener("change", applyTheme);
+    return () => {
+      appearanceVersion++;
+      colorScheme.removeEventListener("change", applyTheme);
+      transparency.removeEventListener("change", applyTheme);
+    };
   }, [theme]);
 
   // Listen for localStorage changes to sync theme across windows

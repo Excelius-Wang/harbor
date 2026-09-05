@@ -7,8 +7,21 @@ import path from "path";
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vite.dev/config/
-export default defineConfig(async () => ({
-  plugins: [react(), tailwindcss()],
+export default defineConfig(async ({ command, mode }) => ({
+  plugins: [
+    react(),
+    tailwindcss(),
+    command === "serve" &&
+      mode === "ui-preview" && {
+        name: "harbor-ui-preview",
+        transformIndexHtml: {
+          order: "pre",
+          handler(html) {
+            return html.replace('src="/src/main.tsx"', 'src="/src/dev/preview-main.ts"');
+          },
+        },
+      },
+  ],
 
   resolve: {
     alias: {

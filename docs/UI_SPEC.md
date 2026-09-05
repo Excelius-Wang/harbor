@@ -1,5 +1,9 @@
 # Harbor Workspace UI Specification
 
+> Historical shell specification. For the current visual direction and reference images,
+> use [the UI design guide](UI_DESIGN_GUIDE.md). Existing behavior and dimensions are recorded
+> in the implementation; the initial values below are not current design defaults.
+
 ## Product intent
 
 Harbor is a focused GitHub desktop workspace for people who move between pull requests,

@@ -963,7 +963,7 @@ export function GitHubDiscoveryView({
                   >
                     <SelectTrigger
                       size="sm"
-                      className="w-28 rounded-[8px] px-4"
+                      className="harbor-filter-trigger min-w-32"
                       aria-label={t("workspace.discovery.trendingPeriod")}
                     >
                       <SelectValue />

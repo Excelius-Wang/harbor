@@ -18,7 +18,9 @@
     "save": "Save",
     "loadMore": "Load more",
     "edit": "Edit",
-    "delete": "Delete"
+    "delete": "Delete",
+    "close": "Close",
+    "loading": "Loading"
   },
   "workspace": {
     "primaryNavigation": "Primary navigation",
@@ -1420,7 +1422,7 @@
       "repositoryFileConflictTitle": "The repository changed before this commit",
       "repositoryFileCommitFailed": "Harbor could not commit this file",
       "committingRepositoryFile": "Committing changes…",
-      "commitChanges": "Commit changes",
+      "commitChanges": "Changed files",
       "repositoryFileCommitted": "Changes committed",
       "repositoryFileCommittedDescription": "{{branch}} now includes commit {{sha}}.",
       "deleteRepositoryFile": "Delete",
@@ -1881,11 +1883,21 @@
         }
       },
       "pullRequestMergeQueueEntryStates": {
-        "awaitingChecks": { "title": "Merge queue checks are running" },
-        "locked": { "title": "This queue entry is locked" },
-        "mergeable": { "title": "Ready to merge from the queue" },
-        "queued": { "title": "Pull request is in the merge queue" },
-        "unmergeable": { "title": "GitHub cannot merge this queue entry" }
+        "awaitingChecks": {
+          "title": "Merge queue checks are running"
+        },
+        "locked": {
+          "title": "This queue entry is locked"
+        },
+        "mergeable": {
+          "title": "Ready to merge from the queue"
+        },
+        "queued": {
+          "title": "Pull request is in the merge queue"
+        },
+        "unmergeable": {
+          "title": "GitHub cannot merge this queue entry"
+        }
       },
       "pullRequestMergeQueueWait": {
         "minute_one": "Estimated wait: about {{count}} minute.",
@@ -2016,7 +2028,6 @@
       "unplacedCommitCommentsLoadingFiles": "These comments may move into the diff after more changed files are loaded.",
       "commitCommentLine": "Line {{line}}",
       "commitCommentPosition": "Diff position {{position}}",
-      "commitChanges": "Changed files",
       "commitChangesDescription": "GitHub returns large commits in pages of 100 files.",
       "commitFileRenamed": "Renamed from {{previousPath}} to {{path}}",
       "commitPatchUnavailable": "GitHub did not include a text patch. This file may be binary, generated, or too large to display.",
@@ -2500,7 +2511,6 @@
       "milestoneCreated": "Milestone created",
       "milestoneUpdated": "Milestone updated",
       "milestoneDeleted": "Milestone deleted",
-      "editMilestone": "Edit milestone",
       "closeMilestone": "Close milestone",
       "reopenMilestone": "Reopen milestone",
       "deleteMilestone": "Delete milestone",
@@ -2731,7 +2741,6 @@
       "noDiscussionCommentsDescription": "Be the first to add to this discussion.",
       "loadMoreDiscussionComments": "Load more comments",
       "reply": "Reply",
-      "edit": "Edit",
       "discussionAnswer": "Answer",
       "markDiscussionAnswer": "Mark as answer",
       "unmarkDiscussionAnswer": "Unmark answer",
@@ -2766,7 +2775,6 @@
         "duplicate": "Duplicate"
       },
       "discussionStateChangeFailed": "Harbor could not update this discussion",
-      "delete": "Delete",
       "deleteDiscussion": "Delete discussion",
       "deletingDiscussion": "Deleting…",
       "discussionDeleted": "Discussion deleted",
@@ -3013,5 +3021,38 @@
       "tauriVersionInvalid": "src-tauri/tauri.conf.json version is missing or invalid",
       "invalidLang": "Invalid --lang value. Use zh or en."
     }
+  },
+  "uiGallery": {
+    "title": "Harbor components",
+    "description": "Production components and tokens. Preview data for visual and keyboard checks.",
+    "theme": "Switch theme",
+    "actions": "Actions",
+    "primary": "Primary action",
+    "outline": "Outline action",
+    "secondary": "Secondary",
+    "ghost": "Ghost action",
+    "link": "View on GitHub",
+    "destructive": "Delete",
+    "disabled": "Disabled",
+    "loading": "Loading",
+    "forms": "Forms",
+    "search": "Search",
+    "placeholder": "Search repositories…",
+    "invalid": "Invalid value",
+    "body": "Description",
+    "longText": "Long descriptions wrap naturally, keeping names, controls and metadata readable in a compact workspace.",
+    "checked": "Include archived repositories",
+    "navigation": "Navigation",
+    "menus": "Menus and filters",
+    "branch": "Branch",
+    "menu": "Open menu",
+    "command": "Command palette",
+    "overlays": "Overlays",
+    "dialog": "Open dialog",
+    "sheet": "Open sheet",
+    "states": "Feedback and states",
+    "error": "Refresh failed",
+    "retry": "Showing the previous results. Retry to refresh.",
+    "empty": "No results"
   }
 }

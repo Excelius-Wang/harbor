@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Harbor · 视觉参考与候选色板</title>
+    <link rel="icon" href="data:," />
+    <style>
+      :root {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #202b3a;
+        background: #eef2f7;
+        font-synthesis: none;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+      }
+      main {
+        max-width: 1200px;
+        margin: auto;
+        padding: 48px 32px 64px;
+      }
+      a {
+        color: #2768d3;
+        text-underline-offset: 4px;
+      }
+      a:focus-visible {
+        outline: 2px solid #2768d3;
+        outline-offset: 5px;
+        border-radius: 3px;
+      }
+      .eyebrow {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+      }
+      h1 {
+        margin: 12px 0 16px;
+        font-size: 32px;
+        line-height: 1.3;
+        letter-spacing: -0.025em;
+      }
+      h2 {
+        margin: 0 0 12px;
+        font-size: 23px;
+      }
+      h3 {
+        margin: 8px 0 10px;
+        font-size: 21px;
+      }
+      p {
+        margin: 0;
+        line-height: 1.8;
+      }
+      .intro {
+        max-width: 780px;
+        color: #607085;
+      }
+      nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px 24px;
+        margin-top: 20px;
+        font-size: 14px;
+      }
+      .section {
+        margin-top: 44px;
+      }
+      .section > p {
+        color: #607085;
+        max-width: 820px;
+        font-size: 14px;
+      }
+      .references {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        margin-top: 22px;
+      }
+      figure {
+        margin: 0;
+        min-width: 0;
+      }
+      .image-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 470px;
+        background: #101725;
+        border-radius: 14px;
+        overflow: hidden;
+      }
+      img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+      figcaption {
+        margin-top: 12px;
+        color: #607085;
+        font-size: 13px;
+        line-height: 1.7;
+      }
+      figcaption strong {
+        display: block;
+        color: #202b3a;
+        font-size: 14px;
+        margin-bottom: 3px;
+      }
+      .palettes {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        margin-top: 22px;
+      }
+      .palette {
+        min-width: 0;
+        padding: 24px;
+        border: 1px solid var(--edge);
+        border-radius: 16px;
+        background: var(--base);
+        color: var(--text);
+      }
+      .dark {
+        --base: #172131;
+        --text: #edf3fa;
+        --secondary: #aab7c9;
+        --edge: #344052;
+      }
+      .light {
+        --base: #eef2f7;
+        --text: #202b3a;
+        --secondary: #607085;
+        --edge: #d4dce7;
+      }
+      .palette .eyebrow,
+      .palette p {
+        color: var(--secondary);
+      }
+      .palette p {
+        font-size: 13px;
+      }
+      .swatches {
+        list-style: none;
+        padding: 0;
+        margin: 24px 0 0;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px 18px;
+      }
+      .swatch {
+        min-width: 0;
+      }
+      .sample {
+        display: block;
+        height: 44px;
+        margin-bottom: 8px;
+        border-radius: 7px;
+        box-shadow: inset 0 0 0 1px var(--edge);
+      }
+      .swatch strong {
+        font-size: 12px;
+        font-weight: 500;
+      }
+      code {
+        display: block;
+        margin-top: 4px;
+        font:
+          11px ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+        color: var(--secondary);
+      }
+      .note {
+        margin-top: 20px;
+        padding: 16px 18px;
+        border-left: 2px solid #bbcbdf;
+        color: #607085;
+        font-size: 13px;
+      }
+      footer {
+        margin-top: 40px;
+        padding-top: 20px;
+        border-top: 1px solid #d4dce7;
+        color: #607085;
+        font-size: 12px;
+        line-height: 1.8;
+      }
+      @media (max-width: 760px) {
+        main {
+          padding: 28px 18px 40px;
+        }
+        h1 {
+          font-size: 27px;
+        }
+        .references,
+        .palettes {
+          grid-template-columns: 1fr;
+        }
+        .image-link {
+          height: auto;
+        }
+        img {
+          height: auto;
+          max-height: 600px;
+        }
+        .palette {
+          padding: 20px;
+        }
+      }
+      @media print {
+        main {
+          padding: 12px;
+        }
+        .references,
+        .palettes {
+          grid-template-columns: 1fr 1fr;
+        }
+        .palette {
+          break-inside: avoid;
+          print-color-adjust: exact;
+          -webkit-print-color-adjust: exact;
+        }
+        .image-link {
+          height: 320px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <span class="eyebrow">HARBOR / DESIGN REFERENCE</span>
+        <h1>冷蓝玻璃与克制的亮色</h1>
+        <p class="intro">
+          侧栏结构采用图四，配色采用 Harbor 的冷蓝灰，整页层次参考 LeonAnd。
+          导航选中态和行高由共享导航组件统一提供，新增页面复用该组件。
+        </p>
+        <nav aria-label="文档导航">
+          <a href="../UI_DESIGN_GUIDE.md">完整 UI 设计指南</a
+          ><a href="references/README.md">图片来源</a><a href="#palettes">查看候选色板</a>
+        </nav>
+      </header>
+      <section class="section" aria-labelledby="selected-title">
+        <h2 id="selected-title">已选侧栏与整页参考</h2>
+        <p>
+          两张图片各有固定用途：侧栏看结构，LeonAnd 看整页表面关系。具体颜色遵循 Harbor，
+          导航状态与尺寸遵循共享组件，其他侧栏示例不作为并行标准。
+        </p>
+        <div class="references">
+          <figure>
+            <a class="image-link" href="references/sidebar-04.webp"
+              ><img
+                src="references/sidebar-04.webp"
+                alt="已选侧栏图四：深色导航的展开与收起形态，带搜索和分组标题"
+                width="1080"
+                height="1440"
+            /></a>
+            <figcaption>
+              <strong>侧栏 · 图四</strong>参考分组、紧凑排列和展开收起的对应关系。 Harbor
+              继续使用冷蓝灰，搜索入口保留在标题栏。
+            </figcaption>
+          </figure>
+          <figure>
+            <a class="image-link" href="references/leonand-workspace.webp"
+              ><img
+                src="references/leonand-workspace.webp"
+                alt="已选整页参考 LeonAnd：玻璃侧栏、顶部工具区和稳定的浅色内容表面"
+                width="1080"
+                height="1440"
+            /></a>
+            <figcaption>
+              <strong>整页 · LeonAnd</strong>参考连续的背景色彩与内容面板的层次。 Harbor
+              保留自己的功能布局和阅读密度。
+            </figcaption>
+          </figure>
+        </div>
+        <p class="note">
+          当前共享导航位于工作区模块的 PrimaryNavigation / NavigationButton，行高为 40 px。
+          新页面继承工作区导航；需要复用到其他位置时，从现有实现提取共享组件。此页记录设计选择，
+          不代表界面已经按参考完成改造。
+        </p>
+      </section>
+      <section class="section" aria-labelledby="references-title">
+        <h2 id="references-title">玻璃与颜色参考</h2>
+        <p>外部视觉参考，画面中的软件名称为 Vorssaint。图片按原文件保存，点击可查看大图。</p>
+        <div class="references">
+          <figure>
+            <a class="image-link" href="references/vorssaint-volume.jpg"
+              ><img
+                src="references/vorssaint-volume.jpg"
+                alt="Vorssaint 音量面板：冷蓝灰玻璃、柔和分组、蓝绿橙色控件"
+                width="1206"
+                height="956"
+            /></a>
+            <figcaption>
+              <strong>材质与控件</strong
+              >细亮边包住玻璃，分组略亮。蓝色表示选中，绿橙色集中用于状态和数值。
+            </figcaption>
+          </figure>
+          <figure>
+            <a class="image-link" href="references/vorssaint-system.jpg"
+              ><img
+                src="references/vorssaint-system.jpg"
+                alt="Vorssaint 系统面板：背景蓝光透入，图表和状态分组清楚"
+                width="1080"
+                height="1582"
+            /></a>
+            <figcaption>
+              <strong>背景与层次</strong
+              >右侧有来自背景的蓝色明暗变化，长面板通过间距和细分隔保持清楚。
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+      <section class="section" id="palettes" aria-labelledby="palettes-title">
+        <h2 id="palettes-title">Harbor 候选色板</h2>
+        <p>
+          以下色值供试做与比较，尚未应用到软件，也未从图片中精确取样。 浅色板最初由 Vorssaint
+          的深色参考推导，LeonAnd 补充浅色表面的层次参考。
+          每个半透明色块都叠在本栏的基础背景上，实际效果会随背后内容变化。
+        </p>
+        <div class="palettes">
+          <section class="palette dark" aria-labelledby="dark-title">
+            <header>
+              <span class="eyebrow">DARK</span>
+              <h3 id="dark-title">深色 · 冷蓝炭灰</h3>
+              <p>深底保持安静，柔和蓝灰承接背景光感，亮色集中在操作和状态。</p>
+            </header>
+            <ul class="swatches">
+              <li class="swatch" data-role="基础背景" data-value="#172131">
+                <span class="sample" style="background: #172131" aria-hidden="true"></span>
+                <div><strong>基础背景</strong><code>#172131</code></div>
+              </li>
+              <li class="swatch" data-role="主玻璃填充" data-value="#28364B / 64%">
+                <span
+                  class="sample"
+                  style="background: rgb(40 54 75 / 64%)"
+                  aria-hidden="true"
+                ></span>
+                <div><strong>主玻璃填充</strong><code>#28364B / 64%</code></div>
+              </li>
+              <li class="swatch" data-role="内容分组填充" data-value="#DCE8FF / 6%">
+                <span
+                  class="sample"
+                  style="background: rgb(220 232 255 / 6%)"
+                  aria-hidden="true"
+                ></span>
+                <div><strong>内容分组填充</strong><code>#DCE8FF / 6%</code></div>
+              </li>
+              <li class="swatch" data-role="浮层填充" data-value="#2B3A51 / 72%">
+                <span
+                  class="sample"
+                  style="background: rgb(43 58 81 / 72%)"
+                  aria-hidden="true"
+                ></span>
+                <div><strong>浮层填充</strong><code>#2B3A51 / 72%</code></div>
+              </li>
+              <li class="swatch" data-role="主要文字" data-value="#EDF3FA">
+                <span class="sample" style="background: #edf3fa" aria-hidden="true"></span>
+                <div><strong>主要文字</strong><code>#EDF3FA</code></div>
+              </li>
+              <li class="swatch" data-role="次要文字" data-value="#AAB7C9">
+                <span class="sample" style="background: #aab7c9" aria-hidden="true"></span>
+                <div><strong>次要文字</strong><code>#AAB7C9</code></div>
+              </li>
+              <li class="swatch" data-role="弱化图标" data-value="#7D8CA2">
+                <span class="sample" style="background: #7d8ca2" aria-hidden="true"></span>
+                <div><strong>弱化图标</strong><code>#7D8CA2</code></div>
+              </li>
+              <li class="swatch" data-role="细边界" data-value="#DCE8FF / 12%">
+                <span
+                  class="sample"
+                  style="background: rgb(220 232 255 / 12%)"
+                  aria-hidden="true"
+                ></span>
+                <div><strong>细边界</strong><code>#DCE8FF / 12%</code></div>
+              </li>
+              <li class="swatch" data-role="边缘高光" data-value="#FFFFFF / 18%">
+                <span
+                  class="sample"
+                  style="background: rgb(255 255 255 / 18%)"
+                  aria-hidden="true"
+                ></span>
+                <div><strong>边缘高光</strong><code>#FFFFFF / 18%</code></div>
+              </li>
+              <li class="swatch" data-role="主色" data-value="#66AAFF">
+                <span class="sample" style="background: #66aaff" aria-hidden="true"></span>
+                <div><strong>主色</strong><code>#66AAFF</code></div>
+              </li>
+              <li class="swatch" data-role="强调控件选中底色" data-value="#66AAFF / 16%">
+                <span
+                  class="sample"
+                  style="background: rgb(102 170 255 / 16%)"
+                  aria-hidden="true"
+                ></span>
+                <div><strong>强调控件选中底色</strong><code>#66AAFF / 16%</code></div>
+              </li>
+              <li class="swatch" data-role="悬停底色" data-value="#EDF3FA / 6%">
+                <span
+                  class="sample"
+                  style="background: rgb(237 243 250 / 6%)"
+                  aria-hidden="true"
+                ></span>
+                <div><strong>悬停底色</strong><code>#EDF3FA / 6%</code></div>
+              </li>
+              <li class="swatch" data-role="成功" data-value="#63C77D">
+                <span class="sample" style="background: #63c77d" aria-hidden="true"></span>
+                <div><strong>成功</strong><code>#63C77D</code></div>
+              </li>
+              <li class="swatch" data-role="警告" data-value="#E9B96B">
+                <span class="sample" style="background: #e9b96b" aria-hidden="true"></span>
+                <div><strong>警告</strong><code>#E9B96B</code></div>
+              </li>
+              <li class="swatch" data-role="错误或破坏性操作" data-value="#F17983">
+                <span class="sample" style="background: #f17983" aria-hidden="true"></span>
+                <div><strong>错误或破坏性操作</strong><code>#F17983</code></div>
+              </li>
+              <li class="swatch" data-role="已合并" data-value="#BC9BEF">
+                <span class="sample" style="background: #bc9bef" aria-hidden="true"></span>
+                <div><strong>已合并</strong><code>#BC9BEF</code></div>
+              </li>
+            </ul>
+          </section>
+          <section class="palette light" aria-labelledby="light-title">
+            <header>
+              <span class="eyebrow">LIGHT</span>
+              <h3 id="light-title">浅色 · 冷白与淡蓝灰</h3>
+              <p>沿用相同的语义，用较深的文字与主色保持浅色表面的清晰度。</p>
+            </header>
+            <ul class="swatches">
+              <li class="swatch" data-role="基础背景" data-value="#EEF2F7">
+                <span class="sample" style="background: #eef2f7" aria-hidden="true"></span>
+                <div><strong>基础背景</strong><code>#EEF2F7</code></div>
+              </li>
+              <li class="swatch" data-role="主玻璃填充" data-value="#F4F7FC / 68%">
+                <span
+                  class="sample"
+                  style="background: rgb(244 247 252 / 68%)"
+                  aria-hidden="true"
+                ></span>
+                <div><strong>主玻璃填充</strong><code>#F4F7FC / 68%</code></div>
+              </li>
+              <li class="swatch" data-role="内容分组填充" data-value="#FFFFFF / 40%">
+                <span
+                  class="sample"
+                  style="background: rgb(255 255 255 / 40%)"
+                  aria-hidden="true"
+                ></span>
+                <div><strong>内容分组填充</strong><code>#FFFFFF / 40%</code></div>
+              </li>
+              <li class="swatch" data-role="浮层填充" data-value="#F8FAFD / 78%">
+                <span
+                  class="sample"
+                  style="background: rgb(248 250 253 / 78%)"
+                  aria-hidden="true"
+                ></span>
+                <div><strong>浮层填充</strong><code>#F8FAFD / 78%</code></div>
+              </li>
+              <li class="swatch" data-role="主要文字" data-value="#202B3A">
+                <span class="sample" style="background: #202b3a" aria-hidden="true"></span>
+                <div><strong>主要文字</strong><code>#202B3A</code></div>
+              </li>
+              <li class="swatch" data-role="次要文字" data-value="#607085">
+                <span class="sample" style="background: #607085" aria-hidden="true"></span>
+                <div><strong>次要文字</strong><code>#607085</code></div>
+              </li>
+              <li class="swatch" data-role="弱化图标" data-value="#7B8899">
+                <span class="sample" style="background: #7b8899" aria-hidden="true"></span>
+                <div><strong>弱化图标</strong><code>#7B8899</code></div>
+              </li>
+              <li class="swatch" data-role="细边界" data-value="#263A54 / 12%">
+                <span
+                  class="sample"
+                  style="background: rgb(38 58 84 / 12%)"
+                  aria-hidden="true"
+                ></span>
+                <div><strong>细边界</strong><code>#263A54 / 12%</code></div>
+              </li>
+              <li class="swatch" data-role="边缘高光" data-value="#FFFFFF / 72%">
+                <span
+                  class="sample"
+                  style="background: rgb(255 255 255 / 72%)"
+                  aria-hidden="true"
+                ></span>
+                <div><strong>边缘高光</strong><code>#FFFFFF / 72%</code></div>
+              </li>
+              <li class="swatch" data-role="主色" data-value="#2768D3">
+                <span class="sample" style="background: #2768d3" aria-hidden="true"></span>
+                <div><strong>主色</strong><code>#2768D3</code></div>
+              </li>
+              <li class="swatch" data-role="强调控件选中底色" data-value="#2768D3 / 10%">
+                <span
+                  class="sample"
+                  style="background: rgb(39 104 211 / 10%)"
+                  aria-hidden="true"
+                ></span>
+                <div><strong>强调控件选中底色</strong><code>#2768D3 / 10%</code></div>
+              </li>
+              <li class="swatch" data-role="悬停底色" data-value="#202B3A / 5%">
+                <span
+                  class="sample"
+                  style="background: rgb(32 43 58 / 5%)"
+                  aria-hidden="true"
+                ></span>
+                <div><strong>悬停底色</strong><code>#202B3A / 5%</code></div>
+              </li>
+              <li class="swatch" data-role="成功" data-value="#257A46">
+                <span class="sample" style="background: #257a46" aria-hidden="true"></span>
+                <div><strong>成功</strong><code>#257A46</code></div>
+              </li>
+              <li class="swatch" data-role="警告" data-value="#90610D">
+                <span class="sample" style="background: #90610d" aria-hidden="true"></span>
+                <div><strong>警告</strong><code>#90610D</code></div>
+              </li>
+              <li class="swatch" data-role="错误或破坏性操作" data-value="#C64250">
+                <span class="sample" style="background: #c64250" aria-hidden="true"></span>
+                <div><strong>错误或破坏性操作</strong><code>#C64250</code></div>
+              </li>
+              <li class="swatch" data-role="已合并" data-value="#8055B9">
+                <span class="sample" style="background: #8055b9" aria-hidden="true"></span>
+                <div><strong>已合并</strong><code>#8055B9</code></div>
+              </li>
+            </ul>
+          </section>
+        </div>
+        <p class="note">
+          主色用于链接、焦点和少量选中控件。成功、警告、错误和已合并各有语义，不扩展成页面装饰色。这里展示颜色分工；实际玻璃效果还需结合模糊、背景和原生窗口验证。
+        </p>
+      </section>
+      <footer>
+        整理日期：2026-09-06。原图来源为用户分享的
+        <a href="https://xhslink.cn/o/3ZjNNK5ZW0B">侧栏笔记</a>、
+        <a href="https://xhslink.cn/o/64spaSG1AGg">玻璃界面笔记</a>与
+        <a href="https://xhslink.cn/o/539lzSnQHkv">Vorssaint 笔记</a>。
+        图片保留第三方参考身份；色板为 Harbor 的候选设计，不代表当前运行界面。
+      </footer>
+    </main>
+  </body>
+</html>
