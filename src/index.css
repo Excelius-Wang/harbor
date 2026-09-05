@@ -117,6 +117,7 @@
 
   body {
     @apply text-foreground bg-transparent;
+
     font-family:
       -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", Inter, ui-sans-serif,
       "Segoe UI", sans-serif;
