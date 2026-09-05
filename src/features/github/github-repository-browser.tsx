@@ -296,7 +296,7 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
   if (repositoryError && !repositoriesLoaded) {
     const disconnected = repositoryError.code === "githubNotConnected";
     return (
-      <section className="grid min-w-0 flex-1 place-items-center bg-[color-mix(in_srgb,var(--background)_95%,transparent)] p-6">
+      <section className="harbor-content grid min-w-0 flex-1 place-items-center p-6">
         <Empty className="max-w-lg border border-white/[0.075] bg-white/[0.02]">
           <EmptyHeader>
             <EmptyMedia variant="icon">
@@ -327,7 +327,7 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
   }
 
   return (
-    <section className="flex min-w-0 flex-1 flex-col bg-[color-mix(in_srgb,var(--background)_95%,transparent)]">
+    <section className="harbor-content flex min-w-0 flex-1 flex-col">
       <header className="flex h-[74px] shrink-0 items-center justify-between gap-4 border-b border-white/[0.075] px-5">
         <div>
           <p className="text-primary/80 text-[10px] font-medium tracking-[0.14em] uppercase">

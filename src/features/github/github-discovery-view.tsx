@@ -678,7 +678,7 @@ export function GitHubDiscoveryView({
   };
 
   return (
-    <section className="flex min-w-0 flex-1 flex-col bg-[color-mix(in_srgb,var(--background)_95%,transparent)]">
+    <section className="harbor-content flex min-w-0 flex-1 flex-col">
       <header className="shrink-0 border-b border-white/[0.075] px-5 pt-4">
         <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-3">
           <div className="flex items-end justify-between gap-5 max-[760px]:items-start">

@@ -140,7 +140,7 @@ export function GitHubPullRequestInbox({
   };
 
   return (
-    <section className="flex min-w-0 flex-1 flex-col bg-[color-mix(in_srgb,var(--background)_95%,transparent)]">
+    <section className="harbor-content flex min-w-0 flex-1 flex-col">
       <header className="h-[74px] shrink-0 border-b border-white/[0.075] px-5">
         <div className="mx-auto flex h-full w-full max-w-[1120px] items-center justify-between gap-4">
           <div>

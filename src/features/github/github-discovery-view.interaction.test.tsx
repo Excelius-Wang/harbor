@@ -36,6 +36,7 @@ describe("GitHub discovery navigation", () => {
     const activeTab = screen.getByRole("tab", { name: "workspace.discovery.tabs.feed" });
     const feedWindow = screen.getByText("workspace.discovery.feedWindow");
 
+    expect(tabList.closest("section")?.className).toContain("harbor-content");
     expect(tabList.className).toContain("scrollbar-none");
     expect(tabList.className).toContain("overflow-x-auto");
     expect(tabList.className).toContain("overflow-y-hidden");

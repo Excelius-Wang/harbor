@@ -487,7 +487,7 @@ export function GitHubProfileView({
   };
 
   return (
-    <section className="flex min-w-0 flex-1 flex-col bg-[color-mix(in_srgb,var(--background)_95%,transparent)]">
+    <section className="harbor-content flex min-w-0 flex-1 flex-col">
       <header className="flex h-[74px] shrink-0 items-center justify-between gap-4 border-b px-5">
         <div className="flex min-w-0 items-center gap-3">
           {selectedUsername || onBack ? (

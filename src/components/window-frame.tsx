@@ -35,7 +35,7 @@ export function WindowFrame({ titleBar, children, className, contentClassName }:
     <ThemeProvider defaultTheme="dark" storageKey="tauri-ui-theme">
       <div
         className={cn(
-          "bg-background flex h-screen w-screen flex-col overflow-hidden",
+          "harbor-window flex h-screen w-screen flex-col overflow-hidden",
           isMaximized ? "" : "border-border rounded-lg border",
           className
         )}

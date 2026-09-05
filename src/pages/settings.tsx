@@ -77,7 +77,7 @@ export default function SettingsPage() {
       contentClassName="flex flex-1 overflow-hidden"
     >
       <Toaster />
-      <aside className="border-border flex w-40 flex-col border-r p-4">
+      <aside className="harbor-glass flex w-40 flex-col border-r p-4">
         <nav className="flex-1 space-y-1">
           {menuItems.map((item) => {
             const Icon = item.icon;
@@ -100,7 +100,7 @@ export default function SettingsPage() {
         </nav>
       </aside>
 
-      <div className="flex-1 overflow-auto">
+      <div className="harbor-content flex-1 overflow-auto">
         <div className="max-w-3xl p-4">
           {activeSection === "appearance" && (
             <div className="space-y-4">
