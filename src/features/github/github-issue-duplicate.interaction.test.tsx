@@ -2,7 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
@@ -57,6 +57,50 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe("GitHub Issue duplicate reference", () => {
+  it("retains a stale canonical Issue while blocking unmark in an already open confirmation", async () => {
+    const duplicate = {
+      owner: "octocat",
+      repository: "api",
+      fullName: "octocat/api",
+      repositoryUrl: "https://github.com/octocat/api",
+      issueNumber: 9,
+      title: "Canonical Issue",
+      url: "https://github.com/octocat/api/issues/9",
+      viewerCanUnmark: true,
+    };
+    vi.mocked(invoke).mockResolvedValue(duplicate);
+    const user = userEvent.setup();
+    const { queryClient, onNavigate } = renderDuplicate();
+    await user.click(
+      await screen.findByRole("button", { name: "workspace.repositories.unmarkIssueDuplicate" })
+    );
+    vi.mocked(invoke).mockRejectedValueOnce({ code: "githubNetwork", message: "offline" });
+    await act(() => queryClient.invalidateQueries());
+
+    expect(await screen.findByText("common.staleResults")).toBeTruthy();
+    const confirm = screen.getByRole("button", {
+      name: "workspace.repositories.unmarkIssueDuplicateConfirm",
+    });
+    expect(confirm.hasAttribute("disabled")).toBe(true);
+    await user.click(confirm);
+    expect(
+      vi
+        .mocked(invoke)
+        .mock.calls.every(([command]) => command === "github_get_repository_issue_duplicate")
+    ).toBe(true);
+    await user.click(screen.getByRole("button", { name: "common.cancel" }));
+    await user.click(screen.getByRole("button", { name: /Canonical Issue/ }));
+    expect(onNavigate).toHaveBeenCalledWith(duplicate);
+    await user.click(screen.getByRole("button", { name: "common.retry" }));
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("button", { name: "workspace.repositories.unmarkIssueDuplicate" })
+          .hasAttribute("disabled")
+      ).toBe(false)
+    );
+  });
+
   it("loads the canonical Issue and navigates to it", async () => {
     const duplicate = {
       owner: "octocat",

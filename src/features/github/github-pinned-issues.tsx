@@ -5,6 +5,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { parseIpcError } from "@/lib/ipc-error";
 import type { GitHubRepositoryContentContext } from "./github-data";
 import { repositoryPinnedIssuesQueryOptions } from "./github-issue-pin-queries";
@@ -39,7 +40,7 @@ export function GitHubPinnedIssues({
   ) : null;
 
   return (
-    <section className="bg-muted/15 border-b px-4 py-3">
+    <section className="harbor-subtle-divider border-b px-4 py-3">
       <div className="mb-2 flex items-center gap-2 text-xs font-medium">
         <Pin className="text-muted-foreground size-3.5" />
         <span>{t("workspace.repositories.pinnedIssues")}</span>
@@ -47,26 +48,28 @@ export function GitHubPinnedIssues({
           <span className="text-muted-foreground font-normal">{result.data.issues.length}/3</span>
         ) : null}
       </div>
-      {result.data && errorNotice ? <div className="mb-2">{errorNotice}</div> : null}
+      {result.data && error ? (
+        <WorkspaceStaleNotice message={error.message} onRetry={() => void result.refetch()} />
+      ) : null}
       {result.isPending ? (
         <div
-          className="grid grid-cols-1 gap-2 @min-[620px]/issues:grid-cols-3"
+          className="flex flex-col gap-1"
           aria-label={t("workspace.repositories.loadingPinnedIssues")}
         >
           {Array.from({ length: 3 }, (_, index) => (
-            <Skeleton key={index} className="h-20 w-full rounded-lg" />
+            <Skeleton key={index} className="h-14 w-full rounded-md" />
           ))}
         </div>
       ) : !result.data && errorNotice ? (
         errorNotice
       ) : result.data?.issues.length ? (
-        <div className="grid grid-cols-1 gap-2 @min-[620px]/issues:grid-cols-3">
+        <div className="flex flex-col gap-1">
           {result.data.issues.map((issue) => (
             <Button
               key={issue.nodeId}
               type="button"
-              variant="outline"
-              className="h-auto min-h-20 items-start justify-start gap-2 px-3 py-2.5 text-left whitespace-normal"
+              variant="ghost"
+              className="harbor-result-row h-auto min-w-0 items-start justify-start gap-2 px-2.5 py-2 text-left whitespace-normal"
               onClick={() => onSelect(issue.number)}
             >
               {issue.state === "open" ? (
@@ -75,10 +78,10 @@ export function GitHubPinnedIssues({
                 <CheckCircle2 className="text-muted-foreground mt-0.5 shrink-0" />
               )}
               <span className="min-w-0">
-                <span className="line-clamp-2 block text-xs leading-5 font-medium">
+                <span className="block text-[13px] leading-5 font-medium break-words">
                   {issue.title}
                 </span>
-                <span className="text-muted-foreground mt-1 block text-[10px] font-normal">
+                <span className="text-muted-foreground block text-[11px] font-normal">
                   #{issue.number} ·{" "}
                   {t("workspace.repositories.pinnedBy", { actor: issue.pinnedBy })}
                 </span>

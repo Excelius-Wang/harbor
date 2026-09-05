@@ -2,7 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { GitHubIssueCloneAction } from "./github-issue-clone-action";
@@ -65,10 +65,49 @@ function renderAction(onCloned = vi.fn()) {
       <GitHubIssueCloneAction repository={repository} issue={issue} onCloned={onCloned} />
     </QueryClientProvider>
   );
-  return onCloned;
+  return { onCloned, queryClient };
 }
 
 describe("GitHub Issue clone action", () => {
+  it("keeps the clone draft through refresh failure and blocks submission until retry", async () => {
+    const status = {
+      repositoryId: "R_1",
+      repositoryFullName: "octocat/hello-world",
+      issueNodeId: "I_7",
+      issueNumber: 7,
+      title: "Current Issue",
+      body: "Current body",
+      sourceOpen: true,
+      destinationAllowsBlankIssues: true,
+      viewerCanClone: true,
+    };
+    vi.mocked(invoke).mockResolvedValue(status);
+    const { queryClient } = renderAction();
+    const user = userEvent.setup();
+    const opener = await screen.findByRole("button", { name: "workspace.repositories.cloneIssue" });
+    await waitFor(() => expect(opener.hasAttribute("disabled")).toBe(false));
+    await user.click(opener);
+    const title = screen.getByLabelText("workspace.repositories.issueTitle") as HTMLInputElement;
+    await user.clear(title);
+    await user.type(title, "Unsaved clone draft");
+    vi.mocked(invoke).mockRejectedValueOnce({ code: "githubNetwork", message: "offline" });
+    await act(() => queryClient.invalidateQueries());
+    expect(await screen.findByText("common.staleResults")).toBeTruthy();
+    expect(title.value).toBe("Unsaved clone draft");
+    const submit = screen.getByRole("button", { name: "workspace.repositories.cloneIssueConfirm" });
+    expect(submit.hasAttribute("disabled")).toBe(true);
+    await user.click(submit);
+    await user.type(title, "{Enter}");
+    expect(
+      vi
+        .mocked(invoke)
+        .mock.calls.every(([command]) => command === "github_get_repository_issue_clone_status")
+    ).toBe(true);
+    await user.click(screen.getByRole("button", { name: "common.retry" }));
+    await waitFor(() => expect(submit.hasAttribute("disabled")).toBe(false));
+    expect(title.value).toBe("Unsaved clone draft");
+  });
+
   it("loads authoritative status, preserves editable content, and creates the clone", async () => {
     const clone = {
       repositoryId: "R_1",
@@ -96,12 +135,14 @@ describe("GitHub Issue clone action", () => {
       if (command === "github_clone_repository_issue") return Promise.resolve(clone);
       return Promise.resolve(undefined);
     });
-    const onCloned = renderAction();
+    const { onCloned } = renderAction();
     const user = userEvent.setup();
 
-    await user.click(
-      await screen.findByRole("button", { name: "workspace.repositories.cloneIssue" })
-    );
+    const opener = await screen.findByRole("button", { name: "workspace.repositories.cloneIssue" });
+    await user.click(opener);
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(document.activeElement).toBe(opener));
+    await user.click(opener);
     expect(
       (screen.getByLabelText("workspace.repositories.issueTitle") as HTMLInputElement).value
     ).toBe("Current Issue");

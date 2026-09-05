@@ -174,13 +174,6 @@ export function workspaceFixture(
       } satisfies GitHubData.GitHubRepositoryCreationOptions;
     case "github_list_repository_issue_types":
       return [{ nodeId: "IT_preview", name: "Task" }] satisfies GitHubData.GitHubIssueType[];
-    case "github_get_repository_issue_creation_policy":
-      return {
-        blankIssueAllowed: true,
-        contactLinks: [],
-        templates: [],
-        templateChooserUrl: `${repository.url}/issues/new/choose`,
-      } satisfies GitHubData.GitHubIssueCreationPolicy;
     case "github_list_repositories":
       return { repositories: empty ? [] : repositories, page: 1, hasMore: false };
     case "github_list_starred_repositories":
@@ -346,6 +339,25 @@ export function workspaceFixture(
           },
         ],
       } satisfies GitHubData.GitHubCheckPage;
+    case "github_get_repository_issue_creation_policy":
+      return {
+        blankIssueAllowed: true,
+        contactLinks: [],
+        templates: [
+          {
+            path: ".github/ISSUE_TEMPLATE/feedback.md",
+            kind: "markdown",
+            name: "Workspace feedback",
+            about: "Report a workspace usability problem.",
+            defaultTitle: "",
+            body: "## What happened?\n\n## What did you expect?",
+            labels: ["enhancement"],
+            assignees: [],
+            templateUrl: `${repository.url}/issues/new?template=feedback.md`,
+          },
+        ],
+        templateChooserUrl: `${repository.url}/issues/new/choose`,
+      } satisfies GitHubData.GitHubIssueCreationPolicy;
     case "github_get_repository_issue_state_capabilities":
       return { ...identity, state: "open", viewerCanClose: true, viewerCanReopen: false };
     case "github_get_repository_conversation_controls":
@@ -358,7 +370,20 @@ export function workspaceFixture(
         viewerSubscription: "subscribed",
       };
     case "github_get_repository_pinned_issues":
-      return { ...identity, viewerCanManage: true, issues: [] };
+      return {
+        ...identity,
+        viewerCanManage: true,
+        issues: empty
+          ? []
+          : [2, 3].map((issueNumber) => ({
+              nodeId: `I_preview_${issueNumber}`,
+              number: issueNumber,
+              title: issue(issueNumber, repository).title,
+              url: `${repository.url}/issues/${issueNumber}`,
+              state: "open" as const,
+              pinnedBy: "harbor-preview",
+            })),
+      } satisfies GitHubData.GitHubPinnedIssuePage;
     case "github_get_repository_issue_type_status":
       return {
         ...identity,
@@ -397,21 +422,54 @@ export function workspaceFixture(
         viewerCanClone: true,
       } satisfies GitHubData.GitHubIssueCloneStatus;
     case "github_get_repository_issue_relationships":
-      return { ...pagination, parent: null, subIssues: [] };
+      return {
+        ...pagination,
+        parent: empty ? null : { issue: issue(number + 10, repository), repository },
+        subIssues: empty
+          ? []
+          : [number + 1, number + 2].map((child) => ({
+              issue: issue(child, repository),
+              repository,
+            })),
+      } satisfies GitHubData.GitHubIssueRelationshipsPage;
     case "github_get_repository_issue_dependencies":
       return {
-        blockedBy: [],
-        blocking: [],
-        totalBlockedBy: 0,
-        totalBlocking: 0,
+        blockedBy: empty ? [] : [{ issue: issue(number + 3, repository), repository }],
+        blocking: empty ? [] : [{ issue: issue(number + 4, repository), repository }],
         page: 1,
         hasPrevious: false,
         hasMore: false,
       };
     case "github_get_repository_issue_duplicate":
-      return null;
+      return empty
+        ? null
+        : ({
+            owner: repository.owner,
+            repository: repository.name,
+            fullName: repository.fullName,
+            repositoryUrl: repository.url,
+            issueNumber: number + 1,
+            title: issue(number + 1, repository).title,
+            url: `${repository.url}/issues/${number + 1}`,
+            viewerCanUnmark: true,
+          } satisfies GitHubData.GitHubIssueDuplicateReference);
     case "github_get_repository_issue_linked_pull_requests":
-      return { pullRequests: [], nextCursor: null };
+      return {
+        pullRequests: empty
+          ? []
+          : [
+              {
+                repository,
+                number: 1,
+                title: "Update workspace surfaces and controls",
+                url: `${repository.url}/pull/1`,
+                state: "open",
+                draft: false,
+                merged: false,
+              },
+            ],
+        nextCursor: null,
+      } satisfies GitHubData.GitHubIssueLinkedPullRequestPage;
     case "github_get_repository_issue_linked_branches":
       return {
         ...identity,
@@ -419,13 +477,34 @@ export function workspaceFixture(
         defaultBranchOid: sha,
         viewerCanCreate: true,
         viewerCanRead: true,
-        branches: [],
+        branches: empty
+          ? []
+          : [
+              {
+                id: "LB_preview",
+                name: "feature/workspace-surfaces",
+                repositoryId: "R_preview",
+                repositoryFullName: repository.fullName,
+                oid: sha,
+              },
+            ],
         nextCursor: null,
       } satisfies GitHubData.GitHubIssueLinkedBranchPage;
     case "github_get_repository_issue_tracking":
       return {
         direction: args.direction === "trackedBy" ? "trackedBy" : "tracked",
-        issues: [],
+        issues: empty
+          ? []
+          : [
+              {
+                nodeId: `I_preview_${number + 5}`,
+                number: number + 5,
+                title: issue(number + 5, repository).title,
+                url: `${repository.url}/issues/${number + 5}`,
+                state: "open",
+                repository,
+              },
+            ],
         nextCursor: null,
       } satisfies GitHubData.GitHubIssueTrackingPage;
     case "github_list_repository_issue_labels":

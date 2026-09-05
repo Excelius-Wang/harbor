@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -67,13 +68,13 @@ function IssueExternalLinks({ links }: { links: IssueExternalLink[] }) {
           key={link.key}
           type="button"
           variant="outline"
-          className="h-auto justify-start px-3 py-2 text-left"
+          className="h-auto min-w-0 justify-start px-3 py-2 text-left whitespace-normal"
           onClick={() => void openExternalUrl(link.url)}
         >
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-xs font-medium">{link.name}</span>
+            <span className="block text-[13px] font-medium break-words">{link.name}</span>
             {link.about ? (
-              <span className="text-muted-foreground block truncate text-[11px] font-normal">
+              <span className="text-muted-foreground block text-[11px] font-normal break-words">
                 {link.about}
               </span>
             ) : null}
@@ -121,14 +122,8 @@ function IssueTemplatePicker({
   if (markdownTemplates.length === 0 && templates.length === 0) return null;
 
   return (
-    <Card className="mb-4 gap-4 py-4 shadow-none">
-      <CardHeader className="px-4">
-        <CardTitle className="text-sm">{t("workspace.repositories.issueTemplate")}</CardTitle>
-        <CardDescription className="text-xs">
-          {selectedTemplate?.about ?? t("workspace.repositories.issueTemplateDescription")}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3 px-4">
+    <section className="harbor-subtle-divider mb-5 border-b pb-5">
+      <div className="flex flex-col gap-3">
         {markdownTemplates.length > 0 ? (
           <FieldGroup>
             <Field>
@@ -157,14 +152,17 @@ function IssueTemplatePicker({
             </Field>
           </FieldGroup>
         ) : null}
+        <p className="text-muted-foreground text-xs">
+          {selectedTemplate?.about ?? t("workspace.repositories.issueTemplateDescription")}
+        </p>
         {templates.some((template) => template.kind !== "markdown") ? (
           <CardDescription className="text-xs">
             {t("workspace.repositories.issueTemplateGitHubOnly")}
           </CardDescription>
         ) : null}
         <IssueExternalLinks links={externalTemplateLinks} />
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }
 
@@ -301,7 +299,7 @@ export function GitHubIssueCreate({
       <ScrollArea className="min-h-0 flex-1">
         <div className="mx-auto w-full max-w-[780px] px-4 py-5 sm:px-5">
           <header className="mb-5">
-            <h2 className="text-foreground text-xl leading-7 font-semibold tracking-[-0.025em]">
+            <h2 className="text-foreground text-2xl leading-7 font-semibold tracking-tight">
               {t("workspace.repositories.newIssue")}
             </h2>
             <p className="text-muted-foreground mt-1 text-xs leading-5">
@@ -310,6 +308,12 @@ export function GitHubIssueCreate({
               })}
             </p>
           </header>
+          {policyError && policy ? (
+            <WorkspaceStaleNotice
+              message={policyError.message}
+              onRetry={() => void policyResult.refetch()}
+            />
+          ) : null}
           {policyResult.isPending ? (
             <IssueCreationPolicySkeleton />
           ) : !policyResult.data ? (
@@ -327,7 +331,7 @@ export function GitHubIssueCreate({
           ) : !policyResult.data.blankIssueAllowed && markdownTemplates.length === 0 ? (
             <IssueTemplateFallback {...policyResult.data} />
           ) : (
-            <section className="harbor-surface rounded-lg p-4 sm:p-5">
+            <section>
               <IssueTemplatePicker
                 blankIssueAllowed={policyResult.data.blankIssueAllowed}
                 templates={policyResult.data.templates}
@@ -345,6 +349,7 @@ export function GitHubIssueCreate({
                 submitLabel={t("workspace.repositories.createIssue")}
                 pendingLabel={t("workspace.repositories.creatingIssue")}
                 pending={mutation.isPending}
+                submitDisabled={Boolean(policyError)}
                 errorTitle={t("workspace.repositories.createIssueFailed")}
                 errorMessage={
                   error?.code === "githubPermission"

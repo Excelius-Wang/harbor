@@ -161,40 +161,40 @@ Generated from existing JSX-bearing production files at task start. Each file mu
 | `src/features/github/github-gist-editor-dialog.tsx` | Audited and migrated in Notifications/More batch | Core matrix and listed dialogs/states in UI_VERIFICATION.md; advanced variants remain explicit there |
 | `src/features/github/github-gist-view.tsx` | Audited and migrated in Notifications/More batch | Core matrix and listed dialogs/states in UI_VERIFICATION.md; advanced variants remain explicit there |
 | `src/features/github/github-insights-view.tsx` | Audited; shared material/metadata/feedback applied where needed | Repository-tab matrix and listed states/actions in UI_VERIFICATION.md; advanced variants are recorded there |
-| `src/features/github/github-issue-clone-action.tsx` | Pending | Pending |
-| `src/features/github/github-issue-convert-discussion-action.tsx` | Pending | Pending |
-| `src/features/github/github-issue-create-subissue-action.tsx` | Pending | Pending |
-| `src/features/github/github-issue-create.tsx` | Pending | Pending |
-| `src/features/github/github-issue-delete-action.tsx` | Pending | Pending |
-| `src/features/github/github-issue-dependencies.tsx` | Pending | Pending |
-| `src/features/github/github-issue-dependency-actions.tsx` | Pending | Pending |
+| `src/features/github/github-issue-clone-action.tsx` | Audited; compact relation rows, shared stale feedback and action focus/draft handling applied where needed | Issue action core/state and draft/duplicate matrices in UI_VERIFICATION.md; candidate and mutation variants remain explicit there |
+| `src/features/github/github-issue-convert-discussion-action.tsx` | Audited; shared confirmation primitives retained | Both themes/sizes and Escape focus return; GitHub conversion not submitted |
+| `src/features/github/github-issue-create-subissue-action.tsx` | Audited; compact relation rows, shared stale feedback and action focus/draft handling applied where needed | Issue action core/state and draft/duplicate matrices in UI_VERIFICATION.md; candidate and mutation variants remain explicit there |
+| `src/features/github/github-issue-create.tsx` | Migrated template/form surface hierarchy and stale policy feedback | Template selection and draft scenarios in UI_VERIFICATION.md; restricted/external and mutation variants remain |
+| `src/features/github/github-issue-delete-action.tsx` | Audited; compact relation rows, shared stale feedback and action focus/draft handling applied where needed | Issue action core/state and draft/duplicate matrices in UI_VERIFICATION.md; candidate and mutation variants remain explicit there |
+| `src/features/github/github-issue-dependencies.tsx` | Audited; compact relation rows, shared stale feedback and action focus/draft handling applied where needed | Issue action core/state and draft/duplicate matrices in UI_VERIFICATION.md; candidate and mutation variants remain explicit there |
+| `src/features/github/github-issue-dependency-actions.tsx` | Audited; compact relation rows, shared stale feedback and action focus/draft handling applied where needed | Issue action core/state and draft/duplicate matrices in UI_VERIFICATION.md; candidate and mutation variants remain explicit there |
 | `src/features/github/github-issue-detail.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
-| `src/features/github/github-issue-duplicate.tsx` | Pending | Pending |
+| `src/features/github/github-issue-duplicate.tsx` | Audited; compact relation rows, shared stale feedback and action focus/draft handling applied where needed | Issue action core/state and draft/duplicate matrices in UI_VERIFICATION.md; candidate and mutation variants remain explicit there |
 | `src/features/github/github-issue-edit-dialog.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
-| `src/features/github/github-issue-form.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
+| `src/features/github/github-issue-form.tsx` | Audited; compact relation rows, shared stale feedback and action focus/draft handling applied where needed | Issue action core/state and draft/duplicate matrices in UI_VERIFICATION.md; candidate and mutation variants remain explicit there |
 | `src/features/github/github-issue-inbox.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
-| `src/features/github/github-issue-linked-branches.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
-| `src/features/github/github-issue-linked-pull-requests.tsx` | Pending | Pending |
-| `src/features/github/github-issue-mark-duplicate-action.tsx` | Pending | Pending |
+| `src/features/github/github-issue-linked-branches.tsx` | Audited; compact relation rows, shared stale feedback and action focus/draft handling applied where needed | Issue action core/state and draft/duplicate matrices in UI_VERIFICATION.md; candidate and mutation variants remain explicit there |
+| `src/features/github/github-issue-linked-pull-requests.tsx` | Audited; compact relation rows, shared stale feedback and action focus/draft handling applied where needed | Issue action core/state and draft/duplicate matrices in UI_VERIFICATION.md; candidate and mutation variants remain explicit there |
+| `src/features/github/github-issue-mark-duplicate-action.tsx` | Audited; compact relation rows, shared stale feedback and action focus/draft handling applied where needed | Issue action core/state and draft/duplicate matrices in UI_VERIFICATION.md; candidate and mutation variants remain explicit there |
 | `src/features/github/github-issue-metadata.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
 | `src/features/github/github-issue-pin-action.tsx` | Pending | Pending |
-| `src/features/github/github-issue-project-action.tsx` | Pending | Pending |
-| `src/features/github/github-issue-relation-ui.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
-| `src/features/github/github-issue-relationship-actions.tsx` | Pending | Pending |
-| `src/features/github/github-issue-relationships.tsx` | Pending | Pending |
+| `src/features/github/github-issue-project-action.tsx` | Audited; compact relation rows, shared stale feedback and action focus/draft handling applied where needed | Issue action core/state and draft/duplicate matrices in UI_VERIFICATION.md; candidate and mutation variants remain explicit there |
+| `src/features/github/github-issue-relation-ui.tsx` | Audited; compact relation rows, shared stale feedback and action focus/draft handling applied where needed | Issue action core/state and draft/duplicate matrices in UI_VERIFICATION.md; candidate and mutation variants remain explicit there |
+| `src/features/github/github-issue-relationship-actions.tsx` | Audited; compact relation rows, shared stale feedback and action focus/draft handling applied where needed | Issue action core/state and draft/duplicate matrices in UI_VERIFICATION.md; candidate and mutation variants remain explicit there |
+| `src/features/github/github-issue-relationships.tsx` | Audited; compact relation rows, shared stale feedback and action focus/draft handling applied where needed | Issue action core/state and draft/duplicate matrices in UI_VERIFICATION.md; candidate and mutation variants remain explicit there |
 | `src/features/github/github-issue-row.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
 | `src/features/github/github-issue-shared.tsx` | Pending | Pending |
-| `src/features/github/github-issue-state-action.tsx` | Pending | Pending |
+| `src/features/github/github-issue-state-action.tsx` | Audited; shared split action and Radix menu retained | Close-reason menu in both themes/sizes; pending/success lifecycle states remain |
 | `src/features/github/github-issue-taxonomy-view.tsx` | Audited; shared surfaces, readable metadata and retained-data feedback applied where needed | Administration core/state and supplemental dialog/return matrices verified; remaining variants explicit in UI_VERIFICATION.md |
 | `src/features/github/github-issue-timeline.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
-| `src/features/github/github-issue-tracking.tsx` | Pending | Pending |
-| `src/features/github/github-issue-transfer.tsx` | Pending | Pending |
-| `src/features/github/github-issue-type-action.tsx` | Pending | Pending |
+| `src/features/github/github-issue-tracking.tsx` | Audited; compact relation rows, shared stale feedback and action focus/draft handling applied where needed | Issue action core/state and draft/duplicate matrices in UI_VERIFICATION.md; candidate and mutation variants remain explicit there |
+| `src/features/github/github-issue-transfer.tsx` | Audited; compact relation rows, shared stale feedback and action focus/draft handling applied where needed | Issue action core/state and draft/duplicate matrices in UI_VERIFICATION.md; candidate and mutation variants remain explicit there |
+| `src/features/github/github-issue-type-action.tsx` | Audited; compact relation rows, shared stale feedback and action focus/draft handling applied where needed | Issue action core/state and draft/duplicate matrices in UI_VERIFICATION.md; candidate and mutation variants remain explicit there |
 | `src/features/github/github-issue-view.tsx` | Query-specific scroll recovery integrated | Repository Issue list captured; remaining filter/action states pending |
 | `src/features/github/github-markdown-editor.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
 | `src/features/github/github-notifications.tsx` | Audited and migrated in Notifications/More batch | Core matrix and listed dialogs/states in UI_VERIFICATION.md; advanced variants remain explicit there |
 | `src/features/github/github-packages-view.tsx` | Audited and migrated in Notifications/More batch | Core matrix and listed dialogs/states in UI_VERIFICATION.md; advanced variants remain explicit there |
-| `src/features/github/github-pinned-issues.tsx` | Pending | Pending |
+| `src/features/github/github-pinned-issues.tsx` | Audited; compact relation rows, shared stale feedback and action focus/draft handling applied where needed | Issue action core/state and draft/duplicate matrices in UI_VERIFICATION.md; candidate and mutation variants remain explicit there |
 | `src/features/github/github-profile-editor-dialog.tsx` | Audited and migrated in Notifications/More batch | Core matrix and listed dialogs/states in UI_VERIFICATION.md; advanced variants remain explicit there |
 | `src/features/github/github-profile-view.tsx` | Audited and migrated in Notifications/More batch | Core matrix and listed dialogs/states in UI_VERIFICATION.md; advanced variants remain explicit there |
 | `src/features/github/github-project-dialogs.tsx` | Audited and migrated in Notifications/More batch | Core matrix and listed dialogs/states in UI_VERIFICATION.md; advanced variants remain explicit there |

@@ -80,3 +80,7 @@ Chart tick labels target Recharts' actual `recharts-cartesian-axis-tick-value` n
 Code/source lines use 13 px monospace, and the shared `harbor-diff` uses 12 px. File and commit panels reuse `harbor-reading`; syntax colors remain the highlighter's responsibility. `GitHubCodeView` owns search input/query/page and history pages per reference/path, so those values survive detail views. The outer ScrollArea uses `useListScroll` for each surface/query.
 
 `useOverlayFocusReturn` captures the opening element plus its linked menu-trigger chain. If the menu item has unmounted when a Dialog/AlertDialog/Sheet closes, the first connected focusable trigger receives focus. Custom close-focus handlers still take precedence.
+
+Issue relationships use `GitHubIssueRelatedIssueRow` with a shrinking, wrapping button so sibling controls stay inside the section. `GitHubIssueRelationLoadError` accepts `stale` for retained records and delegates that state to `WorkspaceStaleNotice`. `GitHubTitleBodyForm.submitDisabled` blocks submission without discarding or disabling draft inputs; `pending` remains the actual mutation state.
+
+`CardHeader` uses implicit grid rows and caller-supplied border padding. Small `AlertDialog` footers stack primary/cancel actions and allow long labels to wrap. Auto-focusing forms should connect their opener with `DialogTrigger asChild`; the shared close-focus hook covers controlled openers when focus has not already moved into the dialog before Radix's mount event.

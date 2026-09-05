@@ -186,6 +186,7 @@ export function GitHubIssueRemoveDependencyAction({
         variant="ghost"
         size="icon-xs"
         aria-label={t("workspace.repositories.removeDependency")}
+        title={t("workspace.repositories.removeDependency")}
         disabled={mutation.isPending}
         onClick={() => setOpen(true)}
       >

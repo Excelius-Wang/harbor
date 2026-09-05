@@ -10,8 +10,10 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { useAppTranslation } from "@/hooks/use-app-translation";
 import { parseIpcError } from "@/lib/ipc-error";
 import { openExternalUrl } from "@/lib/window";
@@ -91,10 +93,12 @@ export function GitHubIssueCreateSubIssueAction({
         if (!nextOpen && mutation.isError) mutation.reset();
       }}
     >
-      <Button type="button" size="xs" disabled={mutation.isPending} onClick={() => setOpen(true)}>
-        <Plus data-icon="inline-start" />
-        {t("workspace.repositories.createSubIssue")}
-      </Button>
+      <DialogTrigger asChild>
+        <Button type="button" size="xs" disabled={mutation.isPending}>
+          <Plus data-icon="inline-start" />
+          {t("workspace.repositories.createSubIssue")}
+        </Button>
+      </DialogTrigger>
       <DialogContent
         className="max-h-[85vh] overflow-y-auto sm:max-w-2xl"
         showCloseButton={!mutation.isPending}
@@ -108,6 +112,12 @@ export function GitHubIssueCreateSubIssueAction({
             })}
           </DialogDescription>
         </DialogHeader>
+        {policyError && policyResult.data ? (
+          <WorkspaceStaleNotice
+            message={policyError.message}
+            onRetry={() => void policyResult.refetch()}
+          />
+        ) : null}
         {policyResult.isPending ? (
           <div className="text-muted-foreground flex items-center gap-2 py-4 text-xs" role="status">
             <Spinner />
@@ -154,6 +164,7 @@ export function GitHubIssueCreateSubIssueAction({
             submitLabel={t("workspace.repositories.createSubIssueConfirm")}
             pendingLabel={t("workspace.repositories.creatingSubIssue")}
             pending={mutation.isPending}
+            submitDisabled={Boolean(policyError)}
             errorTitle={t(creationErrorTitle(mutationError?.code ?? "github"))}
             errorMessage={mutationError?.message}
             onChange={() => {
