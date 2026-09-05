@@ -19,6 +19,7 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
   --color-merged: var(--merged);
+  --color-attention: var(--attention);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -26,7 +27,7 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --breakpoint-workspace-wide: 73.75rem;
+  --breakpoint-workspace-wide: 80rem;
 }
 
 :root {
@@ -48,6 +49,7 @@
   --destructive-foreground: oklch(0.985 0 0);
   --success: oklch(0.55 0.15 145);
   --merged: oklch(0.55 0.16 305);
+  --attention: #9a6700;
   --border: oklch(0.88 0.022 238);
   --input: oklch(0.88 0.022 238);
   --ring: oklch(0.58 0.145 236);
@@ -57,47 +59,52 @@
   --chart-4: var(--destructive);
   --harbor-chrome: oklch(0.985 0.013 236);
   --harbor-canvas-edge: oklch(0.965 0.014 238);
-  --harbor-window-fill: rgb(238 245 250 / 68%);
-  --harbor-glass-fill: rgb(250 252 255 / 58%);
-  --harbor-content-fill: rgb(247 250 253 / 80%);
-  --harbor-elevated-fill: rgb(250 252 255 / 90%);
+  --harbor-window-fill: rgb(239 242 245 / 86%);
+  --harbor-glass-fill: rgb(247 250 252 / 54%);
+  --harbor-content-fill: rgb(248 250 252 / 64%);
+  --harbor-surface-fill: rgb(247 250 252 / 12%);
+  --harbor-elevated-fill: rgb(249 251 253 / 86%);
   --harbor-glass-edge: rgb(255 255 255 / 66%);
-  --harbor-glass-shadow: rgb(36 58 78 / 20%);
-  --radius: 0.55rem;
+  --harbor-glass-shadow: rgb(31 47 61 / 24%);
+  --harbor-window-close: #ff5f57;
+  --harbor-window-minimize: #febc2e;
+  --harbor-window-maximize: #28c840;
+  --radius: 0.625rem;
   color-scheme: light;
 }
 
 .dark {
   --background: #23272e;
-  --foreground: #abb2bf;
+  --foreground: #d2d6de;
   --card: #282c34;
-  --card-foreground: #d7dae0;
+  --card-foreground: #eef0f4;
   --popover: #1e2227;
-  --popover-foreground: #abb2bf;
-  --primary: #61afef;
+  --popover-foreground: #d2d6de;
+  --primary: #6cb6f2;
   --primary-foreground: #15181e;
   --secondary: #30333d;
-  --secondary-foreground: #c0bdbd;
+  --secondary-foreground: #d8dbe1;
   --muted: #2c313c;
-  --muted-foreground: #9da5b4;
+  --muted-foreground: #aeb5bf;
   --accent: #2c313a;
-  --accent-foreground: #d7dae0;
+  --accent-foreground: #eef0f4;
   --destructive: #c24038;
   --destructive-foreground: #ffffff;
   --success: #98c379;
   --merged: #c678dd;
-  --border: #3e4452;
-  --input: #404754;
+  --attention: #e5c07b;
+  --border: #4b5260;
+  --input: #4d5563;
   --ring: #528bff;
   --harbor-chrome: #1e2227;
   --harbor-canvas-edge: #181a1f;
-  /* Window and pane fills stack, so keep the base translucent enough for native vibrancy to read. */
-  --harbor-window-fill: rgb(3 7 12 / 40%);
-  --harbor-glass-fill: rgb(10 15 22 / 52%);
-  --harbor-content-fill: rgb(12 17 25 / 66%);
-  --harbor-elevated-fill: rgb(12 16 23 / 90%);
-  --harbor-glass-edge: rgb(255 255 255 / 12%);
-  --harbor-glass-shadow: rgb(2 6 12 / 52%);
+  --harbor-window-fill: rgb(29 32 37 / 84%);
+  --harbor-glass-fill: rgb(17 24 32 / 46%);
+  --harbor-content-fill: rgb(12 18 26 / 30%);
+  --harbor-surface-fill: rgb(17 24 32 / 8%);
+  --harbor-elevated-fill: rgb(21 28 37 / 76%);
+  --harbor-glass-edge: rgb(255 255 255 / 18%);
+  --harbor-glass-shadow: rgb(0 4 10 / 56%);
   color-scheme: dark;
 }
 
@@ -109,7 +116,7 @@
   html,
   body,
   #root {
-    height: 100vh;
+    height: 100dvh;
     margin: 0;
     padding: 0;
     overflow: hidden;
@@ -138,11 +145,52 @@
 
 @layer utilities {
   .title-bar-btn {
-    @apply text-muted-foreground hover:text-foreground focus-visible:ring-primary/60 flex h-7 w-7 cursor-pointer items-center justify-center rounded-md transition-colors outline-none hover:bg-white/[0.055] focus-visible:ring-2;
+    @apply text-muted-foreground hover:text-foreground focus-visible:ring-primary/60 flex size-8 cursor-pointer items-center justify-center rounded-md transition-colors outline-none hover:bg-white/[0.055] focus-visible:ring-2;
   }
 
-  .title-bar-control {
-    @apply text-muted-foreground hover:text-foreground focus-visible:ring-primary/60 flex h-full w-9 cursor-pointer items-center justify-center outline-none hover:bg-white/[0.055] focus-visible:ring-2 focus-visible:ring-inset;
+  .title-bar-traffic-control {
+    @apply focus-visible:ring-ring/70 relative grid size-5 cursor-default place-items-center rounded-full outline-none focus-visible:ring-2;
+  }
+
+  .title-bar-traffic-dot {
+    @apply relative grid size-3 place-items-center rounded-full border transition-[filter,transform];
+    border-color: color-mix(in srgb, black 18%, transparent);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, white 24%, transparent),
+      0 0 0 0.5px color-mix(in srgb, black 8%, transparent);
+  }
+
+  [data-window-control="close"] .title-bar-traffic-dot {
+    background: var(--harbor-window-close);
+  }
+
+  [data-window-control="minimize"] .title-bar-traffic-dot {
+    background: var(--harbor-window-minimize);
+  }
+
+  [data-window-control="maximize"] .title-bar-traffic-dot {
+    background: var(--harbor-window-maximize);
+  }
+
+  .title-bar-traffic-control:hover .title-bar-traffic-dot {
+    filter: brightness(0.96);
+  }
+
+  .title-bar-traffic-control:active .title-bar-traffic-dot {
+    transform: scale(0.9);
+  }
+
+  .title-bar-traffic-glyph {
+    width: 7px;
+    height: 7px;
+    color: rgb(43 31 25 / 76%);
+    opacity: 0;
+    transition: opacity 120ms ease;
+  }
+
+  .harbor-traffic-lights:hover .title-bar-traffic-glyph,
+  .title-bar-traffic-control:focus-visible .title-bar-traffic-glyph {
+    opacity: 1;
   }
 
   .scrollbar-none {
@@ -156,61 +204,168 @@
   }
 
   .harbor-glass {
-    border-color: color-mix(in srgb, var(--harbor-glass-edge) 72%, transparent);
+    border-color: color-mix(in srgb, var(--harbor-glass-edge) 58%, transparent);
     background: var(--harbor-glass-fill);
     box-shadow:
-      inset 0 1px 0 color-mix(in srgb, white 10%, transparent),
+      inset 0 1px 0 color-mix(in srgb, white 16%, transparent),
       inset 0 -1px 0 color-mix(in srgb, black 7%, transparent);
-    backdrop-filter: saturate(145%) blur(30px);
-    -webkit-backdrop-filter: saturate(145%) blur(30px);
+    backdrop-filter: saturate(112%) blur(34px);
+    -webkit-backdrop-filter: saturate(112%) blur(34px);
   }
 
   .harbor-content {
     background: var(--harbor-content-fill);
-    box-shadow: inset 0 1px 0 color-mix(in srgb, white 4%, transparent);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, white 7%, transparent);
+    backdrop-filter: saturate(108%) blur(26px);
+    -webkit-backdrop-filter: saturate(108%) blur(26px);
+  }
+
+  .harbor-pane {
+    background: transparent;
+  }
+
+  .harbor-surface {
+    border: 1px solid color-mix(in srgb, var(--harbor-glass-edge) 42%, transparent);
+    background: var(--harbor-surface-fill);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, white 9%, transparent),
+      inset 0 -1px 0 color-mix(in srgb, black 4%, transparent);
+  }
+
+  .harbor-workspace-shell {
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    color: var(--card-foreground);
+  }
+
+  .harbor-workspace-shell .harbor-content {
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .harbor-subtle-divider {
+    border-color: color-mix(in srgb, var(--border) 58%, transparent);
+  }
+
+  .harbor-result-row {
+    position: relative;
+    color: var(--card-foreground);
+  }
+
+  .harbor-result-row:not(:last-child)::after {
+    position: absolute;
+    right: 1rem;
+    bottom: 0;
+    left: 1rem;
+    height: 1px;
+    background: color-mix(in srgb, var(--border) 40%, transparent);
+    content: "";
+    pointer-events: none;
+  }
+
+  .harbor-result-row:hover {
+    background: color-mix(in srgb, var(--foreground) 7%, transparent);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, white 5%, transparent);
+  }
+
+  .harbor-result-row:hover .harbor-repository-name {
+    color: var(--primary);
+  }
+
+  .harbor-language-badge {
+    border-color: color-mix(in srgb, var(--harbor-language-color) 52%, var(--border));
+    background: color-mix(in srgb, var(--harbor-language-color) 28%, transparent);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, white 10%, transparent),
+      inset 0 -1px 0 color-mix(in srgb, black 8%, transparent);
+    color: var(--card-foreground);
   }
 
   .harbor-popover,
   .harbor-command,
   .harbor-sheet {
-    border-color: color-mix(in srgb, var(--harbor-glass-edge) 84%, transparent);
+    border-color: color-mix(in srgb, var(--harbor-glass-edge) 92%, transparent);
     background: var(--harbor-elevated-fill);
     box-shadow:
-      0 24px 70px var(--harbor-glass-shadow),
-      inset 0 1px 0 color-mix(in srgb, white 12%, transparent);
-    backdrop-filter: saturate(150%) blur(36px);
-    -webkit-backdrop-filter: saturate(150%) blur(36px);
+      0 22px 58px var(--harbor-glass-shadow),
+      inset 0 1px 0 color-mix(in srgb, white 16%, transparent),
+      inset 0 0 0 1px color-mix(in srgb, var(--harbor-glass-edge) 26%, transparent);
+    backdrop-filter: saturate(120%) blur(34px);
+    -webkit-backdrop-filter: saturate(120%) blur(34px);
+  }
+
+  .harbor-nav-item {
+    color: var(--muted-foreground);
+    box-shadow: inset 0 0 0 1px transparent;
+  }
+
+  .harbor-nav-item:hover {
+    background: color-mix(in srgb, var(--foreground) 5%, transparent);
+    color: var(--foreground);
+  }
+
+  .harbor-nav-item[aria-current="page"] {
+    background: color-mix(in srgb, var(--foreground) 88%, transparent);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, white 18%, transparent),
+      0 8px 22px color-mix(in srgb, var(--harbor-glass-shadow) 24%, transparent);
+    color: var(--background);
+  }
+
+  .harbor-segmented [data-slot="tabs-trigger"][data-state="active"] {
+    border-color: transparent;
+    background: color-mix(in srgb, var(--foreground) 88%, transparent);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, white 18%, transparent),
+      0 6px 18px color-mix(in srgb, var(--harbor-glass-shadow) 22%, transparent);
+    color: var(--background);
+  }
+
+  .harbor-rail-item[data-active="true"] {
+    background: color-mix(in srgb, var(--foreground) 88%, transparent);
+    color: var(--background);
+  }
+
+  .harbor-progress-indeterminate {
+    transform-origin: left center;
+    animation: harbor-progress-indeterminate 1.15s ease-in-out infinite;
+  }
+}
+
+@keyframes harbor-progress-indeterminate {
+  0% {
+    transform: translate3d(-100%, 0, 0) scaleX(0.28);
+  }
+  50% {
+    transform: translate3d(-8%, 0, 0) scaleX(0.48);
+  }
+  100% {
+    transform: translate3d(100%, 0, 0) scaleX(0.28);
   }
 }
 
 .harbor-window {
   position: relative;
   isolation: isolate;
-  background:
-    radial-gradient(
-      880px 520px at 7% -14%,
-      color-mix(in srgb, var(--primary) 12%, transparent),
-      transparent 60%
-    ),
-    radial-gradient(
-      760px 520px at 104% 112%,
-      color-mix(in srgb, var(--primary) 5%, transparent),
-      transparent 68%
-    );
   background-color: var(--harbor-window-fill);
   box-shadow:
-    0 34px 90px var(--harbor-glass-shadow),
-    inset 0 1px 0 color-mix(in srgb, white 12%, transparent),
-    inset 0 0 0 1px color-mix(in srgb, var(--harbor-glass-edge) 64%, transparent);
+    0 34px 86px var(--harbor-glass-shadow),
+    inset 0 1px 0 color-mix(in srgb, white 18%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--harbor-glass-edge) 62%, transparent);
+  backdrop-filter: saturate(104%) blur(32px);
+  -webkit-backdrop-filter: saturate(104%) blur(32px);
 }
 
-.light .harbor-window {
-  background: radial-gradient(
-    880px 520px at 7% -14%,
-    color-mix(in srgb, var(--primary) 10%, transparent),
-    transparent 60%
-  );
-  background-color: var(--harbor-window-fill);
+.harbor-window > .harbor-glass {
+  border-color: color-mix(in srgb, var(--border) 44%, transparent);
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .harbor-diff {
@@ -452,12 +607,20 @@ button {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
+
+  .harbor-progress-indeterminate {
+    animation: none !important;
+    transform: translate3d(0, 0, 0) scaleX(1);
+    opacity: 0.65;
+  }
 }
 
 @media (prefers-reduced-transparency: reduce) {
   .harbor-window,
   .harbor-glass,
   .harbor-content,
+  .harbor-surface,
+  .harbor-workspace-shell,
   .harbor-popover,
   .harbor-command,
   .harbor-sheet {

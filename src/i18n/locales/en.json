@@ -22,6 +22,7 @@
   },
   "workspace": {
     "primaryNavigation": "Primary navigation",
+    "loading": "Loading workspace",
     "pinned": "Pinned",
     "account": "Account",
     "accountMenu": "Open account menu",
@@ -42,22 +43,37 @@
       "packages": "Packages",
       "profile": "Profile",
       "repositories": "Repositories",
-      "discover": "Discover"
+      "discover": "Discover",
+      "more": "More"
     },
     "discovery": {
-      "eyebrow": "GitHub index",
       "searchLabel": "Search GitHub",
       "searchPlaceholder": "Search or enter qualifiers, for example language:rust stars:>100",
       "search": "Search",
+      "searchKind": "Search category",
+      "searchSort": "Sort search results",
       "desktopOnly": "GitHub discovery is available in the Harbor desktop runtime.",
       "tabs": {
+        "trending": "Trending",
         "feed": "Following",
+        "search": "Search",
         "repositories": "Repositories",
         "code": "Code",
         "issues": "Issues",
         "pullRequests": "Pull requests",
         "users": "People"
       },
+      "trendingPeriod": "Trending period",
+      "period": {
+        "daily": "Today",
+        "weekly": "This week",
+        "monthly": "This month"
+      },
+      "viewTrendingOnGitHub": "View on GitHub",
+      "trendingMethod": "Public repositories created in this period, ranked by stars",
+      "emptyTrending": "No trending repositories found",
+      "emptyTrendingDescription": "Try a wider time range or continue on GitHub.",
+      "loading": "Loading updated discovery results",
       "sort": {
         "bestMatch": "Best match",
         "updated": "Recently updated",
@@ -752,14 +768,6 @@
     "history": {
       "back": "Go back",
       "forward": "Go forward"
-    },
-    "discover": {
-      "eyebrow": "Open-source pulse",
-      "tabs": {
-        "trending": "Trending",
-        "forYou": "For you",
-        "collections": "Collections"
-      }
     },
     "pullRequests": {
       "eyebrow": "GitHub review queue",

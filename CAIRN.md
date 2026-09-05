@@ -4,4 +4,4 @@
 
 ## Current item
 
-`.cairn/items/glass-workspace.md`
+None — no current item

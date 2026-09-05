@@ -1,4 +1,4 @@
-import { useEffect, useState, ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { isTauri } from "@tauri-apps/api/core";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { Minus, Maximize2, Minimize2, X } from "lucide-react";
@@ -15,6 +15,27 @@ interface TitleBarProps {
   onDoubleClick?: () => void;
   size?: "default" | "workspace";
   className?: string;
+}
+
+type TrafficLightProps = {
+  kind: "close" | "minimize" | "maximize";
+  label: string;
+  onPress: () => void | Promise<void>;
+  children: ReactNode;
+};
+
+function TrafficLight({ kind, label, onPress, children }: TrafficLightProps) {
+  return (
+    <button
+      type="button"
+      className="title-bar-traffic-control"
+      data-window-control={kind}
+      aria-label={label}
+      onClick={() => void onPress()}
+    >
+      <span className="title-bar-traffic-dot">{children}</span>
+    </button>
+  );
 }
 
 export function TitleBar({
@@ -99,21 +120,60 @@ export function TitleBar({
       handleToggleMaximize();
     }
   };
+  const hasWindowControls = showClose || showMinimize || showMaximize;
 
   return (
     <div
       className={cn(
         "harbor-glass relative flex items-center justify-between border-b select-none",
-        size === "workspace" ? "h-12" : "h-8",
-        showMaximize && isMaximized ? "" : "rounded-t-lg",
+        size === "workspace" ? "h-[52px]" : "h-8",
+        showMaximize && isMaximized
+          ? ""
+          : size === "workspace"
+            ? "rounded-t-[12px]"
+            : "rounded-t-lg",
         className
       )}
     >
-      {/* Left: Title + Drag region */}
+      {hasWindowControls ? (
+        <div
+          role="group"
+          aria-label="Window controls"
+          className="harbor-traffic-lights relative z-20 flex h-full shrink-0 items-center gap-0.5 pr-2 pl-3"
+        >
+          {showClose ? (
+            <TrafficLight kind="close" label="Close" onPress={handleClose}>
+              <X className="title-bar-traffic-glyph" strokeWidth={2.6} />
+            </TrafficLight>
+          ) : null}
+          {showMinimize ? (
+            <TrafficLight kind="minimize" label="Minimize" onPress={handleMinimize}>
+              <Minus className="title-bar-traffic-glyph" strokeWidth={2.6} />
+            </TrafficLight>
+          ) : null}
+          {showMaximize ? (
+            <TrafficLight
+              kind="maximize"
+              label={isMaximized ? "Restore" : "Maximize"}
+              onPress={handleToggleMaximize}
+            >
+              {isMaximized ? (
+                <Minimize2 className="title-bar-traffic-glyph" strokeWidth={2.4} />
+              ) : (
+                <Maximize2 className="title-bar-traffic-glyph" strokeWidth={2.4} />
+              )}
+            </TrafficLight>
+          ) : null}
+        </div>
+      ) : null}
+
       <div
         data-tauri-drag-region
         onDoubleClick={handleDragRegionDoubleClick}
-        className="flex h-full grow items-center gap-2 pl-2"
+        className={cn(
+          "flex h-full min-w-0 grow items-center gap-2",
+          hasWindowControls ? "pl-0" : "pl-2"
+        )}
       >
         {title && <span className="text-sm font-medium text-slate-400">{title}</span>}
         {leftActions}
@@ -125,47 +185,9 @@ export function TitleBar({
         </div>
       ) : null}
 
-      {/* Right: Control buttons */}
-      <div className="relative z-10 flex h-full items-center">
-        {rightActions}
-
-        {rightActions && (showMinimize || showMaximize || showClose) && (
-          <div className="bg-border/40 mx-1 h-4 w-px" />
-        )}
-
-        {showMinimize && (
-          <button
-            onClick={handleMinimize}
-            className="title-bar-control"
-            aria-label="Minimize"
-            tabIndex={-1}
-          >
-            <Minus className="h-4 w-4" />
-          </button>
-        )}
-
-        {showMaximize && (
-          <button
-            onClick={handleToggleMaximize}
-            className="title-bar-control"
-            aria-label={isMaximized ? "Restore" : "Maximize"}
-            tabIndex={-1}
-          >
-            {isMaximized ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-          </button>
-        )}
-
-        {showClose && (
-          <button
-            onClick={handleClose}
-            className="title-bar-control hover:bg-destructive hover:text-destructive-foreground"
-            aria-label="Close"
-            tabIndex={-1}
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
-      </div>
+      {rightActions ? (
+        <div className="relative z-10 flex h-full items-center">{rightActions}</div>
+      ) : null}
     </div>
   );
 }

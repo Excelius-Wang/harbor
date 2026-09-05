@@ -89,11 +89,11 @@ export function MainTitleBar({ onOpenCommand }: MainTitleBarProps) {
     <>
       <TitleBar
         size="workspace"
-        className="border-white/10"
+        className="border-transparent bg-transparent shadow-none"
         leftActions={
           <div className="relative z-10 flex h-full items-center gap-1.5">
-            <div className="mr-3 flex items-center gap-2 pl-1">
-              <span className="border-primary/25 bg-primary/8 text-primary grid size-7 place-items-center rounded-[8px] border shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+            <div className="mr-3 flex items-center gap-2.5 pl-1">
+              <span className="border-primary/20 bg-primary/9 text-primary grid size-8 place-items-center rounded-[8px] border shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]">
                 <Waves className="size-4" strokeWidth={1.8} />
               </span>
               <span className="text-[15px] font-semibold tracking-[-0.025em] max-[720px]:hidden">
@@ -134,7 +134,7 @@ export function MainTitleBar({ onOpenCommand }: MainTitleBarProps) {
           <button
             type="button"
             onClick={onOpenCommand}
-            className="group text-muted-foreground hover:text-foreground focus-visible:ring-primary/60 flex h-8 w-[clamp(260px,36vw,480px)] items-center gap-2 rounded-md border border-white/10 bg-black/[0.08] px-2.5 text-xs shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition-colors hover:border-white/16 hover:bg-white/[0.035] focus-visible:ring-2 focus-visible:outline-none max-[820px]:w-56 max-[620px]:hidden"
+            className="group text-muted-foreground hover:text-foreground focus-visible:ring-primary/60 flex h-9 w-[clamp(260px,36vw,480px)] items-center gap-2 rounded-[8px] border border-white/[0.08] bg-black/[0.07] px-3 text-xs shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-colors hover:border-white/14 hover:bg-white/[0.035] focus-visible:ring-2 focus-visible:outline-none max-[820px]:w-56 max-[620px]:hidden"
           >
             <Search className="size-3.5" />
             <span className="truncate">{t("workspace.command.trigger")}</span>
@@ -152,7 +152,7 @@ export function MainTitleBar({ onOpenCommand }: MainTitleBarProps) {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
-                  className="focus-visible:ring-primary/60 mr-1 flex h-8 items-center gap-1 rounded-md px-1.5 transition-colors hover:bg-white/[0.05] focus-visible:ring-2 focus-visible:outline-none"
+                  className="focus-visible:ring-primary/60 mr-1 flex h-9 items-center gap-1 rounded-[8px] px-1.5 transition-colors hover:bg-white/[0.05] focus-visible:ring-2 focus-visible:outline-none"
                   aria-label={t("workspace.accountMenu")}
                 >
                   <span className="grid size-6 place-items-center rounded-full bg-white/10 text-[11px] font-medium">

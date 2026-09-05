@@ -30,9 +30,10 @@ export function GitHubPullRequestStateBadge({ pullRequest }: { pullRequest: Pull
       variant="outline"
       className={cn(
         "h-6 rounded-md px-2 font-medium",
-        state === "open" && "border-primary/30 bg-primary/10 text-primary",
+        state === "open" && "border-success/30 bg-success/10 text-success",
         state === "merged" && "border-merged/35 bg-merged/10 text-merged",
-        (state === "closed" || state === "draft") && "bg-secondary text-secondary-foreground"
+        state === "closed" && "border-destructive/30 bg-destructive/10 text-destructive",
+        state === "draft" && "bg-secondary text-secondary-foreground"
       )}
     >
       <Icon />
