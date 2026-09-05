@@ -35,11 +35,11 @@ Status: in progress. A source inventory is not visual acceptance. Every row belo
 | Code | Tree, file/preview/blame, history/commits/comments, branches/tags/search and edit dialogs | Pending |
 | Wiki | Page list, reading/editing/history and dialogs | Page/read/editor/history and core state matrix verified; comparison/revert/offline variants pending |
 | Releases | Lists/details/create/edit and assets | List/detail/create/edit/delete/asset-delete and return/state matrix verified; artifact transfer states pending |
-| Discussions | Lists/details, comments/reactions/polls and forms | Pending |
+| Discussions | Lists/details, comments/reactions/polls and forms | List/detail/forms/poll, comment dialogs and return/state matrices verified; nested replies and mutation variants pending |
 | Actions | Workflows/runs/jobs/artifacts/logs/check suites and controls | List/detail/log/dispatch/disable, return and core states verified; rerun/delete/running and artifact action variants pending |
 | Security | Alert lists/details and actions | Three alert kinds/detail, close form, filters/return and core states verified |
 | Insights | Charts, summaries, loading/empty/error | Overview/contributors/traffic, named keyboard charts/tooltips and both-theme states verified |
-| Repository settings | General/access/topics/taxonomy/pages/invitations and forms | Pending |
+| Repository settings | General/access/topics/taxonomy/pages/invitations and forms | Forms, Pages, taxonomy, invitations, visibility and return/state matrices verified; archived/deployment variants pending |
 | Projects | Lists/detail fields/items and dialogs | Table/board/roadmap and create/add/settings/status dialogs verified; remaining field/draft action variants pending |
 | Gists | Lists/detail/editor and files/comments | List/files/revisions/comments, editor/delete and stale/return matrix verified; mutation state variants pending |
 | Packages | Lists/details and actions | List/detail/version-delete dialog and stale matrix verified; restore/mutation variants pending |
@@ -147,12 +147,12 @@ Generated from existing JSX-bearing production files at task start. Each file mu
 | `src/features/github/github-conversation-comment-actions.tsx` | Pending | Pending |
 | `src/features/github/github-conversation-controls.tsx` | Pending | Pending |
 | `src/features/github/github-discovery-view.tsx` | Pending | Pending |
-| `src/features/github/github-discussion-comment-minimize.tsx` | Pending | Pending |
-| `src/features/github/github-discussion-comment.tsx` | Pending | Pending |
-| `src/features/github/github-discussion-detail.tsx` | Pending | Pending |
-| `src/features/github/github-discussion-form-dialog.tsx` | Pending | Pending |
-| `src/features/github/github-discussion-poll.tsx` | Pending | Pending |
-| `src/features/github/github-discussion-view.tsx` | Pending | Pending |
+| `src/features/github/github-discussion-comment-minimize.tsx` | Audited; shared surfaces, readable metadata and retained-data feedback applied where needed | Administration core/state and supplemental dialog/return matrices verified; remaining variants explicit in UI_VERIFICATION.md |
+| `src/features/github/github-discussion-comment.tsx` | Audited; shared surfaces, readable metadata and retained-data feedback applied where needed | Administration core/state and supplemental dialog/return matrices verified; remaining variants explicit in UI_VERIFICATION.md |
+| `src/features/github/github-discussion-detail.tsx` | Audited; shared surfaces, readable metadata and retained-data feedback applied where needed | Administration core/state and supplemental dialog/return matrices verified; remaining variants explicit in UI_VERIFICATION.md |
+| `src/features/github/github-discussion-form-dialog.tsx` | Audited; shared surfaces, readable metadata and retained-data feedback applied where needed | Administration core/state and supplemental dialog/return matrices verified; remaining variants explicit in UI_VERIFICATION.md |
+| `src/features/github/github-discussion-poll.tsx` | Audited; shared surfaces, readable metadata and retained-data feedback applied where needed | Administration core/state and supplemental dialog/return matrices verified; remaining variants explicit in UI_VERIFICATION.md |
+| `src/features/github/github-discussion-view.tsx` | Audited; shared surfaces, readable metadata and retained-data feedback applied where needed | Administration core/state and supplemental dialog/return matrices verified; remaining variants explicit in UI_VERIFICATION.md |
 | `src/features/github/github-execution-status.tsx` | Pending | Pending |
 | `src/features/github/github-file-blame.tsx` | Pending | Pending |
 | `src/features/github/github-file-diff.tsx` | Pending | Pending |
@@ -185,7 +185,7 @@ Generated from existing JSX-bearing production files at task start. Each file mu
 | `src/features/github/github-issue-row.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
 | `src/features/github/github-issue-shared.tsx` | Pending | Pending |
 | `src/features/github/github-issue-state-action.tsx` | Pending | Pending |
-| `src/features/github/github-issue-taxonomy-view.tsx` | Pending | Pending |
+| `src/features/github/github-issue-taxonomy-view.tsx` | Audited; shared surfaces, readable metadata and retained-data feedback applied where needed | Administration core/state and supplemental dialog/return matrices verified; remaining variants explicit in UI_VERIFICATION.md |
 | `src/features/github/github-issue-timeline.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
 | `src/features/github/github-issue-tracking.tsx` | Pending | Pending |
 | `src/features/github/github-issue-transfer.tsx` | Pending | Pending |
@@ -233,14 +233,14 @@ Generated from existing JSX-bearing production files at task start. Each file mu
 | `src/features/github/github-release-edit-dialog.tsx` | Audited; shared material/metadata/feedback applied where needed | Repository-tab matrix and listed states/actions in UI_VERIFICATION.md; advanced variants are recorded there |
 | `src/features/github/github-release-form.tsx` | Audited; shared material/metadata/feedback applied where needed | Repository-tab matrix and listed states/actions in UI_VERIFICATION.md; advanced variants are recorded there |
 | `src/features/github/github-release-view.tsx` | Audited; shared material/metadata/feedback applied where needed | Repository-tab matrix and listed states/actions in UI_VERIFICATION.md; advanced variants are recorded there |
-| `src/features/github/github-repository-access-card.tsx` | Pending | Pending |
+| `src/features/github/github-repository-access-card.tsx` | Audited; shared surfaces, readable metadata and retained-data feedback applied where needed | Administration core/state and supplemental dialog/return matrices verified; remaining variants explicit in UI_VERIFICATION.md |
 | `src/features/github/github-repository-browser.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
 | `src/features/github/github-repository-create-dialog.tsx` | Pending | Pending |
-| `src/features/github/github-repository-invitations-view.tsx` | Pending | Pending |
-| `src/features/github/github-repository-pages-view.tsx` | Pending | Pending |
+| `src/features/github/github-repository-invitations-view.tsx` | Audited; shared surfaces, readable metadata and retained-data feedback applied where needed | Administration core/state and supplemental dialog/return matrices verified; remaining variants explicit in UI_VERIFICATION.md |
+| `src/features/github/github-repository-pages-view.tsx` | Audited; shared surfaces, readable metadata and retained-data feedback applied where needed | Administration core/state and supplemental dialog/return matrices verified; remaining variants explicit in UI_VERIFICATION.md |
 | `src/features/github/github-repository-relationship-actions.tsx` | Pending | Pending |
-| `src/features/github/github-repository-settings-view.tsx` | Pending | Pending |
-| `src/features/github/github-repository-topics.tsx` | Pending | Pending |
+| `src/features/github/github-repository-settings-view.tsx` | Audited; shared surfaces, readable metadata and retained-data feedback applied where needed | Administration core/state and supplemental dialog/return matrices verified; remaining variants explicit in UI_VERIFICATION.md |
+| `src/features/github/github-repository-topics.tsx` | Audited; shared surfaces, readable metadata and retained-data feedback applied where needed | Administration core/state and supplemental dialog/return matrices verified; remaining variants explicit in UI_VERIFICATION.md |
 | `src/features/github/github-security-detail.tsx` | Audited; shared material/metadata/feedback applied where needed | Repository-tab matrix and listed states/actions in UI_VERIFICATION.md; advanced variants are recorded there |
 | `src/features/github/github-security-shared.tsx` | Audited; shared material/metadata/feedback applied where needed | Repository-tab matrix and listed states/actions in UI_VERIFICATION.md; advanced variants are recorded there |
 | `src/features/github/github-security-view.tsx` | Audited; shared material/metadata/feedback applied where needed | Repository-tab matrix and listed states/actions in UI_VERIFICATION.md; advanced variants are recorded there |

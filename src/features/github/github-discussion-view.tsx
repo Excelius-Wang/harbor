@@ -9,10 +9,10 @@ import {
   Plus,
   RefreshCw,
   ThumbsUp,
-  TriangleAlert,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
+import { useListScroll } from "@/hooks/use-list-scroll";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -87,26 +87,26 @@ function DiscussionRow({
       onClick={onSelect}
       onPointerEnter={onPrefetch}
       onFocus={onPrefetch}
-      className="hover:bg-accent/40 h-auto w-full flex-col items-stretch gap-2.5 rounded-none border-b px-4 py-3.5 text-left whitespace-normal"
+      className="harbor-result-row harbor-subtle-divider h-auto w-full flex-col items-stretch gap-2.5 rounded-none px-4 py-3.5 text-left whitespace-normal"
     >
       <span className="flex min-w-0 items-start gap-2.5">
         <span
-          className="bg-muted/50 grid size-7 shrink-0 place-items-center rounded-md text-sm"
+          className="bg-transparent0 grid size-7 shrink-0 place-items-center rounded-md text-sm"
           aria-hidden="true"
         >
           {discussion.category.emoji}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="text-muted-foreground mb-0.5 flex flex-wrap items-center gap-2 text-[10px] font-normal">
+          <span className="text-muted-foreground mb-0.5 flex flex-wrap items-center gap-2 text-[11px] font-normal">
             <span>{discussion.category.name}</span>
             <span>#{discussion.number}</span>
             {discussion.state === "closed" ? (
-              <Badge variant="outline" className="h-4 rounded-sm px-1 text-[8px] font-normal">
+              <Badge variant="outline" className="h-5 rounded px-1.5 text-[11px] font-normal">
                 {t("workspace.repositories.discussionStates.closed")}
               </Badge>
             ) : null}
             {discussion.answerId ? (
-              <Badge variant="secondary" className="h-4 rounded-sm px-1 text-[8px] font-normal">
+              <Badge variant="secondary" className="h-5 rounded px-1.5 text-[11px] font-normal">
                 <CheckCircle2 /> {t("workspace.repositories.answered")}
               </Badge>
             ) : null}
@@ -114,13 +114,13 @@ function DiscussionRow({
           <span className="text-foreground/95 block text-[13px] leading-5 font-medium">
             {discussion.title}
           </span>
-          <span className="text-muted-foreground mt-1 line-clamp-2 block text-[11px] leading-5 font-normal">
+          <span className="text-muted-foreground mt-1 block text-[13px] leading-5 font-normal">
             {discussion.body || t("workspace.repositories.noDiscussionBody")}
           </span>
         </span>
         <ChevronRight className="text-muted-foreground mt-1 shrink-0" />
       </span>
-      <span className="text-muted-foreground flex flex-wrap items-center gap-3 pl-10 text-[10px] font-normal">
+      <span className="text-muted-foreground flex flex-wrap items-center gap-3 pl-10 text-[11px] font-normal">
         <span>
           {discussion.author ? `@${discussion.author}` : t("workspace.repositories.unknownActor")}
         </span>
@@ -171,6 +171,9 @@ export function GitHubDiscussionView({ repository }: { repository: GitHubReposit
     }
     return [...byId.values()];
   }, [result.data?.pages]);
+  const listScroll = useListScroll(
+    JSON.stringify([repository.id, categoryId, state, answered, sort])
+  );
   const categories = categoriesResult.data?.categories ?? [];
   const enabled = categoriesResult.data?.enabled ?? result.data?.pages[0]?.enabled;
   const totalCount = result.data?.pages[0]?.totalCount;
@@ -212,7 +215,11 @@ export function GitHubDiscussionView({ repository }: { repository: GitHubReposit
               value={categoryId ?? ALL_CATEGORIES}
               onValueChange={(value) => setCategoryId(value === ALL_CATEGORIES ? null : value)}
             >
-              <SelectTrigger size="sm" className="w-[170px]">
+              <SelectTrigger
+                size="sm"
+                className="w-[170px]"
+                aria-label={t("workspace.repositories.allDiscussionCategories")}
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -228,7 +235,7 @@ export function GitHubDiscussionView({ repository }: { repository: GitHubReposit
                 </SelectGroup>
               </SelectContent>
             </Select>
-            <span className="text-muted-foreground flex min-h-6 items-center gap-2 text-[10px]">
+            <span className="text-muted-foreground flex min-h-6 items-center gap-2 text-[11px]">
               {result.isFetching && !result.isFetchingNextPage && result.data ? (
                 <RefreshCw className="size-3 animate-spin" />
               ) : null}
@@ -252,7 +259,11 @@ export function GitHubDiscussionView({ repository }: { repository: GitHubReposit
             value={state}
             onValueChange={(value) => setState(value as GitHubDiscussionStateFilter)}
           >
-            <SelectTrigger size="sm" className="w-full">
+            <SelectTrigger
+              size="sm"
+              className="w-full"
+              aria-label={t("workspace.repositories.allDiscussionStates")}
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -271,7 +282,11 @@ export function GitHubDiscussionView({ repository }: { repository: GitHubReposit
             value={answered}
             onValueChange={(value) => setAnswered(value as GitHubDiscussionAnsweredFilter)}
           >
-            <SelectTrigger size="sm" className="w-full">
+            <SelectTrigger
+              size="sm"
+              className="w-full"
+              aria-label={t("workspace.repositories.allDiscussionAnswers")}
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -289,7 +304,11 @@ export function GitHubDiscussionView({ repository }: { repository: GitHubReposit
             </SelectContent>
           </Select>
           <Select value={sort} onValueChange={(value) => setSort(value as GitHubDiscussionSort)}>
-            <SelectTrigger size="sm" className="w-full">
+            <SelectTrigger
+              size="sm"
+              className="w-full"
+              aria-label={t("workspace.repositories.sortUpdated")}
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -303,22 +322,13 @@ export function GitHubDiscussionView({ repository }: { repository: GitHubReposit
       </div>
 
       {supplementalError ? (
-        <Alert variant="destructive" className="rounded-none border-x-0 border-t-0 px-4 py-2">
-          <TriangleAlert />
-          <AlertDescription className="flex min-w-0 items-center gap-3 text-[11px]">
-            <span className="min-w-0 flex-1 truncate">{supplementalError.message}</span>
-            <Button
-              variant="ghost"
-              size="xs"
-              onClick={() => void Promise.all([result.refetch(), categoriesResult.refetch()])}
-            >
-              {t("workspace.repositories.retry")}
-            </Button>
-          </AlertDescription>
-        </Alert>
+        <WorkspaceStaleNotice
+          message={supplementalError.message}
+          onRetry={() => void Promise.all([result.refetch(), categoriesResult.refetch()])}
+        />
       ) : null}
 
-      <ScrollArea className="min-h-0 flex-1">
+      <ScrollArea className="min-h-0 flex-1" {...listScroll}>
         {result.isPending ? (
           <DiscussionSkeletons />
         ) : error ? (

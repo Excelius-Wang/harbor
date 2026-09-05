@@ -321,6 +321,40 @@
     background: var(--harbor-reading-fill);
   }
 
+  /* Keep table actions visible when a workspace pane becomes narrow. */
+  @container (max-width: 720px) {
+    .harbor-adaptive-table,
+    .harbor-adaptive-table tbody {
+      display: block;
+      width: 100%;
+    }
+
+    .harbor-adaptive-table thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+
+    .harbor-adaptive-table tbody tr {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+    }
+
+    .harbor-adaptive-table td {
+      min-width: 0;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+
+    .harbor-adaptive-table td:first-child,
+    .harbor-adaptive-table td:nth-child(2) {
+      grid-column: 1 / -1;
+    }
+  }
+
   .harbor-overlay-scrim {
     background: var(--harbor-scrim);
   }

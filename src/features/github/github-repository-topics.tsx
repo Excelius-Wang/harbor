@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppTranslation } from "@/hooks/use-app-translation";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { parseIpcError } from "@/lib/ipc-error";
 import type { GitHubRepository } from "./github-data";
 import { githubQueryKeys, personalRepositoryTopicsQueryOptions } from "./github-queries";
@@ -158,16 +159,10 @@ export function GitHubRepositoryTopicsCard({ repository }: { repository: GitHubR
       </CardHeader>
       <CardContent>
         {result.error ? (
-          <Alert variant="destructive" className="mb-4">
-            <CircleAlert />
-            <AlertTitle>{t("workspace.repositories.settings.topicsLoadFailed")}</AlertTitle>
-            <AlertDescription className="flex flex-col items-start gap-2">
-              <span>{parseIpcError(result.error).message}</span>
-              <Button variant="outline" size="sm" onClick={() => void refreshTopics()}>
-                {t("common.retry")}
-              </Button>
-            </AlertDescription>
-          </Alert>
+          <WorkspaceStaleNotice
+            message={parseIpcError(result.error).message}
+            onRetry={() => void refreshTopics()}
+          />
         ) : null}
         <form
           className="flex flex-col gap-4"

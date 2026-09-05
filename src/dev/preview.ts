@@ -10,6 +10,7 @@ import "./preview.css";
 import { workspaceFixture } from "./workspace-fixtures";
 import { moreFixture } from "./more-fixtures";
 import { repositoryFixture } from "./repository-fixtures";
+import { administrationFixture } from "./administration-fixtures";
 
 export const previewCalls: string[] = [];
 let previewHandler:
@@ -195,8 +196,18 @@ export function installPreview() {
       commandState === "empty"
     );
     if (repositoryResult !== undefined) return repositoryResult;
+    const administrationResult = administrationFixture(
+      command,
+      args,
+      repositories,
+      commandState === "empty"
+    );
+    if (administrationResult !== undefined) return administrationResult;
     // Missing fixtures fail visibly. Never fall through to a real GitHub write.
     throw { code: "previewFixtureMissing", message: `No UI preview fixture for ${command}` };
   };
   if (!native) mockIPC(previewHandler, { shouldMockEvents: true });
 }
+
+// Fixture edits need a clean bridge and root, including native preview reloads.
+if (import.meta.hot) import.meta.hot.accept(() => window.location.reload());

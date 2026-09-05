@@ -60,6 +60,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { parseIpcError } from "@/lib/ipc-error";
 import type {
   GitHubIssueLabel,
@@ -631,7 +632,7 @@ export function GitHubIssueTaxonomyView({
       </div>
       <div className="flex min-h-0 flex-1 flex-col">
         <header className="border-b px-4 py-4 sm:px-5">
-          <h2 className="text-foreground text-xl leading-7 font-semibold tracking-[-0.025em]">
+          <h2 className="text-foreground text-2xl leading-8 font-semibold tracking-[-0.025em]">
             {t("workspace.repositories.taxonomyTitle")}
           </h2>
           <p className="text-muted-foreground mt-1 max-w-2xl text-xs leading-5">
@@ -675,8 +676,14 @@ export function GitHubIssueTaxonomyView({
               )}
             </Button>
           </div>
-          <TabsContent value="labels" className="min-h-0">
-            <ScrollArea className="h-full">
+          <TabsContent value="labels" className="min-h-0 flex-col data-[state=active]:flex">
+            {labelsResult.error && labelsResult.data ? (
+              <WorkspaceStaleNotice
+                message={parseIpcError(labelsResult.error).message}
+                onRetry={() => void labelsResult.refetch()}
+              />
+            ) : null}
+            <ScrollArea className="min-h-0 flex-1">
               {labelsResult.isPending ? (
                 <TaxonomySkeletons />
               ) : labelsResult.error && !labelsResult.data ? (
@@ -686,16 +693,8 @@ export function GitHubIssueTaxonomyView({
                 />
               ) : labels.length ? (
                 <div className="p-4 sm:p-5">
-                  {labelsResult.error ? (
-                    <Alert variant="destructive" className="mb-3">
-                      <CircleAlert />
-                      <AlertDescription>
-                        {parseIpcError(labelsResult.error).message}
-                      </AlertDescription>
-                    </Alert>
-                  ) : null}
                   <div className="overflow-hidden rounded-lg border">
-                    <Table className="min-w-[620px]">
+                    <Table className="harbor-adaptive-table">
                       <TableHeader>
                         <TableRow>
                           <TableHead>{t("workspace.repositories.labelName")}</TableHead>
@@ -774,8 +773,14 @@ export function GitHubIssueTaxonomyView({
               )}
             </ScrollArea>
           </TabsContent>
-          <TabsContent value="milestones" className="min-h-0">
-            <ScrollArea className="h-full">
+          <TabsContent value="milestones" className="min-h-0 flex-col data-[state=active]:flex">
+            {milestonesResult.error && milestonesResult.data ? (
+              <WorkspaceStaleNotice
+                message={parseIpcError(milestonesResult.error).message}
+                onRetry={() => void milestonesResult.refetch()}
+              />
+            ) : null}
+            <ScrollArea className="min-h-0 flex-1">
               {milestonesResult.isPending ? (
                 <TaxonomySkeletons />
               ) : milestonesResult.error && !milestonesResult.data ? (
@@ -785,16 +790,8 @@ export function GitHubIssueTaxonomyView({
                 />
               ) : milestones.length ? (
                 <div className="p-4 sm:p-5">
-                  {milestonesResult.error ? (
-                    <Alert variant="destructive" className="mb-3">
-                      <CircleAlert />
-                      <AlertDescription>
-                        {parseIpcError(milestonesResult.error).message}
-                      </AlertDescription>
-                    </Alert>
-                  ) : null}
                   <div className="overflow-hidden rounded-lg border">
-                    <Table className="min-w-[720px]">
+                    <Table className="harbor-adaptive-table">
                       <TableHeader>
                         <TableRow>
                           <TableHead>{t("workspace.repositories.milestoneTitle")}</TableHead>
@@ -831,7 +828,7 @@ export function GitHubIssueTaxonomyView({
                                     </Badge>
                                   </div>
                                   {milestone.description ? (
-                                    <span className="text-muted-foreground line-clamp-2 text-xs">
+                                    <span className="text-muted-foreground text-xs">
                                       {milestone.description}
                                     </span>
                                   ) : null}
@@ -844,7 +841,7 @@ export function GitHubIssueTaxonomyView({
                               </TableCell>
                               <TableCell>
                                 <div className="flex min-w-36 flex-col gap-1.5">
-                                  <span className="text-muted-foreground text-[10px]">
+                                  <span className="text-muted-foreground text-[11px]">
                                     {t("workspace.repositories.milestoneCompletion", {
                                       percent: completion,
                                       closed: milestone.closedIssues,

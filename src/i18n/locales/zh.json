@@ -2814,7 +2814,9 @@
         "headRefDeleted": "删除了来源分支",
         "baseRefChanged": "将目标分支改为 {{detail}}"
       },
-      "repositoryPath": "仓库路径"
+      "repositoryPath": "仓库路径",
+      "upvoteDiscussion": "赞同此讨论",
+      "upvoteDiscussionComment": "赞同此评论"
     },
     "filters": {
       "period": "时间范围",

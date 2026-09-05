@@ -38,6 +38,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { parseIpcError } from "@/lib/ipc-error";
 import type { GitHubRepositoryAccessUser, GitHubRepositoryInvitation } from "./github-data";
 import { formatIssueDate } from "./github-issue-shared";
@@ -68,12 +69,28 @@ function AccessUser({ user }: { user: GitHubRepositoryAccessUser }) {
   );
 }
 
-function AccessError({ title, error }: { title: string; error: unknown }) {
+function AccessError({
+  title,
+  error,
+  onRetry,
+}: {
+  title: string;
+  error: unknown;
+  onRetry?: () => void;
+}) {
+  const { t } = useTranslation();
   return (
     <Alert variant="destructive">
       <CircleAlert />
       <AlertTitle>{title}</AlertTitle>
-      <AlertDescription>{parseIpcError(error).message}</AlertDescription>
+      <AlertDescription>
+        {parseIpcError(error).message}
+        {onRetry ? (
+          <Button variant="outline" size="sm" onClick={onRetry}>
+            {t("common.retry")}
+          </Button>
+        ) : null}
+      </AlertDescription>
     </Alert>
   );
 }
@@ -149,10 +166,17 @@ export function GitHubRepositoryAccessCard({ target }: { target: GitHubRepositor
         </CardAction>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        {invitationsResult.isError ? (
+        {invitationsResult.error && invitationsResult.data ? (
+          <WorkspaceStaleNotice
+            message={parseIpcError(invitationsResult.error).message}
+            onRetry={() => void invitationsResult.refetch()}
+          />
+        ) : null}
+        {invitationsResult.isError && !invitationsResult.data ? (
           <AccessError
             title={t("workspace.repositories.settings.access.invitationsLoadFailed")}
             error={invitationsResult.error}
+            onRetry={() => void invitationsResult.refetch()}
           />
         ) : invitationsResult.isPending ? (
           <Skeleton className="h-14 w-full" />
@@ -165,11 +189,11 @@ export function GitHubRepositoryAccessCard({ target }: { target: GitHubRepositor
               {invitations.map((invitation) => (
                 <div
                   key={invitation.id}
-                  className="flex items-center justify-between gap-3 px-3 py-2.5"
+                  className="harbor-result-row flex flex-wrap items-center justify-between gap-3 px-3 py-2.5"
                 >
                   <div className="min-w-0">
                     <AccessUser user={invitation.invitee} />
-                    <p className="text-muted-foreground mt-1 truncate pl-10 text-[11px]">
+                    <p className="text-muted-foreground mt-1 pl-10 text-[11px] break-words">
                       {t("workspace.repositories.settings.access.invitedBy", {
                         inviter: invitation.inviter.login,
                         date: formatIssueDate(invitation.createdAt, i18n.resolvedLanguage ?? "en"),
@@ -210,10 +234,17 @@ export function GitHubRepositoryAccessCard({ target }: { target: GitHubRepositor
           <p className="text-muted-foreground text-[11px] font-medium tracking-[0.06em] uppercase">
             {t("workspace.repositories.settings.access.collaborators")}
           </p>
-          {collaboratorsResult.isError ? (
+          {collaboratorsResult.error && collaboratorsResult.data ? (
+            <WorkspaceStaleNotice
+              message={parseIpcError(collaboratorsResult.error).message}
+              onRetry={() => void collaboratorsResult.refetch()}
+            />
+          ) : null}
+          {collaboratorsResult.isError && !collaboratorsResult.data ? (
             <AccessError
               title={t("workspace.repositories.settings.access.collaboratorsLoadFailed")}
               error={collaboratorsResult.error}
+              onRetry={() => void collaboratorsResult.refetch()}
             />
           ) : collaboratorsResult.isPending ? (
             <>
@@ -226,7 +257,7 @@ export function GitHubRepositoryAccessCard({ target }: { target: GitHubRepositor
                 {collaborators.map((collaborator) => (
                   <div
                     key={collaborator.id}
-                    className="flex items-center justify-between gap-3 px-3 py-2.5"
+                    className="harbor-result-row flex flex-wrap items-center justify-between gap-3 px-3 py-2.5"
                   >
                     <AccessUser user={collaborator} />
                     <div className="flex items-center gap-2">

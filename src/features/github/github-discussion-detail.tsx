@@ -13,7 +13,6 @@ import {
   RotateCcw,
   ThumbsUp,
   Trash2,
-  TriangleAlert,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -58,6 +57,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { parseIpcError } from "@/lib/ipc-error";
 import { openExternalUrl } from "@/lib/window";
 import type {
@@ -396,24 +396,14 @@ export function GitHubDiscussionDetail({
         ) : null}
       </div>
       {supplementalError ? (
-        <Alert variant="destructive" className="rounded-none border-x-0 border-t-0 px-4 py-2">
-          <TriangleAlert />
-          <AlertDescription className="flex min-w-0 items-center gap-3 text-[11px]">
-            <span className="min-w-0 flex-1 truncate">{supplementalError.error.message}</span>
-            <Button
-              type="button"
-              variant="ghost"
-              size="xs"
-              onClick={() =>
-                void (supplementalError.source === "discussion"
-                  ? result.refetch()
-                  : categoriesResult.refetch())
-              }
-            >
-              {t("workspace.repositories.retry")}
-            </Button>
-          </AlertDescription>
-        </Alert>
+        <WorkspaceStaleNotice
+          message={supplementalError.error.message}
+          onRetry={() =>
+            void (supplementalError.source === "discussion"
+              ? result.refetch()
+              : categoriesResult.refetch())
+          }
+        />
       ) : null}
       <ScrollArea className="min-h-0 flex-1">
         {result.isPending ? (
@@ -463,7 +453,7 @@ export function GitHubDiscussionDetail({
                       </Badge>
                     ) : null}
                   </div>
-                  <h2 className="text-foreground text-xl leading-7 font-semibold tracking-[-0.025em]">
+                  <h2 className="text-foreground text-2xl leading-8 font-semibold tracking-[-0.025em]">
                     {discussion.title}{" "}
                     <span className="text-muted-foreground font-normal">#{discussion.number}</span>
                   </h2>
@@ -481,6 +471,9 @@ export function GitHubDiscussionDetail({
                     type="button"
                     variant={discussion.viewerHasUpvoted ? "secondary" : "outline"}
                     size="sm"
+                    aria-pressed={discussion.viewerHasUpvoted}
+                    aria-label={t("workspace.repositories.upvoteDiscussion")}
+                    title={t("workspace.repositories.upvoteDiscussion")}
                     disabled={!discussion.viewerCanUpvote || voteMutation.isPending}
                     onClick={() => voteMutation.mutate()}
                   >
@@ -552,12 +545,12 @@ export function GitHubDiscussionDetail({
                 </div>
               </header>
 
-              <article className="bg-card/30 overflow-hidden rounded-lg border">
-                <header className="bg-card/40 flex min-h-11 items-center gap-2 border-b px-3.5 py-2 text-xs font-medium">
+              <article className="harbor-reading overflow-hidden rounded-lg border">
+                <header className="flex min-h-11 items-center gap-2 border-b bg-transparent px-3.5 py-2 text-xs font-medium">
                   {discussion.author
                     ? `@${discussion.author}`
                     : t("workspace.repositories.unknownActor")}
-                  <span className="text-muted-foreground ml-auto text-[10px]">
+                  <span className="text-muted-foreground ml-auto text-[11px]">
                     {formatIssueDate(discussion.updatedAt, i18n.language)}
                   </span>
                 </header>

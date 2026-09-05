@@ -76,6 +76,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { parseIpcError } from "@/lib/ipc-error";
 import { openExternalUrl } from "@/lib/window";
 import type {
@@ -355,13 +356,15 @@ function PagesConfigurationCard({
           {draft.buildType === "legacy" ? (
             <FieldGroup className="grid gap-4 sm:grid-cols-2">
               <Field data-disabled={disabled}>
-                <FieldLabel>{t("workspace.repositories.settings.pages.branch")}</FieldLabel>
+                <FieldLabel htmlFor="repository-pages-branch">
+                  {t("workspace.repositories.settings.pages.branch")}
+                </FieldLabel>
                 <Select
                   value={draft.branch ?? ""}
                   disabled={disabled}
                   onValueChange={(branch) => onDraftChange({ ...draft, branch })}
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger id="repository-pages-branch" className="w-full">
                     <SelectValue placeholder={t("workspace.repositories.settings.pages.branch")} />
                   </SelectTrigger>
                   <SelectContent>
@@ -376,7 +379,9 @@ function PagesConfigurationCard({
                 </Select>
               </Field>
               <Field data-disabled={disabled}>
-                <FieldLabel>{t("workspace.repositories.settings.pages.folder")}</FieldLabel>
+                <FieldLabel htmlFor="repository-pages-folder">
+                  {t("workspace.repositories.settings.pages.folder")}
+                </FieldLabel>
                 <Select
                   value={draft.sourcePath ?? "root"}
                   disabled={disabled}
@@ -387,7 +392,7 @@ function PagesConfigurationCard({
                     })
                   }
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger id="repository-pages-folder" className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -502,6 +507,9 @@ function DomainHealthCard({
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
+        {error && results.length > 0 ? (
+          <WorkspaceStaleNotice message={parseIpcError(error).message} onRetry={onRetry} />
+        ) : null}
         {pending ? (
           <Alert>
             <Spinner />
@@ -510,7 +518,7 @@ function DomainHealthCard({
               {t("workspace.repositories.settings.pages.healthCheckingDescription")}
             </AlertDescription>
           </Alert>
-        ) : error ? (
+        ) : error && results.length === 0 ? (
           <Alert variant="destructive">
             <AlertTriangle />
             <AlertTitle>{t("workspace.repositories.settings.pages.healthFailed")}</AlertTitle>
@@ -835,7 +843,7 @@ export function GitHubRepositoryPagesView({
           {t("workspace.repositories.settings.pages.back")}
         </Button>
         <div>
-          <h3 className="text-base font-semibold tracking-[-0.02em]">
+          <h3 className="text-2xl leading-8 font-semibold tracking-[-0.025em]">
             {t("workspace.repositories.settings.pages.title")}
           </h3>
           <p className="text-muted-foreground mt-1 text-xs">
@@ -845,7 +853,13 @@ export function GitHubRepositoryPagesView({
           </p>
         </div>
 
-        {pagesResult.isError ? (
+        {pagesResult.error && workspace ? (
+          <WorkspaceStaleNotice
+            message={parseIpcError(pagesResult.error).message}
+            onRetry={() => void pagesResult.refetch()}
+          />
+        ) : null}
+        {pagesResult.isError && !workspace ? (
           <Alert variant="destructive">
             <AlertTriangle />
             <AlertTitle>{t("workspace.repositories.settings.pages.loadFailed")}</AlertTitle>
@@ -873,7 +887,7 @@ export function GitHubRepositoryPagesView({
           <PublishingStatus repository={repository} site={site} latestBuild={latestBuild} />
         ) : null}
 
-        {!pagesResult.isError && workspace ? (
+        {workspace ? (
           <PagesConfigurationCard
             enabled={Boolean(site)}
             archived={archived}

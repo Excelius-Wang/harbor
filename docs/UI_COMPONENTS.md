@@ -72,3 +72,7 @@ Use `?state=error&commands=github_get_repository_wiki` (or a comma-separated com
 In ui-preview mode, Vite rewrites application imports of the core SDK to `src/dev/preview-core.ts`. This facade intercepts application `invoke` calls without assigning Tauri's readonly native internals. Real native window/event behavior remains available for visual testing. Ordinary development and production retain their original SDK imports; browser preview alone uses the SDK mock.
 
 Chart tick labels target Recharts' actual `recharts-cartesian-axis-tick-value` nodes. Tooltips use `harbor-popover`; chart keyboard focus is visible. Data series use primary and muted colors, with destructive retained for code deletions. Insights renders data directly instead of animating chart entry.
+
+`harbor-adaptive-table` is for workspace tables with actions that must stay visible in a narrow pane. Place the table inside a CSS container; below 720 px, its first two cells stack above metadata and actions. Table headings remain available to screen readers. Labels and milestones are the current production examples.
+
+`src/dev/administration-fixtures.ts` supplies repository settings/access/Pages and Discussions read data. Fixture edits reload the preview entry so the mocked bridge and React root start together. These fixtures exercise production components; they do not validate live GitHub operations.

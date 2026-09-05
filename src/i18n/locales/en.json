@@ -2821,7 +2821,9 @@
         "headRefDeleted": "deleted the head branch",
         "baseRefChanged": "changed the base branch to {{detail}}"
       },
-      "repositoryPath": "Repository path"
+      "repositoryPath": "Repository path",
+      "upvoteDiscussion": "Upvote discussion",
+      "upvoteDiscussionComment": "Upvote comment"
     },
     "filters": {
       "period": "Time range",

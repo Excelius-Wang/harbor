@@ -426,7 +426,7 @@ export function workspaceFixture(
         nextCursor: null,
       } satisfies GitHubData.GitHubIssueTrackingPage;
     case "github_list_repository_issue_labels":
-      return { labels };
+      return { labels: empty ? [] : labels };
     case "github_list_repository_issue_assignees":
       return {
         assignees: [
@@ -435,7 +435,29 @@ export function workspaceFixture(
         ],
       };
     case "github_list_repository_issue_milestones":
-      return { milestones: [] };
+      return {
+        milestones: empty
+          ? []
+          : [
+              {
+                number: 1,
+                title: "Workspace accessibility",
+                description:
+                  "Keep keyboard access and review context intact at compact window sizes.",
+                state: "open",
+                openIssues: 3,
+                closedIssues: 7,
+                dueOn: "2026-09-30T10:00:00Z",
+              },
+              {
+                number: 2,
+                title: "Stable navigation",
+                state: "closed",
+                openIssues: 0,
+                closedIssues: 12,
+              },
+            ],
+      } satisfies GitHubData.GitHubIssueMilestonePage;
     case "github_get_repository_reactions":
       return ((args.subjects ?? []) as GitHubData.GitHubReactionSubjectRef[]).map(
         (subject) =>
