@@ -715,9 +715,9 @@ export function GitHubDiscoveryView({
             <Tabs value={tab} onValueChange={changeTab} className="min-w-0 gap-0">
               <TabsList
                 variant="line"
-                className="h-9 max-w-full justify-start gap-4 overflow-x-auto p-0"
+                className="scrollbar-none h-9 max-w-full justify-start gap-4 overflow-x-auto overflow-y-hidden p-0"
               >
-                <TabsTrigger value="feed" className="px-1.5 text-xs">
+                <TabsTrigger value="feed" className="px-1.5 text-xs after:bottom-0!">
                   <UsersRound /> {t("workspace.discovery.tabs.feed")}
                 </TabsTrigger>
                 {SEARCH_TABS.map((searchKind) => {
@@ -732,7 +732,11 @@ export function GitHubDiscoveryView({
                             ? GitPullRequest
                             : UserRound;
                   return (
-                    <TabsTrigger key={searchKind} value={searchKind} className="px-1.5 text-xs">
+                    <TabsTrigger
+                      key={searchKind}
+                      value={searchKind}
+                      className="px-1.5 text-xs after:bottom-0!"
+                    >
                       <Icon /> {t(`workspace.discovery.tabs.${searchKind}`)}
                     </TabsTrigger>
                   );
@@ -740,7 +744,7 @@ export function GitHubDiscoveryView({
               </TabsList>
             </Tabs>
             {tab === "feed" ? (
-              <span className="text-muted-foreground hidden pb-2 text-[10px] min-[900px]:block">
+              <span className="text-muted-foreground hidden pb-2 text-[10px] min-[1240px]:block">
                 {t("workspace.discovery.feedWindow")}
               </span>
             ) : (

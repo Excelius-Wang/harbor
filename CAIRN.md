@@ -4,4 +4,4 @@
 
 ## Current item
 
-`.cairn/items/github-web-parity.md`
+`.cairn/items/adaptive-main-window.md`
