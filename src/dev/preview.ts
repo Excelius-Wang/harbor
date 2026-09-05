@@ -2,6 +2,9 @@ import { isTauri } from "@tauri-apps/api/core";
 import { mockIPC, mockWindows } from "@tauri-apps/api/mocks";
 import type { GitHubRepository } from "@/features/github/github-data";
 import "./preview.css";
+import { workspaceFixture } from "./workspace-fixtures";
+
+export const previewCalls: string[] = [];
 
 const repositories: GitHubRepository[] = [
   [
@@ -69,10 +72,12 @@ const languages = [
 ].map((name) => ({ name, slug: name.toLowerCase() }));
 
 export function installPreview() {
+  Object.assign(window, { __harborPreviewCalls: previewCalls });
   // Native window commands remain real; every business command is intercepted.
   const native = isTauri();
   const parameters = new URLSearchParams(location.search);
   const state = parameters.get("state") ?? "populated";
+  const requestCounts = new Map<string, number>();
   if (!native) {
     mockWindows("main");
     Object.defineProperty(globalThis, "isTauri", { value: true, configurable: true });
@@ -92,6 +97,7 @@ export function installPreview() {
   mockIPC(
     async (command, payload) => {
       const args = (payload ?? {}) as Record<string, unknown>;
+      previewCalls.push(command);
       if (
         command.startsWith("plugin:window|") ||
         command.startsWith("plugin:webview|") ||
@@ -112,7 +118,10 @@ export function installPreview() {
       if (command.startsWith("github_")) {
         if (state === "loading") return new Promise(() => {});
         await new Promise((resolve) => setTimeout(resolve, 120));
-        if (state === "error")
+        const requestKey = JSON.stringify([command, args]);
+        const attempts = (requestCounts.get(requestKey) ?? 0) + 1;
+        requestCounts.set(requestKey, attempts);
+        if (state === "error" || (state === "stale" && attempts > 1))
           throw {
             code: "preview",
             message: "Preview request failed. Retry to check error feedback.",
@@ -156,6 +165,8 @@ export function installPreview() {
       }
       if (command === "github_list_developer_feed")
         return { events: [], page: 1, hasPrevious: false, hasMore: false };
+      const fixture = workspaceFixture(command, args, repositories, state === "empty");
+      if (fixture !== undefined) return fixture;
       // Missing fixtures fail visibly. Never fall through to a real GitHub write.
       throw { code: "previewFixtureMissing", message: `No UI preview fixture for ${command}` };
     },

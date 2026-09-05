@@ -65,6 +65,8 @@ import {
   CommandGroup,
   CommandItem,
 } from "@/components/ui/command";
+import { WorkspacePageHeader } from "@/features/workspace/workspace-page-header";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { NavigationButton } from "@/features/workspace/navigation-button";
 import { GitHubTrendingFilterControls } from "@/features/github/github-trending-filters";
 import { DEFAULT_TRENDING_FILTERS } from "@/features/github/github-trending";
@@ -120,6 +122,17 @@ function Gallery() {
             </Button>
           </div>
         </header>
+        <Example
+          title={copy("navigation")}
+          usage={'<WorkspacePageHeader title="Issues" contained />'}
+        >
+          <WorkspacePageHeader title="Issues" description={t("workspace.issues.eyebrow")}>
+            <Button variant="outline" size="sm">
+              {t("common.refresh")}
+            </Button>
+          </WorkspacePageHeader>
+          <WorkspaceStaleNotice message={copy("retry")} onRetry={() => {}} />
+        </Example>
         <Example title={copy("actions")} usage={'<Button variant="outline" size="sm">…</Button>'}>
           <div className="flex flex-wrap items-center gap-3">
             <Button>{copy("primary")}</Button>

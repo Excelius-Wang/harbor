@@ -27,7 +27,7 @@ export function GitHubPullRequestRow({
       onClick={onSelect}
       onPointerEnter={onPrefetch}
       onFocus={onPrefetch}
-      className="hover:bg-accent/40 h-auto w-full flex-col items-stretch gap-2.5 rounded-none border-b px-4 py-3.5 text-left whitespace-normal"
+      className="harbor-result-row h-auto w-full flex-col items-stretch gap-2.5 rounded-none px-4 py-3.5 text-left whitespace-normal"
     >
       <span className="flex min-w-0 items-start gap-2.5">
         <GitPullRequest
@@ -44,7 +44,7 @@ export function GitHubPullRequestRow({
         />
         <span className="min-w-0 flex-1">
           {showRepository ? (
-            <span className="text-muted-foreground mb-0.5 flex min-w-0 items-center gap-1.5 font-mono text-[10px] font-normal">
+            <span className="text-muted-foreground mb-0.5 flex min-w-0 items-center gap-1.5 font-mono text-[11px] font-normal">
               <span className="truncate font-medium">{pullRequest.repository.fullName}</span>
               <span className="shrink-0">#{pullRequest.number}</span>
             </span>
@@ -59,7 +59,7 @@ export function GitHubPullRequestRow({
           </span>
         </span>
         {!showRepository ? (
-          <span className="text-muted-foreground shrink-0 font-mono text-[10px] font-normal tabular-nums">
+          <span className="text-muted-foreground shrink-0 font-mono text-[11px] font-normal tabular-nums">
             #{pullRequest.number}
           </span>
         ) : null}
@@ -71,7 +71,7 @@ export function GitHubPullRequestRow({
           ))}
         </span>
       ) : null}
-      <span className="text-muted-foreground flex flex-wrap items-center gap-3 pl-6 text-[10px] font-normal">
+      <span className="text-muted-foreground flex flex-wrap items-center gap-3 pl-6 text-[11px] font-normal">
         <span className="text-card-foreground/70 font-medium">@{pullRequest.author}</span>
         <span className="flex items-center gap-1 font-mono tabular-nums">
           <MessageSquare /> {pullRequest.comments}

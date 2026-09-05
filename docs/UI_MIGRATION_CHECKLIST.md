@@ -28,9 +28,9 @@ Status: in progress. A source inventory is not visual acceptance. Every row belo
 | --- | --- | --- |
 | Workspace | Window/title bar, primary navigation, More menu, command palette, context rail and Agent sheet | Pending |
 | Notifications | Inbox, filters, retained results, target detail | Pending |
-| Issues | Inbox/repository lists, details, timeline, metadata, relationships, all actions/forms | Pending |
-| Pull requests | Inbox/repository lists, details, commits, files/diff, reviews, checks, merge/lifecycle forms | Pending |
-| Repositories | Owned/starred lists, create/access/invitations, repository shell and tabs | Pending |
+| Issues | Inbox/repository lists, details, timeline, metadata, relationships, all actions/forms | Inbox/detail/edit/preview and return checks done; advanced actions still pending |
+| Pull requests | Inbox/repository lists, details, commits, files/diff, reviews, checks, merge/lifecycle forms | Inbox/conversation/checks/files/review dialog captured; advanced review/lifecycle pending |
+| Repositories | Owned/starred lists, create/access/invitations, repository shell and tabs | Core browser, code and create-form capture done; other tabs/actions pending |
 | Discovery | Trending repositories/developers, developer feed, search and result/detail returns | Pending |
 | Code | Tree, file/preview/blame, history/commits/comments, branches/tags/search and edit dialogs | Pending |
 | Wiki | Page list, reading/editing/history and dialogs | Pending |
@@ -134,9 +134,9 @@ Generated from existing JSX-bearing production files at task start. Each file mu
 | `src/features/github/github-code-history.tsx` | Pending | Pending |
 | `src/features/github/github-code-search.tsx` | Pending | Pending |
 | `src/features/github/github-code-tags.tsx` | Pending | Pending |
-| `src/features/github/github-code-view.tsx` | Pending | Pending |
+| `src/features/github/github-code-view.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
 | `src/features/github/github-comment-actions.tsx` | Pending | Pending |
-| `src/features/github/github-comment-form.tsx` | Pending | Pending |
+| `src/features/github/github-comment-form.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
 | `src/features/github/github-commit-comment-card.tsx` | Pending | Pending |
 | `src/features/github/github-commit-comment-composer.tsx` | Pending | Pending |
 | `src/features/github/github-commit-comment-diff.tsx` | Pending | Pending |
@@ -168,30 +168,30 @@ Generated from existing JSX-bearing production files at task start. Each file mu
 | `src/features/github/github-issue-delete-action.tsx` | Pending | Pending |
 | `src/features/github/github-issue-dependencies.tsx` | Pending | Pending |
 | `src/features/github/github-issue-dependency-actions.tsx` | Pending | Pending |
-| `src/features/github/github-issue-detail.tsx` | Pending | Pending |
+| `src/features/github/github-issue-detail.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
 | `src/features/github/github-issue-duplicate.tsx` | Pending | Pending |
-| `src/features/github/github-issue-edit-dialog.tsx` | Pending | Pending |
-| `src/features/github/github-issue-form.tsx` | Pending | Pending |
-| `src/features/github/github-issue-inbox.tsx` | Pending | Pending |
-| `src/features/github/github-issue-linked-branches.tsx` | Pending | Pending |
+| `src/features/github/github-issue-edit-dialog.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
+| `src/features/github/github-issue-form.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
+| `src/features/github/github-issue-inbox.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
+| `src/features/github/github-issue-linked-branches.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
 | `src/features/github/github-issue-linked-pull-requests.tsx` | Pending | Pending |
 | `src/features/github/github-issue-mark-duplicate-action.tsx` | Pending | Pending |
-| `src/features/github/github-issue-metadata.tsx` | Pending | Pending |
+| `src/features/github/github-issue-metadata.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
 | `src/features/github/github-issue-pin-action.tsx` | Pending | Pending |
 | `src/features/github/github-issue-project-action.tsx` | Pending | Pending |
-| `src/features/github/github-issue-relation-ui.tsx` | Pending | Pending |
+| `src/features/github/github-issue-relation-ui.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
 | `src/features/github/github-issue-relationship-actions.tsx` | Pending | Pending |
 | `src/features/github/github-issue-relationships.tsx` | Pending | Pending |
-| `src/features/github/github-issue-row.tsx` | Pending | Pending |
+| `src/features/github/github-issue-row.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
 | `src/features/github/github-issue-shared.tsx` | Pending | Pending |
 | `src/features/github/github-issue-state-action.tsx` | Pending | Pending |
 | `src/features/github/github-issue-taxonomy-view.tsx` | Pending | Pending |
-| `src/features/github/github-issue-timeline.tsx` | Pending | Pending |
+| `src/features/github/github-issue-timeline.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
 | `src/features/github/github-issue-tracking.tsx` | Pending | Pending |
 | `src/features/github/github-issue-transfer.tsx` | Pending | Pending |
 | `src/features/github/github-issue-type-action.tsx` | Pending | Pending |
-| `src/features/github/github-issue-view.tsx` | Pending | Pending |
-| `src/features/github/github-markdown-editor.tsx` | Pending | Pending |
+| `src/features/github/github-issue-view.tsx` | Query-specific scroll recovery integrated | Repository Issue list captured; remaining filter/action states pending |
+| `src/features/github/github-markdown-editor.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
 | `src/features/github/github-notifications.tsx` | Pending | Pending |
 | `src/features/github/github-packages-view.tsx` | Pending | Pending |
 | `src/features/github/github-pinned-issues.tsx` | Pending | Pending |
@@ -203,28 +203,28 @@ Generated from existing JSX-bearing production files at task start. Each file mu
 | `src/features/github/github-pull-request-auto-merge.tsx` | Pending | Pending |
 | `src/features/github/github-pull-request-base-edit.tsx` | Pending | Pending |
 | `src/features/github/github-pull-request-branch-update.tsx` | Pending | Pending |
-| `src/features/github/github-pull-request-checks.tsx` | Pending | Pending |
+| `src/features/github/github-pull-request-checks.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
 | `src/features/github/github-pull-request-commits.tsx` | Pending | Pending |
 | `src/features/github/github-pull-request-create.tsx` | Pending | Pending |
-| `src/features/github/github-pull-request-detail.tsx` | Pending | Pending |
-| `src/features/github/github-pull-request-edit-dialog.tsx` | Pending | Pending |
+| `src/features/github/github-pull-request-detail.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
+| `src/features/github/github-pull-request-edit-dialog.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
 | `src/features/github/github-pull-request-file-view-state.tsx` | Pending | Pending |
 | `src/features/github/github-pull-request-files-error.tsx` | Pending | Pending |
 | `src/features/github/github-pull-request-files.tsx` | Pending | Pending |
-| `src/features/github/github-pull-request-inbox.tsx` | Pending | Pending |
-| `src/features/github/github-pull-request-inline-comment.tsx` | Pending | Pending |
+| `src/features/github/github-pull-request-inbox.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
+| `src/features/github/github-pull-request-inline-comment.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
 | `src/features/github/github-pull-request-lifecycle.tsx` | Pending | Pending |
 | `src/features/github/github-pull-request-maintainer-editability.tsx` | Pending | Pending |
 | `src/features/github/github-pull-request-merge-panel.tsx` | Pending | Pending |
 | `src/features/github/github-pull-request-merge-queue.tsx` | Pending | Pending |
-| `src/features/github/github-pull-request-metadata.tsx` | Pending | Pending |
-| `src/features/github/github-pull-request-review-dialog.tsx` | Pending | Pending |
+| `src/features/github/github-pull-request-metadata.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
+| `src/features/github/github-pull-request-review-dialog.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
 | `src/features/github/github-pull-request-review-dismissal.tsx` | Pending | Pending |
-| `src/features/github/github-pull-request-review-thread.tsx` | Pending | Pending |
+| `src/features/github/github-pull-request-review-thread.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
 | `src/features/github/github-pull-request-reviewers.tsx` | Pending | Pending |
-| `src/features/github/github-pull-request-row.tsx` | Pending | Pending |
+| `src/features/github/github-pull-request-row.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
 | `src/features/github/github-pull-request-shared.tsx` | Pending | Pending |
-| `src/features/github/github-pull-request-view.tsx` | Pending | Pending |
+| `src/features/github/github-pull-request-view.tsx` | Query-specific scroll recovery integrated | Repository Issue list captured; remaining filter/action states pending |
 | `src/features/github/github-reaction-bar.tsx` | Pending | Pending |
 | `src/features/github/github-reactions-provider.tsx` | Pending | Pending |
 | `src/features/github/github-readme.tsx` | Pending | Pending |
@@ -234,7 +234,7 @@ Generated from existing JSX-bearing production files at task start. Each file mu
 | `src/features/github/github-release-form.tsx` | Pending | Pending |
 | `src/features/github/github-release-view.tsx` | Pending | Pending |
 | `src/features/github/github-repository-access-card.tsx` | Pending | Pending |
-| `src/features/github/github-repository-browser.tsx` | Pending | Pending |
+| `src/features/github/github-repository-browser.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
 | `src/features/github/github-repository-create-dialog.tsx` | Pending | Pending |
 | `src/features/github/github-repository-invitations-view.tsx` | Pending | Pending |
 | `src/features/github/github-repository-pages-view.tsx` | Pending | Pending |
@@ -254,3 +254,7 @@ Generated from existing JSX-bearing production files at task start. Each file mu
 
 | `src/features/workspace/navigation-button.tsx` | Extracted and reused by all primary controls | Gallery + More menu; full workspace matrix pending |
 | `src/dev/component-gallery.tsx` | Production component examples | Light/dark controls, dialog and command captures; additional examples pending |
+
+## Repository batch evidence
+
+See [UI_VERIFICATION.md](UI_VERIFICATION.md) for exact captures and scope limits. `pnpm check` passes 458 tests. Core lists use shared page headers and result rows; body/editor surfaces use stable cool fills. Issue/PR inbox stale results are explicitly labeled. Returning from details now restores scroll per query, with browser and integration regression evidence. Remaining pages/actions must still be checked individually.

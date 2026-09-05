@@ -71,7 +71,7 @@ function TimelineEvent({ item, locale }: { item: GitHubIssueTimelineItem; locale
           }),
         })}
         {item.createdAt ? (
-          <span className="ml-2 text-[10px]">{formatIssueDate(item.createdAt, locale)}</span>
+          <span className="ml-2 text-[11px]">{formatIssueDate(item.createdAt, locale)}</span>
         ) : null}
       </p>
     </div>
@@ -111,8 +111,8 @@ function ConversationCard({
   const [open, setOpen] = useState(!isMinimized);
   useEffect(() => setOpen(!isMinimized), [isMinimized]);
   return (
-    <article className="bg-card/30 overflow-hidden rounded-lg border">
-      <header className="bg-card/40 flex min-h-11 min-w-0 items-center gap-2 border-b px-3.5 py-2">
+    <article className="harbor-reading overflow-hidden rounded-lg border">
+      <header className="harbor-subtle-divider flex min-h-11 min-w-0 items-center gap-2 border-b px-3.5 py-2">
         <Avatar size="sm">
           {avatarUrl ? <AvatarImage src={avatarUrl} alt="" /> : null}
           <AvatarFallback>
@@ -120,7 +120,7 @@ function ConversationCard({
           </AvatarFallback>
         </Avatar>
         <span className="text-foreground/90 min-w-0 truncate text-xs font-medium">@{actor}</span>
-        <span className="text-muted-foreground shrink-0 text-[10px]">
+        <span className="text-muted-foreground shrink-0 text-[11px]">
           {reviewState
             ? t("workspace.repositories.reviewedAt", {
                 state: t(`workspace.repositories.reviewStates.${reviewState}`),

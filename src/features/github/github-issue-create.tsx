@@ -327,7 +327,7 @@ export function GitHubIssueCreate({
           ) : !policyResult.data.blankIssueAllowed && markdownTemplates.length === 0 ? (
             <IssueTemplateFallback {...policyResult.data} />
           ) : (
-            <section className="bg-card/25 rounded-lg border p-4 sm:p-5">
+            <section className="harbor-surface rounded-lg p-4 sm:p-5">
               <IssueTemplatePicker
                 blankIssueAllowed={policyResult.data.blankIssueAllowed}
                 templates={policyResult.data.templates}

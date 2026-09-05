@@ -68,6 +68,7 @@
   --harbor-elevated-fill: rgb(243 248 253 / 86%);
   --harbor-filter-glass-fill: var(--harbor-elevated-fill);
   --harbor-reading-fill: rgb(246 249 253 / 82%);
+  --harbor-code-fill: #e1e8f1;
   --harbor-control-fill: rgb(255 255 255 / 22%);
   --harbor-selected-fill: rgb(255 255 255 / 76%);
   --harbor-glass-edge: rgb(255 255 255 / 70%);
@@ -112,6 +113,7 @@
   --harbor-surface-fill: rgb(220 232 255 / 5%);
   --harbor-elevated-fill: rgb(43 59 81 / 90%);
   --harbor-reading-fill: rgb(28 41 60 / 86%);
+  --harbor-code-fill: #172335;
   --harbor-control-fill: rgb(220 232 255 / 5%);
   --harbor-selected-fill: rgb(220 232 255 / 13%);
   --harbor-glass-edge: rgb(225 237 255 / 21%);
@@ -404,6 +406,8 @@
     color: var(--foreground);
   }
 
+  .harbor-row-selected,
+  .harbor-row-selected:hover,
   .harbor-nav-item[aria-current="page"],
   .harbor-rail-item[data-active="true"] {
     background: var(--harbor-selected-fill);
@@ -603,7 +607,7 @@ kbd {
   overflow-x: auto;
   border: 1px solid color-mix(in oklch, var(--foreground) 7%, transparent);
   border-radius: 0.5rem;
-  background: color-mix(in oklch, var(--background) 78%, black);
+  background: var(--harbor-code-fill);
   padding: 0.9rem 1rem;
 }
 

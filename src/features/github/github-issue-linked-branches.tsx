@@ -1,3 +1,4 @@
+import { Skeleton } from "@/components/ui/skeleton";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CircleAlert, GitBranch, RefreshCw, Unlink } from "lucide-react";
@@ -51,13 +52,13 @@ function LinkedBranchesSkeleton() {
     <Card className="gap-3 py-4 shadow-none">
       <CardHeader className="px-4">
         <div className="flex items-center justify-between gap-2">
-          <div className="bg-muted h-4 w-32 animate-pulse rounded" />
-          <div className="bg-muted h-7 w-24 animate-pulse rounded" />
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-7 w-24" />
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-2 px-4">
-        <div className="bg-muted h-10 w-full animate-pulse rounded" />
-        <div className="bg-muted h-10 w-full animate-pulse rounded" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
       </CardContent>
     </Card>
   );

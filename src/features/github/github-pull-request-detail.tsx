@@ -250,7 +250,7 @@ export function GitHubPullRequestDetail({
           <div className="border-b px-4 py-4 sm:px-5 @max-[620px]/pull-detail:py-3">
             <div className="mx-auto flex w-full max-w-[1280px] flex-wrap items-start gap-3 @max-[620px]/pull-detail:flex-nowrap">
               <div className="min-w-0 flex-1">
-                <h2 className="text-foreground text-xl leading-7 font-semibold tracking-[-0.025em] @max-[620px]/pull-detail:text-base @max-[620px]/pull-detail:leading-6">
+                <h2 className="text-foreground text-2xl leading-8 font-semibold tracking-[-0.025em]">
                   {detail.pullRequest.title}{" "}
                   <span className="text-muted-foreground font-normal">
                     #{detail.pullRequest.number}
@@ -258,7 +258,7 @@ export function GitHubPullRequestDetail({
                 </h2>
                 <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] @max-[620px]/pull-detail:mt-1.5 @max-[620px]/pull-detail:gap-1.5">
                   <GitHubPullRequestStateBadge pullRequest={detail.pullRequest} />
-                  <span className="text-muted-foreground @max-[620px]/pull-detail:hidden">
+                  <span className="text-muted-foreground">
                     {t("workspace.repositories.openedPullRequestBy", {
                       author: detail.pullRequest.author,
                       date: formatIssueDate(detail.pullRequest.createdAt, i18n.language),
@@ -286,6 +286,7 @@ export function GitHubPullRequestDetail({
                   size="sm"
                   className="@max-[620px]/pull-detail:size-8 @max-[620px]/pull-detail:px-0"
                   aria-label={t("workspace.repositories.editPullRequest")}
+                  title={t("workspace.repositories.editPullRequest")}
                   onClick={() => setEditOpen(true)}
                 >
                   <Pencil data-icon="inline-start" />
@@ -298,6 +299,7 @@ export function GitHubPullRequestDetail({
                   size="sm"
                   className="@max-[620px]/pull-detail:size-8 @max-[620px]/pull-detail:px-0"
                   aria-label={t("workspace.openOnGitHub")}
+                  title={t("workspace.openOnGitHub")}
                   onClick={() => void openExternalUrl(detail.pullRequest.url)}
                 >
                   <ExternalLink data-icon="inline-end" />

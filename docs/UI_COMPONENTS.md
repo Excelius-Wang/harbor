@@ -8,11 +8,11 @@ pnpm dev:ui --port 1423
 
 Open `http://localhost:1423/ui-components` for controls, navigation, filters, dialogs, sheets and feedback states. Switch theme/language in the gallery. Open `http://localhost:1423/` for the real workspace with controlled discovery data.
 
-The preview replaces the HTML entry only when Vite is **serving** in `ui-preview` mode. Normal development and production builds use the regular application entry. Fixtures are intercepted through Tauri's official `mockIPC` interface. Unknown business commands fail visibly; no GitHub mutation falls through to a real backend. Native window calls may pass through when running a native preview. Fixture data is synthetic and does not verify real GitHub API responses.
+The preview replaces the HTML entry only when Vite is **serving** in `ui-preview` mode. Normal development and production builds use the regular application entry. Fixtures now cover discovery, repository/code, Issue and PR core reads. Other commands still fail visibly until their fixtures are added. Fixtures are intercepted through Tauri's official `mockIPC` interface. Unknown business commands fail visibly; no GitHub mutation falls through to a real backend. Native window calls may pass through when running a native preview. Fixture data is synthetic and does not verify real GitHub API responses.
 
 | Query parameter | Values | Purpose |
 | --- | --- | --- |
-| `state` | `populated`, `loading`, `empty`, `error` | Controlled discovery query state |
+| `state` | `populated`, `loading`, `empty`, `error`, `stale` | Controlled query state; `stale` fails repeat requests after initial success |
 | `background` | `cool`, `neutral`, `bright` | Browser-only environment behind the transparent window |
 
 Example: `http://localhost:1423/?state=error&background=bright`.
@@ -52,3 +52,11 @@ Use the stylesheet as the exact token source. Full migration and verification ev
 `output/playwright/` contains actual browser captures, including `ui-before-populated-*`, `ui-material-populated-*`, `ui-discovery-{theme}-{background}-{width}.png` and `ui-gallery-*`. Before/after discovery comparisons use the same fixture records. Later matrix captures additionally cover English and the 900 × 620 minimum window. Gallery screenshots include Chinese forms, invalid/disabled controls, dialogs and command menus. These local artifacts are ignored by Git; selected final screenshots must be made available to remote PR reviewers before delivery.
 
 Native compilation succeeded, but the computer-control tool has not yet exposed the running preview window for observation. Native material acceptance is **pending**. Remaining production pages and action dialogs also remain pending in the checklist; changing primitive defaults is not their acceptance evidence.
+
+## Page composition and return behavior
+
+Use `WorkspacePageHeader` from `src/features/workspace/workspace-page-header.tsx` for list-page titles and actions, with `contained` for a centered 1120 px workspace. Use `WorkspaceStaleNotice` when a failed refresh retains existing results. Both are shown in the gallery.
+
+Keep `useListScroll(JSON.stringify(queryParameters))` in the parent view that swaps between list and detail. Spread its return value onto the list ScrollArea. Positions stay local to that parent and separate for each query; filters/query caches remain owned by the feature.
+
+Markdown code blocks use `--harbor-code-fill` (`#e1e8f1` light / `#172335` dark), avoiding hue changes from mixing black into a cool palette in OKLCH. See [the verification record](UI_VERIFICATION.md) for current evidence and remaining limits.

@@ -141,12 +141,12 @@ function FileRow({
       type="button"
       variant="ghost"
       onClick={onOpen}
-      className="group hover:bg-primary/[0.045] h-10 w-full justify-start gap-2.5 rounded-none border-b px-3 text-left last:border-b-0"
+      className="harbor-result-row group h-10 w-full justify-start gap-2.5 rounded-none px-3 text-left"
     >
       <Icon className={isDirectory ? "text-primary" : "text-muted-foreground"} />
-      <span className="min-w-0 flex-1 truncate text-xs font-medium">{entry.name}</span>
+      <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{entry.name}</span>
       {!isDirectory ? (
-        <span className="text-muted-foreground text-[10px] font-normal tabular-nums">
+        <span className="text-muted-foreground text-[11px] font-normal tabular-nums">
           {formatBytes(entry.size, locale)}
         </span>
       ) : null}
@@ -419,13 +419,14 @@ export function GitHubCodeView({
               variant="ghost"
               size="icon-sm"
               aria-label={backLabel ?? t("workspace.history.back")}
+              title={backLabel ?? t("workspace.history.back")}
               onClick={onBack}
             >
               <ArrowLeft />
             </Button>
           ) : null}
           <Select value={reference} onValueChange={selectBranch}>
-            <SelectTrigger size="sm" className="bg-muted/20 min-w-40 text-xs">
+            <SelectTrigger size="sm" className="harbor-filter-trigger min-w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="harbor-popover">
@@ -481,6 +482,7 @@ export function GitHubCodeView({
                   variant="outline"
                   size="icon-sm"
                   aria-label={t("workspace.repositories.manageBranches")}
+                  title={t("workspace.repositories.manageBranches")}
                 >
                   <GitBranch />
                 </Button>
@@ -507,8 +509,11 @@ export function GitHubCodeView({
             </DropdownMenu>
           ) : null}
 
-          <div className="bg-muted/10 flex h-8 min-w-0 flex-1 items-center rounded-md border px-2.5">
-            <Breadcrumb>
+          <div className="harbor-control flex h-8 min-w-44 flex-1 basis-44 items-center rounded-md border px-2.5">
+            <Breadcrumb
+              className="w-full min-w-0 overflow-x-auto"
+              aria-label={t("workspace.repositories.repositoryPath")}
+            >
               <BreadcrumbList className="flex-nowrap gap-1 text-[11px] sm:gap-1">
                 <BreadcrumbItem>
                   {breadcrumbSegments.length || selectedFile ? (
@@ -711,7 +716,7 @@ export function GitHubCodeView({
           ) : null
         ) : (
           <>
-            <section className="bg-muted/10 overflow-hidden rounded-lg border shadow-sm">
+            <section className="harbor-reading harbor-subtle-divider overflow-hidden rounded-lg border">
               {latestCommit && path === "" ? (
                 <div className="group bg-primary/[0.035] flex h-11 w-full items-center gap-1 border-b px-2">
                   <button
@@ -734,6 +739,7 @@ export function GitHubCodeView({
                     variant="ghost"
                     size="icon-xs"
                     aria-label={t("workspace.openOnGitHub")}
+                    title={t("workspace.openOnGitHub")}
                     onClick={() => void openExternalUrl(latestCommit.url)}
                   >
                     <ExternalLink />
@@ -794,6 +800,7 @@ export function GitHubCodeView({
                         variant="ghost"
                         size="icon-xs"
                         aria-label={t("workspace.openOnGitHub")}
+                        title={t("workspace.openOnGitHub")}
                         onClick={() => void openExternalUrl(commit.url)}
                       >
                         <ExternalLink />

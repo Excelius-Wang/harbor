@@ -20,7 +20,8 @@
     "edit": "编辑",
     "delete": "删除",
     "close": "关闭",
-    "loading": "加载中"
+    "loading": "加载中",
+    "staleResults": "刷新失败，当前显示上次结果。"
   },
   "workspace": {
     "primaryNavigation": "主导航",
@@ -2677,9 +2678,9 @@
       },
       "allIssueMilestones": "全部里程碑",
       "issueMilestoneFilter": "Issue 里程碑",
-      "allIssueLinkedPullRequests": "全部关联 Pull Request",
+      "allIssueLinkedPullRequests": "不限 PR 关联",
       "issueLinkedPullRequestFilter": "Issue 关联 Pull Request",
-      "issueLinkedPullRequest": "已关联 Pull Request",
+      "issueLinkedPullRequest": "已关联 PR",
       "allDiscussionCategories": "全部分类",
       "discussionCount": "{{count}} 条讨论",
       "openDiscussions": "开放的讨论",
@@ -2812,7 +2813,8 @@
         "convertToDraft": "将这个拉取请求改为草稿",
         "headRefDeleted": "删除了来源分支",
         "baseRefChanged": "将目标分支改为 {{detail}}"
-      }
+      },
+      "repositoryPath": "仓库路径"
     },
     "filters": {
       "period": "时间范围",

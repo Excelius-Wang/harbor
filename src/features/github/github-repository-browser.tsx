@@ -1,3 +1,4 @@
+import { WorkspacePageHeader } from "@/features/workspace/workspace-page-header";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { isTauri } from "@tauri-apps/api/core";
@@ -147,9 +148,10 @@ function RepositoryRow({
       type="button"
       variant="ghost"
       onClick={onSelect}
+      aria-current={selected ? "true" : undefined}
       className={cn(
-        "h-auto w-full justify-start gap-3 rounded-md px-2.5 py-2.5 text-left whitespace-normal",
-        selected && "bg-primary/10 text-foreground hover:bg-primary/12"
+        "harbor-result-row h-auto w-full justify-start gap-3 rounded-md px-2.5 py-2.5 text-left whitespace-normal",
+        selected && "harbor-row-selected"
       )}
     >
       <span className="border-primary/25 bg-primary/8 text-primary grid size-8 shrink-0 place-items-center rounded-md border text-xs font-semibold uppercase">
@@ -160,12 +162,12 @@ function RepositoryRow({
           <span className="truncate text-[13px] font-medium">{repository.fullName}</span>
           {repository.isPrivate ? <LockKeyhole className="text-muted-foreground" /> : null}
         </span>
-        <span className="text-muted-foreground line-clamp-1 text-[11px] leading-4 font-normal">
+        <span className="text-muted-foreground text-[11px] leading-4 font-normal">
           {repository.description ?? repository.url}
         </span>
         {starredAt ? (
-          <span className="text-muted-foreground/80 flex items-center gap-1 text-[10px] font-normal">
-            <Star className="size-3 fill-current text-amber-400/80" />
+          <span className="text-muted-foreground/80 flex items-center gap-1 text-[11px] font-normal">
+            <Star className="text-attention size-3 fill-current" />
             {t("workspace.repositories.starredAt", {
               date: formatIssueDate(starredAt, locale),
             })}
@@ -297,7 +299,7 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
     const disconnected = repositoryError.code === "githubNotConnected";
     return (
       <section className="harbor-content grid min-w-0 flex-1 place-items-center p-6">
-        <Empty className="max-w-lg border border-white/[0.075] bg-white/[0.02]">
+        <Empty className="harbor-subtle-divider max-w-lg border">
           <EmptyHeader>
             <EmptyMedia variant="icon">
               <Github />
@@ -327,36 +329,29 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
   }
 
   return (
-    <section className="harbor-content flex min-w-0 flex-1 flex-col">
-      <header className="flex h-[74px] shrink-0 items-center justify-between gap-4 border-b border-white/[0.075] px-5">
-        <div>
-          <p className="text-primary/80 text-[10px] font-medium tracking-[0.14em] uppercase">
-            {t("workspace.repositories.eyebrow")}
-          </p>
-          <h1 className="mt-0.5 text-xl font-semibold tracking-[-0.03em]">
-            {t("workspace.nav.repositories")}
-          </h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button size="sm" onClick={() => setCreateOpen(true)}>
-            <Plus />
-            {t("workspace.repositories.settings.newRepository")}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => void activeResult.refetch()}
-            disabled={activeResult.isFetching}
-          >
-            {activeResult.isFetching ? (
-              <Spinner data-icon="inline-start" />
-            ) : (
-              <RefreshCw data-icon="inline-start" />
-            )}
-            {t("workspace.repositories.refresh")}
-          </Button>
-        </div>
-      </header>
+    <section className="harbor-content flex min-h-0 min-w-0 flex-1 flex-col">
+      <WorkspacePageHeader
+        title={t("workspace.nav.repositories")}
+        description={t("workspace.repositories.eyebrow")}
+      >
+        <Button size="sm" onClick={() => setCreateOpen(true)}>
+          <Plus />
+          {t("workspace.repositories.settings.newRepository")}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => void activeResult.refetch()}
+          disabled={activeResult.isFetching}
+        >
+          {activeResult.isFetching ? (
+            <Spinner data-icon="inline-start" />
+          ) : (
+            <RefreshCw data-icon="inline-start" />
+          )}
+          {t("workspace.repositories.refresh")}
+        </Button>
+      </WorkspacePageHeader>
 
       {repositoryError && repositoriesLoaded ? (
         <Alert variant="destructive" className="m-3 mb-0">
@@ -382,16 +377,16 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
       ) : null}
 
       <div className="flex min-h-0 min-w-0 flex-1">
-        <aside className="workspace-wide:w-[280px] flex w-[240px] shrink-0 flex-col border-r border-white/[0.075] max-[680px]:w-full max-[680px]:border-r-0 xl:w-[320px] 2xl:w-[360px]">
-          <div className="border-b border-white/[0.065] p-3">
-            <div className="bg-muted/45 mb-2 grid grid-cols-2 gap-1 rounded-md p-1">
+        <aside className="workspace-wide:w-[280px] harbor-subtle-divider flex w-[240px] shrink-0 flex-col border-r max-[680px]:w-full max-[680px]:border-r-0 xl:w-[320px] 2xl:w-[360px]">
+          <div className="harbor-subtle-divider border-b p-3">
+            <div className="harbor-surface mb-2 grid grid-cols-2 gap-1 rounded-md p-1">
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  "h-7 rounded-sm text-[11px]",
-                  repositorySource === "mine" && "bg-background text-foreground shadow-xs"
+                  "harbor-choice h-8 text-[13px]",
+                  repositorySource === "mine" && "harbor-row-selected"
                 )}
                 aria-pressed={repositorySource === "mine"}
                 onClick={() => setRepositorySource("mine")}
@@ -404,8 +399,8 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  "h-7 rounded-sm text-[11px]",
-                  repositorySource === "starred" && "bg-background text-foreground shadow-xs"
+                  "harbor-choice h-8 text-[13px]",
+                  repositorySource === "starred" && "harbor-row-selected"
                 )}
                 aria-pressed={repositorySource === "starred"}
                 onClick={() => setRepositorySource("starred")}
@@ -424,11 +419,11 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
                     ? "workspace.repositories.search"
                     : "workspace.repositories.searchStarred"
                 )}
-                className="h-8 bg-white/[0.025] pl-8 text-xs"
+                className="h-8 pl-8 text-xs"
               />
             </div>
             <div className="mt-2 flex items-center justify-between gap-2">
-              <p className="text-muted-foreground min-w-0 truncate text-[10px]">
+              <p className="text-muted-foreground min-w-0 truncate text-[11px]">
                 {t(
                   repositorySource === "mine"
                     ? "workspace.repositories.repositoryCount"
@@ -444,7 +439,7 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
                   value={starredSort}
                   onValueChange={(value) => setStarredSort(value as GitHubStarredRepositorySort)}
                 >
-                  <SelectTrigger size="sm" className="h-7 max-w-32 min-w-0 px-2 text-[10px]">
+                  <SelectTrigger size="sm" className="h-7 max-w-32 min-w-0 px-2 text-[11px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent align="end">
@@ -521,7 +516,7 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden max-[680px]:hidden">
           {selectedRepository ? (
             <>
-              <div className="flex min-h-[76px] items-center justify-between gap-4 border-b border-white/[0.065] px-4 py-3">
+              <div className="harbor-subtle-divider flex min-h-[76px] items-center justify-between gap-4 border-b px-4 py-3">
                 <div className="min-w-0">
                   <div className="flex min-w-0 items-center gap-2">
                     <h2 className="truncate text-sm font-semibold tracking-[-0.01em]">
@@ -545,10 +540,10 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
                       </Badge>
                     ) : null}
                   </div>
-                  <p className="text-muted-foreground mt-1 line-clamp-1 text-[11px]">
+                  <p className="text-muted-foreground mt-1 text-[11px]">
                     {selectedRepository.description ?? t("workspace.repositories.noDescription")}
                   </p>
-                  <div className="text-muted-foreground mt-1.5 flex items-center gap-3 text-[10px]">
+                  <div className="text-muted-foreground mt-1.5 flex items-center gap-3 text-[11px]">
                     {selectedRepository.language ? (
                       <span>{selectedRepository.language}</span>
                     ) : null}
@@ -578,7 +573,7 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
                 onValueChange={(value) => setTab(value as RepositoryTab)}
                 className="min-h-0 min-w-0 flex-1 gap-0"
               >
-                <div className="overflow-x-auto border-b border-white/[0.065] px-4">
+                <div className="harbor-subtle-divider overflow-x-auto border-b px-4">
                   <TabsList variant="line" className="h-10 min-w-max gap-2 p-0 xl:gap-4">
                     <TabsTrigger value="code" className="px-1.5 text-xs">
                       <Code2 /> {t("workspace.repositories.tabs.code")}

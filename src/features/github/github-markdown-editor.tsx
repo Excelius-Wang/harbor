@@ -75,17 +75,14 @@ export function GitHubMarkdownEditor({
           disabled={disabled}
           aria-invalid={invalid}
           placeholder={placeholder}
-          className={cn(
-            "bg-background/40 max-h-[45vh] resize-y text-[12px] leading-5",
-            minHeightClassName
-          )}
+          className={cn("max-h-[45vh] resize-y text-[13px] leading-5", minHeightClassName)}
           onChange={(event) => onChange(event.target.value)}
         />
       </TabsContent>
       <TabsContent value="preview" className="min-w-0">
         <div
           className={cn(
-            "harbor-markdown bg-background/40 max-h-[45vh] overflow-auto rounded-md border p-3 text-[12px]",
+            "harbor-markdown harbor-reading max-h-[45vh] overflow-auto rounded-md border p-3 text-[13px]",
             minHeightClassName
           )}
           role="region"

@@ -171,7 +171,7 @@ function GitHubChecksResult({
           </Empty>
         ) : data?.checks.length ? (
           <>
-            <section className="bg-card/30 flex flex-col gap-3 rounded-lg border p-4">
+            <section className="harbor-surface flex flex-col gap-3 rounded-lg p-4">
               <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-semibold">

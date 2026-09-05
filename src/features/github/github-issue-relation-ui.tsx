@@ -17,13 +17,13 @@ export function GitHubIssueRelatedIssueRow({
     <Button
       type="button"
       variant="ghost"
-      className="h-auto w-full min-w-0 justify-start gap-2 rounded-md px-2.5 py-2 text-left"
+      className="harbor-result-row h-auto w-full min-w-0 justify-start gap-2 rounded-md px-2.5 py-2 text-left"
       onClick={() => onNavigate(summary)}
     >
       <StateIcon data-icon="inline-start" className="text-muted-foreground" />
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-xs font-medium">{summary.issue.title}</span>
-        <span className="text-muted-foreground block truncate text-[10px] font-normal">
+        <span className="block text-[13px] font-medium">{summary.issue.title}</span>
+        <span className="text-muted-foreground block truncate text-[11px] font-normal">
           {summary.repository.fullName} #{summary.issue.number}
         </span>
       </span>

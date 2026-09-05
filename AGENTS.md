@@ -111,6 +111,10 @@ equal card grids do not belong in app workflows.
   This shared control owns the 40 px row, icon/label layout, collapsed tooltip and keyboard
   focus. Selection and hover use `harbor-nav-item` in `src/index.css`. New pages inherit the
   shell; do not copy rows or override row dimensions/states in consumers.
+- Reuse `WorkspacePageHeader` for list headers and `WorkspaceStaleNotice` for retained
+  results after a failed refresh. For list/detail swaps, keep `useListScroll` in the parent,
+  key it by the actual query parameters, and spread its viewport bindings onto ScrollArea.
+  This preserves pane scroll without changing query keys or persisting state globally.
 - Discovery uses a centered 1120 px maximum content width. Other workspaces may fill their pane.
   Page header, filters, and scrollable content should share alignment.
 - Developer discovery rows keep the author, popular repository, and description in one vertical

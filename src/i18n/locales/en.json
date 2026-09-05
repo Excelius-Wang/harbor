@@ -20,7 +20,8 @@
     "edit": "Edit",
     "delete": "Delete",
     "close": "Close",
-    "loading": "Loading"
+    "loading": "Loading",
+    "staleResults": "Refresh failed. Showing previous results."
   },
   "workspace": {
     "primaryNavigation": "Primary navigation",
@@ -2684,9 +2685,9 @@
       },
       "allIssueMilestones": "All milestones",
       "issueMilestoneFilter": "Issue milestone",
-      "allIssueLinkedPullRequests": "All linked pull requests",
+      "allIssueLinkedPullRequests": "PR links: any",
       "issueLinkedPullRequestFilter": "Issue linked pull request",
-      "issueLinkedPullRequest": "Linked to a pull request",
+      "issueLinkedPullRequest": "Linked to a PR",
       "allDiscussionCategories": "All categories",
       "discussionCount": "{{count}} discussions",
       "openDiscussions": "Open discussions",
@@ -2819,7 +2820,8 @@
         "convertToDraft": "converted this pull request to draft",
         "headRefDeleted": "deleted the head branch",
         "baseRefChanged": "changed the base branch to {{detail}}"
-      }
+      },
+      "repositoryPath": "Repository path"
     },
     "filters": {
       "period": "Time range",
