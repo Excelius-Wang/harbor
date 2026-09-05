@@ -1,13 +1,14 @@
 // @vitest-environment jsdom
 
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "./preview-core";
 import { clearMocks } from "@tauri-apps/api/mocks";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { installPreview } from "./preview";
 
 afterEach(() => {
-  clearMocks();
+  history.replaceState(null, "", "/");
   vi.unstubAllGlobals();
+  clearMocks();
   delete document.documentElement.dataset.previewBackground;
   delete document.documentElement.dataset.uiPreview;
 });
@@ -31,13 +32,27 @@ describe("UI preview isolation", () => {
     await expect(invoke("github_get_pending_repository_pull_request_review")).resolves.toBeNull();
   });
 
+  it("scopes a failure to selected commands while preserving workspace navigation", async () => {
+    vi.stubGlobal("isTauri", false);
+    history.replaceState(null, "", "/?state=error&commands=github_list_repository_workflow_runs");
+    installPreview();
+    const result = await invoke<{ repositories: unknown[] }>("github_list_repositories");
+    expect(result.repositories.length).toBeGreaterThan(0);
+    await expect(invoke("github_list_repository_workflow_runs")).rejects.toMatchObject({
+      code: "preview",
+    });
+  });
+
   it("forwards native window calls while keeping business calls inside the preview", async () => {
     const nativeIPC = vi.fn().mockResolvedValue(false);
     vi.stubGlobal("isTauri", true);
-    vi.stubGlobal("__TAURI_INTERNALS__", { invoke: nativeIPC });
+    const internals = {};
+    Object.defineProperty(internals, "invoke", { value: nativeIPC });
+    vi.stubGlobal("__TAURI_INTERNALS__", internals);
     installPreview();
     await invoke("plugin:window|is_maximized");
-    expect(nativeIPC).toHaveBeenCalledWith("plugin:window|is_maximized", {});
+    expect(nativeIPC).toHaveBeenCalledWith("plugin:window|is_maximized", {}, undefined);
+    expect(Object.getOwnPropertyDescriptor(internals, "invoke")?.writable).toBe(false);
     await expect(invoke("github_mutate_repository_issue", { number: 1 })).rejects.toMatchObject({
       code: "previewFixtureMissing",
     });

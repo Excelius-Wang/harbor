@@ -205,7 +205,7 @@ export function GitHubCommitDetail({
       commitSha,
     })
   );
-  const pages = result.data?.pages ?? [];
+  const pages = useMemo(() => result.data?.pages ?? [], [result.data?.pages]);
   const matchingPages = useMemo(() => matchingCommitDetailPages(pages), [pages]);
   const pageMismatch = matchingPages.length !== pages.length;
   const firstPage = matchingPages[0];

@@ -1,11 +1,33 @@
-import { isTauri } from "@tauri-apps/api/core";
+import {
+  isTauri,
+  invoke as nativeInvoke,
+  type InvokeArgs,
+  type InvokeOptions,
+} from "@tauri-apps/api/core";
 import { mockIPC, mockWindows } from "@tauri-apps/api/mocks";
 import type { GitHubRepository } from "@/features/github/github-data";
 import "./preview.css";
 import { workspaceFixture } from "./workspace-fixtures";
 import { moreFixture } from "./more-fixtures";
+import { repositoryFixture } from "./repository-fixtures";
 
 export const previewCalls: string[] = [];
+let previewHandler:
+  | ((command: string, args?: InvokeArgs, options?: InvokeOptions) => Promise<unknown>)
+  | undefined;
+
+export function invokePreview<T>(
+  command: string,
+  args?: InvokeArgs,
+  options?: InvokeOptions
+): Promise<T> {
+  if (!previewHandler)
+    return Promise.reject({
+      code: "previewNotInstalled",
+      message: "The UI preview is not installed.",
+    });
+  return previewHandler(command, args, options) as Promise<T>;
+}
 
 const repositories: GitHubRepository[] = [
   [
@@ -78,6 +100,7 @@ export function installPreview() {
   const native = isTauri();
   const parameters = new URLSearchParams(location.search);
   const state = parameters.get("state") ?? "populated";
+  const scenarioCommands = parameters.get("commands")?.split(",").filter(Boolean);
   const requestCounts = new Map<string, number>();
   if (!native) {
     mockWindows("main");
@@ -87,94 +110,93 @@ export function installPreview() {
     document.documentElement.dataset.previewBackground = parameters.get("background") ?? "cool";
   document.documentElement.dataset.uiPreview = "true";
 
-  // Capture the original IPC function before mockIPC replaces it on native windows.
-  const realIPC = native
-    ? (
-        window as unknown as {
-          __TAURI_INTERNALS__: { invoke: (command: string, payload: unknown) => Promise<unknown> };
-        }
-      ).__TAURI_INTERNALS__.invoke
-    : undefined;
-  mockIPC(
-    async (command, payload) => {
-      const args = (payload ?? {}) as Record<string, unknown>;
-      previewCalls.push(command);
-      if (
-        command.startsWith("plugin:window|") ||
-        command.startsWith("plugin:webview|") ||
-        (native && command.startsWith("plugin:event|"))
-      ) {
-        if (realIPC) return realIPC(command, payload);
-        if (command.endsWith("get_all_windows")) return ["main"];
-        if (command.endsWith("is_maximized")) return false;
-        return null;
-      }
-      if (command === "plugin:app|version") return "0.1.0";
-      if (command === "plugin:updater|check") return null;
-      if (command === "update_tray_menu") return null;
-      if (command === "github_login_availability")
-        return { available: false, reason: "UI preview" };
-      if (command === "github_connection_status")
-        return { connected: true, identity: { login: "harbor-preview" } };
-      if (command.startsWith("github_")) {
-        if (state === "loading") return new Promise(() => {});
-        await new Promise((resolve) => setTimeout(resolve, 120));
-        const requestKey = JSON.stringify([command, args]);
-        const attempts = (requestCounts.get(requestKey) ?? 0) + 1;
-        requestCounts.set(requestKey, attempts);
-        if (state === "error" || (state === "stale" && attempts > 1))
-          throw {
-            code: "preview",
-            message: "Preview request failed. Retry to check error feedback.",
-          };
-      }
-      if (command === "github_search_discovery") {
-        return {
-          kind: args.kind,
-          results: state === "empty" ? [] : args.kind === "repositories" ? repositories : [],
-          totalCount: state === "empty" ? 0 : repositories.length,
-          incompleteResults: false,
-          page: 1,
-          hasPrevious: false,
-          hasMore: false,
+  // Native bridge properties are readonly. Only the browser uses the SDK mock.
+  previewHandler = async (command, payload, options) => {
+    const commandState =
+      !scenarioCommands?.length || scenarioCommands.includes(command) ? state : "populated";
+    const args = (payload ?? {}) as Record<string, unknown>;
+    previewCalls.push(command);
+    if (
+      command.startsWith("plugin:window|") ||
+      command.startsWith("plugin:webview|") ||
+      (native && command.startsWith("plugin:event|"))
+    ) {
+      if (native) return nativeInvoke(command, payload, options);
+      if (command.endsWith("get_all_windows")) return ["main"];
+      if (command.endsWith("is_maximized")) return false;
+      return null;
+    }
+    if (command === "plugin:app|version") return "0.1.0";
+    if (command === "plugin:updater|check") return null;
+    if (command === "update_tray_menu") return null;
+    if (command === "github_login_availability") return { available: false, reason: "UI preview" };
+    if (command === "github_connection_status")
+      return { connected: true, identity: { login: "harbor-preview" } };
+    if (command.startsWith("github_")) {
+      if (commandState === "loading") return new Promise(() => {});
+      await new Promise((resolve) => setTimeout(resolve, 120));
+      const requestKey = JSON.stringify([command, args]);
+      const attempts = (requestCounts.get(requestKey) ?? 0) + 1;
+      requestCounts.set(requestKey, attempts);
+      if (commandState === "error" || (commandState === "stale" && attempts > 1))
+        throw {
+          code: "preview",
+          message: "Preview request failed. Retry to check error feedback.",
         };
-      }
-      if (command === "github_list_trending_developers") {
-        return {
-          period: args.period,
-          languages,
-          developers:
-            state === "empty"
-              ? []
-              : repositories.map((repo, index) => ({
-                  rank: index + 1,
-                  login: `developer-${index + 1}`,
-                  name: [
-                    "Alex Morgan",
-                    "Lin Chen / 陈林",
-                    "Sam Rivera",
-                    "A developer with a deliberately long display name",
-                  ][index % 4],
-                  avatarUrl: null,
-                  popularRepository: {
-                    fullName: repo.fullName,
-                    url: repo.url,
-                    description: repo.description,
-                  },
-                })),
-        };
-      }
-      if (command === "github_list_developer_feed")
-        return { events: [], page: 1, hasPrevious: false, hasMore: false };
-      const workspaceResult = workspaceFixture(command, args, repositories, state === "empty");
-      const fixture =
-        workspaceResult === undefined
-          ? moreFixture(command, args, repositories, state === "empty")
-          : workspaceResult;
-      if (fixture !== undefined) return fixture;
-      // Missing fixtures fail visibly. Never fall through to a real GitHub write.
-      throw { code: "previewFixtureMissing", message: `No UI preview fixture for ${command}` };
-    },
-    { shouldMockEvents: !native }
-  );
+    }
+    if (command === "github_search_discovery") {
+      return {
+        kind: args.kind,
+        results: commandState === "empty" ? [] : args.kind === "repositories" ? repositories : [],
+        totalCount: commandState === "empty" ? 0 : repositories.length,
+        incompleteResults: false,
+        page: 1,
+        hasPrevious: false,
+        hasMore: false,
+      };
+    }
+    if (command === "github_list_trending_developers") {
+      return {
+        period: args.period,
+        languages,
+        developers:
+          commandState === "empty"
+            ? []
+            : repositories.map((repo, index) => ({
+                rank: index + 1,
+                login: `developer-${index + 1}`,
+                name: [
+                  "Alex Morgan",
+                  "Lin Chen / 陈林",
+                  "Sam Rivera",
+                  "A developer with a deliberately long display name",
+                ][index % 4],
+                avatarUrl: null,
+                popularRepository: {
+                  fullName: repo.fullName,
+                  url: repo.url,
+                  description: repo.description,
+                },
+              })),
+      };
+    }
+    if (command === "github_list_developer_feed")
+      return { events: [], page: 1, hasPrevious: false, hasMore: false };
+    const workspaceResult = workspaceFixture(command, args, repositories, commandState === "empty");
+    const fixture =
+      workspaceResult === undefined
+        ? moreFixture(command, args, repositories, commandState === "empty")
+        : workspaceResult;
+    if (fixture !== undefined) return fixture;
+    const repositoryResult = repositoryFixture(
+      command,
+      args,
+      repositories,
+      commandState === "empty"
+    );
+    if (repositoryResult !== undefined) return repositoryResult;
+    // Missing fixtures fail visibly. Never fall through to a real GitHub write.
+    throw { code: "previewFixtureMissing", message: `No UI preview fixture for ${command}` };
+  };
+  if (!native) mockIPC(previewHandler, { shouldMockEvents: true });
 }

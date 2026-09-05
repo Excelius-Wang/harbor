@@ -1,3 +1,4 @@
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Archive, CircleAlert, Download, PackageOpen, RefreshCw } from "lucide-react";
@@ -77,7 +78,7 @@ function ArtifactRow({
       </span>
       <div className="min-w-48 flex-1">
         <p className="text-foreground/95 text-xs font-medium break-all">{artifact.name}</p>
-        <p className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px]">
+        <p className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
           <span>{formatBytes(artifact.sizeInBytes, locale)}</span>
           <span>
             {t("workspace.repositories.workflowArtifactCreated", {
@@ -191,6 +192,12 @@ export function GitHubActionsArtifacts({
   if (!artifacts.length) {
     return (
       <div className="flex min-w-0 flex-col gap-3">
+        {result.data && result.error ? (
+          <WorkspaceStaleNotice
+            message={parseIpcError(result.error).message}
+            onRetry={() => void result.refetch()}
+          />
+        ) : null}
         <Empty className="min-h-44 border">
           <EmptyHeader>
             <EmptyMedia variant="icon">
@@ -221,6 +228,12 @@ export function GitHubActionsArtifacts({
 
   return (
     <div className="flex min-w-0 flex-col gap-3">
+      {result.data && result.error ? (
+        <WorkspaceStaleNotice
+          message={parseIpcError(result.error).message}
+          onRetry={() => void result.refetch()}
+        />
+      ) : null}
       <section
         className="overflow-hidden rounded-lg border"
         aria-labelledby="workflow-artifacts-heading"

@@ -817,7 +817,7 @@
       "pagination": "Pull request inbox pages"
     },
     "repositories": {
-      "eyebrow": "Connected GitHub data",
+      "eyebrow": "GitHub data",
       "desktopOnly": "Repository data is available in the Harbor desktop runtime.",
       "desktopOnlyTitle": "Open Harbor on desktop",
       "connectTitle": "Connect GitHub to load repositories",
@@ -2155,7 +2155,7 @@
       "workflowRunDeleteConflict": "This workflow run changed or is no longer available. Refresh Actions and try again.",
       "runWorkflow": "Run workflow",
       "runningWorkflow": "Requesting run…",
-      "runWorkflowDescription": "Choose a workflow and a branch or tag. Harbor reads its workflow_dispatch inputs before starting the run.",
+      "runWorkflowDescription": "Choose a workflow and a branch or tag, then fill in the inputs for this run.",
       "workflow": "Workflow",
       "workflowPlaceholder": "Choose a workflow",
       "workflowReference": "Branch or tag",

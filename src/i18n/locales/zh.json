@@ -811,7 +811,7 @@
       "pagination": "拉取请求收件箱分页"
     },
     "repositories": {
-      "eyebrow": "GitHub 真实数据",
+      "eyebrow": "GitHub 数据",
       "desktopOnly": "仓库数据需要在 Harbor 桌面端读取。",
       "desktopOnlyTitle": "请在 Harbor 桌面端打开",
       "connectTitle": "连接 GitHub 后读取仓库",
@@ -2148,7 +2148,7 @@
       "workflowRunDeleteConflict": "这次运行在 GitHub 上已经发生变化或已不存在，请刷新 Actions 后再试。",
       "runWorkflow": "运行工作流",
       "runningWorkflow": "正在提交…",
-      "runWorkflowDescription": "选择工作流和分支或标签。Harbor 会先读取这个版本的 workflow_dispatch 输入，再提交运行请求。",
+      "runWorkflowDescription": "选择工作流、分支或标签，再填写本次运行的参数。",
       "workflow": "工作流",
       "workflowPlaceholder": "选择工作流",
       "workflowReference": "分支或标签",

@@ -1,3 +1,4 @@
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { lazy, Suspense, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -103,9 +104,9 @@ function ReleaseAssetRow({
       <div className="min-w-52 flex-1">
         <p className="text-foreground/95 text-xs font-medium break-all">{asset.name}</p>
         {asset.label ? (
-          <p className="text-muted-foreground mt-0.5 text-[10px]">{asset.label}</p>
+          <p className="text-muted-foreground mt-0.5 text-[11px]">{asset.label}</p>
         ) : null}
-        <p className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px]">
+        <p className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
           <span>{formatBytes(asset.size, locale)}</span>
           <span>{asset.contentType}</span>
           <span>
@@ -120,7 +121,7 @@ function ReleaseAssetRow({
           </span>
         </p>
         {asset.digest ? (
-          <p className="text-muted-foreground mt-1 font-mono text-[9px] break-all">
+          <p className="text-muted-foreground mt-1 font-mono text-[11px] break-all">
             {asset.digest}
           </p>
         ) : null}
@@ -261,15 +262,10 @@ export function GitHubReleaseDetail({
         ) : null}
       </div>
       {supplementalError ? (
-        <Alert variant="destructive" className="rounded-none border-x-0 border-t-0 px-4 py-2">
-          <CircleAlert />
-          <AlertDescription className="flex min-w-0 items-center gap-3 text-[11px]">
-            <span className="min-w-0 flex-1 truncate">{supplementalError.message}</span>
-            <Button type="button" variant="ghost" size="xs" onClick={() => void result.refetch()}>
-              {t("workspace.repositories.retry")}
-            </Button>
-          </AlertDescription>
-        </Alert>
+        <WorkspaceStaleNotice
+          message={supplementalError.message}
+          onRetry={() => void result.refetch()}
+        />
       ) : null}
       <ScrollArea className="min-h-0 flex-1">
         {result.isPending ? (
@@ -326,7 +322,7 @@ export function GitHubReleaseDetail({
                       </Badge>
                     ) : null}
                   </div>
-                  <h2 className="text-foreground text-xl leading-7 font-semibold tracking-[-0.025em]">
+                  <h2 className="text-foreground text-2xl leading-7 font-semibold tracking-tight">
                     {release.name?.trim() || release.tagName}
                   </h2>
                   <p className="text-muted-foreground mt-2 text-[11px]">
@@ -345,7 +341,7 @@ export function GitHubReleaseDetail({
                       }
                     )}
                   </p>
-                  <p className="text-muted-foreground mt-1 flex items-center gap-1 text-[10px]">
+                  <p className="text-muted-foreground mt-1 flex items-center gap-1 text-[11px]">
                     <GitCommitHorizontal className="size-3" />
                     {t("workspace.repositories.releaseTarget", {
                       target: release.targetCommitish,
@@ -388,8 +384,8 @@ export function GitHubReleaseDetail({
                 </div>
               </header>
 
-              <article className="bg-card/30 mt-5 overflow-hidden rounded-lg border">
-                <header className="bg-card/40 flex min-h-11 items-center gap-2 border-b px-3.5 py-2 text-xs font-medium">
+              <article className="harbor-reading mt-5 overflow-hidden rounded-lg border">
+                <header className="harbor-subtle-divider flex min-h-11 items-center gap-2 border-b px-3.5 py-2 text-xs font-medium">
                   <Tag />
                   {t("workspace.repositories.releaseNotes")}
                 </header>

@@ -54,7 +54,7 @@ export function GitHubReleaseCreate({
       <ScrollArea className="min-h-0 flex-1">
         <div className="mx-auto w-full max-w-[780px] px-4 py-5 sm:px-5">
           <header className="mb-5">
-            <h2 className="text-foreground text-xl leading-7 font-semibold tracking-[-0.025em]">
+            <h2 className="text-foreground text-2xl leading-7 font-semibold tracking-tight">
               {t("workspace.repositories.newRelease")}
             </h2>
             <p className="text-muted-foreground mt-1 text-xs leading-5">
@@ -63,7 +63,7 @@ export function GitHubReleaseCreate({
               })}
             </p>
           </header>
-          <section className="bg-card/25 rounded-lg border p-4 sm:p-5">
+          <section className="harbor-reading rounded-lg border p-4 sm:p-5">
             <GitHubReleaseForm
               repository={repository}
               idPrefix="github-new-release"

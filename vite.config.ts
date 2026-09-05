@@ -13,6 +13,16 @@ export default defineConfig(({ command, mode }) => ({
     command === "serve" &&
       mode === "ui-preview" && {
         name: "harbor-ui-preview",
+        enforce: "pre",
+        transform(code, id) {
+          const sourceRoot = path.resolve(__dirname, "src") + "/";
+          if (!id.startsWith(sourceRoot) || id.startsWith(sourceRoot + "dev/")) return;
+          const transformed = code.replace(
+            /(["'])@tauri-apps\/api\/core\1/g,
+            '"@/dev/preview-core"'
+          );
+          return transformed === code ? undefined : { code: transformed, map: null };
+        },
         transformIndexHtml: {
           order: "pre",
           handler(html) {

@@ -1,8 +1,9 @@
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
+import { useListScroll } from "@/hooks/use-list-scroll";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Bot, CircleAlert, KeyRound, RefreshCw, ScanSearch, ShieldCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -78,7 +79,7 @@ function SecurityAlertRow({
       type="button"
       variant="ghost"
       onClick={onOpen}
-      className="relative h-auto w-full justify-start gap-0 overflow-hidden rounded-none border-b px-0 py-0 text-left whitespace-normal hover:bg-white/[0.025]"
+      className="harbor-result-row relative h-auto w-full justify-start gap-0 overflow-hidden rounded-none border-b px-0 py-0 text-left whitespace-normal"
     >
       <span className={cn("w-1 self-stretch", severityRailClass(alert))} aria-hidden="true" />
       <span className="flex min-w-0 flex-1 items-start gap-4 px-4 py-3.5">
@@ -86,14 +87,14 @@ function SecurityAlertRow({
           <span className="text-foreground line-clamp-2 text-[13px] leading-5 font-medium">
             {alert.title}
           </span>
-          <span className="text-muted-foreground flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-normal">
+          <span className="text-muted-foreground flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-normal">
             {details.map((detail) => (
               <span key={detail} className="max-w-full truncate">
                 {detail}
               </span>
             ))}
           </span>
-          <span className="text-muted-foreground text-[10px] font-normal">
+          <span className="text-muted-foreground text-[11px] font-normal">
             {t("workspace.security.alertNumber", { number: alert.number })}
             {" · "}
             {formatIssueDate(alert.updatedAt ?? alert.createdAt, locale)}
@@ -137,6 +138,9 @@ export function GitHubSecurityView({ repository }: { repository: GitHubRepositor
     }),
     placeholderData: (previous) => previous,
   });
+  const listScroll = useListScroll(
+    JSON.stringify([repository.id, kind, state, severity, sort, page])
+  );
   const data = result.data;
   const error = !data && result.error ? parseIpcError(result.error) : null;
   const supplementalError = data && result.error ? parseIpcError(result.error) : null;
@@ -161,7 +165,7 @@ export function GitHubSecurityView({ repository }: { repository: GitHubRepositor
 
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <div className="flex min-h-12 shrink-0 items-center justify-between gap-3 border-b border-white/[0.065] px-4 py-2.5">
+      <div className="border-border/60 flex min-h-12 shrink-0 items-center justify-between gap-3 border-b px-4 py-2.5">
         <Tabs value={kind} onValueChange={(value) => changeKind(value as GitHubSecurityAlertKind)}>
           <TabsList variant="line" className="h-9 gap-3 p-0">
             <TabsTrigger value="dependabot" className="px-1.5 text-xs">
@@ -180,6 +184,7 @@ export function GitHubSecurityView({ repository }: { repository: GitHubRepositor
           variant="ghost"
           size="icon-sm"
           aria-label={t("workspace.security.refresh")}
+          title={t("workspace.security.refresh")}
           disabled={result.isFetching}
           onClick={() => void result.refetch()}
         >
@@ -187,7 +192,7 @@ export function GitHubSecurityView({ repository }: { repository: GitHubRepositor
         </Button>
       </div>
 
-      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-white/[0.055] px-4 py-2.5">
+      <div className="border-border/60 flex shrink-0 flex-wrap items-center gap-2 border-b px-4 py-2.5">
         <Select
           value={state}
           onValueChange={(value) => {
@@ -195,7 +200,11 @@ export function GitHubSecurityView({ repository }: { repository: GitHubRepositor
             setPage(1);
           }}
         >
-          <SelectTrigger size="sm" aria-label={t("workspace.security.filters.state")}>
+          <SelectTrigger
+            size="sm"
+            aria-label={t("workspace.security.filters.state")}
+            title={t("workspace.security.filters.state")}
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -216,7 +225,11 @@ export function GitHubSecurityView({ repository }: { repository: GitHubRepositor
             setPage(1);
           }}
         >
-          <SelectTrigger size="sm" aria-label={t("workspace.security.filters.severity")}>
+          <SelectTrigger
+            size="sm"
+            aria-label={t("workspace.security.filters.severity")}
+            title={t("workspace.security.filters.severity")}
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -236,7 +249,11 @@ export function GitHubSecurityView({ repository }: { repository: GitHubRepositor
             setPage(1);
           }}
         >
-          <SelectTrigger size="sm" aria-label={t("workspace.security.filters.sort")}>
+          <SelectTrigger
+            size="sm"
+            aria-label={t("workspace.security.filters.sort")}
+            title={t("workspace.security.filters.sort")}
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -246,24 +263,19 @@ export function GitHubSecurityView({ repository }: { repository: GitHubRepositor
             </SelectGroup>
           </SelectContent>
         </Select>
-        <span className="text-muted-foreground ml-auto text-[10px]">
+        <span className="text-muted-foreground ml-auto text-[11px]">
           {data ? t("workspace.security.pageCount", { count: data.alerts.length }) : null}
         </span>
       </div>
 
       {supplementalError ? (
-        <Alert variant="destructive" className="rounded-none border-x-0 border-t-0 px-4 py-2">
-          <CircleAlert />
-          <AlertDescription className="flex min-w-0 items-center gap-3 text-[11px]">
-            <span className="min-w-0 flex-1 truncate">{supplementalError.message}</span>
-            <Button variant="ghost" size="xs" onClick={() => void result.refetch()}>
-              {t("workspace.repositories.retry")}
-            </Button>
-          </AlertDescription>
-        </Alert>
+        <WorkspaceStaleNotice
+          message={supplementalError.message}
+          onRetry={() => void result.refetch()}
+        />
       ) : null}
 
-      <ScrollArea className="min-h-0 flex-1">
+      <ScrollArea className="min-h-0 flex-1" {...listScroll}>
         {result.isPending && !data ? (
           <SecurityListSkeleton />
         ) : error ? (

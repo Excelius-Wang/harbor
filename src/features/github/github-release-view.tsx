@@ -1,9 +1,10 @@
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
+import { useListScroll } from "@/hooks/use-list-scroll";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { isTauri } from "@tauri-apps/api/core";
-import { CircleAlert, LockKeyhole, PackageOpen, Plus, RefreshCw, Rocket, Tag } from "lucide-react";
+import { LockKeyhole, PackageOpen, Plus, RefreshCw, Rocket, Tag } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -59,7 +60,7 @@ function ReleaseRow({
     <Button
       type="button"
       variant="ghost"
-      className="h-auto w-full justify-start gap-3 rounded-none border-b px-4 py-4 text-left whitespace-normal last:border-b-0"
+      className="harbor-result-row h-auto w-full justify-start gap-3 rounded-none border-b px-4 py-4 text-left whitespace-normal last:border-b-0"
       onMouseEnter={onPrefetch}
       onFocus={onPrefetch}
       onClick={onOpen}
@@ -68,7 +69,7 @@ function ReleaseRow({
         <Rocket className="size-4" />
       </span>
       <span className="flex min-w-0 flex-1 flex-col items-start gap-1.5">
-        <span className="text-foreground line-clamp-2 text-[13px] leading-5 font-medium">
+        <span className="text-foreground text-[13px] leading-5 font-medium">
           {release.name?.trim() || release.tagName}
         </span>
         <span className="flex min-w-0 flex-wrap items-center gap-2">
@@ -86,7 +87,7 @@ function ReleaseRow({
             </Badge>
           ) : null}
         </span>
-        <span className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-normal">
+        <span className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-normal">
           <span>
             {release.author ? `@${release.author}` : t("workspace.repositories.unknownActor")}
           </span>
@@ -114,6 +115,7 @@ export function GitHubReleaseView({ repository }: { repository: GitHubRepository
     repository: repository.name,
     page,
   };
+  const listScroll = useListScroll(JSON.stringify([repository.owner, repository.name, page]));
   const result = useQuery({
     ...repositoryReleasesQueryOptions(target),
     enabled: desktopRuntime,
@@ -152,10 +154,10 @@ export function GitHubReleaseView({ repository }: { repository: GitHubRepository
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <header className="flex min-h-14 items-center gap-3 border-b px-4 py-2.5">
+      <header className="flex min-h-14 shrink-0 flex-wrap items-center gap-3 border-b px-4 py-2.5">
         <div className="min-w-0 flex-1">
           <h3 className="text-sm font-semibold">{t("workspace.repositories.releases")}</h3>
-          <p className="text-muted-foreground mt-0.5 text-[10px]">
+          <p className="text-muted-foreground mt-0.5 text-[11px]">
             {t("workspace.repositories.releasesDescription")}
           </p>
         </div>
@@ -186,17 +188,12 @@ export function GitHubReleaseView({ repository }: { repository: GitHubRepository
         </div>
       </header>
       {supplementalError ? (
-        <Alert variant="destructive" className="rounded-none border-x-0 border-t-0 px-4 py-2">
-          <CircleAlert />
-          <AlertDescription className="flex min-w-0 items-center gap-3 text-[11px]">
-            <span className="min-w-0 flex-1 truncate">{supplementalError.message}</span>
-            <Button type="button" variant="ghost" size="xs" onClick={() => void result.refetch()}>
-              {t("workspace.repositories.retry")}
-            </Button>
-          </AlertDescription>
-        </Alert>
+        <WorkspaceStaleNotice
+          message={supplementalError.message}
+          onRetry={() => void result.refetch()}
+        />
       ) : null}
-      <ScrollArea className="min-h-0 flex-1">
+      <ScrollArea className="min-h-0 flex-1" {...listScroll}>
         {result.isPending && desktopRuntime ? (
           <ReleaseListSkeleton />
         ) : error ? (

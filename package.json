@@ -20,8 +20,8 @@
     "tauri:build": "dotenv -c -- tauri build --bundles dmg",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css,json}\"",
-    "lint": "eslint src/**/*.{ts,tsx} vite.config.ts",
-    "lint:fix": "eslint src/**/*.{ts,tsx} vite.config.ts --fix",
+    "lint": "eslint \"src/**/*.{ts,tsx}\" vite.config.ts",
+    "lint:fix": "eslint \"src/**/*.{ts,tsx}\" vite.config.ts --fix",
     "test": "vitest run",
     "check": "pnpm format:check && pnpm lint && pnpm test && pnpm build",
     "dev:ui": "vite --mode ui-preview"

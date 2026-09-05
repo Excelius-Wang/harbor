@@ -753,16 +753,31 @@ export function GitHubRepositoryPagesView({
     refetchInterval: (query) => (query.state.data?.pending ? 3_000 : false),
   });
 
+  const {
+    buildType: publishedBuildType,
+    branch: publishedBranch,
+    sourcePath: publishedPath,
+    customDomain: publishedDomain,
+    httpsEnforced: publishedHttps,
+  } = configurationFromSite(site, repository.defaultBranch);
+
+  // Build-status polling must not reset edits to unchanged published settings.
   useEffect(() => {
-    setDraft(configurationFromSite(site, repository.defaultBranch));
+    setDraft({
+      buildType: publishedBuildType,
+      branch: publishedBranch,
+      sourcePath: publishedPath,
+      customDomain: publishedDomain,
+      httpsEnforced: publishedHttps,
+    });
   }, [
     repository.defaultBranch,
     repository.id,
-    site?.buildType,
-    site?.customDomain,
-    site?.httpsEnforced,
-    site?.source?.branch,
-    site?.source?.path,
+    publishedBuildType,
+    publishedBranch,
+    publishedPath,
+    publishedDomain,
+    publishedHttps,
   ]);
 
   useEffect(() => {

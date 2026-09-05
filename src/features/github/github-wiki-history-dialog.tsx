@@ -199,11 +199,11 @@ export function GitHubWikiHistoryDialog({
                         onClick={() => setSelectedSha(revision.sha)}
                       >
                         <span className="line-clamp-2 text-xs font-medium">{revision.message}</span>
-                        <span className="text-muted-foreground text-[10px]">
+                        <span className="text-muted-foreground text-[11px]">
                           {revision.shortSha} ·{" "}
                           {revision.authorName ?? t("workspace.repositories.unknownAuthor")}
                         </span>
-                        <span className="text-muted-foreground text-[10px]">
+                        <span className="text-muted-foreground text-[11px]">
                           {new Intl.DateTimeFormat(i18n.language, {
                             dateStyle: "medium",
                             timeStyle: "short",
@@ -222,6 +222,7 @@ export function GitHubWikiHistoryDialog({
                       variant="outline"
                       size="icon-sm"
                       aria-label={t("workspace.repositories.wiki.previousHistoryPage")}
+                      title={t("workspace.repositories.wiki.previousHistoryPage")}
                       disabled={historyPage === 1}
                       onClick={() => {
                         setHistoryPage((current) => Math.max(1, current - 1));
@@ -243,6 +244,7 @@ export function GitHubWikiHistoryDialog({
                       variant="outline"
                       size="icon-sm"
                       aria-label={t("workspace.repositories.wiki.nextHistoryPage")}
+                      title={t("workspace.repositories.wiki.nextHistoryPage")}
                       disabled={!historyResult.data?.hasMore}
                       onClick={() => {
                         setHistoryPage((current) => current + 1);
@@ -336,7 +338,7 @@ export function GitHubWikiHistoryDialog({
                         />
                       </div>
                     ) : (
-                      <pre className="bg-muted/40 overflow-auto rounded-md border p-4 text-xs leading-5 whitespace-pre-wrap">
+                      <pre className="harbor-reading overflow-auto rounded-md border p-4 text-[13px] leading-5 whitespace-pre-wrap">
                         {selectedRevision.content}
                       </pre>
                     )}

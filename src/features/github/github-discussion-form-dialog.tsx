@@ -87,12 +87,14 @@ export function GitHubDiscussionFormDialog({
     },
   });
 
+  const resetMutation = mutation.reset;
+
   useEffect(() => {
     if (open) {
       setCategoryId(discussion?.category.id ?? categories[0]?.id ?? "");
-      mutation.reset();
+      resetMutation();
     }
-  }, [categories, discussion?.category.id, open]);
+  }, [categories, discussion?.category.id, open, resetMutation]);
 
   const error = mutation.error ? parseIpcError(mutation.error) : null;
   const setOpen = (nextOpen: boolean) => {

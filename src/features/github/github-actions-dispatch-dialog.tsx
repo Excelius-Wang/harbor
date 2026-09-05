@@ -280,12 +280,14 @@ export function GitHubWorkflowDispatchDialog({
     setFieldErrors({});
   }, [repository.id]);
 
+  const resetMutation = mutation.reset;
+
   useEffect(() => {
     if (!configResult.data) return;
     setDraft(createWorkflowDispatchDraft(configResult.data));
     setFieldErrors({});
-    mutation.reset();
-  }, [configResult.data]);
+    resetMutation();
+  }, [configResult.data, resetMutation]);
 
   const optionsError = optionsResult.error ? parseIpcError(optionsResult.error) : null;
   const configError = configResult.error ? parseIpcError(configResult.error) : null;

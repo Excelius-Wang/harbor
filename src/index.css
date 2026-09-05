@@ -56,8 +56,8 @@
   --input: rgb(50 73 101 / 28%);
   --ring: var(--primary);
   --chart-1: var(--primary);
-  --chart-2: var(--success);
-  --chart-3: var(--merged);
+  --chart-2: var(--muted-foreground);
+  --chart-3: color-mix(in srgb, var(--primary) 55%, var(--muted-foreground));
   --chart-4: var(--destructive);
   --harbor-chrome: #e5edf5;
   --harbor-canvas-edge: #d8e3ee;

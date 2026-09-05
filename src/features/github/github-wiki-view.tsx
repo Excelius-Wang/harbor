@@ -1,3 +1,4 @@
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -155,10 +156,12 @@ function GitHubWikiEditorDialog({
     normalizedTitle.length === 0 ||
     normalizedTitle.length > 245 ||
     (!page &&
+      // eslint-disable-next-line no-control-regex -- Git filenames must reject ASCII control characters.
       (/[\\/:*?"<>|\u0000-\u001f\u007f]/.test(normalizedTitle) ||
         normalizedTitle.endsWith(".") ||
         /^_(Sidebar|Footer)$/i.test(normalizedTitle)));
   const contentInvalid = new Blob([content]).size > MAX_WIKI_PAGE_BYTES;
+  // eslint-disable-next-line no-control-regex -- Git commit messages here must be one printable line.
   const messageInvalid = message.length > 256 || /[\u0000-\u001f\u007f]/.test(message);
   const error = mutation.error ? parseIpcError(mutation.error) : null;
   const relativeImageBaseUrl = `https://raw.githubusercontent.com/wiki/${repository.owner}/${repository.name}`;
@@ -409,7 +412,7 @@ export function GitHubWikiView({ repository }: { repository: GitHubRepository })
   });
 
   if (overviewResult.isPending) return <WikiSkeleton />;
-  if (overviewResult.isError) {
+  if (overviewResult.isError && !overview) {
     const error = parseIpcError(overviewResult.error);
     return (
       <div className="grid min-h-0 flex-1 place-items-center p-6">
@@ -560,9 +563,10 @@ export function GitHubWikiView({ repository }: { repository: GitHubRepository })
                     type="button"
                     variant="ghost"
                     className={cn(
-                      "h-auto min-h-8 justify-start px-2 py-1.5 text-left text-xs whitespace-normal",
-                      selectedPath === item.path && "bg-accent text-accent-foreground"
+                      "harbor-result-row h-auto min-h-8 justify-start px-2 py-1.5 text-left text-[13px] whitespace-normal",
+                      selectedPath === item.path && "harbor-row-selected"
                     )}
+                    aria-current={selectedPath === item.path ? "page" : undefined}
                     onClick={() => setSelectedPath(item.path)}
                   >
                     <Icon data-icon="inline-start" />
@@ -577,7 +581,7 @@ export function GitHubWikiView({ repository }: { repository: GitHubRepository })
               </div>
             )}
             {deferredQuery && searchResult.data?.truncated ? (
-              <p className="text-muted-foreground px-2 pb-2 text-[10px]">
+              <p className="text-muted-foreground px-2 pb-2 text-[11px]">
                 {t("workspace.repositories.wiki.searchTruncated")}
               </p>
             ) : null}
@@ -616,7 +620,19 @@ export function GitHubWikiView({ repository }: { repository: GitHubRepository })
       </aside>
 
       <section className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <header className="flex min-h-14 shrink-0 items-center justify-between gap-3 border-b px-4 py-2">
+        {overviewResult.error ? (
+          <WorkspaceStaleNotice
+            message={parseIpcError(overviewResult.error).message}
+            onRetry={() => void overviewResult.refetch()}
+          />
+        ) : null}
+        {page && pageResult.error ? (
+          <WorkspaceStaleNotice
+            message={parseIpcError(pageResult.error).message}
+            onRetry={() => void pageResult.refetch()}
+          />
+        ) : null}
+        <header className="flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-3 border-b px-4 py-2">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h3 className="truncate text-sm font-semibold">{selectedSummary?.title}</h3>
@@ -736,7 +752,7 @@ export function GitHubWikiView({ repository }: { repository: GitHubRepository })
             <Skeleton className="h-28 w-full" />
             <Skeleton className="h-40 w-full" />
           </div>
-        ) : pageResult.isError ? (
+        ) : pageResult.isError && !page ? (
           <div className="grid min-h-0 flex-1 place-items-center p-6">
             <Alert variant="destructive" className="max-w-xl">
               <BookOpen />
@@ -783,7 +799,7 @@ export function GitHubWikiView({ repository }: { repository: GitHubRepository })
                   />
                 </div>
               ) : (
-                <pre className="bg-muted/40 overflow-auto rounded-md border p-4 text-xs leading-5 whitespace-pre-wrap">
+                <pre className="harbor-reading overflow-auto rounded-md border p-4 text-[13px] leading-5 whitespace-pre-wrap">
                   {page.content}
                 </pre>
               )}

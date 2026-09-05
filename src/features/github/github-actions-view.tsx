@@ -1,3 +1,5 @@
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
+import { useListScroll } from "@/hooks/use-list-scroll";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -88,7 +90,7 @@ export function WorkflowRunRow({
         onClick={onSelect}
         onPointerEnter={onPrefetch}
         onFocus={onPrefetch}
-        className="hover:bg-accent/40 h-auto min-w-0 flex-1 items-start gap-3 rounded-none px-4 py-3.5 text-left whitespace-normal"
+        className="harbor-result-row h-auto min-w-0 flex-1 items-start gap-3 rounded-none px-4 py-3.5 text-left whitespace-normal"
       >
         <GitHubWorkflowStatusBadge status={run.status} conclusion={run.conclusion} />
         <span className="min-w-0 flex-1">
@@ -100,13 +102,13 @@ export function WorkflowRunRow({
               {run.event}
             </Badge>
           </span>
-          <span className="text-muted-foreground mt-1 block truncate text-[10px] font-normal">
+          <span className="text-muted-foreground mt-1 block text-[11px] font-normal">
             {run.workflowName} #{run.runNumber}
             {run.runAttempt > 1
               ? ` · ${t("workspace.repositories.workflowAttempt", { count: run.runAttempt })}`
               : ""}
           </span>
-          <span className="text-muted-foreground mt-1.5 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-normal">
+          <span className="text-muted-foreground mt-1.5 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-normal">
             {run.headBranch ? (
               <span className="flex min-w-0 items-center gap-1">
                 <GitBranch /> <span className="max-w-48 truncate">{run.headBranch}</span>
@@ -166,6 +168,7 @@ export function GitHubActionsView({ repository }: { repository: GitHubRepository
     refetchInterval: (query) =>
       query.state.data?.runs.some((run) => run.status !== "completed") ? 15_000 : false,
   });
+  const listScroll = useListScroll(JSON.stringify([repository.id, workflowId, filters, page]));
   const data = result.data;
   const error = !data && result.error ? parseIpcError(result.error) : null;
   const selectedRunId = selectedRun?.id ?? null;
@@ -228,13 +231,14 @@ export function GitHubActionsView({ repository }: { repository: GitHubRepository
               variant="outline"
               size="icon-sm"
               aria-label={t("workspace.repositories.refreshWorkflowRuns")}
+              title={t("workspace.repositories.refreshWorkflowRuns")}
               onClick={() => void result.refetch()}
               disabled={result.isFetching}
             >
               <RefreshCw className={cn(result.isFetching && "animate-spin")} />
             </Button>
           </div>
-          <span className="text-muted-foreground text-[10px]">
+          <span className="text-muted-foreground text-[11px]">
             {data
               ? t("workspace.repositories.workflowRunCount", {
                   count: data.totalCount,
@@ -268,7 +272,13 @@ export function GitHubActionsView({ repository }: { repository: GitHubRepository
         />
 
         <section className="flex min-h-0 min-w-0 flex-col">
-          <ScrollArea className="min-h-0 flex-1">
+          {data && result.error ? (
+            <WorkspaceStaleNotice
+              message={parseIpcError(result.error).message}
+              onRetry={() => void result.refetch()}
+            />
+          ) : null}
+          <ScrollArea className="min-h-0 flex-1" {...listScroll}>
             {result.isPending ? (
               <WorkflowRunSkeletons />
             ) : error ? (

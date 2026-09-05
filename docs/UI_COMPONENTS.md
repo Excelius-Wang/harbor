@@ -64,3 +64,11 @@ Markdown code blocks use `--harbor-code-fill` (`#e1e8f1` light / `#172335` dark)
 Controlled Dialog, AlertDialog and Sheet consumers may open from ordinary page actions. Their shared content primitives restore a still-connected opener after close. `onOpenAutoFocus` and `onCloseAutoFocus` remain available; calling `preventDefault()` in a custom close handler takes precedence. Continue using Radix Trigger when it naturally belongs in the same component.
 
 `src/dev/more-fixtures.ts` adds typed read scenarios for Notifications, profile and More pages. Fixture lookup must distinguish `undefined` (unimplemented) from valid `null` data. These fixtures never fall through to business IPC.
+
+## Scoped repository previews
+
+Use `?state=error&commands=github_get_repository_wiki` (or a comma-separated command list) to exercise an inner workspace query without breaking its parent navigation. Supported states remain `populated`, `loading`, `empty`, `error` and `stale`. `src/dev/repository-fixtures.ts` supplies Actions, releases, Wiki, Insights and security reads.
+
+In ui-preview mode, Vite rewrites application imports of the core SDK to `src/dev/preview-core.ts`. This facade intercepts application `invoke` calls without assigning Tauri's readonly native internals. Real native window/event behavior remains available for visual testing. Ordinary development and production retain their original SDK imports; browser preview alone uses the SDK mock.
+
+Chart tick labels target Recharts' actual `recharts-cartesian-axis-tick-value` nodes. Tooltips use `harbor-popover`; chart keyboard focus is visible. Data series use primary and muted colors, with destructive retained for code deletions. Insights renders data directly instead of animating chart entry.
