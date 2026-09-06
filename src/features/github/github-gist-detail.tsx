@@ -255,11 +255,12 @@ function GistComments({ gist }: { gist: GitHubGist }) {
       if (mutation.action === "delete") {
         syncDeletedGistComment(queryClient, gist.id, mutation.commentId);
         setDeleteTarget(null);
+        setEditing((current) => (current?.id === mutation.commentId ? null : current));
         toast.success(t("workspace.gists.commentDeleted"));
       } else if (comment) {
         syncGistComment(queryClient, gist.id, comment, mutation.action === "create");
-        setBody("");
-        setEditing(null);
+        if (mutation.action === "create") setBody("");
+        else setEditing(null);
         toast.success(
           t(
             mutation.action === "create"
@@ -272,6 +273,8 @@ function GistComments({ gist }: { gist: GitHubGist }) {
     },
   });
   const mutationError = mutation.error ? parseIpcError(mutation.error).message : "";
+  const pendingAction = mutation.isPending ? mutation.variables?.action : undefined;
+  const failedAction = mutation.error ? mutation.variables : undefined;
 
   if (result.isPending) {
     return (
@@ -307,6 +310,7 @@ function GistComments({ gist }: { gist: GitHubGist }) {
       {result.data && result.error ? (
         <WorkspaceStaleNotice
           message={parseIpcError(result.error).message}
+          retryDisabled={result.isFetching || mutation.isPending}
           onRetry={() => void result.refetch()}
         />
       ) : null}
@@ -336,7 +340,15 @@ function GistComments({ gist }: { gist: GitHubGist }) {
               </time>
               <span className="flex-1" />
               {comment.viewerCanUpdate ? (
-                <Button variant="ghost" size="xs" onClick={() => setEditing(comment)}>
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  disabled={mutation.isPending}
+                  onClick={() => {
+                    mutation.reset();
+                    setEditing(comment);
+                  }}
+                >
                   <Pencil data-icon="inline-start" />
                   {t("common.edit")}
                 </Button>
@@ -345,7 +357,11 @@ function GistComments({ gist }: { gist: GitHubGist }) {
                 <Button
                   variant="ghost"
                   size="icon-xs"
-                  onClick={() => setDeleteTarget(comment)}
+                  disabled={mutation.isPending}
+                  onClick={() => {
+                    mutation.reset();
+                    setDeleteTarget(comment);
+                  }}
                   aria-label={t("workspace.gists.deleteComment")}
                   title={t("workspace.gists.deleteComment")}
                 >
@@ -356,17 +372,25 @@ function GistComments({ gist }: { gist: GitHubGist }) {
             {editing?.id === comment.id ? (
               <div className="space-y-2 p-3">
                 <Textarea
+                  aria-label={t("workspace.gists.editComment")}
                   value={editing.body}
                   disabled={mutation.isPending}
-                  className="min-h-28 text-xs"
+                  className="min-h-28 text-[13px]"
                   onChange={(event) => setEditing({ ...editing, body: event.currentTarget.value })}
                 />
-                <FieldError>{mutationError}</FieldError>
+                <FieldError>
+                  {failedAction?.action === "update" && failedAction.commentId === comment.id
+                    ? mutationError
+                    : ""}
+                </FieldError>
                 <div className="flex justify-end gap-2">
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setEditing(null)}
+                    onClick={() => {
+                      setEditing(null);
+                      mutation.reset();
+                    }}
                     disabled={mutation.isPending}
                   >
                     {t("common.cancel")}
@@ -382,7 +406,7 @@ function GistComments({ gist }: { gist: GitHubGist }) {
                       })
                     }
                   >
-                    {mutation.isPending ? <Spinner data-icon="inline-start" /> : null}
+                    {pendingAction === "update" ? <Spinner data-icon="inline-start" /> : null}
                     {t("common.save")}
                   </Button>
                 </div>
@@ -413,7 +437,7 @@ function GistComments({ gist }: { gist: GitHubGist }) {
           className="space-y-2 rounded-lg border p-3"
           onSubmit={(event) => {
             event.preventDefault();
-            if (body.trim()) mutation.mutate({ action: "create", body });
+            if (body.trim() && !mutation.isPending) mutation.mutate({ action: "create", body });
           }}
         >
           <Field>
@@ -424,15 +448,15 @@ function GistComments({ gist }: { gist: GitHubGist }) {
               id={`gist-${gist.id}-comment`}
               value={body}
               disabled={mutation.isPending}
-              className="min-h-28 text-xs"
+              className="min-h-28 text-[13px]"
               placeholder={t("workspace.gists.commentPlaceholder")}
               onChange={(event) => setBody(event.currentTarget.value)}
             />
-            <FieldError>{!editing ? mutationError : ""}</FieldError>
+            <FieldError>{failedAction?.action === "create" ? mutationError : ""}</FieldError>
           </Field>
           <div className="flex justify-end">
             <Button type="submit" size="sm" disabled={!body.trim() || mutation.isPending}>
-              {mutation.isPending ? (
+              {pendingAction === "create" ? (
                 <Spinner data-icon="inline-start" />
               ) : (
                 <Send data-icon="inline-start" />
@@ -450,7 +474,12 @@ function GistComments({ gist }: { gist: GitHubGist }) {
 
       <AlertDialog
         open={Boolean(deleteTarget)}
-        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        onOpenChange={(open) => {
+          if (!open && !mutation.isPending) {
+            setDeleteTarget(null);
+            mutation.reset();
+          }
+        }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -459,7 +488,7 @@ function GistComments({ gist }: { gist: GitHubGist }) {
               {t("workspace.gists.deleteCommentDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          {mutationError && deleteTarget ? (
+          {failedAction?.action === "delete" && deleteTarget ? (
             <Alert variant="destructive">
               <AlertDescription>{mutationError}</AlertDescription>
             </Alert>
@@ -473,7 +502,8 @@ function GistComments({ gist }: { gist: GitHubGist }) {
               disabled={mutation.isPending}
               onClick={(event) => {
                 event.preventDefault();
-                if (deleteTarget) mutation.mutate({ action: "delete", commentId: deleteTarget.id });
+                if (deleteTarget && !mutation.isPending)
+                  mutation.mutate({ action: "delete", commentId: deleteTarget.id });
               }}
             >
               {mutation.isPending ? (
@@ -696,6 +726,7 @@ export function GitHubGistDetail({
               variant="outline"
               size="icon-sm"
               aria-label={t("workspace.gists.openOnGitHub")}
+              title={t("workspace.gists.openOnGitHub")}
               onClick={() => void openExternalUrl(gist.url)}
             >
               <ExternalLink />
@@ -705,6 +736,7 @@ export function GitHubGistDetail({
                 variant="destructive"
                 size="icon-sm"
                 aria-label={t("workspace.gists.delete")}
+                title={t("workspace.gists.delete")}
                 onClick={() => setDeleteOpen(true)}
               >
                 <Trash2 />
@@ -898,6 +930,7 @@ export function GitHubGistDetail({
       <AlertDialog
         open={deleteOpen}
         onOpenChange={(open) => {
+          if (deleteMutation.isPending) return;
           setDeleteOpen(open);
           if (!open) {
             setDeleteConfirmation("");
@@ -938,7 +971,11 @@ export function GitHubGistDetail({
               }
               onClick={(event) => {
                 event.preventDefault();
-                deleteMutation.mutate();
+                if (
+                  !deleteMutation.isPending &&
+                  deleteConfirmation.trim().toLowerCase() === gist.id.toLowerCase()
+                )
+                  deleteMutation.mutate();
               }}
             >
               {deleteMutation.isPending ? (

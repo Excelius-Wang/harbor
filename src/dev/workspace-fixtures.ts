@@ -145,7 +145,10 @@ export function workspaceFixture(
   empty: boolean,
   pullRequestScenario: string | null = null
 ): unknown {
-  const repository = repositories.find((repo) => repo.name === args.repository) ?? repositories[0];
+  const repository =
+    repositories.find(
+      (repo) => repo.name === args.repository && (!args.owner || repo.owner === args.owner)
+    ) ?? repositories[0];
   const number = Number(args.issueNumber ?? args.pullRequestNumber ?? args.number ?? 1);
   const currentIssue = issue(number, repository);
   const pullOverrides: Record<string, Partial<GitHubPullRequest>> = {
@@ -530,13 +533,13 @@ export function workspaceFixture(
       return { ...identity, state: "open", viewerCanClose: true, viewerCanReopen: false };
     case "github_get_repository_conversation_controls":
       return {
-        kind: args.kind,
-        number,
+        kind: args.conversationKind === "pullRequest" ? "pullRequest" : "issue",
+        number: Number(args.conversationNumber ?? number),
         locked: false,
         viewerCanLock: true,
         viewerCanSubscribe: true,
         viewerSubscription: "subscribed",
-      };
+      } satisfies GitHubData.GitHubConversationControls;
     case "github_get_repository_pinned_issues":
       return {
         ...identity,

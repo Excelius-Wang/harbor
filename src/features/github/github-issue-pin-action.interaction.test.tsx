@@ -2,7 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -60,13 +60,13 @@ const currentPinned = {
 };
 
 function renderAction() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
-    <QueryClientProvider
-      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-    >
+    <QueryClientProvider client={client}>
       <GitHubIssuePinAction repository={repository} issue={issue} />
     </QueryClientProvider>
   );
+  return client;
 }
 
 beforeEach(() => {
@@ -77,6 +77,43 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe("GitHub Issue pin action", () => {
+  it.each(["repository", "issue"])(
+    "blocks writes when the %s identity differs",
+    async (identity) => {
+      vi.mocked(invoke).mockResolvedValue(
+        identity === "repository"
+          ? { ...page(true), repositoryFullName: "octocat/other" }
+          : page(true, [{ ...currentPinned, nodeId: "I_replaced" }])
+      );
+      renderAction();
+      await screen.findByRole("button", {
+        name: "workspace.repositories.pinIssueStatusUnavailable",
+      });
+      expect(screen.queryByRole("button", { name: "workspace.repositories.pinIssue" })).toBeNull();
+      expect(invoke).toHaveBeenCalledTimes(1);
+    }
+  );
+
+  it("blocks cached pin actions after refresh failure and retries only the status read", async () => {
+    vi.mocked(invoke).mockResolvedValue(page(true));
+    const client = renderAction();
+    await screen.findByRole("button", { name: "workspace.repositories.pinIssue" });
+    vi.mocked(invoke).mockRejectedValue({ code: "preview", message: "Status unavailable" });
+    await act(async () => {
+      await client.invalidateQueries();
+    });
+    const retry = await screen.findByRole("button", {
+      name: "workspace.repositories.pinIssueStatusUnavailable",
+    });
+    expect(screen.queryByRole("button", { name: "workspace.repositories.pinIssue" })).toBeNull();
+    await userEvent.setup().click(retry);
+    expect(
+      vi
+        .mocked(invoke)
+        .mock.calls.every(([command]) => command === "github_get_repository_pinned_issues")
+    ).toBe(true);
+  });
+
   it("shows a disabled action while the authoritative pin state loads", async () => {
     vi.mocked(invoke).mockImplementation(() => new Promise(() => undefined));
 

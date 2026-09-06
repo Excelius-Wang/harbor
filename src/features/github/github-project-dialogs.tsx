@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CircleAlert, Plus, Save } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -52,6 +52,17 @@ function MutationError({ message }: { message: string }) {
   ) : null;
 }
 
+function useDialogInitialization(open: boolean, identity: string, initialize: () => void) {
+  const initialized = useRef<string | null>(null);
+  useEffect(() => {
+    if (!open) initialized.current = null;
+    else if (initialized.current !== identity) {
+      initialized.current = identity;
+      initialize();
+    }
+  }, [open, identity, initialize]);
+}
+
 export function CreateProjectDialog({
   open,
   pending,
@@ -72,9 +83,14 @@ export function CreateProjectDialog({
   }, [open]);
   const valid = Boolean(title.trim());
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="harbor-popover sm:max-w-[440px]">
-        <DialogHeader>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!pending) onOpenChange(next);
+      }}
+    >
+      <DialogContent showCloseButton={!pending} className="sm:max-w-[440px]">
+        <DialogHeader className="pr-8">
           <DialogTitle>{t("workspace.projects.createTitle")}</DialogTitle>
           <DialogDescription>{t("workspace.projects.createDescription")}</DialogDescription>
         </DialogHeader>
@@ -82,6 +98,7 @@ export function CreateProjectDialog({
           <Field data-invalid={!valid && Boolean(title)}>
             <FieldLabel htmlFor="project-title">{t("workspace.projects.fields.title")}</FieldLabel>
             <Input
+              disabled={pending}
               id="project-title"
               value={title}
               onChange={(event) => setTitle(event.currentTarget.value)}
@@ -132,20 +149,34 @@ export function ProjectSettingsDialog({
   const [nextReadme, setNextReadme] = useState(readme);
   const [isPublic, setIsPublic] = useState(project.public);
   const [closed, setClosed] = useState(project.closed);
-  useEffect(() => {
-    if (!open) return;
+  const readOnly = !project.viewerCanUpdate;
+  useDialogInitialization(open, project.id, () => {
     setTitle(project.title);
     setDescription(project.shortDescription ?? "");
     setNextReadme(readme);
     setIsPublic(project.public);
     setClosed(project.closed);
-  }, [open, project, readme]);
+  });
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="harbor-popover max-h-[88vh] overflow-y-auto sm:max-w-[560px]">
-        <DialogHeader>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!pending) onOpenChange(next);
+      }}
+    >
+      <DialogContent
+        showCloseButton={!pending}
+        className="max-h-[88vh] overflow-y-auto sm:max-w-[560px]"
+      >
+        <DialogHeader className="pr-8">
           <DialogTitle>{t("workspace.projects.settingsTitle")}</DialogTitle>
-          <DialogDescription>{t("workspace.projects.settingsDescription")}</DialogDescription>
+          <DialogDescription>
+            {t(
+              readOnly
+                ? "workspace.projects.readOnlyDescription"
+                : "workspace.projects.settingsDescription"
+            )}
+          </DialogDescription>
         </DialogHeader>
         <FieldGroup>
           <Field>
@@ -153,6 +184,7 @@ export function ProjectSettingsDialog({
               {t("workspace.projects.fields.title")}
             </FieldLabel>
             <Input
+              disabled={pending || readOnly}
               id="project-settings-title"
               value={title}
               onChange={(event) => setTitle(event.currentTarget.value)}
@@ -164,6 +196,7 @@ export function ProjectSettingsDialog({
               {t("workspace.projects.fields.description")}
             </FieldLabel>
             <Input
+              disabled={pending || readOnly}
               id="project-description"
               value={description}
               onChange={(event) => setDescription(event.currentTarget.value)}
@@ -175,6 +208,7 @@ export function ProjectSettingsDialog({
               {t("workspace.projects.fields.readme")}
             </FieldLabel>
             <Textarea
+              disabled={pending || readOnly}
               id="project-readme"
               value={nextReadme}
               onChange={(event) => setNextReadme(event.currentTarget.value)}
@@ -185,6 +219,7 @@ export function ProjectSettingsDialog({
           </Field>
           <Field orientation="horizontal">
             <Checkbox
+              disabled={pending || readOnly}
               id="project-public"
               checked={isPublic}
               onCheckedChange={(checked) => setIsPublic(checked === true)}
@@ -195,6 +230,11 @@ export function ProjectSettingsDialog({
             <Checkbox
               id="project-closed"
               checked={closed}
+              disabled={
+                pending ||
+                readOnly ||
+                (project.closed ? !project.viewerCanReopen : !project.viewerCanClose)
+              }
               onCheckedChange={(checked) => setClosed(checked === true)}
             />
             <FieldLabel htmlFor="project-closed">{t("workspace.projects.closeProject")}</FieldLabel>
@@ -215,7 +255,7 @@ export function ProjectSettingsDialog({
                 closed,
               })
             }
-            disabled={!title.trim() || pending}
+            disabled={!title.trim() || pending || readOnly}
           >
             {pending ? <Spinner data-icon="inline-start" /> : <Save data-icon="inline-start" />}
             {t("common.save")}
@@ -254,16 +294,25 @@ export function AddProjectItemDialog({
   }, [open]);
   const valid = kind === "draftIssue" ? Boolean(title.trim()) : Boolean(url.trim());
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="harbor-popover sm:max-w-[520px]">
-        <DialogHeader>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!pending) onOpenChange(next);
+      }}
+    >
+      <DialogContent showCloseButton={!pending} className="sm:max-w-[520px]">
+        <DialogHeader className="pr-8">
           <DialogTitle>{t("workspace.projects.addItemTitle")}</DialogTitle>
           <DialogDescription>{t("workspace.projects.addItemDescription")}</DialogDescription>
         </DialogHeader>
         <Tabs value={kind} onValueChange={(value) => setKind(value as typeof kind)}>
           <TabsList variant="line">
-            <TabsTrigger value="draftIssue">{t("workspace.projects.draftIssue")}</TabsTrigger>
-            <TabsTrigger value="existingItem">{t("workspace.projects.existingItem")}</TabsTrigger>
+            <TabsTrigger disabled={pending} value="draftIssue">
+              {t("workspace.projects.draftIssue")}
+            </TabsTrigger>
+            <TabsTrigger disabled={pending} value="existingItem">
+              {t("workspace.projects.existingItem")}
+            </TabsTrigger>
           </TabsList>
         </Tabs>
         {kind === "draftIssue" ? (
@@ -273,6 +322,7 @@ export function AddProjectItemDialog({
                 {t("workspace.projects.fields.title")}
               </FieldLabel>
               <Input
+                disabled={pending}
                 id="project-item-title"
                 value={title}
                 onChange={(event) => setTitle(event.currentTarget.value)}
@@ -284,6 +334,7 @@ export function AddProjectItemDialog({
                 {t("workspace.projects.fields.body")}
               </FieldLabel>
               <Textarea
+                disabled={pending}
                 id="project-item-body"
                 value={body}
                 onChange={(event) => setBody(event.currentTarget.value)}
@@ -296,6 +347,7 @@ export function AddProjectItemDialog({
             <Field>
               <FieldLabel htmlFor="project-item-url">{t("workspace.projects.itemUrl")}</FieldLabel>
               <Input
+                disabled={pending}
                 id="project-item-url"
                 value={url}
                 onChange={(event) => setUrl(event.currentTarget.value)}
@@ -333,6 +385,7 @@ export function EditProjectDraftDialog({
   item,
   open,
   pending,
+  readOnly = false,
   error,
   onOpenChange,
   onSubmit,
@@ -340,6 +393,7 @@ export function EditProjectDraftDialog({
   item: GitHubProjectItem;
   open: boolean;
   pending: boolean;
+  readOnly?: boolean;
   error: string;
   onOpenChange: (open: boolean) => void;
   onSubmit: (update: GitHubProjectItemUpdate) => void;
@@ -348,18 +402,29 @@ export function EditProjectDraftDialog({
   const content = item.content.kind === "draftIssue" ? item.content : null;
   const [title, setTitle] = useState(content?.title ?? "");
   const [body, setBody] = useState(content?.body ?? "");
-  useEffect(() => {
-    if (open && content) {
-      setTitle(content.title);
-      setBody(content.body);
-    }
-  }, [open, content]);
+  useDialogInitialization(open, `${item.id}:${content?.id ?? ""}`, () => {
+    setTitle(content?.title ?? "");
+    setBody(content?.body ?? "");
+  });
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="harbor-popover sm:max-w-[520px]">
-        <DialogHeader>
-          <DialogTitle>{t("workspace.projects.editDraftTitle")}</DialogTitle>
-          <DialogDescription>{t("workspace.projects.editDraftDescription")}</DialogDescription>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!pending) onOpenChange(next);
+      }}
+    >
+      <DialogContent showCloseButton={!pending} className="sm:max-w-[520px]">
+        <DialogHeader className="pr-8">
+          <DialogTitle>
+            {t(readOnly ? "workspace.projects.draftIssue" : "workspace.projects.editDraftTitle")}
+          </DialogTitle>
+          <DialogDescription>
+            {t(
+              readOnly
+                ? "workspace.projects.readOnlyDescription"
+                : "workspace.projects.editDraftDescription"
+            )}
+          </DialogDescription>
         </DialogHeader>
         <FieldGroup>
           <Field>
@@ -367,6 +432,8 @@ export function EditProjectDraftDialog({
               {t("workspace.projects.fields.title")}
             </FieldLabel>
             <Input
+              disabled={pending}
+              readOnly={readOnly}
               id="edit-project-draft-title"
               value={title}
               onChange={(event) => setTitle(event.currentTarget.value)}
@@ -378,6 +445,8 @@ export function EditProjectDraftDialog({
               {t("workspace.projects.fields.body")}
             </FieldLabel>
             <Textarea
+              disabled={pending}
+              readOnly={readOnly}
               id="edit-project-draft-body"
               value={body}
               onChange={(event) => setBody(event.currentTarget.value)}
@@ -388,15 +457,17 @@ export function EditProjectDraftDialog({
         <MutationError message={error} />
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={pending}>
-            {t("common.cancel")}
+            {t(readOnly ? "common.close" : "common.cancel")}
           </Button>
-          <Button
-            onClick={() => onSubmit({ kind: "draftIssue", title: title.trim(), body })}
-            disabled={!content || !title.trim() || pending}
-          >
-            {pending ? <Spinner data-icon="inline-start" /> : <Save data-icon="inline-start" />}
-            {t("common.save")}
-          </Button>
+          {!readOnly ? (
+            <Button
+              onClick={() => onSubmit({ kind: "draftIssue", title: title.trim(), body })}
+              disabled={!content || !title.trim() || pending}
+            >
+              {pending ? <Spinner data-icon="inline-start" /> : <Save data-icon="inline-start" />}
+              {t("common.save")}
+            </Button>
+          ) : null}
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -408,6 +479,7 @@ export function ProjectFieldEditDialog({
   item,
   open,
   pending,
+  readOnly = false,
   error,
   onOpenChange,
   onSubmit,
@@ -416,6 +488,7 @@ export function ProjectFieldEditDialog({
   item: GitHubProjectItem;
   open: boolean;
   pending: boolean;
+  readOnly?: boolean;
   error: string;
   onOpenChange: (open: boolean) => void;
   onSubmit: (update: GitHubProjectItemUpdate) => void;
@@ -425,22 +498,32 @@ export function ProjectFieldEditDialog({
   const initial = useMemo(() => projectFieldInitialValue(current), [current]);
   const [value, setValue] = useState(initial.text);
   const [selected, setSelected] = useState<string[]>(initial.selected);
-  useEffect(() => {
-    if (open) {
-      setValue(initial.text);
-      setSelected(initial.selected);
-    }
-  }, [open, initial]);
+  useDialogInitialization(open, `${item.id}:${field.id}`, () => {
+    setValue(initial.text);
+    setSelected(initial.selected);
+  });
   const update = projectFieldUpdate(field, value, selected);
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="harbor-popover sm:max-w-[460px]">
-        <DialogHeader>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!pending) onOpenChange(next);
+      }}
+    >
+      <DialogContent showCloseButton={!pending} className="sm:max-w-[460px]">
+        <DialogHeader className="pr-8">
           <DialogTitle>{field.name}</DialogTitle>
-          <DialogDescription>{t("workspace.projects.editFieldDescription")}</DialogDescription>
+          <DialogDescription>
+            {t(
+              readOnly
+                ? "workspace.projects.readOnlyDescription"
+                : "workspace.projects.editFieldDescription"
+            )}
+          </DialogDescription>
         </DialogHeader>
         <ProjectFieldControl
           field={field}
+          disabled={pending || readOnly || !field.editable}
           value={value}
           selected={selected}
           onValueChange={setValue}
@@ -451,11 +534,14 @@ export function ProjectFieldEditDialog({
           <Button
             variant="ghost"
             onClick={() => onSubmit({ kind: "clearField", fieldId: field.id })}
-            disabled={!current || pending}
+            disabled={!current || pending || readOnly || !field.editable}
           >
             {t("workspace.projects.clearField")}
           </Button>
-          <Button onClick={() => update && onSubmit(update)} disabled={!update || pending}>
+          <Button
+            onClick={() => update && onSubmit(update)}
+            disabled={!update || pending || readOnly || !field.editable}
+          >
             {pending ? <Spinner data-icon="inline-start" /> : <Save data-icon="inline-start" />}
             {t("common.save")}
           </Button>
@@ -467,12 +553,14 @@ export function ProjectFieldEditDialog({
 
 function ProjectFieldControl({
   field,
+  disabled,
   value,
   selected,
   onValueChange,
   onSelectedChange,
 }: {
   field: GitHubProjectField;
+  disabled: boolean;
   value: string;
   selected: string[];
   onValueChange: (value: string) => void;
@@ -488,7 +576,11 @@ function ProjectFieldControl({
       <FieldGroup>
         <Field>
           <FieldLabel htmlFor={`project-field-${field.id}`}>{field.name}</FieldLabel>
-          <Select value={selected[0]} onValueChange={(next) => onSelectedChange([next])}>
+          <Select
+            disabled={disabled || options.length === 0}
+            value={selected[0]}
+            onValueChange={(next) => onSelectedChange([next])}
+          >
             <SelectTrigger id={`project-field-${field.id}`}>
               <SelectValue placeholder={t("workspace.projects.selectValue")} />
             </SelectTrigger>
@@ -502,18 +594,25 @@ function ProjectFieldControl({
               </SelectGroup>
             </SelectContent>
           </Select>
+          {options.length === 0 ? (
+            <FieldDescription>{t("workspace.projects.noFieldOptions")}</FieldDescription>
+          ) : null}
         </Field>
       </FieldGroup>
     );
   }
   if (field.dataType === "multiSelect") {
     return (
-      <FieldSet>
-        <FieldLegend>{field.name}</FieldLegend>
+      <FieldSet disabled={disabled}>
+        <FieldLegend variant="label">{field.name}</FieldLegend>
+        {field.options.length === 0 ? (
+          <FieldDescription>{t("workspace.projects.noFieldOptions")}</FieldDescription>
+        ) : null}
         <FieldGroup>
           {field.options.map((option) => (
             <Field key={option.id} orientation="horizontal">
               <Checkbox
+                disabled={disabled}
                 id={`project-field-${field.id}-${option.id}`}
                 checked={selected.includes(option.id)}
                 onCheckedChange={(checked) =>
@@ -536,6 +635,7 @@ function ProjectFieldControl({
       <Field>
         <FieldLabel htmlFor={`project-field-${field.id}`}>{field.name}</FieldLabel>
         <Input
+          disabled={disabled}
           id={`project-field-${field.id}`}
           type={
             field.dataType === "number" ? "number" : field.dataType === "date" ? "date" : "text"
@@ -588,13 +688,16 @@ function projectFieldUpdate(
     case "date":
       return value ? { kind: "date", fieldId: field.id, date: value } : null;
     case "singleSelect":
-      return selected[0]
+      return field.options.some((option) => option.id === selected[0])
         ? { kind: "singleSelect", fieldId: field.id, optionId: selected[0] }
         : null;
     case "multiSelect":
-      return { kind: "multiSelect", fieldId: field.id, optionIds: selected };
+      return field.options.length &&
+        selected.every((id) => field.options.some((option) => option.id === id))
+        ? { kind: "multiSelect", fieldId: field.id, optionIds: selected }
+        : null;
     case "iteration":
-      return selected[0]
+      return field.iterations.some((iteration) => iteration.id === selected[0])
         ? { kind: "iteration", fieldId: field.id, iterationId: selected[0] }
         : null;
     default:

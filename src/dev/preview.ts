@@ -1,5 +1,9 @@
 import { createWorkflowFixtures } from "./workflow-fixtures";
 import { createWikiFixtures } from "./wiki-fixtures";
+import { createRepositoryActionFixtures } from "./repository-action-fixtures";
+import { createConversationActionFixtures } from "./conversation-action-fixtures";
+import { createProjectFixtures } from "./project-fixtures";
+import { createGistFixtures } from "./gist-fixtures";
 import { createNotificationTargetFixtures } from "./notification-target-fixtures";
 import { discoveryFixture } from "./discovery-fixtures";
 import {
@@ -108,13 +112,41 @@ export function installPreview() {
   const openedUrls: string[] = [];
   Object.assign(window, { __harborPreviewOpenedUrls: openedUrls });
   const state = parameters.get("state") ?? "populated";
-  const repositories =
-    parameters.get("repo") === "private"
-      ? repositoryFixtures.map((repository, index) =>
-          index ? repository : { ...repository, isPrivate: true }
-        )
-      : repositoryFixtures;
+  const repositoryActions = parameters.get("repoActions");
+  const externalRepository = repositoryActions && repositoryActions !== "owned";
+  const repositories = repositoryFixtures.map((repository, index) => ({
+    ...repository,
+    ...(index === 0 && parameters.get("repo") === "private" ? { isPrivate: true } : {}),
+    ...(index === 0 && externalRepository
+      ? {
+          owner: "harbor-community",
+          fullName: `harbor-community/${repository.name}`,
+          url: `https://github.com/harbor-community/${repository.name}`,
+        }
+      : {}),
+  }));
+  const repositoryActionFixtures = createRepositoryActionFixtures(
+    repositories,
+    repositoryActions,
+    parameters.get("writes") === "accept"
+  );
   const notificationTargets = parameters.get("notifications") === "targets";
+  const gistFixtures = createGistFixtures(
+    parameters.get("gists"),
+    parameters.get("writes") === "accept"
+  );
+  const projectFixtures = createProjectFixtures(
+    repositories,
+    parameters.get("projects"),
+    parameters.get("writes") === "accept"
+  );
+  const conversationActionFixtures = createConversationActionFixtures(repositories, {
+    conversation: parameters.get("conversation"),
+    reactions: parameters.get("reactions"),
+    pins: parameters.get("pins"),
+    acceptWrites: parameters.get("writes") === "accept",
+    pullRequest: parameters.get("pr"),
+  });
   const workflowFixtures = createWorkflowFixtures(
     repositories,
     parameters.get("actions"),
@@ -295,6 +327,22 @@ export function installPreview() {
     if (wikiResult !== undefined) return wikiResult;
     const workflowResult = workflowFixtures(command, args, commandState === "empty");
     if (workflowResult !== undefined) return workflowResult;
+    const repositoryActionResult = repositoryActionFixtures(
+      command,
+      args,
+      commandState === "empty"
+    );
+    if (repositoryActionResult !== undefined) return repositoryActionResult;
+    const conversationActionResult = conversationActionFixtures(
+      command,
+      args,
+      commandState === "empty"
+    );
+    if (conversationActionResult !== undefined) return conversationActionResult;
+    const projectResult = projectFixtures(command, args, commandState === "empty");
+    if (projectResult !== undefined) return projectResult;
+    const gistResult = gistFixtures(command, args, commandState === "empty");
+    if (gistResult !== undefined) return gistResult;
     const workspaceResult = workspaceFixture(
       command,
       args,

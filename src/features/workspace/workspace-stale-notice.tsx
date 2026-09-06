@@ -2,17 +2,42 @@ import { TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function WorkspaceStaleNotice({
   message,
   onRetry,
   retryDisabled = false,
+  compact = false,
 }: {
   message: string;
   onRetry: () => void;
   retryDisabled?: boolean;
+  compact?: boolean;
 }) {
   const { t } = useTranslation();
+  if (compact) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            size="xs"
+            onClick={onRetry}
+            disabled={retryDisabled}
+          >
+            <TriangleAlert data-icon="inline-start" className="text-destructive" />
+            {t("common.staleRetry")}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-72">
+          <p>{t("common.staleResults")}</p>
+          <p className="break-words">{message}</p>
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
   return (
     <Alert variant="destructive" className="shrink-0 rounded-none border-x-0 border-t-0">
       <TriangleAlert />

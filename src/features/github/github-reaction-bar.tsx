@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAppTranslation } from "@/hooks/use-app-translation";
 import { cn } from "@/lib/utils";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import type { GitHubReactionContent, GitHubReactionSubjectRef } from "./github-data";
 import { useGitHubReactions } from "./github-reactions-provider";
 
@@ -58,6 +59,7 @@ export function GitHubReactionBar({
             size="icon-xs"
             className={className}
             aria-label={t("workspace.repositories.reactions.retry")}
+            disabled={reactions.refreshing}
             onClick={reactions.retry}
           >
             <RefreshCw />
@@ -74,10 +76,18 @@ export function GitHubReactionBar({
     const group = current.groups.find((group) => group.content === reaction.content);
     return group && group.count > 0 ? [{ ...reaction, group }] : [];
   });
-  if (!visibleGroups.length && !current.viewerCanReact) return null;
+  if (!visibleGroups.length && !current.viewerCanReact && !reactions.error) return null;
 
   return (
     <div className={cn("flex min-w-0 flex-wrap items-center gap-1", className)}>
+      {reactions.error ? (
+        <WorkspaceStaleNotice
+          compact
+          message={reactions.error.message}
+          onRetry={reactions.retry}
+          retryDisabled={reactions.refreshing || reactions.pending}
+        />
+      ) : null}
       {visibleGroups.map(({ content, emoji, group }) => {
         const canToggle = current.viewerCanReact || group.viewerHasReacted;
         return (

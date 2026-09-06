@@ -146,3 +146,45 @@ History rows use13px wrapping messages and `aria-current` for selection. Reading
 `?wiki=history|long|raw|truncated|source|offline|archived|readonly|disabled|uninitialized` selects controlled Wiki scenarios. Scoped command states cover history/revision/comparison reads and restore pending/errors. `&writes=accept` permits a simulated restore and reconciles subsequent fixture reads; it does not change a real Wiki or Git repository.
 
 Native ThemeProvider synchronization requires `core:window:allow-set-theme` and `core:window:allow-set-effects` in the main/about/settings capability. `core:default` alone does not permit those calls. Browser mocks cannot validate native ACL enforcement. The provider already chooses the light/dark native effect and removes it for reduced transparency; actual native observation remains part of acceptance.
+
+## Conversation refresh feedback
+
+`WorkspaceStaleNotice.compact` provides an outlined, localized stale Retry button for dense action rows. Its Tooltip is attached directly to the button so keyboard focus receives the error description. The gallery includes enabled and disabled examples. The default full notice remains unchanged.
+
+Reaction rows keep cached counts alongside this compact notice, including a cached empty read-only subject. Retry is disabled while a reaction write or refresh is pending. Conversation controls retain their subscription and lock actions with a full stale notice; their pending mutation guards remain. The provider exposes `refreshing` separately from initial `loading` and mutation `pending`.
+
+Use `?state=stale&commands=github_get_repository_reactions,github_get_repository_conversation_controls` and invalidate the relevant queries after their first successful reads. These new states still need the browser matrix; current restricted-session CLI attempts produced no new screenshots.
+
+## Repository actions and creation
+
+Repository relationship controls use a repository-keyed component instance. A late Star/Watch response continues reconciling its original repository even after navigation. The Star count shows its tentative delta only while the write is pending. Retained relationship errors expose compact stale Retry without removing an open Fork dialog. Action tooltips, separators and the control surface reuse shared primitives and semantic tokens.
+
+Create and Fork disable editable controls and dismissal during submission. Failures remain inline with the draft and reset on reopening. Repository creation uses linked template labels, a named visibility group and per-instance checkbox IDs. Optional template failures do not block repository creation; retained template options stay selected through refresh failures.
+
+`?repoActions=external|owned|starred|ignored|fork-existing|slow-star` enables repository-action fixtures. All modes except `owned` make the first repository belong to the synthetic `harbor-community` account so Fork is available. Add `writes=accept` to simulate only Star, Watch, Fork and personal repository creation. `slow-star` delays the Star response by 1.5 seconds for navigation checks. `fork-existing` returns an existing-fork result. Query/mutation loading and errors still use the scoped `state`/`commands` parameters.
+
+The fixture reconciles subsequent list, relationship and created-repository settings reads. DTOs returned to caches are copied; accepted writes replace canonical repository objects rather than changing previously returned objects. Reinstalling the preview starts from clean fixture data. Unknown business writes still fail locally. These fixtures do not create or modify real GitHub repositories. New action/form states still require browser and native visual acceptance.
+
+## Conversation, reaction and Issue pin fixtures
+
+`conversation=standard|locked|readonly|unsubscribed|unknown`, `reactions=standard|readonly|empty` and `pins=standard|pinned|limit|readonly|identity-mismatch|repository-mismatch` enable independent controlled states. Add `writes=accept` to simulate only their lock/subscription, reaction and pin operations. Scoped `state`/`commands` parameters still supply loading, failure and stale reads. Use `reactions=readonly&state=empty&commands=github_get_repository_reactions` for an initially empty read-only reaction list.
+
+Conversation state is keyed by repository, Issue/PR kind and number; lock changes also reconcile subsequent detail reads. Reactions are keyed by repository and opaque subject identity, respect Release's supported reactions, and allow a read-only viewer to remove their own reaction. Pin fixtures preserve permission, identity and three-Issue guards. All returned state is copied before reaching caches. The shared repository fixtures also match an explicit owner, preventing a same-name fork from replacing its upstream in Issue/Wiki reads. Baseline conversation reads now use the production `conversationKind`/`conversationNumber` arguments.
+
+These additions prepare the remaining visual action matrix; unit/interaction checks do not establish browser or native acceptance. The old unsuccessful before-capture script cannot produce before evidence from the now-modified source.
+
+## Project field and draft actions
+
+Project dialogs guard dismissal and editable controls while a mutation is pending. Settings, draft and field dialogs initialize their local draft when opening or changing target identity; refreshed props do not overwrite unsent input. Read-only Project permissions reach table/board/roadmap item actions, field controls and the draft reader. Draft text stays readable without a Save action. Empty choice fields show a compact explanation and do not submit absent options. Project descriptions and text field values wrap; cached item replacement preserves the existing row position.
+
+`?projects=fields|iterations|long|empty-options|readonly|closed` enables controlled Project data. Fields include text, number (including zero), date, single/multi-select and iteration. `iterations` groups the board by iteration; `long` expands the Project title/description and draft body. `empty-options` removes select/iteration choices; `readonly` leaves field-type metadata editable while denying Project writes, matching the distinction in production data. For `closed`, choose the Closed or All Project filter.
+
+With `writes=accept`, only the six Project command families (create/update/delete, add/update/change item) are simulated. Reads reconcile settings, field values, drafts, active/archived items and deletions; created Projects begin without items. Returned snapshots are independent, and item identities include the Project number. Unknown business writes continue to fail. These fixtures prepare visual acceptance and do not change real GitHub Projects.
+
+## Gist editor and action recovery
+
+The Gist editor preserves file/description drafts across refreshed props and initializes again when reopened or given a different Gist. Saving disables dismissal and all inputs; the visibility group and comment editor have accessible names. Comment creation and editing retain each other's unsent drafts. Pending comment operations disable action switching, failures appear only in the corresponding form, and delete confirmations retain pending state and reset failures when reopened.
+
+`?gists=files|long|truncated|external|comments-disabled|readonly-comments` enables controlled Gist data. `files` adds Markdown alongside TypeScript; `long` expands descriptions, file content and comments. `truncated` disables editing incomplete content. Select the Public list for `external` and `readonly-comments`, which belong to another synthetic account; the latter also denies modification of the seeded comment.
+
+Add `writes=accept` to simulate Gist creation, file/description edits, confirmed deletion, Star, Fork and comment creation/editing/deletion. Reads reconcile list sources, content, comment counts and revision snapshots. Previous revisions and returned DTOs remain independent. Revision line statistics are fixed synthetic values, not a computed diff. Scoped `state`/`commands` still provide waiting/failure/refresh scenarios. These fixtures do not change real Gists or verify live GitHub contracts; browser/native acceptance remains pending.

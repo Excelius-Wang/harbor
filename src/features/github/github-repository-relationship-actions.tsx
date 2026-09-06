@@ -1,8 +1,9 @@
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, ChevronDown, GitFork, RefreshCw, Star } from "lucide-react";
+import { Bell, ChevronDown, CircleAlert, GitFork, RefreshCw, Star } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -23,8 +24,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Field, FieldContent, FieldDescription, FieldLabel } from "@/components/ui/field";
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { Spinner } from "@/components/ui/spinner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { parseIpcError } from "@/lib/ipc-error";
@@ -49,6 +58,15 @@ export function GitHubRepositoryRelationshipActions({
 }: {
   repository: GitHubRepository;
 }) {
+  return (
+    <RepositoryRelationshipActions
+      key={`${repository.id}:${repository.owner}/${repository.name}`}
+      repository={repository}
+    />
+  );
+}
+
+function RepositoryRelationshipActions({ repository }: { repository: GitHubRepository }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const forkNameId = useId();
@@ -59,12 +77,6 @@ export function GitHubRepositoryRelationshipActions({
   const target = { owner: repository.owner, repository: repository.name };
   const relationshipResult = useQuery(repositoryRelationshipQueryOptions(target));
   const relationship = relationshipResult.data;
-
-  useEffect(() => {
-    setForkOpen(false);
-    setForkName(repository.name);
-    setDefaultBranchOnly(false);
-  }, [repository.id, repository.name]);
 
   const starMutation = useMutation({
     mutationFn: (starred: boolean) => updateRepositoryStar(target, starred),
@@ -114,13 +126,9 @@ export function GitHubRepositoryRelationshipActions({
           : undefined
       );
     },
-    onError: (error) =>
-      toast.error(t("workspace.repositories.forkFailed"), {
-        description: parseIpcError(error).message,
-      }),
   });
 
-  if (relationshipResult.isError) {
+  if (relationshipResult.isError && !relationship) {
     return (
       <Button
         type="button"
@@ -136,118 +144,159 @@ export function GitHubRepositoryRelationshipActions({
   }
 
   const actionsPending = relationshipResult.isPending;
-  const mutationPending = starMutation.isPending || watchMutation.isPending;
+  const mutationPending =
+    starMutation.isPending || watchMutation.isPending || forkMutation.isPending;
+  const forkError = forkMutation.error ? parseIpcError(forkMutation.error) : null;
+  const starLabel = t(
+    relationship?.starred ? "workspace.repositories.starredLabel" : "workspace.repositories.star"
+  );
+  const watchLabel = relationship
+    ? t(`workspace.repositories.watchLevels.${relationship.watchLevel}.label`)
+    : t("workspace.repositories.watch");
   const starCount = Math.max(
     0,
     repository.stars +
-      (relationship && starMutation.variables !== undefined
+      (relationship && starMutation.isPending && starMutation.variables !== undefined
         ? Number(starMutation.variables) - Number(relationship.starred)
         : 0)
   );
 
   return (
-    <div
-      className="border-border/70 bg-muted/25 flex items-center rounded-md border p-0.5 shadow-xs"
-      aria-label={t("workspace.repositories.relationshipActions")}
-    >
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        className="h-7 rounded-sm px-2.5"
-        disabled={actionsPending || mutationPending}
-        aria-pressed={relationship?.starred ?? false}
-        onClick={() => relationship && starMutation.mutate(!relationship.starred)}
+    <div className="flex min-w-0 flex-wrap items-center gap-2">
+      {relationshipResult.error ? (
+        <WorkspaceStaleNotice
+          compact
+          message={parseIpcError(relationshipResult.error).message}
+          onRetry={() => void relationshipResult.refetch()}
+          retryDisabled={relationshipResult.isFetching || mutationPending}
+        />
+      ) : null}
+      <div
+        role="group"
+        className="harbor-control border-border/70 flex items-center rounded-md border p-0.5"
+        aria-label={t("workspace.repositories.relationshipActions")}
       >
-        {starMutation.isPending ? (
-          <Spinner />
-        ) : (
-          <Star className={cn(relationship?.starred && "fill-current text-amber-400")} />
-        )}
-        <span className="max-[1080px]:sr-only">
-          {t(
-            relationship?.starred
-              ? "workspace.repositories.starredLabel"
-              : "workspace.repositories.star"
-          )}
-        </span>
-        <span className="text-muted-foreground tabular-nums">{starCount.toLocaleString()}</span>
-      </Button>
-
-      <span className="bg-border/70 h-4 w-px" aria-hidden="true" />
-
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-7 rounded-sm px-2.5"
-            disabled={actionsPending || mutationPending}
-          >
-            {watchMutation.isPending ? <Spinner /> : <Bell />}
-            <span className="max-[1160px]:sr-only">
-              {relationship
-                ? t(`workspace.repositories.watchLevels.${relationship.watchLevel}.label`)
-                : t("workspace.repositories.watch")}
-            </span>
-            <ChevronDown className="opacity-60" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-72">
-          <DropdownMenuLabel>{t("workspace.repositories.watchMenuTitle")}</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuRadioGroup
-            value={relationship?.watchLevel}
-            onValueChange={(value) => watchMutation.mutate(value as GitHubRepositoryWatchLevel)}
-          >
-            {watchLevels.map((level) => (
-              <DropdownMenuRadioItem key={level} value={level} className="items-start py-2">
-                <span className="flex flex-col gap-0.5">
-                  <span className="text-xs font-medium">
-                    {t(`workspace.repositories.watchLevels.${level}.label`)}
-                  </span>
-                  <span className="text-muted-foreground text-[11px] leading-4 font-normal whitespace-normal">
-                    {t(`workspace.repositories.watchLevels.${level}.description`)}
-                  </span>
-                </span>
-              </DropdownMenuRadioItem>
-            ))}
-          </DropdownMenuRadioGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      <span className="bg-border/70 h-4 w-px" aria-hidden="true" />
-
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span>
+        <Tooltip>
+          <TooltipTrigger asChild>
             <Button
               type="button"
               variant="ghost"
               size="sm"
               className="h-7 rounded-sm px-2.5"
-              disabled={
-                actionsPending || relationship?.viewerOwnsRepository || forkMutation.isPending
-              }
-              onClick={() => setForkOpen(true)}
+              disabled={actionsPending || mutationPending}
+              aria-pressed={relationship?.starred ?? false}
+              onClick={() => relationship && starMutation.mutate(!relationship.starred)}
             >
-              <GitFork />
-              <span className="max-[1080px]:sr-only">{t("workspace.repositories.forkAction")}</span>
+              {starMutation.isPending ? (
+                <Spinner />
+              ) : (
+                <Star className={cn(relationship?.starred && "text-attention fill-current")} />
+              )}
+              <span className="max-[1080px]:sr-only">{starLabel}</span>
               <span className="text-muted-foreground tabular-nums">
-                {repository.forks.toLocaleString()}
+                {starCount.toLocaleString()}
               </span>
             </Button>
-          </span>
-        </TooltipTrigger>
-        {relationship?.viewerOwnsRepository ? (
-          <TooltipContent>{t("workspace.repositories.ownRepositoryCannotFork")}</TooltipContent>
-        ) : null}
-      </Tooltip>
+          </TooltipTrigger>
+          <TooltipContent>{starLabel}</TooltipContent>
+        </Tooltip>
 
-      <Dialog open={forkOpen} onOpenChange={setForkOpen}>
-        <DialogContent>
-          <DialogHeader>
+        <Separator orientation="vertical" className="data-[orientation=vertical]:h-4" />
+
+        <DropdownMenu>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 rounded-sm px-2.5"
+                  disabled={actionsPending || mutationPending}
+                >
+                  {watchMutation.isPending ? <Spinner /> : <Bell />}
+                  <span className="max-[1160px]:sr-only">{watchLabel}</span>
+                  <ChevronDown className="opacity-60" />
+                </Button>
+              </DropdownMenuTrigger>
+            </TooltipTrigger>
+            <TooltipContent>{watchLabel}</TooltipContent>
+          </Tooltip>
+          <DropdownMenuContent align="end" className="w-72">
+            <DropdownMenuLabel>{t("workspace.repositories.watchMenuTitle")}</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuRadioGroup
+              value={relationship?.watchLevel}
+              onValueChange={(value) => {
+                if (!mutationPending) watchMutation.mutate(value as GitHubRepositoryWatchLevel);
+              }}
+            >
+              {watchLevels.map((level) => (
+                <DropdownMenuRadioItem
+                  key={level}
+                  value={level}
+                  disabled={mutationPending}
+                  className="items-start py-2"
+                >
+                  <span className="flex flex-col gap-0.5">
+                    <span className="text-[13px] font-medium">
+                      {t(`workspace.repositories.watchLevels.${level}.label`)}
+                    </span>
+                    <span className="text-muted-foreground text-[11px] leading-4 font-normal whitespace-normal">
+                      {t(`workspace.repositories.watchLevels.${level}.description`)}
+                    </span>
+                  </span>
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <Separator orientation="vertical" className="data-[orientation=vertical]:h-4" />
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 rounded-sm px-2.5"
+                disabled={
+                  actionsPending || relationship?.viewerOwnsRepository || forkMutation.isPending
+                }
+                onClick={() => {
+                  forkMutation.reset();
+                  setForkOpen(true);
+                }}
+              >
+                <GitFork />
+                <span className="max-[1080px]:sr-only">
+                  {t("workspace.repositories.forkAction")}
+                </span>
+                <span className="text-muted-foreground tabular-nums">
+                  {repository.forks.toLocaleString()}
+                </span>
+              </Button>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>
+            {t(
+              relationship?.viewerOwnsRepository
+                ? "workspace.repositories.ownRepositoryCannotFork"
+                : "workspace.repositories.forkAction"
+            )}
+          </TooltipContent>
+        </Tooltip>
+      </div>
+      <Dialog
+        open={forkOpen}
+        onOpenChange={(next) => {
+          if (!forkMutation.isPending) setForkOpen(next);
+        }}
+      >
+        <DialogContent showCloseButton={!forkMutation.isPending}>
+          <DialogHeader className="pr-8">
             <DialogTitle>{t("workspace.repositories.forkDialogTitle")}</DialogTitle>
             <DialogDescription>
               {t("workspace.repositories.forkDialogDescription", {
@@ -256,11 +305,12 @@ export function GitHubRepositoryRelationshipActions({
               })}
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col gap-5 py-1">
+          <FieldGroup className="gap-5 py-1">
             <Field>
               <FieldLabel htmlFor={forkNameId}>{t("workspace.repositories.forkName")}</FieldLabel>
               <Input
                 id={forkNameId}
+                disabled={forkMutation.isPending}
                 value={forkName}
                 maxLength={100}
                 autoComplete="off"
@@ -276,6 +326,7 @@ export function GitHubRepositoryRelationshipActions({
             <Field orientation="horizontal">
               <Checkbox
                 id={defaultBranchId}
+                disabled={forkMutation.isPending}
                 checked={defaultBranchOnly}
                 onCheckedChange={(checked) => setDefaultBranchOnly(checked === true)}
               />
@@ -290,7 +341,14 @@ export function GitHubRepositoryRelationshipActions({
                 </FieldDescription>
               </FieldContent>
             </Field>
-          </div>
+          </FieldGroup>
+          {forkError ? (
+            <Alert variant="destructive">
+              <CircleAlert />
+              <AlertTitle>{t("workspace.repositories.forkFailed")}</AlertTitle>
+              <AlertDescription>{forkError.message}</AlertDescription>
+            </Alert>
+          ) : null}
           <DialogFooter>
             <DialogClose asChild>
               <Button type="button" variant="outline" disabled={forkMutation.isPending}>
@@ -300,7 +358,9 @@ export function GitHubRepositoryRelationshipActions({
             <Button
               type="button"
               disabled={!forkName.trim() || forkMutation.isPending}
-              onClick={() => forkMutation.mutate()}
+              onClick={() => {
+                if (forkName.trim() && !forkMutation.isPending) forkMutation.mutate();
+              }}
             >
               {forkMutation.isPending ? <Spinner /> : <GitFork />}
               {t(

@@ -29,6 +29,7 @@ type ReactionMutation = {
 type GitHubReactionsContextValue = {
   subject: (reference: GitHubReactionSubjectRef) => GitHubReactionSubject | undefined;
   loading: boolean;
+  refreshing: boolean;
   error: IpcError | null;
   pending: boolean;
   toggle: (reference: GitHubReactionSubjectRef, content: GitHubReactionContent) => void;
@@ -138,6 +139,7 @@ export function GitHubReactionsProvider({
     () => ({
       subject: (reference) => subjectsByKey.get(reactionKey(reference)),
       loading: results.some((result) => result.isPending),
+      refreshing: results.some((result) => result.isFetching),
       error: queryError ? parseIpcError(queryError) : null,
       pending: mutation.isPending,
       toggle: (reference, content) => {

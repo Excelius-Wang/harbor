@@ -137,7 +137,10 @@ export function repositoryFixture(
   repositories: Data.GitHubRepository[],
   empty: boolean
 ): unknown {
-  const repository = repositories.find((item) => item.name === args.repository) ?? repositories[0];
+  const repository =
+    repositories.find(
+      (item) => item.name === args.repository && (!args.owner || item.owner === args.owner)
+    ) ?? repositories[0];
   const overview: Data.GitHubWikiOverview = {
     repositoryId: repository.id,
     enabled: true,

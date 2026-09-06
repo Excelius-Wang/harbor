@@ -683,7 +683,7 @@ function ProjectDetailWorkspace({
                 #{project.number}
               </Badge>
             </div>
-            <p className="text-muted-foreground line-clamp-2 max-w-[72ch] text-xs leading-5">
+            <p className="text-muted-foreground max-w-[72ch] text-[13px] leading-5">
               {project.shortDescription || t("workspace.projects.noDescription")}
             </p>
           </div>
@@ -731,7 +731,10 @@ function ProjectDetailWorkspace({
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
                 <DropdownMenuItem
-                  onSelect={() => setDeleteProjectOpen(true)}
+                  onSelect={() => {
+                    deleteMutation.reset();
+                    setDeleteProjectOpen(true);
+                  }}
                   disabled={!project.viewerCanUpdate}
                   className="text-destructive focus:text-destructive"
                 >
@@ -893,6 +896,7 @@ function ProjectDetailWorkspace({
           item={draftItem}
           open
           pending={itemUpdateMutation.isPending}
+          readOnly={!project.viewerCanUpdate}
           error={itemUpdateMutation.error ? parseIpcError(itemUpdateMutation.error).message : ""}
           onOpenChange={(open) => {
             if (!open) {
@@ -909,6 +913,7 @@ function ProjectDetailWorkspace({
           item={fieldEditor.item}
           open
           pending={itemUpdateMutation.isPending}
+          readOnly={!project.viewerCanUpdate}
           error={itemUpdateMutation.error ? parseIpcError(itemUpdateMutation.error).message : ""}
           onOpenChange={(open) => {
             if (!open) {
@@ -920,7 +925,14 @@ function ProjectDetailWorkspace({
         />
       ) : null}
 
-      <AlertDialog open={deleteProjectOpen} onOpenChange={setDeleteProjectOpen}>
+      <AlertDialog
+        open={deleteProjectOpen}
+        onOpenChange={(open) => {
+          if (deleteMutation.isPending) return;
+          setDeleteProjectOpen(open);
+          if (!open) deleteMutation.reset();
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("workspace.projects.deleteProjectTitle")}</AlertDialogTitle>
@@ -942,7 +954,7 @@ function ProjectDetailWorkspace({
               variant="destructive"
               onClick={(event) => {
                 event.preventDefault();
-                deleteMutation.mutate();
+                if (!deleteMutation.isPending) deleteMutation.mutate();
               }}
               disabled={deleteMutation.isPending}
             >
@@ -1041,12 +1053,17 @@ function ProjectTable({
                     <ProjectFieldCell
                       field={field}
                       item={item}
+                      canEdit={detail.project.viewerCanUpdate}
                       onEdit={() => onEditField(item, field)}
                     />
                   </TableCell>
                 ))}
                 <TableCell>
-                  <ProjectItemMenu item={item} onAction={onAction} />
+                  <ProjectItemMenu
+                    item={item}
+                    onAction={onAction}
+                    canEdit={detail.project.viewerCanUpdate}
+                  />
                 </TableCell>
               </TableRow>
             );
@@ -1142,7 +1159,11 @@ function ProjectBoard({
                             {projectItemRepository(item) || t("workspace.projects.draftIssue")}
                           </CardDescription>
                           <CardAction>
-                            <ProjectItemMenu item={item} onAction={onAction} />
+                            <ProjectItemMenu
+                              item={item}
+                              onAction={onAction}
+                              canEdit={detail.project.viewerCanUpdate}
+                            />
                           </CardAction>
                         </CardHeader>
                         <CardContent className="flex flex-wrap gap-1 px-3">
@@ -1161,7 +1182,7 @@ function ProjectBoard({
                                 </Badge>
                               ) : null;
                             })}
-                          {groupField.editable ? (
+                          {groupField.editable && detail.project.viewerCanUpdate ? (
                             <Button
                               variant="ghost"
                               size="xs"
@@ -1237,7 +1258,11 @@ function ProjectRoadmap({ detail, view, items, onOpenItem, onAction }: ProjectIt
                 </span>
               </Button>
               <div className="flex items-center">
-                <ProjectItemMenu item={item} onAction={onAction} />
+                <ProjectItemMenu
+                  item={item}
+                  onAction={onAction}
+                  canEdit={detail.project.viewerCanUpdate}
+                />
               </div>
             </div>
           );
@@ -1250,16 +1275,18 @@ function ProjectRoadmap({ detail, view, items, onOpenItem, onAction }: ProjectIt
 function ProjectFieldCell({
   field,
   item,
+  canEdit,
   onEdit,
 }: {
   field: GitHubProjectField;
   item: GitHubProjectItem;
+  canEdit: boolean;
   onEdit: () => void;
 }) {
   const { t } = useTranslation();
   const value = projectFieldValue(item, field.id);
   const content = <ProjectFieldValueDisplay value={value} />;
-  return field.editable ? (
+  return field.editable && canEdit ? (
     <Button
       variant="ghost"
       onClick={onEdit}
@@ -1309,17 +1336,20 @@ function ProjectFieldValueDisplay({ value }: { value: GitHubProjectFieldValue | 
       </span>
     );
   }
-  return <span className="line-clamp-2">{projectFieldValueText(value)}</span>;
+  return <span className="wrap-anywhere whitespace-pre-wrap">{projectFieldValueText(value)}</span>;
 }
 
 function ProjectItemMenu({
   item,
   onAction,
+  canEdit,
 }: {
   item: GitHubProjectItem;
+  canEdit: boolean;
   onAction: (item: GitHubProjectItem, action: GitHubProjectItemAction) => void;
 }) {
   const { t } = useTranslation();
+  if (!canEdit) return null;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -1372,7 +1402,12 @@ function ProjectItemActionDialog({
   const { t } = useTranslation();
   const action = target?.action;
   return (
-    <AlertDialog open={Boolean(target)} onOpenChange={onOpenChange}>
+    <AlertDialog
+      open={Boolean(target)}
+      onOpenChange={(open) => {
+        if (!pending) onOpenChange(open);
+      }}
+    >
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>
@@ -1396,7 +1431,7 @@ function ProjectItemActionDialog({
             variant={action === "delete" ? "destructive" : "default"}
             onClick={(event) => {
               event.preventDefault();
-              onConfirm();
+              if (!pending) onConfirm();
             }}
             disabled={pending}
           >

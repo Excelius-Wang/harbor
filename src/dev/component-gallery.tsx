@@ -211,6 +211,15 @@ function Gallery() {
             </Button>
           </WorkspacePageHeader>
           <WorkspaceStaleNotice message={copy("retry")} onRetry={() => {}} />
+          <div className="flex flex-wrap items-center gap-3">
+            <WorkspaceStaleNotice compact message={copy("retry")} onRetry={() => {}} />
+            <WorkspaceStaleNotice
+              compact
+              retryDisabled
+              message={copy("retry")}
+              onRetry={() => {}}
+            />
+          </div>
         </Example>
         <Example title={copy("actions")} usage={'<Button variant="outline" size="sm">…</Button>'}>
           <div className="flex flex-wrap items-center gap-3">
