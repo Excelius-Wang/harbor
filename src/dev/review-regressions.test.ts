@@ -45,6 +45,12 @@ it("keeps notification repositories defined for a one-repository or empty fixtur
   ) as Data.GitHubNotificationPage;
   expect(page.notifications).toHaveLength(4);
   expect(page.notifications.every((item) => item.repository.id === repository.id)).toBe(true);
+  expect(page.notifications.map(({ subject }) => [subject.kind, subject.url])).toEqual([
+    ["issue", `${repository.url}/issues/1`],
+    ["pullRequest", `${repository.url}/pull/1`],
+    ["issue", `${repository.url}/issues/1`],
+    ["pullRequest", `${repository.url}/pull/1`],
+  ]);
   expect(
     (moreFixture("github_list_notifications", {}, [], false) as Data.GitHubNotificationPage)
       .notifications

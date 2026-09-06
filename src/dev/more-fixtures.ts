@@ -211,7 +211,7 @@ export function moreFixture(
                   title,
                   kind: index % 2 ? "pullRequest" : "issue",
                   number: 1,
-                  url: `${repositories[index % repositories.length].url}/issues/1`,
+                  url: `${repositories[index % repositories.length].url}/${index % 2 ? "pull" : "issues"}/1`,
                 },
                 reason: index % 2 ? "review_requested" : "mention",
                 unread: true,
