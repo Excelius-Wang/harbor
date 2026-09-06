@@ -18,7 +18,7 @@ export function WorkspaceStaleNotice({
       <TriangleAlert />
       <AlertTitle>{t("common.staleResults")}</AlertTitle>
       <AlertDescription className="flex min-w-0 flex-wrap items-center gap-3">
-        <span className="min-w-0 flex-1 break-words">{message}</span>
+        <span className="min-w-0 flex-1 basis-48 break-words">{message}</span>
         <Button variant="outline" size="xs" onClick={onRetry} disabled={retryDisabled}>
           {t("common.retry")}
         </Button>

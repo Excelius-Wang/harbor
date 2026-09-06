@@ -33,7 +33,7 @@ Status: in progress. A source inventory is not visual acceptance. Every row belo
 | Repositories | Owned/starred lists, create/access/invitations, repository shell and tabs | Core browser, code and create-form capture done; other tabs/actions pending |
 | Discovery | Trending repositories/developers, developer feed, search and result/detail returns | Core/state/filter and eight nonzero return paths verified in both themes/languages/sizes |
 | Code | Tree, file/preview/blame, history/commits/comments, branches/tags/search and edit dialogs | Core/read/action/state matrices, focus and list/detail return verified; broader mutation audit remains |
-| Wiki | Page list, reading/editing/history and dialogs | Page/read/editor/history and core state matrix verified; comparison/revert/offline variants pending |
+| Wiki | Page list, reading/editing/history and dialogs | Page/read/editor plus complete history/comparison/restore, raw/truncated and offline/permission matrices verified with controlled responses |
 | Releases | Lists/details/create/edit and assets | List/detail/create/edit/delete/asset-delete and return/state matrix verified; artifact transfer states pending |
 | Discussions | Lists/details, comments/reactions/polls and forms | List/detail/forms/poll, comment dialogs and return/state matrices verified; nested replies and mutation variants pending |
 | Actions | Workflows/runs/jobs/artifacts/logs/check suites and controls | List/detail/log/dispatch/disable and returns verified; run/suite metadata, jobs/logs/artifacts and rerun/cancel/delete/download UI matrices verified with controlled responses |
@@ -144,7 +144,7 @@ Generated from existing JSX-bearing production files at task start. Each file mu
 | `src/features/github/github-commit-detail.tsx` | Audited; shared source/reading/metadata/feedback applied where needed | Code core/state/action/return matrices in UI_VERIFICATION.md; broader mutation audit remains |
 | `src/features/github/github-commit-list.tsx` | Audited; shared source/reading/metadata/feedback applied where needed | Code core/state/action/return matrices in UI_VERIFICATION.md; broader mutation audit remains |
 | `src/features/github/github-connection-dialog.tsx` | Audited shared material, layout, keyboard and asynchronous context handling | Context/auth matrix in UI_VERIFICATION.md; native material gate remains |
-| `src/features/github/github-conversation-comment-actions.tsx` | Pending | Pending |
+| `src/features/github/github-conversation-comment-actions.tsx` | Source reviewed; Issue/PR mutation adapter and reconciliation preserved | Core comment dialogs rendered; remaining action variants pending |
 | `src/features/github/github-conversation-controls.tsx` | Pending | Pending |
 | `src/features/github/github-discovery-view.tsx` | Audited shared rows, metadata, source labels, filters and cached return/state handling | Discovery core/state/return/filter matrices in UI_VERIFICATION.md |
 | `src/features/github/github-discussion-comment-minimize.tsx` | Audited; shared surfaces, readable metadata and retained-data feedback applied where needed | Administration core/state and supplemental dialog/return matrices verified; remaining variants explicit in UI_VERIFICATION.md |
@@ -153,7 +153,7 @@ Generated from existing JSX-bearing production files at task start. Each file mu
 | `src/features/github/github-discussion-form-dialog.tsx` | Audited; shared surfaces, readable metadata and retained-data feedback applied where needed | Administration core/state and supplemental dialog/return matrices verified; remaining variants explicit in UI_VERIFICATION.md |
 | `src/features/github/github-discussion-poll.tsx` | Audited; shared surfaces, readable metadata and retained-data feedback applied where needed | Administration core/state and supplemental dialog/return matrices verified; remaining variants explicit in UI_VERIFICATION.md |
 | `src/features/github/github-discussion-view.tsx` | Audited; shared surfaces, readable metadata and retained-data feedback applied where needed | Administration core/state and supplemental dialog/return matrices verified; remaining variants explicit in UI_VERIFICATION.md |
-| `src/features/github/github-execution-status.tsx` | Pending | Pending |
+| `src/features/github/github-execution-status.tsx` | Audited; semantic status icons preserved | Actions/check-suite/PR matrices in UI_VERIFICATION.md |
 | `src/features/github/github-file-blame.tsx` | Audited; shared source/reading/metadata/feedback applied where needed | Code core/state/action/return matrices in UI_VERIFICATION.md; broader mutation audit remains |
 | `src/features/github/github-file-diff.tsx` | Audited; shared source/reading/metadata/feedback applied where needed | Code core/state/action/return matrices in UI_VERIFICATION.md; broader mutation audit remains |
 | `src/features/github/github-file-preview.tsx` | Audited; shared source/reading/metadata/feedback applied where needed | Code core/state/action/return matrices in UI_VERIFICATION.md; broader mutation audit remains |
@@ -226,8 +226,8 @@ Generated from existing JSX-bearing production files at task start. Each file mu
 | `src/features/github/github-pull-request-shared.tsx` | Audited shared materials, metadata and retained-state feedback | PR lifecycle/review matrix in UI_VERIFICATION.md; native material gate remains |
 | `src/features/github/github-pull-request-view.tsx` | Audited shared PR surfaces, controls and readable metadata | PR core/lifecycle/review/inline matrices and applicable state checks in UI_VERIFICATION.md |
 | `src/features/github/github-reaction-bar.tsx` | Pending | Pending |
-| `src/features/github/github-reactions-provider.tsx` | Pending | Pending |
-| `src/features/github/github-readme.tsx` | Pending | Pending |
+| `src/features/github/github-reactions-provider.tsx` | Source reviewed; batching, optimistic updates and rollback preserved | Core reaction rows rendered; remaining query/mutation variants pending |
+| `src/features/github/github-readme.tsx` | Audited; sanitizer, safe dimensions and relative/external routing preserved | README/conversation/release and Wiki Markdown/source matrices; shared reading typography |
 | `src/features/github/github-release-create.tsx` | Audited; shared material/metadata/feedback applied where needed | Repository-tab matrix and listed states/actions in UI_VERIFICATION.md; advanced variants are recorded there |
 | `src/features/github/github-release-detail.tsx` | Audited; shared material/metadata/feedback applied where needed | Repository-tab matrix and listed states/actions in UI_VERIFICATION.md; advanced variants are recorded there |
 | `src/features/github/github-release-edit-dialog.tsx` | Audited; shared material/metadata/feedback applied where needed | Repository-tab matrix and listed states/actions in UI_VERIFICATION.md; advanced variants are recorded there |
@@ -270,3 +270,7 @@ Actions, Releases, Wiki, Insights and Security now have 72 core captures, 40 sco
 ## Execution and notification destinations
 
 The advanced Actions and notification route batch is verified with 504 current captures, four execution/checks regression cases and two additional preview isolation/state tests. PR checks and Discussion headers were verified in both entry contexts. Final checks pass523 tests/116 files and separate tsc. Exact states, screenshots, harness corrections and native limits are recorded in [UI_VERIFICATION.md](UI_VERIFICATION.md).
+
+## Wiki history and shared notice wrapping
+
+Wiki history/comparison/restore and offline/permission variants now have248 current captures and seven additional regression/fixture cases. The shared stale notice stacks Retry in a narrow rail and remains inline in wider PR checks. Final full check530 tests/117 files and separate tsc pass. Evidence and remaining boundaries are in [UI_VERIFICATION.md](UI_VERIFICATION.md).

@@ -25,10 +25,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { parseIpcError } from "@/lib/ipc-error";
 import { cn } from "@/lib/utils";
 import { openExternalUrl } from "@/lib/window";
@@ -49,7 +51,8 @@ import { revertRepositoryWikiPage, syncRepositoryWikiMutation } from "./github-w
 function parseWikiPatch(source: string): FileData | null {
   if (!source) return null;
   try {
-    return parseDiff(source, { nearbySequences: "zip" })[0] ?? null;
+    const file = parseDiff(source, { nearbySequences: "zip" })[0];
+    return file?.hunks.length ? file : null;
   } catch {
     return null;
   }
@@ -125,6 +128,9 @@ export function GitHubWikiHistoryDialog({
     [comparisonResult.data?.patch]
   );
   const selectedRevision = revisionResult.data;
+  const noRevisions = !selectedSha && historyResult.data?.revisions.length === 0;
+  const revisionPending =
+    historyResult.isPending || Boolean(selectedSha && revisionResult.isPending);
 
   const revertMutation = useMutation({
     mutationFn: () =>
@@ -141,13 +147,8 @@ export function GitHubWikiHistoryDialog({
       onOpenChange(false);
       toast.success(t("workspace.repositories.wiki.reverted"));
     },
-    onError: (reason) => {
-      const error = parseIpcError(reason);
-      toast.error(t("workspace.repositories.wiki.revertFailed"), {
-        description: error.message,
-      });
-    },
   });
+  const revertError = revertMutation.error ? parseIpcError(revertMutation.error) : null;
 
   const relativeImageBaseUrl = `https://raw.githubusercontent.com/wiki/${repository.owner}/${repository.name}`;
 
@@ -155,7 +156,7 @@ export function GitHubWikiHistoryDialog({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="flex max-h-[85vh] flex-col sm:max-w-5xl">
-          <DialogHeader>
+          <DialogHeader className="pr-8">
             <DialogTitle>
               {t("workspace.repositories.wiki.historyTitle", { title: page.title })}
             </DialogTitle>
@@ -167,11 +168,18 @@ export function GitHubWikiHistoryDialog({
             <aside className="flex min-h-0 flex-col border-r max-[760px]:max-h-52 max-[760px]:border-r-0 max-[760px]:border-b">
               <ScrollArea className="min-h-0 flex-1" constrainContentWidth>
                 <div className="flex flex-col gap-1 p-2">
+                  {historyResult.data && historyResult.error ? (
+                    <WorkspaceStaleNotice
+                      message={parseIpcError(historyResult.error).message}
+                      onRetry={() => void historyResult.refetch()}
+                      retryDisabled={historyResult.isFetching}
+                    />
+                  ) : null}
                   {historyResult.isPending ? (
                     Array.from({ length: 5 }, (_, index) => (
                       <Skeleton key={index} className="h-14 w-full" />
                     ))
-                  ) : historyResult.isError ? (
+                  ) : historyResult.error && !historyResult.data ? (
                     <Alert variant="destructive">
                       <TriangleAlert />
                       <AlertTitle>{t("workspace.repositories.wiki.historyLoadFailed")}</AlertTitle>
@@ -180,6 +188,7 @@ export function GitHubWikiHistoryDialog({
                         <Button
                           size="sm"
                           variant="outline"
+                          disabled={historyResult.isFetching}
                           onClick={() => void historyResult.refetch()}
                         >
                           {t("common.retry")}
@@ -192,13 +201,16 @@ export function GitHubWikiHistoryDialog({
                         key={revision.sha}
                         type="button"
                         variant="ghost"
+                        aria-current={selectedSha === revision.sha ? "true" : undefined}
                         className={cn(
-                          "h-auto min-w-0 flex-col items-start gap-1 px-2 py-2 text-left whitespace-normal",
+                          "harbor-result-row h-auto min-w-0 flex-col items-start gap-1 px-2 py-2 text-left whitespace-normal",
                           selectedSha === revision.sha && "bg-accent text-accent-foreground"
                         )}
                         onClick={() => setSelectedSha(revision.sha)}
                       >
-                        <span className="line-clamp-2 text-xs font-medium">{revision.message}</span>
+                        <span className="text-[13px] font-medium wrap-anywhere">
+                          {revision.message}
+                        </span>
                         <span className="text-muted-foreground text-[11px]">
                           {revision.shortSha} ·{" "}
                           {revision.authorName ?? t("workspace.repositories.unknownAuthor")}
@@ -278,27 +290,51 @@ export function GitHubWikiHistoryDialog({
                     </AlertDescription>
                   </Alert>
                 ) : null}
-                {revisionResult.isPending ? (
+                {selectedRevision && revisionResult.error ? (
+                  <WorkspaceStaleNotice
+                    message={parseIpcError(revisionResult.error).message}
+                    onRetry={() => void revisionResult.refetch()}
+                    retryDisabled={revisionResult.isFetching}
+                  />
+                ) : null}
+                {noRevisions ? (
+                  <Empty className="min-h-48">
+                    <EmptyHeader>
+                      <EmptyMedia variant="icon">
+                        <History />
+                      </EmptyMedia>
+                      <EmptyTitle>{t("workspace.repositories.wiki.historyEmpty")}</EmptyTitle>
+                    </EmptyHeader>
+                  </Empty>
+                ) : revisionPending ? (
                   <>
                     <Skeleton className="h-7 w-2/5" />
                     <Skeleton className="h-36 w-full" />
                   </>
-                ) : revisionResult.isError ? (
+                ) : revisionResult.error && !selectedRevision ? (
                   <Alert variant="destructive">
                     <TriangleAlert />
                     <AlertTitle>{t("workspace.repositories.wiki.revisionLoadFailed")}</AlertTitle>
                     <AlertDescription>
-                      {parseIpcError(revisionResult.error).message}
+                      <p>{parseIpcError(revisionResult.error).message}</p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={revisionResult.isFetching}
+                        onClick={() => void revisionResult.refetch()}
+                      >
+                        {t("common.retry")}
+                      </Button>
                     </AlertDescription>
                   </Alert>
                 ) : selectedRevision ? (
                   <>
                     <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div>
-                        <h4 className="text-sm font-semibold">
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-sm font-semibold wrap-anywhere">
                           {selectedRevision.revision.message}
                         </h4>
-                        <p className="text-muted-foreground mt-1 text-[11px]">
+                        <p className="text-muted-foreground mt-1 font-mono text-[11px] break-all">
                           {selectedRevision.revision.sha}
                         </p>
                       </div>
@@ -312,7 +348,10 @@ export function GitHubWikiHistoryDialog({
                           selectedRevision.deleted ||
                           selectedRevision.revision.sha === overview.headSha
                         }
-                        onClick={() => setRevertOpen(true)}
+                        onClick={() => {
+                          revertMutation.reset();
+                          setRevertOpen(true);
+                        }}
                       >
                         <RotateCcw data-icon="inline-start" />
                         {t("workspace.repositories.wiki.revert")}
@@ -324,7 +363,7 @@ export function GitHubWikiHistoryDialog({
                         <AlertTitle>{t("workspace.repositories.wiki.revisionDeleted")}</AlertTitle>
                       </Alert>
                     ) : selectedRevision.markdown && selectedRevision.content !== undefined ? (
-                      <div className="harbor-markdown rounded-md border p-4 text-[13px]">
+                      <div className="harbor-markdown harbor-reading rounded-md border p-4 text-[13px]">
                         <GitHubReadme
                           content={selectedRevision.content}
                           path={selectedRevision.path}
@@ -356,16 +395,48 @@ export function GitHubWikiHistoryDialog({
                             </div>
                           ) : null}
                         </div>
+                        {comparisonResult.data && comparisonResult.error ? (
+                          <WorkspaceStaleNotice
+                            message={parseIpcError(comparisonResult.error).message}
+                            onRetry={() => void comparisonResult.refetch()}
+                            retryDisabled={comparisonResult.isFetching}
+                          />
+                        ) : null}
+                        {comparisonResult.data?.truncated ? (
+                          <Alert>
+                            <TriangleAlert />
+                            <AlertTitle>
+                              {t("workspace.repositories.wiki.comparisonTruncated")}
+                            </AlertTitle>
+                            <AlertDescription>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => void openExternalUrl(overview.webUrl)}
+                              >
+                                {t("workspace.openOnGitHub")}
+                              </Button>
+                            </AlertDescription>
+                          </Alert>
+                        ) : null}
                         {comparisonResult.isPending ? (
                           <Skeleton className="h-32 w-full" />
-                        ) : comparisonResult.isError ? (
+                        ) : comparisonResult.error && !comparisonResult.data ? (
                           <Alert variant="destructive">
                             <TriangleAlert />
                             <AlertTitle>
                               {t("workspace.repositories.wiki.compareFailed")}
                             </AlertTitle>
                             <AlertDescription>
-                              {parseIpcError(comparisonResult.error).message}
+                              <p>{parseIpcError(comparisonResult.error).message}</p>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={comparisonResult.isFetching}
+                                onClick={() => void comparisonResult.refetch()}
+                              >
+                                {t("common.retry")}
+                              </Button>
                             </AlertDescription>
                           </Alert>
                         ) : diff ? (
@@ -376,6 +447,10 @@ export function GitHubWikiHistoryDialog({
                               }
                             </Diff>
                           </div>
+                        ) : comparisonResult.data?.patch ? (
+                          <pre className="harbor-reading overflow-auto rounded-md border p-4 font-mono text-[13px] leading-5 wrap-anywhere whitespace-pre-wrap">
+                            {comparisonResult.data.patch}
+                          </pre>
                         ) : (
                           <p className="text-muted-foreground text-xs">
                             {t("workspace.repositories.wiki.noRevisionChanges")}
@@ -405,6 +480,13 @@ export function GitHubWikiHistoryDialog({
               })}
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {revertError ? (
+            <Alert variant="destructive">
+              <TriangleAlert />
+              <AlertTitle>{t("workspace.repositories.wiki.revertFailed")}</AlertTitle>
+              <AlertDescription>{revertError.message}</AlertDescription>
+            </Alert>
+          ) : null}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={revertMutation.isPending}>
               {t("common.cancel")}

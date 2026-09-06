@@ -109,3 +109,39 @@ it("removes acknowledged notification targets from the controlled inbox", async 
     after.notifications.some((notification) => notification.id === before.notifications[0].id)
   ).toBe(false);
 });
+
+it("keeps Wiki revision identities distinct and reconciles a simulated restore", async () => {
+  vi.stubGlobal("isTauri", false);
+  history.replaceState(null, "", "/?wiki=history&writes=accept");
+  installPreview();
+  const target = { owner: "harbor-preview", repository: "harbor", path: "Home.md" };
+  const historyPage = await invoke<Data.GitHubWikiHistoryPage>(
+    "github_list_repository_wiki_history",
+    target
+  );
+  const current = historyPage.revisions[0];
+  const previous = historyPage.revisions[1];
+  expect(current.sha).not.toBe(previous.sha);
+  const revision = await invoke<Data.GitHubWikiRevision>("github_get_repository_wiki_revision", {
+    ...target,
+    commitSha: previous.sha,
+  });
+  expect(revision.revision.sha).toBe(previous.sha);
+  const restored = await invoke<Data.GitHubWikiMutationResult>(
+    "github_revert_repository_wiki_page",
+    {
+      owner: target.owner,
+      repository: target.repository,
+      input: {
+        path: target.path,
+        expectedHead: current.sha,
+        expectedBlobSha: current.sha,
+        sourceCommitSha: previous.sha,
+      },
+    }
+  );
+  expect(restored.page?.content).toBe(revision.content);
+  expect(restored.overview.headSha).not.toBe(current.sha);
+  const refreshed = await invoke<Data.GitHubWikiOverview>("github_get_repository_wiki", target);
+  expect(refreshed.headSha).toBe(restored.overview.headSha);
+});

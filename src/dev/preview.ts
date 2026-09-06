@@ -1,4 +1,5 @@
 import { createWorkflowFixtures } from "./workflow-fixtures";
+import { createWikiFixtures } from "./wiki-fixtures";
 import { createNotificationTargetFixtures } from "./notification-target-fixtures";
 import { discoveryFixture } from "./discovery-fixtures";
 import {
@@ -121,6 +122,11 @@ export function installPreview() {
     notificationTargets
   );
   const notificationFixtures = createNotificationTargetFixtures(repositories, notificationTargets);
+  const wikiFixtures = createWikiFixtures(
+    repositories,
+    parameters.get("wiki"),
+    parameters.get("writes") === "accept"
+  );
   const scenarioCommands = parameters.get("commands")?.split(",").filter(Boolean);
   const requestCounts = new Map<string, number>();
   const shortcuts = new Set(
@@ -285,6 +291,8 @@ export function installPreview() {
     }
     const notificationResult = notificationFixtures(command, args, commandState === "empty");
     if (notificationResult !== undefined) return notificationResult;
+    const wikiResult = wikiFixtures(command, args, commandState === "empty");
+    if (wikiResult !== undefined) return wikiResult;
     const workflowResult = workflowFixtures(command, args, commandState === "empty");
     if (workflowResult !== undefined) return workflowResult;
     const workspaceResult = workspaceFixture(

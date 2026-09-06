@@ -134,3 +134,13 @@ Controlled workflow variants are `?actions=failed|running|queued|truncated|downl
 `?notifications=targets` supplies nine in-app detail routes: workflow, check suite, Discussion, Release, Commit, three Security alert kinds and repository invitations. Read/Done acknowledgments remove synthetic rows, and mark-all clears this fixture inbox. This is browser preview state; unknown business commands remain rejected.
 
 Discussion detail headers keep the title/metadata and wrapping action group on separate rows, so intermediate pane widths cannot squeeze the title between controls. This applies to both repository and notification entry points.
+
+## Wiki history and compact retained-state feedback
+
+`GitHubWikiHistoryDialog` keeps history, revision and comparison queries independent. Check for missing data before rendering a terminal error; retained data uses `WorkspaceStaleNotice`. A disabled, unselected revision query is not a loading state after an empty history response. Comparisons with a nonempty patch but no renderable hunks fall back to source; truncated comparisons have explicit feedback.
+
+History rows use13px wrapping messages and `aria-current` for selection. Reading content uses `harbor-reading`. The history header reserves space for its Close control. Restore errors stay in the confirmation and reset on reopening; existing current/deleted/offline/archived/permission guards remain.
+
+`WorkspaceStaleNotice` gives its message a12rem flex basis. Its existing wrapping flex layout moves Retry below the message in narrow areas and keeps it beside the message when space allows, without a feature-specific variant.
+
+`?wiki=history|long|raw|truncated|source|offline|archived|readonly|disabled|uninitialized` selects controlled Wiki scenarios. Scoped command states cover history/revision/comparison reads and restore pending/errors. `&writes=accept` permits a simulated restore and reconciles subsequent fixture reads; it does not change a real Wiki or Git repository.
