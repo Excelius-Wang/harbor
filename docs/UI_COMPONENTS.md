@@ -144,3 +144,5 @@ History rows use13px wrapping messages and `aria-current` for selection. Reading
 `WorkspaceStaleNotice` gives its message a12rem flex basis. Its existing wrapping flex layout moves Retry below the message in narrow areas and keeps it beside the message when space allows, without a feature-specific variant.
 
 `?wiki=history|long|raw|truncated|source|offline|archived|readonly|disabled|uninitialized` selects controlled Wiki scenarios. Scoped command states cover history/revision/comparison reads and restore pending/errors. `&writes=accept` permits a simulated restore and reconciles subsequent fixture reads; it does not change a real Wiki or Git repository.
+
+Native ThemeProvider synchronization requires `core:window:allow-set-theme` and `core:window:allow-set-effects` in the main/about/settings capability. `core:default` alone does not permit those calls. Browser mocks cannot validate native ACL enforcement. The provider already chooses the light/dark native effect and removes it for reduced transparency; actual native observation remains part of acceptance.

@@ -252,3 +252,11 @@ Wiki history now has a real empty state. Failed refreshes retain revision rows, 
 There are248 distinct current captures. Completed runner/log: `/private/tmp/harbor-wiki-acceptance.py`, `harbor-wiki-acceptance.log`; scripts `harbor-wiki-{core,states,shared-stale}.py` and corresponding `*-final.log` outputs. The preview preserves distinct current/earlier/deleted revision identities and simulates a restore only when explicitly opted in. No Wiki page or Git commit was changed on GitHub. Native material and the remaining controls/feature variants are still open.
 
 The read-only source audit also covered the shared Markdown renderer, execution icons, reaction provider and Issue/PR comment adapter. Existing sanitizer, URL routing, cache/optimistic rollback and mutation-target behavior remain. Remaining reaction, conversation and repository relationship states are recorded for the next control batch.
+
+## Native observation and appearance permissions — 2026-09-06
+
+The Mac briefly stopped reporting its lock flag. CUA opened the diagnostic Harbor bundle, read the actual WebKit accessibility tree and returned one dark Discovery window screenshot in the tool response. The session locked again before a PNG could be saved; subsequent captures returned `cgWindowNotFound` and read-only console diagnostics reported a locked on-console session. No desktop-background, theme or reduced-transparency/motion matrix is claimed from that brief observation.
+
+The source/compiled-ACL audit found that ThemeProvider calls `setTheme` and `setEffects`, but the original `core:default` resolved to window read permissions and neither appearance mutation was allowed. The existing capability now explicitly allows `core:window:allow-set-theme` and `core:window:allow-set-effects` for main/about/settings. No additional resize permission is needed because adaptive geometry is applied in Rust.
+
+`cargo check` and two focused ThemeProvider tests pass (`/private/tmp/harbor-native-appearance-cargo.log`, `harbor-native-appearance-tests.log`). The diagnostic bundle was rebuilt with the existing1423/visible config and signed locally (`harbor-native-appearance-build.log`); updated generated capabilities include both permissions. The running preview still has the old binary in memory and must be restarted through CUA after unlock. Real native material acceptance remains open.
