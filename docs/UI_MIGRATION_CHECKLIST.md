@@ -31,7 +31,7 @@ Status: in progress. A source inventory is not visual acceptance. Every row belo
 | Issues | Inbox/repository lists, details, timeline, metadata, relationships, all actions/forms | Inbox/detail/edit/preview and return checks done; advanced actions still pending |
 | Pull requests | Inbox/repository lists, details, commits, files/diff, reviews, checks, merge/lifecycle forms | Inbox/detail/commits/files, lifecycle dialogs, creation drafts and review variants verified; native/final delivery gates remain |
 | Repositories | Owned/starred lists, create/access/invitations, repository shell and tabs | Core browser, code and create-form capture done; other tabs/actions pending |
-| Discovery | Trending repositories/developers, developer feed, search and result/detail returns | Pending |
+| Discovery | Trending repositories/developers, developer feed, search and result/detail returns | Core/state/filter and eight nonzero return paths verified in both themes/languages/sizes |
 | Code | Tree, file/preview/blame, history/commits/comments, branches/tags/search and edit dialogs | Core/read/action/state matrices, focus and list/detail return verified; broader mutation audit remains |
 | Wiki | Page list, reading/editing/history and dialogs | Page/read/editor/history and core state matrix verified; comparison/revert/offline variants pending |
 | Releases | Lists/details/create/edit and assets | List/detail/create/edit/delete/asset-delete and return/state matrix verified; artifact transfer states pending |
@@ -46,7 +46,7 @@ Status: in progress. A source inventory is not visual acceptance. Every row belo
 | Profile/account | Profile data/edit, connection/authentication dialogs | Profile/read/edit and auth availability/login/disconnect/follow pending/error matrices verified |
 | Settings window | Theme/language/shortcut controls | Native-size/common-size browser matrices, keyboard, OS theme and failure/pending states verified |
 | About/update | Version/release info, progress, error, update dialogs/toasts | Both native/common sizes and languages, long notes, loading/error/up-to-date and focus return verified; native material gate remains |
-| Third-party web | Preserve third-party presentation; inspect Harbor launch/switch controls | Pending |
+| Third-party web | Preserve third-party presentation; inspect Harbor launch/switch controls | Owned opener controls audited; ten browser-recorded destinations verified. Native observation remains a separate gate |
 
 ## First migration batch
 
@@ -146,7 +146,7 @@ Generated from existing JSX-bearing production files at task start. Each file mu
 | `src/features/github/github-connection-dialog.tsx` | Audited shared material, layout, keyboard and asynchronous context handling | Context/auth matrix in UI_VERIFICATION.md; native material gate remains |
 | `src/features/github/github-conversation-comment-actions.tsx` | Pending | Pending |
 | `src/features/github/github-conversation-controls.tsx` | Pending | Pending |
-| `src/features/github/github-discovery-view.tsx` | Pending | Pending |
+| `src/features/github/github-discovery-view.tsx` | Audited shared rows, metadata, source labels, filters and cached return/state handling | Discovery core/state/return/filter matrices in UI_VERIFICATION.md |
 | `src/features/github/github-discussion-comment-minimize.tsx` | Audited; shared surfaces, readable metadata and retained-data feedback applied where needed | Administration core/state and supplemental dialog/return matrices verified; remaining variants explicit in UI_VERIFICATION.md |
 | `src/features/github/github-discussion-comment.tsx` | Audited; shared surfaces, readable metadata and retained-data feedback applied where needed | Administration core/state and supplemental dialog/return matrices verified; remaining variants explicit in UI_VERIFICATION.md |
 | `src/features/github/github-discussion-detail.tsx` | Audited; shared surfaces, readable metadata and retained-data feedback applied where needed | Administration core/state and supplemental dialog/return matrices verified; remaining variants explicit in UI_VERIFICATION.md |
@@ -245,8 +245,8 @@ Generated from existing JSX-bearing production files at task start. Each file mu
 | `src/features/github/github-security-shared.tsx` | Audited; shared material/metadata/feedback applied where needed | Repository-tab matrix and listed states/actions in UI_VERIFICATION.md; advanced variants are recorded there |
 | `src/features/github/github-security-view.tsx` | Audited; shared material/metadata/feedback applied where needed | Repository-tab matrix and listed states/actions in UI_VERIFICATION.md; advanced variants are recorded there |
 | `src/features/github/github-source-code.tsx` | Audited; shared source/reading/metadata/feedback applied where needed | Code core/state/action/return matrices in UI_VERIFICATION.md; broader mutation audit remains |
-| `src/features/github/github-trending-developers.tsx` | Pending | Pending |
-| `src/features/github/github-trending-filters.tsx` | Pending | Pending |
+| `src/features/github/github-trending-developers.tsx` | Audited shared rows, metadata, source labels, filters and cached return/state handling | Discovery core/state/return/filter matrices in UI_VERIFICATION.md |
+| `src/features/github/github-trending-filters.tsx` | Audited shared rows, metadata, source labels, filters and cached return/state handling | Discovery core/state/return/filter matrices in UI_VERIFICATION.md |
 | `src/features/github/github-wiki-history-dialog.tsx` | Audited; shared material/metadata/feedback applied where needed | Repository-tab matrix and listed states/actions in UI_VERIFICATION.md; advanced variants are recorded there |
 | `src/features/github/github-wiki-view.tsx` | Audited; shared material/metadata/feedback applied where needed | Repository-tab matrix and listed states/actions in UI_VERIFICATION.md; advanced variants are recorded there |
 | `src/features/workspace/harbor-rail.tsx` | Audited shared material, layout, keyboard and asynchronous context handling | Context/auth matrix in UI_VERIFICATION.md; native material gate remains |

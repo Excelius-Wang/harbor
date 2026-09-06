@@ -147,7 +147,8 @@
         "ReleaseEvent": "{{actor}} 在 {{repository}} {{action}}版本发布",
         "PublicEvent": "{{actor}} 把 {{repository}} 设为公开仓库",
         "fallback": "{{actor}} 在 {{repository}} 产生了 {{type}} 动态"
-      }
+      },
+      "feedMoreFailed": "更多动态加载失败"
     },
     "profile": {
       "eyebrow": "个人账户",

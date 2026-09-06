@@ -1,3 +1,4 @@
+import { discoveryFixture } from "./discovery-fixtures";
 import {
   isTauri,
   invoke as nativeInvoke,
@@ -101,6 +102,8 @@ export function installPreview() {
   // Native window calls remain real; application business invokes are intercepted.
   const native = isTauri();
   const parameters = new URLSearchParams(location.search);
+  const openedUrls: string[] = [];
+  Object.assign(window, { __harborPreviewOpenedUrls: openedUrls });
   const state = parameters.get("state") ?? "populated";
   const repositories =
     parameters.get("repo") === "private"
@@ -189,6 +192,18 @@ export function installPreview() {
       args.url === "https://example.invalid/harbor-preview-auth"
     )
       return null;
+    if (
+      !native &&
+      parameters.get("links") === "record" &&
+      command === "plugin:opener|open_url" &&
+      typeof args.url === "string"
+    ) {
+      const url = new URL(args.url);
+      if (url.protocol === "https:" && ["github.com", "gist.github.com"].includes(url.hostname)) {
+        openedUrls.push(args.url);
+        return null;
+      }
+    }
     if (command === "github_connection_status")
       return { connected: true, identity: { login: "harbor-preview" } };
     if (command.startsWith("github_") || command === "repository_context_ask") {
@@ -219,17 +234,20 @@ export function installPreview() {
           ),
       };
     }
-    if (command === "github_search_discovery") {
-      return {
-        kind: args.kind,
-        results: commandState === "empty" ? [] : args.kind === "repositories" ? repositories : [],
-        totalCount: commandState === "empty" ? 0 : repositories.length,
-        incompleteResults: false,
-        page: 1,
-        hasPrevious: false,
-        hasMore: false,
-      };
-    }
+    if (
+      command === "github_list_developer_feed" &&
+      parameters.get("discovery") === "next-loading" &&
+      Number(args.page) > 1
+    )
+      return new Promise(() => {});
+    const discoveryResult = discoveryFixture(
+      command,
+      args,
+      repositories,
+      commandState === "empty",
+      parameters.get("discovery")
+    );
+    if (discoveryResult !== undefined) return discoveryResult;
     if (command === "github_list_trending_developers") {
       return {
         period: args.period,
@@ -255,8 +273,6 @@ export function installPreview() {
               })),
       };
     }
-    if (command === "github_list_developer_feed")
-      return { events: [], page: 1, hasPrevious: false, hasMore: false };
     const workspaceResult = workspaceFixture(
       command,
       args,

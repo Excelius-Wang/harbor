@@ -112,3 +112,13 @@ The gallery includes every local UI primitive family. Radio groups, mixed/disabl
 `ModeToggle`, breadcrumb and pagination defaults, and Sonner region/close labels use i18next. Consumers may still provide specific accessible labels. `Toaster.toastOptions` merges caller options with the shared material class. Keep theme icons positioned inside their trigger; the gallery verifies that scrolling the header away also removes the icons from view.
 
 Browser reduced-transparency checks use actual media emulation and computed styles, not a manually added CSS class. Reduced window/dialog surfaces are opaque with no backdrop filter. Reduced motion stops indeterminate progress and minimizes skeleton animation. The browser background matrix remains separate from native Tauri acceptance.
+
+## Discovery composition and fixtures
+
+Discovery's header and results share a centered 1120 px container with 24 px inner alignment. Repository/developer descriptions wrap; code fragments use `harbor-reading` and 13 px monospace. Following events keep their actor/project together and place timestamps below that group in a narrow pane. Loading silhouettes follow each result kind.
+
+Keep Discovery's `useListScroll` in `GitHubDiscoveryView`, keyed by the actual query or developer filters. Its viewport bindings are passed into the developer and feed children. All kinds reuse their existing query keys and cached data. Failed refreshes use `WorkspaceStaleNotice`; a failed next feed page keeps the prior events and exposes its separate error beside Load more.
+
+`src/dev/discovery-fixtures.ts` supplies all five search result kinds and Following events, reusing the same controlled Issue/PR factories as detail views. `?discovery=dense` adds long descriptions, enough rows for nonzero scroll and a second search page; `incomplete` shows partial-search feedback; `next-error` and `next-loading` exercise feed continuation. These are synthetic read scenarios.
+
+`?links=record` records GitHub/gist HTTPS opener targets in `window.__harborPreviewOpenedUrls` inside the browser preview, without opening a site. This opt-in mode does not intercept native SDK plugin behavior or authorize business writes. Unknown business commands continue to fail.

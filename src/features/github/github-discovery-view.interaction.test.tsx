@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { GitHubDiscoveryView } from "./github-discovery-view";
@@ -24,9 +24,16 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }),
 }));
 vi.mock("./github-code-view", () => ({
-  GitHubCodeView: ({ repository }: { repository: { fullName: string } }) => (
+  GitHubCodeView: ({
+    repository,
+    onBack,
+  }: {
+    repository: { fullName: string };
+    onBack: () => void;
+  }) => (
     <section aria-label="repository detail">
       <h2>{repository.fullName}</h2>
+      <button onClick={onBack}>Back to discovery</button>
     </section>
   ),
 }));
@@ -148,10 +155,20 @@ describe("GitHub discovery navigation", () => {
       screen.getByRole("checkbox", { name: "workspace.discovery.developers.sponsorable" })
     );
     await screen.findByRole("button", { name: "The Octocat (@octocat)" });
+    const developerViewport = screen
+      .getByRole("button", { name: "The Octocat (@octocat)" })
+      .closest<HTMLDivElement>("[data-radix-scroll-area-viewport]")!;
+    developerViewport.scrollTop = 172;
+    fireEvent.scroll(developerViewport);
     await user.click(screen.getByRole("button", { name: "The Octocat (@octocat)" }));
     expect(await screen.findByRole("region", { name: "developer profile" })).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Back to discovery" }));
     expect(await screen.findByRole("button", { name: "The Octocat (@octocat)" })).toBeTruthy();
+    expect(
+      screen
+        .getByRole("button", { name: "The Octocat (@octocat)" })
+        .closest<HTMLDivElement>("[data-radix-scroll-area-viewport]")?.scrollTop
+    ).toBe(172);
     expect(
       screen.getByRole("combobox", { name: "workspace.discovery.developers.language" }).textContent
     ).toContain("Python");
@@ -436,4 +453,138 @@ describe("GitHub discovery navigation", () => {
       );
     });
   });
+});
+
+const retainedRepository = {
+  id: 21,
+  owner: "octocat",
+  name: "retained-results",
+  fullName: "octocat/retained-results",
+  url: "https://github.com/octocat/retained-results",
+  stars: 80,
+  forks: 2,
+  openIssues: 3,
+  defaultBranch: "main",
+  isPrivate: false,
+  isFork: false,
+  isArchived: false,
+};
+const retainedSearch = {
+  kind: "repositories",
+  results: [retainedRepository],
+  totalCount: 1,
+  incompleteResults: false,
+  page: 1,
+  hasPrevious: false,
+  hasMore: false,
+};
+function renderRetainedDiscovery() {
+  tauriApi.isTauri.mockReturnValue(true);
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={client}>
+      <TooltipProvider>
+        <GitHubDiscoveryView onSelectRepository={() => {}} />
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+  return client;
+}
+it("restores the repository result viewport when returning from detail", async () => {
+  tauriApi.invoke.mockResolvedValue(retainedSearch);
+  const client = renderRetainedDiscovery();
+  const user = userEvent.setup();
+  const row = await screen.findByRole("button", { name: retainedRepository.fullName });
+  const viewport = row.closest<HTMLDivElement>("[data-radix-scroll-area-viewport]")!;
+  viewport.scrollTop = 230;
+  fireEvent.scroll(viewport);
+  await user.click(row);
+  await user.click(await screen.findByRole("button", { name: "Back to discovery" }));
+  expect(
+    (
+      await screen.findByRole("button", { name: retainedRepository.fullName })
+    ).closest<HTMLDivElement>("[data-radix-scroll-area-viewport]")?.scrollTop
+  ).toBe(230);
+  client.clear();
+});
+it("marks retained search results after a failed refresh and offers a retry", async () => {
+  tauriApi.invoke.mockResolvedValue(retainedSearch);
+  const client = renderRetainedDiscovery();
+  await screen.findByRole("button", { name: retainedRepository.fullName });
+  tauriApi.invoke.mockRejectedValue(new Error("Refresh unavailable"));
+  await act(async () => {
+    await client.invalidateQueries({ queryKey: ["github", "discovery", "search"] });
+  });
+  expect(screen.getByRole("button", { name: retainedRepository.fullName })).toBeTruthy();
+  expect(await screen.findByText("common.staleResults")).toBeTruthy();
+  tauriApi.invoke.mockResolvedValue(retainedSearch);
+  await userEvent.setup().click(screen.getByRole("button", { name: "common.retry" }));
+  await waitFor(() => expect(screen.queryByText("common.staleResults")).toBeNull());
+  client.clear();
+});
+it("keeps cached following events visible when their refresh fails", async () => {
+  const event = {
+    id: "retained-event",
+    eventType: "PushEvent",
+    actor: { id: 1, login: "octocat", avatarUrl: "", url: "https://github.com/octocat" },
+    repository: retainedRepository,
+    commitCount: 2,
+    public: true,
+    createdAt: "2026-09-01T10:00:00Z",
+  };
+  tauriApi.invoke.mockImplementation((command: string) =>
+    Promise.resolve(
+      command === "github_list_developer_feed"
+        ? { events: [event], page: 1, hasPrevious: false, hasMore: false }
+        : retainedSearch
+    )
+  );
+  const client = renderRetainedDiscovery();
+  await userEvent.setup().click(screen.getByRole("tab", { name: "workspace.discovery.tabs.feed" }));
+  await screen.findByText("workspace.discovery.events.PushEvent");
+  tauriApi.invoke.mockRejectedValue(new Error("Feed refresh unavailable"));
+  await act(async () => {
+    await client.invalidateQueries();
+  });
+  expect(screen.getByText("workspace.discovery.events.PushEvent")).toBeTruthy();
+  expect(await screen.findByText("common.staleResults")).toBeTruthy();
+  client.clear();
+});
+
+it("retains following events and retries a failed next page independently of refresh", async () => {
+  const event = {
+    id: "first-page",
+    eventType: "PushEvent",
+    actor: { id: 1, login: "octocat", avatarUrl: "", url: "https://github.com/octocat" },
+    repository: retainedRepository,
+    commitCount: 2,
+    public: true,
+    createdAt: "2026-09-01T10:00:00Z",
+  };
+  let failNext = true;
+  tauriApi.invoke.mockImplementation((command: string, args: { page?: number }) => {
+    if (command !== "github_list_developer_feed") return Promise.resolve(retainedSearch);
+    if (args.page === 2 && failNext) return Promise.reject(new Error("Next page unavailable"));
+    return Promise.resolve({
+      events: [{ ...event, id: args.page === 2 ? "second-page" : "first-page" }],
+      page: args.page,
+      hasPrevious: args.page === 2,
+      hasMore: args.page === 1,
+    });
+  });
+  const client = renderRetainedDiscovery();
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("tab", { name: "workspace.discovery.tabs.feed" }));
+  await screen.findByText("workspace.discovery.events.PushEvent");
+  await user.click(screen.getByRole("button", { name: "common.loadMore" }));
+  expect(await screen.findByText("workspace.discovery.feedMoreFailed")).toBeTruthy();
+  expect(screen.getByText("workspace.discovery.events.PushEvent")).toBeTruthy();
+  expect(screen.queryByText("common.staleResults")).toBeNull();
+  failNext = false;
+  await user.click(screen.getByRole("button", { name: "common.loadMore" }));
+  await waitFor(() =>
+    expect(screen.getAllByText("workspace.discovery.events.PushEvent")).toHaveLength(2)
+  );
+  expect(screen.queryByText("workspace.discovery.feedMoreFailed")).toBeNull();
+  client.clear();
 });

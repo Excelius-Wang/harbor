@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ComponentProps } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { isTauri } from "@tauri-apps/api/core";
 import { BookMarked, CircleAlert, ExternalLink, RefreshCw, UsersRound } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,7 +44,7 @@ function DeveloperRow({
     : repository?.fullName;
 
   return (
-    <li className="harbor-result-row grid grid-cols-[24px_40px_minmax(0,1fr)] items-start gap-3 px-5 py-4">
+    <li className="harbor-result-row grid grid-cols-[24px_40px_minmax(0,1fr)] items-start gap-3 px-6 py-4">
       <span className="text-muted-foreground pt-0.5 text-right text-xs leading-5 tabular-nums">
         {developer.rank}
       </span>
@@ -95,7 +95,7 @@ function DeveloperRow({
               <ExternalLink data-icon="inline-end" className="text-muted-foreground size-3" />
             </Button>
             {repository.description ? (
-              <p className="text-muted-foreground line-clamp-2 max-w-[72ch] text-xs leading-5 break-words">
+              <p className="text-muted-foreground max-w-[72ch] text-[13px] leading-5 break-words">
                 {repository.description}
               </p>
             ) : null}
@@ -111,11 +111,13 @@ export function GitHubTrendingDevelopers({
   filters,
   onFiltersChange,
   onSelectDeveloper,
+  scroll,
 }: {
   period: GitHubTrendingPeriod;
   filters: GitHubTrendingFilters;
   onFiltersChange: (filters: GitHubTrendingFilters) => void;
   onSelectDeveloper: (login: string) => void;
+  scroll?: Pick<ComponentProps<typeof ScrollArea>, "viewportRef" | "onViewportScroll">;
 }) {
   const { t } = useTranslation();
   const desktop = isTauri();
@@ -146,7 +148,7 @@ export function GitHubTrendingDevelopers({
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col" aria-busy={result.isFetching}>
-      <div className="text-muted-foreground flex min-h-12 shrink-0 flex-wrap items-center gap-x-3 gap-y-1 px-5 py-2 text-[11px]">
+      <div className="text-muted-foreground flex min-h-12 shrink-0 flex-wrap items-center gap-x-3 gap-y-1 px-6 py-2 text-[11px]">
         <span>{t("workspace.discovery.developers.source")}</span>
         <div className="ml-auto flex flex-wrap items-center gap-3">
           <GitHubTrendingFilterControls
@@ -174,13 +176,13 @@ export function GitHubTrendingDevelopers({
         </div>
       </div>
       {error && data ? (
-        <Alert className="mx-5 mb-2 w-auto">
-          <CircleAlert />
-          <AlertTitle>{t("workspace.discovery.developers.refreshFailed")}</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <WorkspaceStaleNotice
+          message={error}
+          onRetry={() => void result.refetch()}
+          retryDisabled={result.isFetching}
+        />
       ) : null}
-      <ScrollArea className="min-h-0 flex-1" constrainContentWidth>
+      <ScrollArea className="min-h-0 flex-1" constrainContentWidth {...scroll}>
         {error && !data ? (
           <Empty className="min-h-[340px]">
             <EmptyHeader>
@@ -197,7 +199,7 @@ export function GitHubTrendingDevelopers({
             {Array.from({ length: 6 }, (_, index) => (
               <div
                 key={index}
-                className="harbor-result-row grid grid-cols-[24px_40px_minmax(0,1fr)] items-start gap-3 px-5 py-4"
+                className="harbor-result-row grid grid-cols-[24px_40px_minmax(0,1fr)] items-start gap-3 px-6 py-4"
                 aria-hidden="true"
               >
                 <Skeleton className="mt-1 h-3 w-4 justify-self-end" />

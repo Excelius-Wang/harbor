@@ -147,7 +147,8 @@
         "ReleaseEvent": "{{actor}} {{action}} a release in {{repository}}",
         "PublicEvent": "{{actor}} made {{repository}} public",
         "fallback": "{{actor}} created {{type}} activity in {{repository}}"
-      }
+      },
+      "feedMoreFailed": "Could not load more activity"
     },
     "profile": {
       "eyebrow": "Personal account",

@@ -50,6 +50,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useListScroll } from "@/hooks/use-list-scroll";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { parseIpcError } from "@/lib/ipc-error";
 import { openExternalUrl } from "@/lib/window";
 import type {
@@ -166,19 +168,44 @@ const SORTS: Record<
   ],
 };
 
-function SearchSkeletons() {
+function SearchSkeletons({ kind = "repositories" }: { kind?: GitHubDiscoverySearchKind | "feed" }) {
+  const { t } = useTranslation();
+  const avatar = kind === "users" || kind === "feed";
+  const icon = kind === "issues" || kind === "pullRequests";
   return (
-    <div className="flex flex-col gap-2 p-2">
-      {Array.from({ length: 7 }, (_, index) => (
-        <div key={index} className="flex items-start gap-3 rounded-[8px] px-4 py-4">
-          <Skeleton className="size-9 shrink-0" />
-          <div className="flex min-w-0 flex-1 flex-col gap-2">
-            <Skeleton className="h-3 w-2/5" />
-            <Skeleton className="h-3 w-4/5" />
-            <Skeleton className="h-2.5 w-3/5" />
+    <div role="status" aria-label={t("workspace.discovery.loading")}>
+      <div className="flex flex-col p-2" aria-hidden="true">
+        {Array.from({ length: 7 }, (_, index) => (
+          <div key={index} className="harbor-result-row flex items-start gap-3 px-4 py-4">
+            {avatar ? (
+              <Skeleton className="size-9 shrink-0 rounded-full" />
+            ) : kind === "code" ? (
+              <Skeleton className="size-9 shrink-0" />
+            ) : icon ? (
+              <Skeleton className="mt-1 size-4 shrink-0 rounded-full" />
+            ) : null}
+            <div className="flex min-w-0 flex-1 flex-col gap-2">
+              <Skeleton className="h-3.5 w-2/5" />
+              {kind !== "users" ? (
+                <>
+                  {kind === "code" ? (
+                    <Skeleton className="h-24 w-full" />
+                  ) : (
+                    <>
+                      <Skeleton className="h-3 w-full" />
+                      <Skeleton className="h-3 w-4/5" />
+                    </>
+                  )}
+                  <div className="flex gap-3">
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                </>
+              ) : null}
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }
@@ -217,7 +244,13 @@ function initials(value: string) {
   return value.slice(0, 2).toUpperCase();
 }
 
-function DeveloperFeed({ onSelect }: { onSelect: (selection: DiscoverySelection) => void }) {
+function DeveloperFeed({
+  onSelect,
+  scroll,
+}: {
+  onSelect: (selection: DiscoverySelection) => void;
+  scroll: ReturnType<typeof useListScroll>;
+}) {
   const { t, i18n } = useTranslation();
   const desktopRuntime = isTauri();
   const result = useInfiniteQuery({
@@ -225,9 +258,10 @@ function DeveloperFeed({ onSelect }: { onSelect: (selection: DiscoverySelection)
     enabled: desktopRuntime,
   });
   const events = result.data?.pages.flatMap((page) => page.events) ?? [];
+  const nextPageError = result.isFetchNextPageError ? parseIpcError(result.error).message : null;
   const error = !desktopRuntime
     ? { code: "desktopOnly", message: t("workspace.discovery.desktopOnly") }
-    : result.error
+    : result.error && !result.isFetchNextPageError
       ? parseIpcError(result.error)
       : null;
 
@@ -262,120 +296,166 @@ function DeveloperFeed({ onSelect }: { onSelect: (selection: DiscoverySelection)
     onSelect({ kind: "repository", repository: feedRepository(event) });
   };
 
-  if (result.isPending) return <SearchSkeletons />;
+  const renderEvents = () => {
+    if (result.isPending && !error) return <SearchSkeletons kind="feed" />;
 
-  if (error) {
-    return (
-      <Empty className="min-h-[360px]">
-        <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <CircleAlert />
-          </EmptyMedia>
-          <EmptyTitle>{t("workspace.discovery.feedFailed")}</EmptyTitle>
-          <EmptyDescription>{error.message}</EmptyDescription>
-        </EmptyHeader>
-        <EmptyContent>
-          <Button variant="outline" size="sm" onClick={() => void result.refetch()}>
-            <RefreshCw data-icon="inline-start" />
-            {t("common.retry")}
-          </Button>
-        </EmptyContent>
-      </Empty>
-    );
-  }
-
-  if (!events.length) {
-    return (
-      <Empty className="min-h-[360px]">
-        <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <UsersRound />
-          </EmptyMedia>
-          <EmptyTitle>{t("workspace.discovery.emptyFeed")}</EmptyTitle>
-          <EmptyDescription>{t("workspace.discovery.emptyFeedDescription")}</EmptyDescription>
-        </EmptyHeader>
-      </Empty>
-    );
-  }
-
-  return (
-    <div className="flex flex-col">
-      {events.map((event) => {
-        const Icon = eventIcon(event.eventType);
-        const action = event.action
-          ? t(`workspace.profile.actions.${event.action}`, { defaultValue: event.action })
-          : undefined;
-        return (
-          <article
-            key={event.id}
-            className="mx-2 grid grid-cols-[36px_minmax(0,1fr)_auto] gap-3 rounded-[8px] px-3 py-3.5 transition-colors hover:bg-white/[0.035]"
-          >
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-9 rounded-full"
-              aria-label={t("workspace.discovery.openProfile", { username: event.actor.login })}
-              onClick={() => onSelect({ kind: "user", user: event.actor })}
-            >
-              <Avatar className="size-8">
-                <AvatarImage src={event.actor.avatarUrl} alt={`@${event.actor.login}`} />
-                <AvatarFallback>{initials(event.actor.login)}</AvatarFallback>
-              </Avatar>
+    if (error && !result.data) {
+      return (
+        <Empty className="min-h-[360px]">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <CircleAlert />
+            </EmptyMedia>
+            <EmptyTitle>{t("workspace.discovery.feedFailed")}</EmptyTitle>
+            <EmptyDescription>{error.message}</EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button variant="outline" size="sm" onClick={() => void result.refetch()}>
+              <RefreshCw data-icon="inline-start" />
+              {t("common.retry")}
             </Button>
-            <Button
-              variant="ghost"
-              className="h-auto min-w-0 justify-start rounded-[8px] px-2 py-1 text-left whitespace-normal"
-              onClick={() => openEvent(event)}
+          </EmptyContent>
+        </Empty>
+      );
+    }
+
+    if (!events.length) {
+      return (
+        <Empty className="min-h-[360px]">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <UsersRound />
+            </EmptyMedia>
+            <EmptyTitle>{t("workspace.discovery.emptyFeed")}</EmptyTitle>
+            <EmptyDescription>{t("workspace.discovery.emptyFeedDescription")}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      );
+    }
+
+    return (
+      <div className="@container/discovery-feed flex flex-col">
+        {events.map((event) => {
+          const Icon = eventIcon(event.eventType);
+          const action = event.action
+            ? t(`workspace.profile.actions.${event.action}`, { defaultValue: event.action })
+            : undefined;
+          return (
+            <article
+              key={event.id}
+              className="harbor-result-row grid grid-cols-[36px_minmax(0,1fr)] gap-x-3 gap-y-1 px-6 py-4 @min-[960px]/discovery-feed:grid-cols-[36px_minmax(0,1fr)_auto]"
             >
-              <span className="flex min-w-0 flex-1 flex-col gap-1">
-                <span className="flex min-w-0 items-center gap-2 text-xs">
-                  <Icon className="text-primary shrink-0" />
-                  <span className="min-w-0 leading-5">
-                    {t(`workspace.discovery.events.${event.eventType}`, {
-                      defaultValue: t("workspace.discovery.events.fallback"),
-                      action,
-                      actor: event.actor.login,
-                      count: event.commitCount ?? 0,
-                      number: event.resourceNumber,
-                      reference: event.reference,
-                      repository: event.repository.fullName,
-                      title: event.resourceTitle,
-                      type: event.eventType,
-                    })}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-9 rounded-full"
+                aria-label={t("workspace.discovery.openProfile", { username: event.actor.login })}
+                title={t("workspace.discovery.openProfile", { username: event.actor.login })}
+                onClick={() => onSelect({ kind: "user", user: event.actor })}
+              >
+                <Avatar className="size-8">
+                  <AvatarImage src={event.actor.avatarUrl} alt={`@${event.actor.login}`} />
+                  <AvatarFallback>{initials(event.actor.login)}</AvatarFallback>
+                </Avatar>
+              </Button>
+              <Button
+                variant="ghost"
+                className="h-auto min-w-0 justify-start rounded-[8px] px-2 py-1 text-left whitespace-normal"
+                onClick={() => openEvent(event)}
+              >
+                <span className="flex min-w-0 flex-1 flex-col gap-1">
+                  <span className="flex min-w-0 items-center gap-2 text-[13px]">
+                    <Icon className="text-primary shrink-0" />
+                    <span className="min-w-0 leading-5">
+                      {t(`workspace.discovery.events.${event.eventType}`, {
+                        defaultValue: t("workspace.discovery.events.fallback"),
+                        action,
+                        actor: event.actor.login,
+                        count: event.commitCount ?? 0,
+                        number: event.resourceNumber,
+                        reference: event.reference,
+                        repository: event.repository.fullName,
+                        title: event.resourceTitle,
+                        type: event.eventType,
+                      })}
+                    </span>
                   </span>
-                </span>
-                {event.resourceTitle ? (
-                  <span className="text-muted-foreground truncate text-[10px] font-normal">
-                    {event.resourceTitle}
-                  </span>
-                ) : null}
-                <span className="text-muted-foreground flex items-center gap-2 text-[10px] font-normal">
-                  <span className="truncate">{event.repository.fullName}</span>
-                  {!event.public ? (
-                    <Badge variant="outline" className="h-4 px-1 text-[9px] font-normal">
-                      <LockKeyhole /> {t("workspace.discovery.privateEvent")}
-                    </Badge>
+                  {event.resourceTitle ? (
+                    <span className="text-muted-foreground text-[13px] leading-5 font-normal wrap-anywhere">
+                      {event.resourceTitle}
+                    </span>
                   ) : null}
+                  <span className="text-muted-foreground flex items-center gap-2 text-[11px] font-normal">
+                    <span className="truncate">{event.repository.fullName}</span>
+                    {!event.public ? (
+                      <Badge variant="outline" className="h-5 px-1.5 text-[11px] font-normal">
+                        <LockKeyhole /> {t("workspace.discovery.privateEvent")}
+                      </Badge>
+                    ) : null}
+                  </span>
                 </span>
-              </span>
+              </Button>
+              <time className="text-muted-foreground col-start-2 px-2 text-[11px] @min-[960px]/discovery-feed:col-start-3 @min-[960px]/discovery-feed:row-start-1 @min-[960px]/discovery-feed:pt-2">
+                {formatIssueDate(event.createdAt, i18n.language)}
+              </time>
+            </article>
+          );
+        })}
+        {nextPageError ? (
+          <Alert variant="destructive" className="mx-6 mt-3 w-auto">
+            <CircleAlert />
+            <AlertTitle>{t("workspace.discovery.feedMoreFailed")}</AlertTitle>
+            <AlertDescription>{nextPageError}</AlertDescription>
+          </Alert>
+        ) : null}
+        {result.hasNextPage ? (
+          <div className="flex justify-center p-4">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={result.isFetching}
+              onClick={() => void result.fetchNextPage()}
+            >
+              {result.isFetchingNextPage ? <Spinner data-icon="inline-start" /> : null}
+              {t("common.loadMore")}
             </Button>
-            <time className="text-muted-foreground pt-2 text-[10px] whitespace-nowrap">
-              {formatIssueDate(event.createdAt, i18n.language)}
-            </time>
-          </article>
-        );
-      })}
-      {result.hasNextPage ? (
-        <div className="flex justify-center p-4">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={result.isFetchingNextPage}
-            onClick={() => void result.fetchNextPage()}
-          >
-            {result.isFetchingNextPage ? <Spinner data-icon="inline-start" /> : null}
-            {t("common.loadMore")}
-          </Button>
+          </div>
+        ) : null}
+      </div>
+    );
+  };
+  return (
+    <div className="relative flex min-h-0 flex-1 flex-col" aria-busy={result.isFetching}>
+      <div className="text-muted-foreground flex min-h-11 shrink-0 flex-wrap items-center gap-3 px-6 py-2 text-[11px]">
+        <span className="min-w-0 flex-1">{t("workspace.discovery.feedWindow")}</span>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={t("common.refresh")}
+          title={t("common.refresh")}
+          disabled={!desktopRuntime || result.isFetching}
+          onClick={() => void result.refetch()}
+        >
+          <RefreshCw />
+        </Button>
+      </div>
+      {error && result.data ? (
+        <WorkspaceStaleNotice
+          message={error.message}
+          onRetry={() => void result.refetch()}
+          retryDisabled={result.isFetching}
+        />
+      ) : null}
+      <ScrollArea className="min-h-0 flex-1" constrainContentWidth {...scroll}>
+        {renderEvents()}
+      </ScrollArea>
+      {result.isFetching && result.data ? (
+        <div
+          role="status"
+          aria-label={t("workspace.discovery.loading")}
+          className="pointer-events-none absolute inset-x-0 top-0"
+        >
+          <Progress aria-hidden="true" className="h-0.5 rounded-none bg-transparent" />
         </div>
       ) : null}
     </div>
@@ -400,7 +480,9 @@ function RepositoryResultRow({
       <span className="flex min-w-0 flex-1 flex-col gap-1.5">
         <span className="flex min-w-0 items-center gap-2">
           <span className="flex min-w-0 items-baseline text-[14px] leading-5 tracking-[-0.015em]">
-            <span className="text-muted-foreground shrink-0 font-normal">{repository.owner}/</span>
+            <span className="text-muted-foreground max-w-[45%] truncate font-normal">
+              {repository.owner}/
+            </span>
             <span className="harbor-repository-name text-primary truncate font-semibold">
               {repository.name}
             </span>
@@ -412,7 +494,7 @@ function RepositoryResultRow({
             </Badge>
           ) : null}
         </span>
-        <span className="text-foreground line-clamp-2 text-xs leading-5 font-normal">
+        <span className="text-foreground max-w-[80ch] text-[13px] leading-5 font-normal wrap-anywhere">
           {repository.description ?? t("workspace.repositories.noDescription")}
         </span>
         <span className="text-muted-foreground flex flex-wrap items-center gap-3 text-[11px] font-normal">
@@ -461,18 +543,19 @@ function CodeResultRow({
     <Button
       variant="ghost"
       onClick={onSelect}
-      className="h-auto w-full items-start justify-start gap-3 rounded-[8px] px-4 py-3.5 text-left whitespace-normal"
+      aria-label={result.path}
+      className="harbor-result-row h-auto w-full items-start justify-start gap-3 rounded-none px-4 py-4 text-left whitespace-normal"
     >
       <span className="bg-muted text-muted-foreground grid size-9 shrink-0 place-items-center rounded-md">
         <Code2 />
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-1.5">
         <span className="truncate text-[13px] font-medium">{result.path}</span>
-        <span className="text-muted-foreground truncate text-[10px] font-normal">
+        <span className="text-muted-foreground truncate text-[11px] font-normal">
           {result.repository.fullName}
         </span>
         {result.fragment ? (
-          <code className="bg-muted/45 text-muted-foreground line-clamp-3 rounded-md px-2.5 py-2 font-mono text-[10px] leading-4 whitespace-pre-wrap">
+          <code className="harbor-reading text-foreground rounded-md px-2.5 py-2 font-mono text-[13px] leading-5 wrap-anywhere whitespace-pre-wrap">
             {result.fragment}
           </code>
         ) : null}
@@ -486,7 +569,7 @@ function UserResultRow({ user, onSelect }: { user: GitHubUserSummary; onSelect: 
     <Button
       variant="ghost"
       onClick={onSelect}
-      className="h-auto w-full justify-start gap-3 rounded-[8px] px-4 py-3.5 text-left"
+      className="harbor-result-row h-auto w-full justify-start gap-3 rounded-none px-4 py-4 text-left"
     >
       <Avatar className="size-9">
         <AvatarImage src={user.avatarUrl} alt={`@${user.login}`} />
@@ -534,58 +617,66 @@ function SearchResults({
         </div>
       );
     case "issues":
-      return data.results.map((summary: GitHubIssueSummary) => (
-        <GitHubIssueRow
-          key={summary.issue.id}
-          issue={summary.issue}
-          repository={summary.repository}
-          locale={locale}
-          showRepository
-          onSelect={() =>
-            onSelect({
-              kind: "issue",
-              repository: summary.repository,
-              number: summary.issue.number,
-            })
-          }
-          onPrefetch={() =>
-            void queryClient.prefetchQuery(
-              repositoryIssueDetailQueryOptions({
-                owner: summary.repository.owner,
-                repository: summary.repository.name,
-                issueNumber: summary.issue.number,
-                timelinePage: 1,
-              })
-            )
-          }
-        />
-      ));
+      return (
+        <div className="px-2">
+          {data.results.map((summary: GitHubIssueSummary) => (
+            <GitHubIssueRow
+              key={summary.issue.id}
+              issue={summary.issue}
+              repository={summary.repository}
+              locale={locale}
+              showRepository
+              onSelect={() =>
+                onSelect({
+                  kind: "issue",
+                  repository: summary.repository,
+                  number: summary.issue.number,
+                })
+              }
+              onPrefetch={() =>
+                void queryClient.prefetchQuery(
+                  repositoryIssueDetailQueryOptions({
+                    owner: summary.repository.owner,
+                    repository: summary.repository.name,
+                    issueNumber: summary.issue.number,
+                    timelinePage: 1,
+                  })
+                )
+              }
+            />
+          ))}
+        </div>
+      );
     case "pullRequests":
-      return data.results.map((pullRequest: GitHubPullRequestSummary) => (
-        <GitHubPullRequestRow
-          key={pullRequest.id}
-          pullRequest={pullRequest}
-          locale={locale}
-          showRepository
-          onSelect={() =>
-            onSelect({
-              kind: "pullRequest",
-              repository: pullRequest.repository,
-              number: pullRequest.number,
-            })
-          }
-          onPrefetch={() =>
-            void queryClient.prefetchQuery(
-              repositoryPullRequestDetailQueryOptions({
-                owner: pullRequest.repository.owner,
-                repository: pullRequest.repository.name,
-                pullRequestNumber: pullRequest.number,
-                timelinePage: 1,
-              })
-            )
-          }
-        />
-      ));
+      return (
+        <div className="px-2">
+          {data.results.map((pullRequest: GitHubPullRequestSummary) => (
+            <GitHubPullRequestRow
+              key={pullRequest.id}
+              pullRequest={pullRequest}
+              locale={locale}
+              showRepository
+              onSelect={() =>
+                onSelect({
+                  kind: "pullRequest",
+                  repository: pullRequest.repository,
+                  number: pullRequest.number,
+                })
+              }
+              onPrefetch={() =>
+                void queryClient.prefetchQuery(
+                  repositoryPullRequestDetailQueryOptions({
+                    owner: pullRequest.repository.owner,
+                    repository: pullRequest.repository.name,
+                    pullRequestNumber: pullRequest.number,
+                    timelinePage: 1,
+                  })
+                )
+              }
+            />
+          ))}
+        </div>
+      );
     case "users":
       return (
         <div className="flex flex-col gap-1.5 p-2">
@@ -657,6 +748,7 @@ function SelectionDetail({
         <GitHubPullRequestDetail
           repository={selection.repository}
           pullRequestNumber={selection.number}
+          backLabel={t("workspace.discovery.backToDiscovery")}
           onBack={onBack}
         />
       </Suspense>
@@ -693,6 +785,15 @@ export function GitHubDiscoveryView({
   const kind = mode === "search" ? searchKind : "repositories";
   const activeQuery = mode === "trending" ? trendingSearchQuery(trendingPeriod) : query;
   const activeSort = mode === "trending" ? "stars" : sort;
+  const listScroll = useListScroll(
+    JSON.stringify(
+      mode === "feed"
+        ? ["feed"]
+        : mode === "trending" && trendingKind === "developers"
+          ? ["developers", trendingPeriod, trendingFilters.language, trendingFilters.sponsorable]
+          : ["search", kind, activeQuery, activeSort, page]
+    )
+  );
   const search = useQuery({
     ...discoverySearchQueryOptions({ kind, query: activeQuery, sort: activeSort, page }),
     enabled:
@@ -760,7 +861,7 @@ export function GitHubDiscoveryView({
 
   const content = (
     <div
-      className="relative mx-auto flex min-h-0 w-full max-w-[1120px] flex-1 px-4"
+      className="relative mx-auto flex min-h-0 w-full max-w-[1120px] flex-1"
       aria-busy={backgroundLoading}
     >
       <div className="relative flex min-h-0 w-full flex-1 overflow-hidden">
@@ -771,53 +872,65 @@ export function GitHubDiscoveryView({
               filters={trendingFilters}
               onFiltersChange={setTrendingFilters}
               onSelectDeveloper={(login) => setSelection({ kind: "user", user: { login } })}
+              scroll={listScroll}
             />
           ) : mode === "feed" ? (
-            <ScrollArea className="min-h-0 flex-1" constrainContentWidth>
-              <DeveloperFeed onSelect={setSelection} />
-            </ScrollArea>
+            <DeveloperFeed onSelect={setSelection} scroll={listScroll} />
           ) : mode === "search" && !query ? (
-            <Empty className="min-h-[420px]">
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <Search />
-                </EmptyMedia>
-                <EmptyTitle>{t("workspace.discovery.startSearch")}</EmptyTitle>
-                <EmptyDescription>{t("workspace.discovery.queryHelp")}</EmptyDescription>
-              </EmptyHeader>
-            </Empty>
+            <ScrollArea className="min-h-0 flex-1" constrainContentWidth>
+              <Empty className="min-h-[340px]">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <Search />
+                  </EmptyMedia>
+                  <EmptyTitle>{t("workspace.discovery.startSearch")}</EmptyTitle>
+                  <EmptyDescription>{t("workspace.discovery.queryHelp")}</EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            </ScrollArea>
           ) : searchError ? (
-            <Empty className="min-h-[420px]">
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <CircleAlert />
-                </EmptyMedia>
-                <EmptyTitle>{t("workspace.discovery.searchFailed")}</EmptyTitle>
-                <EmptyDescription>{searchError.message}</EmptyDescription>
-              </EmptyHeader>
-              <EmptyContent>
-                <div className="flex flex-wrap items-center justify-center gap-2">
-                  <Button variant="outline" size="sm" onClick={() => void search.refetch()}>
-                    <RefreshCw data-icon="inline-start" />
-                    {t("common.retry")}
-                  </Button>
-                  {mode === "trending" ? (
-                    <Button variant="ghost" size="sm" onClick={() => void openTrendingOnGitHub()}>
-                      <ExternalLink data-icon="inline-start" />
-                      {t("workspace.discovery.viewTrendingOnGitHub")}
+            <ScrollArea className="min-h-0 flex-1" constrainContentWidth>
+              <Empty className="min-h-[340px]">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <CircleAlert />
+                  </EmptyMedia>
+                  <EmptyTitle>{t("workspace.discovery.searchFailed")}</EmptyTitle>
+                  <EmptyDescription>{searchError.message}</EmptyDescription>
+                </EmptyHeader>
+                <EmptyContent>
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    <Button variant="outline" size="sm" onClick={() => void search.refetch()}>
+                      <RefreshCw data-icon="inline-start" />
+                      {t("common.retry")}
                     </Button>
-                  ) : null}
-                </div>
-              </EmptyContent>
-            </Empty>
+                    {mode === "trending" ? (
+                      <Button variant="ghost" size="sm" onClick={() => void openTrendingOnGitHub()}>
+                        <ExternalLink data-icon="inline-start" />
+                        {t("workspace.discovery.viewTrendingOnGitHub")}
+                      </Button>
+                    ) : null}
+                  </div>
+                </EmptyContent>
+              </Empty>
+            </ScrollArea>
           ) : search.isPending || !data ? (
-            <SearchSkeletons />
+            <ScrollArea className="min-h-0 flex-1" constrainContentWidth>
+              <SearchSkeletons kind={kind} />
+            </ScrollArea>
           ) : (
             <>
               <div className="flex min-h-0 flex-1 flex-col">
-                <div className="text-muted-foreground flex min-h-11 shrink-0 items-center gap-3 px-5 pt-1 text-[11px]">
+                {search.error && data ? (
+                  <WorkspaceStaleNotice
+                    message={parseIpcError(search.error).message}
+                    onRetry={() => void search.refetch()}
+                    retryDisabled={search.isFetching}
+                  />
+                ) : null}
+                <div className="text-muted-foreground flex min-h-11 shrink-0 flex-wrap items-center gap-3 px-6 py-2 text-[11px]">
                   {mode === "trending" ? (
-                    <span className="truncate">{t("workspace.discovery.trendingMethod")}</span>
+                    <span>{t("workspace.discovery.trendingMethod")}</span>
                   ) : (
                     <>
                       <span>
@@ -833,6 +946,7 @@ export function GitHubDiscoveryView({
                         size="icon-xs"
                         className="ml-auto"
                         aria-label={t("workspace.discovery.openSearchOnGitHub")}
+                        title={t("workspace.discovery.openSearchOnGitHub")}
                         onClick={() =>
                           void openExternalUrl(
                             `https://github.com/search?q=${encodeURIComponent(query)}&type=${
@@ -855,7 +969,7 @@ export function GitHubDiscoveryView({
                     </AlertDescription>
                   </Alert>
                 ) : null}
-                <ScrollArea className="min-h-0 flex-1" constrainContentWidth>
+                <ScrollArea className="min-h-0 flex-1" constrainContentWidth {...listScroll}>
                   {data.results.length ? (
                     <SearchResults data={data} locale={i18n.language} onSelect={selectResult} />
                   ) : (
@@ -929,8 +1043,8 @@ export function GitHubDiscoveryView({
       asChild
     >
       <section className="harbor-content flex min-h-0 min-w-0 flex-1 flex-col">
-        <header className="harbor-subtle-divider shrink-0 border-b px-6 py-4">
-          <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-3">
+        <header className="harbor-subtle-divider shrink-0 border-b">
+          <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-3 px-6 py-4">
             <div className="flex min-h-10 flex-wrap items-center gap-x-5 gap-y-2.5">
               <h1 className="shrink-0 text-2xl font-semibold tracking-[-0.04em]">
                 {t("workspace.nav.discover")}
@@ -938,7 +1052,7 @@ export function GitHubDiscoveryView({
               <Tabs value={mode} onValueChange={changeMode} className="min-w-0 gap-0">
                 <TabsList
                   aria-label={t("workspace.discovery.modes")}
-                  className="harbor-segmented h-10 justify-start gap-1 rounded-[8px] border border-white/[0.055] bg-white/[0.025] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.055)]"
+                  className="harbor-segmented h-10 justify-start gap-1 p-1"
                 >
                   <TabsTrigger value="trending" className="rounded-[6px] px-3.5">
                     <Flame /> {t("workspace.discovery.tabs.trending")}

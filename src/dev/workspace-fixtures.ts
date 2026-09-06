@@ -74,6 +74,8 @@ function pullRequest(number: number, repository: GitHubRepository): GitHubPullRe
   };
 }
 
+export { issue as previewIssue, pullRequest as previewPullRequest };
+
 const timeline: GitHubIssueTimelineItem[] = [
   {
     id: "101",

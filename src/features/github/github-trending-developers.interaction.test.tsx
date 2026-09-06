@@ -205,7 +205,7 @@ describe("trending developers", () => {
     await user.click(
       screen.getByRole("button", { name: "workspace.discovery.developers.refresh" })
     );
-    expect(await screen.findByText("workspace.discovery.developers.refreshFailed")).toBeTruthy();
+    expect(await screen.findByText("common.staleResults")).toBeTruthy();
     expect(screen.getByText("The Octocat")).toBeTruthy();
   });
 
