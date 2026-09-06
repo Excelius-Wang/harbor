@@ -2976,7 +2976,10 @@
       "showMain": "Show Main Window",
       "showMainDesc": "Use shortcut to quickly show the main window",
       "setSuccess": "Shortcut set to {{shortcut}}!",
-      "cleared": "Shortcut cleared!"
+      "cleared": "Shortcut cleared!",
+      "clear": "Clear shortcut",
+      "updating": "Updating shortcut…",
+      "updateFailed": "Harbor could not update the shortcut. Try again."
     }
   },
   "releaseVersion": {
@@ -3061,5 +3064,11 @@
     "error": "Refresh failed",
     "retry": "Showing the previous results. Retry to refresh.",
     "empty": "No results"
+  },
+  "window": {
+    "controls": "Window controls",
+    "minimize": "Minimize",
+    "maximize": "Maximize",
+    "restore": "Restore"
   }
 }

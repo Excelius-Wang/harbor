@@ -19,8 +19,10 @@ vi.mock("@tauri-apps/api/webviewWindow", () => ({
 }));
 
 import { TitleBar } from "./title-bar";
+import i18n from "@/i18n";
 
-beforeEach(() => {
+beforeEach(async () => {
+  await i18n.changeLanguage("en");
   vi.clearAllMocks();
   tauriWindow.isMaximized.mockResolvedValue(false);
   tauriWindow.onResized.mockResolvedValue(vi.fn());
@@ -80,4 +82,13 @@ describe("TitleBar window controls", () => {
     });
     expect(screen.getByRole("button", { name: "Close" })).toBeTruthy();
   });
+});
+
+it("localizes native window control names", async () => {
+  await i18n.changeLanguage("zh");
+  render(<TitleBar />);
+  const controls = screen.getByRole("group", { name: "窗口控制" });
+  expect(within(controls).getByRole("button", { name: "关闭" })).toBeTruthy();
+  expect(within(controls).getByRole("button", { name: "最小化" })).toBeTruthy();
+  expect(within(controls).getByRole("button", { name: "最大化" })).toBeTruthy();
 });

@@ -66,34 +66,39 @@ export async function registerShortcut(
   shortcut: string,
   callback: () => void,
   oldShortcut?: string
-): Promise<void> {
-  if (oldShortcut) {
-    await unregisterShortcut(oldShortcut);
-  }
-  await unregisterShortcut(shortcut);
+): Promise<boolean> {
   try {
+    if (!(await unregisterShortcut(shortcut))) return false;
     await register(shortcut, (event) => {
       if (event.state === "Pressed") {
         callback();
       }
     });
+    if (oldShortcut && oldShortcut !== shortcut && !(await unregisterShortcut(oldShortcut))) {
+      await unregisterShortcut(shortcut);
+      return false;
+    }
     console.log("Shortcut registered successfully:", shortcut);
+    return true;
   } catch (e) {
     console.error("Failed to register shortcut:", e);
+    return false;
   }
 }
 
-export async function unregisterShortcut(shortcut?: string): Promise<void> {
+export async function unregisterShortcut(shortcut?: string): Promise<boolean> {
   if (!shortcut) {
-    return;
+    return true;
   }
   try {
     if (!(await isRegistered(shortcut))) {
-      return;
+      return true;
     }
     await unregister(shortcut);
+    return true;
   } catch (e) {
     console.error("Failed to unregister shortcut:", e);
+    return false;
   }
 }
 

@@ -104,6 +104,11 @@ export function installPreview() {
   const state = parameters.get("state") ?? "populated";
   const scenarioCommands = parameters.get("commands")?.split(",").filter(Boolean);
   const requestCounts = new Map<string, number>();
+  const shortcuts = new Set(
+    [localStorage.getItem("global-shortcut-show-main")].filter((value): value is string =>
+      Boolean(value)
+    )
+  );
   if (!native) {
     mockWindows("main");
     Object.defineProperty(globalThis, "isTauri", { value: true, configurable: true });
@@ -129,7 +134,39 @@ export function installPreview() {
       return null;
     }
     if (command === "plugin:app|version") return "0.1.0";
-    if (command === "plugin:updater|check") return null;
+    if (command === "plugin:updater|check") {
+      const updateState = parameters.get("update");
+      if (updateState === "loading") return new Promise(() => {});
+      if (updateState === "error") throw new Error("Preview update check failed");
+      if (updateState === "available")
+        return {
+          rid: 91000,
+          currentVersion: "0.1.0",
+          version: "0.2.0",
+          date: "2026-09-06",
+          body:
+            "Harbor preview release notes.\n\n" +
+            "Keep repository navigation, review controls and drafts readable across window sizes.\n\n".repeat(
+              8
+            ),
+          rawJson: {},
+        };
+      return null;
+    }
+    if (command === "plugin:resources|close" && args.rid === 91000) return null;
+    if (!native && command.startsWith("plugin:global-shortcut|")) {
+      if (command.endsWith("is_registered")) return shortcuts.has(String(args.shortcut));
+      const shortcutState = parameters.get("shortcut");
+      if (shortcutState === "loading") return new Promise(() => {});
+      if (shortcutState === "error") throw new Error("Preview shortcut registration failed");
+      if (Array.isArray(args.shortcuts))
+        for (const shortcut of args.shortcuts) {
+          if (command.endsWith("|register")) shortcuts.add(String(shortcut));
+          else if (command.endsWith("|unregister")) shortcuts.delete(String(shortcut));
+        }
+      if (command.endsWith("unregister_all")) shortcuts.clear();
+      return null;
+    }
     if (command === "update_tray_menu") return null;
     if (command === "github_login_availability") return { available: false, reason: "UI preview" };
     if (command === "github_connection_status")

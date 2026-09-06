@@ -2969,7 +2969,10 @@
       "showMain": "显示主窗口",
       "showMainDesc": "使用快捷键快速显示主窗口",
       "setSuccess": "已将快捷键设为 {{shortcut}}！",
-      "cleared": "已取消快捷键！"
+      "cleared": "已取消快捷键！",
+      "clear": "清除快捷键",
+      "updating": "正在更新快捷键…",
+      "updateFailed": "快捷键更新失败，请重试。"
     }
   },
   "releaseVersion": {
@@ -3054,5 +3057,11 @@
     "error": "刷新失败",
     "retry": "当前显示上次结果，可重试刷新。",
     "empty": "没有结果"
+  },
+  "window": {
+    "controls": "窗口控制",
+    "minimize": "最小化",
+    "maximize": "最大化",
+    "restore": "还原窗口"
   }
 }

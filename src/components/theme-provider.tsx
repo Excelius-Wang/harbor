@@ -12,11 +12,13 @@ type ThemeProviderProps = {
 
 type ThemeProviderState = {
   theme: Theme;
+  resolvedTheme: "light" | "dark";
   setTheme: (theme: Theme) => void;
 };
 
 const initialState: ThemeProviderState = {
   theme: "system",
+  resolvedTheme: "light",
   setTheme: () => null,
 };
 
@@ -32,6 +34,14 @@ export function ThemeProvider({
     () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
   );
 
+  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">(() =>
+    theme === "system"
+      ? window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light"
+      : theme
+  );
+
   useEffect(() => {
     const root = window.document.documentElement;
     const colorScheme = window.matchMedia("(prefers-color-scheme: dark)");
@@ -40,18 +50,18 @@ export function ThemeProvider({
 
     const applyTheme = () => {
       const version = ++appearanceVersion;
-      const resolvedTheme = theme === "system" ? (colorScheme.matches ? "dark" : "light") : theme;
+      const nextTheme = theme === "system" ? (colorScheme.matches ? "dark" : "light") : theme;
 
       root.classList.remove("light", "dark");
-      root.classList.add(resolvedTheme);
+      root.classList.add(nextTheme);
+      setResolvedTheme(nextTheme);
 
       if (isTauri()) {
         const appWindow = getCurrentWindow();
-        const glassEffect =
-          resolvedTheme === "dark" ? Effect.HudWindow : Effect.UnderWindowBackground;
+        const glassEffect = nextTheme === "dark" ? Effect.HudWindow : Effect.UnderWindowBackground;
 
         void appWindow
-          .setTheme(resolvedTheme)
+          .setTheme(nextTheme)
           .then(() => {
             if (version !== appearanceVersion) return;
             return appWindow.setEffects({
@@ -90,6 +100,7 @@ export function ThemeProvider({
 
   const value = {
     theme,
+    resolvedTheme,
     setTheme: (newTheme: Theme) => {
       localStorage.setItem(storageKey, newTheme);
       setTheme(newTheme);

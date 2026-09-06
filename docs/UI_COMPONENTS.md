@@ -90,3 +90,9 @@ PR creation reuses `GitHubTitleBodyForm.submitDisabled` to retain input after a 
 The cmdk 1.1.1 patch in `patches/` maintains an item-id registry for asynchronous option selection. It changes no component API. `Command` roots in the base-branch/reviewer dialogs supply a localized search label; keyboard tests assert `aria-activedescendant` points to the selected option. See `patches/README.md` for upstream attribution and removal criteria.
 
 `?pr=` selects controlled PR read states in ui-preview: draft/closed/merged/conflicts/unknown, queue-available/queue-waiting/queue-queued/queue-unavailable, auto-enabled, branch-conflicts, maintainer-available/maintainer-risk, pending-review/outdated-review, thread-resolved/thread-outdated, view-dismissed and reviewed. Scoped `state=loading|error&commands=<mutation>` safely exercises pending/error controls without reaching business IPC.
+
+Separate Settings windows reuse `NavigationButton` with `alwaysExpanded`; main workspace callers keep its default responsive label behavior. Render controls that call `useTheme()` beneath WindowFrame's ThemeProvider, as `SettingsContents` does. The context's `resolvedTheme` is the displayed light/dark mode, including live OS changes when the stored setting is `system`.
+
+`ShortcutInput` is a keyboard capture button followed by a named Clear action. Plain Tab/Shift+Tab navigate; modified key combinations and Delete/Backspace retain their existing capture/clear behavior. `disabled` locks pending changes. Shortcut registration helpers return success booleans so settings persist a value only after the native operation succeeds.
+
+About uses a local ScrollArea layout selector to center its content while allowing overflow at its 500 × 400 creation size. Keep update notes left-aligned on `harbor-reading`; they and the dialog footer stay reachable by scrolling.

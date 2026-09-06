@@ -39,7 +39,7 @@ type MainTitleBarProps = {
 };
 
 export function MainTitleBar({ onOpenCommand }: MainTitleBarProps) {
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
   const { t, i18n } = useTranslation();
   const [githubDialogOpen, setGithubDialogOpen] = useState(false);
   const [githubConnection, setGithubConnection] = useState<GitHubConnection>(() =>
@@ -52,7 +52,7 @@ export function MainTitleBar({ onOpenCommand }: MainTitleBarProps) {
   }, []);
 
   const handleToggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark");
+    setTheme(resolvedTheme === "dark" ? "light" : "dark");
   };
 
   const handleOpenAbout = async () => {
@@ -134,7 +134,7 @@ export function MainTitleBar({ onOpenCommand }: MainTitleBarProps) {
           <button
             type="button"
             onClick={onOpenCommand}
-            className="group text-muted-foreground hover:text-foreground focus-visible:ring-primary/60 flex h-9 w-[clamp(260px,36vw,480px)] items-center gap-2 rounded-[8px] border border-white/[0.08] bg-black/[0.07] px-3 text-xs shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-colors hover:border-white/14 hover:bg-white/[0.035] focus-visible:ring-2 focus-visible:outline-none max-[820px]:w-56 max-[620px]:hidden"
+            className="harbor-control text-muted-foreground hover:text-foreground hover:bg-accent/70 focus-visible:ring-ring flex h-9 w-[clamp(260px,36vw,480px)] items-center gap-2 rounded-lg border px-3 text-[13px] transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none max-[820px]:w-56 max-[620px]:hidden"
           >
             <Search className="size-3.5" />
             <span className="truncate">{t("workspace.command.trigger")}</span>
@@ -152,10 +152,11 @@ export function MainTitleBar({ onOpenCommand }: MainTitleBarProps) {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
-                  className="focus-visible:ring-primary/60 mr-1 flex h-9 items-center gap-1 rounded-[8px] px-1.5 transition-colors hover:bg-white/[0.05] focus-visible:ring-2 focus-visible:outline-none"
+                  className="focus-visible:ring-ring hover:bg-accent/70 mr-1 flex h-9 items-center gap-1 rounded-[8px] px-1.5 transition-colors focus-visible:ring-2 focus-visible:outline-none"
                   aria-label={t("workspace.accountMenu")}
+                  title={t("workspace.accountMenu")}
                 >
-                  <span className="grid size-6 place-items-center rounded-full bg-white/10 text-[11px] font-medium">
+                  <span className="bg-muted grid size-6 place-items-center rounded-full text-[11px] font-medium">
                     {accountInitial}
                   </span>
                   <ChevronDown className="text-muted-foreground size-3" />
@@ -164,7 +165,7 @@ export function MainTitleBar({ onOpenCommand }: MainTitleBarProps) {
               <DropdownMenuContent align="end" className="harbor-popover w-48">
                 <DropdownMenuLabel>
                   <p className="text-xs font-medium">{accountLabel}</p>
-                  <p className="text-muted-foreground mt-0.5 text-[10px] font-normal">
+                  <p className="text-muted-foreground mt-0.5 text-[11px] font-normal">
                     {githubConnection.connected
                       ? t("workspace.github.secureStorage")
                       : t("workspace.github.notConnected")}
@@ -184,7 +185,7 @@ export function MainTitleBar({ onOpenCommand }: MainTitleBarProps) {
                   <Languages /> {t("language.toggle")}
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={handleToggleTheme}>
-                  {theme === "dark" ? <Sun /> : <Moon />} {t("theme.toggle")}
+                  {resolvedTheme === "dark" ? <Sun /> : <Moon />} {t("theme.toggle")}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={() => void handleOpenAbout()}>

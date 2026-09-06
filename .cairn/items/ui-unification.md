@@ -15,6 +15,12 @@ Execute `/private/tmp/harbor-ui-refactor-handoff.md`: migrate all owned UI, veri
 - PR completed browser evidence: 68 core, 64 stable lifecycle, 92 Chinese read-state, 24 pending/error mutation, 24 creation/draft, 48 review/warning, 4 nonzero commit-scroll and 4 Teams keyboard captures; 20 extra dismissal/conversion/maintainer captures. Maintainer warning/loading/error/stale targets needed bottom-of-pane positioning because the metadata aside is sticky and taller than the viewport; corrected 16 captures have explicit target bounds assertions. Some older core captures predate the final metadata refinements; final delivery images must be refreshed after all batches.
 - PR final code checks pass `pnpm check` (496 tests/109 files, full-source lint/format/build) and separate `tsc -b`: `/private/tmp/harbor-pr-final-check.log`, `/private/tmp/harbor-pr-final-tsc.log`. The final inline new/edit/preview/cancel and checks/repository-list tour adds 24 captures; log `/private/tmp/harbor-pr-inline-qa.log`. Review pending/error footer captures were replaced via `harbor-pr-review-write-final.py`, log of the same stem. All tours completed; browser ends dark/900 in a controlled failed review submission. Source audit and exact evidence are recorded in the UI docs. No business IPC reached GitHub.
 
+- PR batch committed as `7a0a69f`, still unpushed. Window/settings batch is included in the local commit titled `refactor: unify settings and window controls`. Before/current screenshots and exact scope are now in UI_VERIFICATION.md; 140 distinct current browser captures. Native material remains unverified.
+- Window behavior fixes: SettingsContents renders under WindowFrame's ThemeProvider; ShortcutInput allows Tab/Shift+Tab and named Clear; settings preserve stored shortcuts after registration/clear failure and lock pending input. Replacement registers before removing the previous shortcut. ThemeProvider exposes resolvedTheme, so titlebar toggles the visible OS theme instead of treating stored System as light. Actual browser failures were recorded before each fix. Existing shared navigation, shortcut conventions, About information and manual release-link behavior remain.
+- Window final `pnpm check` passes 507 tests/113 files, complete-source lint/format/build; separate `tsc -b` passes. Logs `/private/tmp/harbor-window-final-check.log`, `harbor-window-final-tsc.log`. Source unchanged since checks. All tours complete: core 60, states 64, header/language 16. About 24 images were refreshed after fixing local flex shrink; update-note 24 captures were refreshed with left-aligned reading text. Scripts/logs `/private/tmp/harbor-window-{before,qa,states,header-qa}`, `harbor-about-final-qa`, `harbor-updater-notes-final`. No need repeat earlier failed harness runs.
+- Browser fixtures support `?update=available|loading|error` (fake resource rid91000 closes locally) and `?shortcut=loading|error` with an in-memory shortcut set. These plugin scenarios establish browser UI, not native OS registration or update installation. Last browser state is main workspace, Chinese/light/wide after toggling from OS dark; use fresh goto after future edits.
+- Next scope read: CommandDialog in harbor-workspace still overrides shared material with border-white/shadow-2xl/top28%; HarborRail has black/white fills,10 px provider text, long-content/late-answer context handling to audit. GitHubConnectionDialog's configured DTO mismatches the existing fixture (`available` vs `configured`); auth states and profile follow-error feedback remain. No edits yet to those consumers for this next scope. Window before-command image already exists; collect rail/auth before images before changing them.
+
 ## Preview and recovery
 
 - Task preview 1423: `pnpm dev:ui --port 1423 --force`, exec58868. Original 1420 and task1422 remain untouched. Restart was necessary because Vite still served old optimized cmdk; current optimized dependency contains `getItemIdByValue`.
@@ -31,12 +37,12 @@ Execute `/private/tmp/harbor-ui-refactor-handoff.md`: migrate all owned UI, veri
 
 ## Next action
 
-Audit and migrate the remaining workspace/window/account UI, starting with settings/about/update and shared titlebar controls, with before images and controlled preview states.
+Migrate and verify command palette, context rail/Agent and GitHub connection/profile follow feedback, using before images and controlled responses.
 
 ## Verification
 
-- `pnpm check` and `pnpm exec tsc -b`: 496 tests in 109 files, full-source lint/format/build/typecheck pass. Existing bundle-size advisory only. Logs `/private/tmp/harbor-pr-final-check.log`, `/private/tmp/harbor-pr-final-tsc.log`.
-- Browser: light/dark at 900×620 and 1440×900, English/Chinese, query/mutation states, keyboard and nonzero returns as specified in `docs/UI_VERIFICATION.md`; the PR inline and feedback tours are complete.
+- Current window batch: `pnpm check` passes 507 tests/113 files, full-source lint/format/build. Separate `pnpm exec tsc -b` passes. Logs `/private/tmp/harbor-window-final-check.log`, `harbor-window-final-tsc.log`; existing bundle-size advisory only.
+- Browser: both themes/languages at 900×620 and 1440×900, plus Settings 600×500/About 500×400; exact states, focus and persistence assertions in UI_VERIFICATION.md. All current tours complete.
 - Baseline Rust cargo check and native preview build pass. Native visuals, remaining UI migration, final CI/current-branch PR/CodeRabbit remain unverified.
 
-Success: PR code checks and the completed browser matrices pass; the overall Goal remains active and incomplete.
+Success: current code checks and browser matrices pass; the overall Goal remains active and incomplete.

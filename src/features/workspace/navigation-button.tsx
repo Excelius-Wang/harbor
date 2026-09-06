@@ -7,11 +7,15 @@ type NavigationButtonProps = Omit<ComponentProps<"button">, "children" | "classN
   label: string;
   caption?: string;
   active?: boolean;
+  alwaysExpanded?: boolean;
 };
 
 // Forward Radix trigger events and refs to the same native navigation control.
 export const NavigationButton = forwardRef<HTMLButtonElement, NavigationButtonProps>(
-  function NavigationButton({ icon: Icon, label, caption, active = false, ...props }, ref) {
+  function NavigationButton(
+    { icon: Icon, label, caption, active = false, alwaysExpanded = false, ...props },
+    ref
+  ) {
     return (
       <Tooltip>
         <TooltipTrigger asChild>
@@ -24,12 +28,22 @@ export const NavigationButton = forwardRef<HTMLButtonElement, NavigationButtonPr
             aria-label={label}
           >
             <Icon className="size-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />
-            <span className="workspace-wide:block hidden min-w-0 flex-1 truncate">
+            <span
+              className={
+                alwaysExpanded
+                  ? "block min-w-0 flex-1 truncate"
+                  : "workspace-wide:block hidden min-w-0 flex-1 truncate"
+              }
+            >
               {caption ?? label}
             </span>
           </button>
         </TooltipTrigger>
-        <TooltipContent side="right" sideOffset={8} className="workspace-wide:hidden">
+        <TooltipContent
+          side="right"
+          sideOffset={8}
+          className={alwaysExpanded ? "hidden" : "workspace-wide:hidden"}
+        >
           {label}
         </TooltipContent>
       </Tooltip>

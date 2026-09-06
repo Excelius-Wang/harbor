@@ -44,8 +44,8 @@ Status: in progress. A source inventory is not visual acceptance. Every row belo
 | Gists | Lists/detail/editor and files/comments | List/files/revisions/comments, editor/delete and stale/return matrix verified; mutation state variants pending |
 | Packages | Lists/details and actions | List/detail/version-delete dialog and stale matrix verified; restore/mutation variants pending |
 | Profile/account | Profile data/edit, connection/authentication dialogs | Profile/read/edit matrix verified; authentication and follow-failure feedback pending |
-| Settings window | Theme/language/shortcut/account controls | Pending |
-| About/update | Version/release info, progress, error, update dialogs/toasts | Pending |
+| Settings window | Theme/language/shortcut controls | Native-size/common-size browser matrices, keyboard, OS theme and failure/pending states verified |
+| About/update | Version/release info, progress, error, update dialogs/toasts | Both native/common sizes and languages, long notes, loading/error/up-to-date and focus return verified; native material gate remains |
 | Third-party web | Preserve third-party presentation; inspect Harbor launch/switch controls | Pending |
 
 ## First migration batch
@@ -72,15 +72,15 @@ Generated from existing JSX-bearing production files at task start. Each file mu
 
 | Production source | Source audit | Render / states evidence |
 | --- | --- | --- |
-| `src/pages/about.tsx` | Pending | Pending |
+| `src/pages/about.tsx` | Audited shared material, layout and keyboard controls | Settings/About/titlebar matrix in UI_VERIFICATION.md; native material gate remains |
 | `src/pages/home.tsx` | Pending | Pending |
-| `src/pages/settings.tsx` | Pending | Pending |
-| `src/components/language-toggle.tsx` | Pending | Pending |
-| `src/components/main-title-bar.tsx` | Pending | Pending |
+| `src/pages/settings.tsx` | Audited shared material, layout and keyboard controls | Settings/About/titlebar matrix in UI_VERIFICATION.md; native material gate remains |
+| `src/components/language-toggle.tsx` | Audited shared material, layout and keyboard controls | Settings/About/titlebar matrix in UI_VERIFICATION.md; native material gate remains |
+| `src/components/main-title-bar.tsx` | Audited shared material, layout and keyboard controls | Settings/About/titlebar matrix in UI_VERIFICATION.md; native material gate remains |
 | `src/components/mode-toggle.tsx` | Pending | Pending |
-| `src/components/shortcut-input.tsx` | Pending | Pending |
-| `src/components/theme-provider.tsx` | Pending | Pending |
-| `src/components/title-bar.tsx` | Pending | Pending |
+| `src/components/shortcut-input.tsx` | Audited shared material, layout and keyboard controls | Settings/About/titlebar matrix in UI_VERIFICATION.md; native material gate remains |
+| `src/components/theme-provider.tsx` | Audited shared material, layout and keyboard controls | Settings/About/titlebar matrix in UI_VERIFICATION.md; native material gate remains |
+| `src/components/title-bar.tsx` | Audited shared material, layout and keyboard controls | Settings/About/titlebar matrix in UI_VERIFICATION.md; native material gate remains |
 | `src/components/ui/alert-dialog.tsx` | Shared defaults audited and migrated | Gallery basics inspected; feature-specific states pending |
 | `src/components/ui/alert.tsx` | Shared defaults audited and migrated | Gallery basics inspected; feature-specific states pending |
 | `src/components/ui/avatar.tsx` | Pending | Pending |
@@ -113,8 +113,8 @@ Generated from existing JSX-bearing production files at task start. Each file mu
 | `src/components/ui/tabs.tsx` | Shared defaults audited and migrated | Gallery basics inspected; feature-specific states pending |
 | `src/components/ui/textarea.tsx` | Shared defaults audited and migrated | Gallery basics inspected; feature-specific states pending |
 | `src/components/ui/tooltip.tsx` | Shared defaults audited and migrated | Gallery basics inspected; feature-specific states pending |
-| `src/components/updater-dialog.tsx` | Pending | Pending |
-| `src/components/window-frame.tsx` | Pending | Pending |
+| `src/components/updater-dialog.tsx` | Audited shared material, layout and keyboard controls | Settings/About/titlebar matrix in UI_VERIFICATION.md; native material gate remains |
+| `src/components/window-frame.tsx` | Audited shared material, layout and keyboard controls | Settings/About/titlebar matrix in UI_VERIFICATION.md; native material gate remains |
 | `src/features/github/github-actions-artifacts.tsx` | Audited; shared material/metadata/feedback applied where needed | Repository-tab matrix and listed states/actions in UI_VERIFICATION.md; advanced variants are recorded there |
 | `src/features/github/github-actions-detail.tsx` | Audited; shared material/metadata/feedback applied where needed | Repository-tab matrix and listed states/actions in UI_VERIFICATION.md; advanced variants are recorded there |
 | `src/features/github/github-actions-dispatch-dialog.tsx` | Audited; shared material/metadata/feedback applied where needed | Repository-tab matrix and listed states/actions in UI_VERIFICATION.md; advanced variants are recorded there |
