@@ -11,6 +11,8 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { parseIpcError } from "@/lib/ipc-error";
 import { GitHubActionsDetail } from "./github-actions-detail";
 import type { GitHubRepository } from "./github-data";
@@ -39,18 +41,27 @@ export function GitHubActionsRunDetail({
 
   if (result.data) {
     return (
-      <GitHubActionsDetail
-        repository={repository}
-        run={result.data}
-        backLabel={backLabel}
-        onBack={onBack}
-      />
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        {error ? (
+          <WorkspaceStaleNotice
+            message={error.message}
+            onRetry={() => void result.refetch()}
+            retryDisabled={result.isFetching}
+          />
+        ) : null}
+        <GitHubActionsDetail
+          repository={repository}
+          run={result.data}
+          backLabel={backLabel}
+          onBack={onBack}
+        />
+      </div>
     );
   }
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col p-4 sm:p-5">
-      <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-4">
+    <ScrollArea className="min-h-0 min-w-0 flex-1" constrainContentWidth>
+      <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-4 p-4 sm:p-5">
         <Button type="button" variant="ghost" size="sm" className="w-fit" onClick={onBack}>
           <ArrowLeft data-icon="inline-start" />
           {backLabel}
@@ -81,6 +92,6 @@ export function GitHubActionsRunDetail({
           </Empty>
         )}
       </div>
-    </div>
+    </ScrollArea>
   );
 }

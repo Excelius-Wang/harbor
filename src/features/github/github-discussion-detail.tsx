@@ -431,8 +431,8 @@ export function GitHubDiscussionDetail({
         ) : (
           <GitHubReactionsProvider repository={repository} subjects={reactionSubjects}>
             <div className="mx-auto w-full max-w-[1050px] px-4 py-5 sm:px-5">
-              <header className="mb-5 flex flex-wrap items-start gap-3">
-                <div className="min-w-0 flex-1">
+              <header className="mb-5 flex min-w-0 flex-col gap-3">
+                <div className="min-w-0">
                   <div className="mb-2 flex flex-wrap items-center gap-2">
                     <Badge variant="outline">
                       <span aria-hidden="true">{discussion.category.emoji}</span>

@@ -77,7 +77,7 @@ function ArtifactRow({
         <Archive className="size-4" />
       </span>
       <div className="min-w-48 flex-1">
-        <p className="text-foreground/95 text-xs font-medium break-all">{artifact.name}</p>
+        <p className="text-foreground text-[13px] font-medium wrap-anywhere">{artifact.name}</p>
         <p className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
           <span>{formatBytes(artifact.sizeInBytes, locale)}</span>
           <span>
@@ -272,7 +272,7 @@ export function GitHubActionsArtifacts({
           ))}
         </div>
         {downloadError && downloadErrorMessage ? (
-          <Alert variant="destructive" className="m-3" aria-live="polite">
+          <Alert variant="destructive" className="m-3 w-auto" aria-live="polite">
             <CircleAlert />
             <AlertTitle>{t("workspace.repositories.workflowArtifactDownloadFailed")}</AlertTitle>
             <AlertDescription>{downloadErrorMessage}</AlertDescription>

@@ -27,7 +27,7 @@ Status: in progress. A source inventory is not visual acceptance. Every row belo
 | Entry | Owned scope | Migration / visual evidence |
 | --- | --- | --- |
 | Workspace | Window/title bar, primary navigation, More menu, command palette, context rail and Agent sheet | Window/context matrices, keyboard/focus, pending/error/private and long-answer states verified; native material gate remains |
-| Notifications | Inbox, filters, retained results, target detail | Inbox matrix, stale notice and mark-all dialog verified; destination variants/invitations pending |
+| Notifications | Inbox, filters, retained results, target detail | Inbox/stale/dialog matrix, nine additional destination routes, highlighted invitation and returns verified |
 | Issues | Inbox/repository lists, details, timeline, metadata, relationships, all actions/forms | Inbox/detail/edit/preview and return checks done; advanced actions still pending |
 | Pull requests | Inbox/repository lists, details, commits, files/diff, reviews, checks, merge/lifecycle forms | Inbox/detail/commits/files, lifecycle dialogs, creation drafts and review variants verified; native/final delivery gates remain |
 | Repositories | Owned/starred lists, create/access/invitations, repository shell and tabs | Core browser, code and create-form capture done; other tabs/actions pending |
@@ -36,7 +36,7 @@ Status: in progress. A source inventory is not visual acceptance. Every row belo
 | Wiki | Page list, reading/editing/history and dialogs | Page/read/editor/history and core state matrix verified; comparison/revert/offline variants pending |
 | Releases | Lists/details/create/edit and assets | List/detail/create/edit/delete/asset-delete and return/state matrix verified; artifact transfer states pending |
 | Discussions | Lists/details, comments/reactions/polls and forms | List/detail/forms/poll, comment dialogs and return/state matrices verified; nested replies and mutation variants pending |
-| Actions | Workflows/runs/jobs/artifacts/logs/check suites and controls | List/detail/log/dispatch/disable, return and core states verified; rerun/delete/running and artifact action variants pending |
+| Actions | Workflows/runs/jobs/artifacts/logs/check suites and controls | List/detail/log/dispatch/disable and returns verified; run/suite metadata, jobs/logs/artifacts and rerun/cancel/delete/download UI matrices verified with controlled responses |
 | Security | Alert lists/details and actions | Three alert kinds/detail, close form, filters/return and core states verified |
 | Insights | Charts, summaries, loading/empty/error | Overview/contributors/traffic, named keyboard charts/tooltips and both-theme states verified |
 | Repository settings | General/access/topics/taxonomy/pages/invitations and forms | Forms, Pages, taxonomy, invitations, visibility and return/state matrices verified; archived/deployment variants pending |
@@ -115,19 +115,19 @@ Generated from existing JSX-bearing production files at task start. Each file mu
 | `src/components/ui/tooltip.tsx` | Audited shared semantic material, layout and applicable accessibility defaults | Complete gallery matrix and feature matrices in UI_VERIFICATION.md; native material gate remains |
 | `src/components/updater-dialog.tsx` | Audited shared material, layout and keyboard controls | Settings/About/titlebar matrix in UI_VERIFICATION.md; native material gate remains |
 | `src/components/window-frame.tsx` | Audited shared material, layout and keyboard controls | Settings/About/titlebar matrix in UI_VERIFICATION.md; native material gate remains |
-| `src/features/github/github-actions-artifacts.tsx` | Audited; shared material/metadata/feedback applied where needed | Repository-tab matrix and listed states/actions in UI_VERIFICATION.md; advanced variants are recorded there |
-| `src/features/github/github-actions-detail.tsx` | Audited; shared material/metadata/feedback applied where needed | Repository-tab matrix and listed states/actions in UI_VERIFICATION.md; advanced variants are recorded there |
+| `src/features/github/github-actions-artifacts.tsx` | Audited; readable execution rows, narrow header and inset feedback | Execution core/state/mutation matrices in UI_VERIFICATION.md |
+| `src/features/github/github-actions-detail.tsx` | Audited; readable execution rows, narrow header and inset feedback | Execution core/state/mutation matrices in UI_VERIFICATION.md |
 | `src/features/github/github-actions-dispatch-dialog.tsx` | Audited; shared material/metadata/feedback applied where needed | Repository-tab matrix and listed states/actions in UI_VERIFICATION.md; advanced variants are recorded there |
 | `src/features/github/github-actions-filters.tsx` | Audited; shared material/metadata/feedback applied where needed | Repository-tab matrix and listed states/actions in UI_VERIFICATION.md; advanced variants are recorded there |
-| `src/features/github/github-actions-job-actions.tsx` | Pending | Pending |
-| `src/features/github/github-actions-run-actions.tsx` | Pending | Pending |
-| `src/features/github/github-actions-run-delete.tsx` | Pending | Pending |
-| `src/features/github/github-actions-run-detail.tsx` | Pending | Pending |
-| `src/features/github/github-actions-shared.tsx` | Pending | Pending |
+| `src/features/github/github-actions-job-actions.tsx` | Audited; shared execution surfaces, status and action feedback | Execution core/state/mutation and notification-route matrices in UI_VERIFICATION.md; native material remains separate |
+| `src/features/github/github-actions-run-actions.tsx` | Audited; shared execution surfaces, status and action feedback | Execution core/state/mutation and notification-route matrices in UI_VERIFICATION.md; native material remains separate |
+| `src/features/github/github-actions-run-delete.tsx` | Audited; shared execution surfaces, status and action feedback | Execution core/state/mutation and notification-route matrices in UI_VERIFICATION.md; native material remains separate |
+| `src/features/github/github-actions-run-detail.tsx` | Audited; shared execution surfaces, status and action feedback | Execution core/state/mutation and notification-route matrices in UI_VERIFICATION.md; native material remains separate |
+| `src/features/github/github-actions-shared.tsx` | Audited; shared execution surfaces, status and action feedback | Execution core/state/mutation and notification-route matrices in UI_VERIFICATION.md; native material remains separate |
 | `src/features/github/github-actions-view.tsx` | Audited; shared material/metadata/feedback applied where needed | Repository-tab matrix and listed states/actions in UI_VERIFICATION.md; advanced variants are recorded there |
 | `src/features/github/github-actions-workflow-controls.tsx` | Audited; shared material/metadata/feedback applied where needed | Repository-tab matrix and listed states/actions in UI_VERIFICATION.md; advanced variants are recorded there |
 | `src/features/github/github-actions-workflow-navigation.tsx` | Audited; shared material/metadata/feedback applied where needed | Repository-tab matrix and listed states/actions in UI_VERIFICATION.md; advanced variants are recorded there |
-| `src/features/github/github-check-suite-detail.tsx` | Pending | Pending |
+| `src/features/github/github-check-suite-detail.tsx` | Audited; shared execution surfaces, status and action feedback | Execution core/state/mutation and notification-route matrices in UI_VERIFICATION.md; native material remains separate |
 | `src/features/github/github-code-branch-dialogs.tsx` | Audited; shared source/reading/metadata/feedback applied where needed | Code core/state/action/return matrices in UI_VERIFICATION.md; broader mutation audit remains |
 | `src/features/github/github-code-delete-file-dialog.tsx` | Audited; shared source/reading/metadata/feedback applied where needed | Code core/state/action/return matrices in UI_VERIFICATION.md; broader mutation audit remains |
 | `src/features/github/github-code-file-dialog.tsx` | Audited; shared source/reading/metadata/feedback applied where needed | Code core/state/action/return matrices in UI_VERIFICATION.md; broader mutation audit remains |
@@ -266,3 +266,7 @@ The five entry pages and 48 core view captures, 40 action-dialog captures, 15 Ch
 ## Repository-tab batch
 
 Actions, Releases, Wiki, Insights and Security now have 72 core captures, 40 scoped state captures, 32 action-dialog captures and chart/return checks. Full-source lint is now part of `pnpm check`; previous unquoted glob coverage was incomplete. The native preview bootstrap no longer overwrites the readonly bridge, but an actual native visual pass remains outstanding. Details and limits are in [UI_VERIFICATION.md](UI_VERIFICATION.md).
+
+## Execution and notification destinations
+
+The advanced Actions and notification route batch is verified with 504 current captures, four execution/checks regression cases and two additional preview isolation/state tests. PR checks and Discussion headers were verified in both entry contexts. Final checks pass523 tests/116 files and separate tsc. Exact states, screenshots, harness corrections and native limits are recorded in [UI_VERIFICATION.md](UI_VERIFICATION.md).

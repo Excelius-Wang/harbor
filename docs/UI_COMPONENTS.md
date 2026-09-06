@@ -122,3 +122,15 @@ Keep Discovery's `useListScroll` in `GitHubDiscoveryView`, keyed by the actual q
 `src/dev/discovery-fixtures.ts` supplies all five search result kinds and Following events, reusing the same controlled Issue/PR factories as detail views. `?discovery=dense` adds long descriptions, enough rows for nonzero scroll and a second search page; `incomplete` shows partial-search feedback; `next-error` and `next-loading` exercise feed continuation. These are synthetic read scenarios.
 
 `?links=record` records GitHub/gist HTTPS opener targets in `window.__harborPreviewOpenedUrls` inside the browser preview, without opening a site. This opt-in mode does not intercept native SDK plugin behavior or authorize business writes. Unknown business commands continue to fail.
+
+## Workflow execution and notification targets
+
+`GitHubActionsRunDetail` and `GitHubCheckSuiteDetail` keep loaded metadata visible after refresh errors and show `WorkspaceStaleNotice` with Retry. `GitHubPullRequestChecks` applies the same behavior to its own list query, whether opened from a PR or a notification. Preserve these separate query boundaries.
+
+Actions puts its header controls on a separate row below 680 px of available detail-pane width. Job, step, artifact and check text uses 13 px; metadata uses 11 px. Inset alerts use `w-auto` with their margins so the shared Alert's default full width does not extend past the parent.
+
+Controlled workflow variants are `?actions=failed|running|queued|truncated|download-cancelled`. `&writes=accept` enables only named local rerun/cancel/delete/job-rerun/artifact-download simulations. Subsequent fixture reads reflect accepted run actions and deletion. Download success/cancellation returns a DTO only; it creates no file and does not exercise the native save picker. Scoped loading/error command states still take precedence.
+
+`?notifications=targets` supplies nine in-app detail routes: workflow, check suite, Discussion, Release, Commit, three Security alert kinds and repository invitations. Read/Done acknowledgments remove synthetic rows, and mark-all clears this fixture inbox. This is browser preview state; unknown business commands remain rejected.
+
+Discussion detail headers keep the title/metadata and wrapping action group on separate rows, so intermediate pane widths cannot squeeze the title between controls. This applies to both repository and notification entry points.

@@ -1,3 +1,5 @@
+import { createWorkflowFixtures } from "./workflow-fixtures";
+import { createNotificationTargetFixtures } from "./notification-target-fixtures";
 import { discoveryFixture } from "./discovery-fixtures";
 import {
   isTauri,
@@ -111,6 +113,14 @@ export function installPreview() {
           index ? repository : { ...repository, isPrivate: true }
         )
       : repositoryFixtures;
+  const notificationTargets = parameters.get("notifications") === "targets";
+  const workflowFixtures = createWorkflowFixtures(
+    repositories,
+    parameters.get("actions"),
+    parameters.get("writes") === "accept",
+    notificationTargets
+  );
+  const notificationFixtures = createNotificationTargetFixtures(repositories, notificationTargets);
   const scenarioCommands = parameters.get("commands")?.split(",").filter(Boolean);
   const requestCounts = new Map<string, number>();
   const shortcuts = new Set(
@@ -273,6 +283,10 @@ export function installPreview() {
               })),
       };
     }
+    const notificationResult = notificationFixtures(command, args, commandState === "empty");
+    if (notificationResult !== undefined) return notificationResult;
+    const workflowResult = workflowFixtures(command, args, commandState === "empty");
+    if (workflowResult !== undefined) return workflowResult;
     const workspaceResult = workspaceFixture(
       command,
       args,

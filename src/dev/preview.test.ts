@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import type * as Data from "@/features/github/github-data";
 import { invoke } from "./preview-core";
 import { clearMocks } from "@tauri-apps/api/mocks";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -65,4 +66,46 @@ it("supplies the sign-in configuration shape used by the production dialog", asy
   vi.stubGlobal("isTauri", false);
   installPreview();
   await expect(invoke("github_login_availability")).resolves.toEqual({ configured: true });
+});
+
+it("simulates only the opted-in workflow actions and reconciles their read fixtures", async () => {
+  vi.stubGlobal("isTauri", false);
+  history.replaceState(null, "", "/?actions=failed&writes=accept");
+  installPreview();
+  const target = { owner: "harbor-preview", repository: "harbor", runId: 1 };
+  expect(
+    (await invoke<Data.GitHubWorkflowRun>("github_get_repository_workflow_run", target)).conclusion
+  ).toBe("failure");
+  await invoke("github_request_workflow_run_action", { ...target, action: "rerunAll" });
+  expect(
+    (await invoke<Data.GitHubWorkflowRun>("github_get_repository_workflow_run", target)).status
+  ).toBe("queued");
+  await invoke("github_delete_repository_workflow_run", target);
+  expect(
+    (
+      await invoke<Data.GitHubWorkflowRunPage>("github_list_repository_workflow_runs", target)
+    ).runs.some((run) => run.id === 1)
+  ).toBe(false);
+  await expect(invoke("github_delete_repository_issue", { number: 1 })).rejects.toMatchObject({
+    code: "previewFixtureMissing",
+  });
+});
+
+it("removes acknowledged notification targets from the controlled inbox", async () => {
+  vi.stubGlobal("isTauri", false);
+  history.replaceState(null, "", "/?notifications=targets");
+  installPreview();
+  const before = await invoke<Data.GitHubNotificationPage>("github_list_notifications");
+  expect(
+    before.notifications.some((notification) => notification.subject.kind === "checkSuite")
+  ).toBe(true);
+  await invoke("github_update_notification", {
+    threadId: before.notifications[0].id,
+    action: "read",
+  });
+  const after = await invoke<Data.GitHubNotificationPage>("github_list_notifications");
+  expect(after.notifications).toHaveLength(before.notifications.length - 1);
+  expect(
+    after.notifications.some((notification) => notification.id === before.notifications[0].id)
+  ).toBe(false);
 });

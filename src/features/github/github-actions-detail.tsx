@@ -78,14 +78,18 @@ function WorkflowJob({
           <Button
             type="button"
             variant="ghost"
-            className="h-auto min-w-0 flex-1 justify-start gap-3 px-2 py-2 text-left"
+            className="h-auto min-w-0 flex-1 justify-start gap-3 px-2 py-2 text-left whitespace-normal"
           >
             <GitHubExecutionStatusIcon status={job.status} conclusion={job.conclusion} />
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-xs font-medium">{job.name}</span>
+              <span className="block truncate text-[13px] font-medium" title={job.name}>
+                {job.name}
+              </span>
               <span className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-2 text-[11px] font-normal">
                 {duration ? <span>{duration}</span> : null}
-                {job.runnerName ? <span>{job.runnerName}</span> : null}
+                {job.runnerName ? (
+                  <span className="max-w-full wrap-anywhere">{job.runnerName}</span>
+                ) : null}
                 {job.labels.slice(0, 3).map((label) => (
                   <Badge key={label} variant="outline" className="h-5 rounded-md font-normal">
                     {label}
@@ -141,7 +145,7 @@ function WorkflowJob({
                   <span className="text-muted-foreground w-5 shrink-0 text-right font-mono text-[11px] tabular-nums">
                     {step.number}
                   </span>
-                  <span className="min-w-0 flex-1 truncate text-[11px]">{step.name}</span>
+                  <span className="min-w-0 flex-1 text-[13px] wrap-anywhere">{step.name}</span>
                   {stepDuration ? (
                     <span className="text-muted-foreground shrink-0 text-[11px] tabular-nums">
                       {stepDuration}
@@ -259,7 +263,7 @@ export function GitHubActionsDetail({
                 <span>{formatIssueDate(run.createdAt, i18n.language)}</span>
               </p>
             </div>
-            <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+            <div className="ml-auto flex w-full flex-wrap items-center justify-end gap-2 @min-[680px]/actions-detail:w-auto">
               <GitHubWorkflowRunActions
                 repository={repository}
                 run={run}
@@ -372,7 +376,7 @@ export function GitHubActionsDetail({
               <header className="flex min-w-0 items-center gap-3 border-b px-3 py-2.5">
                 <TerminalSquare className="text-primary shrink-0" />
                 <div className="min-w-0 flex-1">
-                  <h4 className="truncate text-xs font-semibold">{selectedJob.name}</h4>
+                  <h4 className="text-[13px] font-semibold wrap-anywhere">{selectedJob.name}</h4>
                   <p className="text-muted-foreground mt-0.5 text-[11px]">
                     {t("workspace.repositories.workflowJobLog")}
                   </p>
@@ -401,7 +405,7 @@ export function GitHubActionsDetail({
                   ))}
                 </div>
               ) : logError ? (
-                <Alert variant="destructive" className="m-3">
+                <Alert variant="destructive" className="m-3 w-auto">
                   <FileText />
                   <AlertTitle>{t("workspace.repositories.workflowLogLoadFailed")}</AlertTitle>
                   <AlertDescription className="flex min-w-0 items-center gap-3">
@@ -419,7 +423,7 @@ export function GitHubActionsDetail({
               ) : logResult.data ? (
                 <>
                   {logResult.data.truncated ? (
-                    <Alert className="m-3">
+                    <Alert className="m-3 w-auto">
                       <FileText />
                       <AlertTitle>{t("workspace.repositories.workflowLogTruncated")}</AlertTitle>
                       <AlertDescription>

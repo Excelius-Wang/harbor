@@ -15,6 +15,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { parseIpcError } from "@/lib/ipc-error";
 import { openExternalUrl } from "@/lib/window";
 import type { GitHubCheckPage, GitHubRepositoryIdentity } from "./github-data";
@@ -144,8 +145,15 @@ function GitHubChecksResult({
   const progress = data?.checks.length ? (completed / data.checks.length) * 100 : 0;
 
   return (
-    <ScrollArea className="min-h-0 flex-1">
+    <ScrollArea className="min-h-0 flex-1" constrainContentWidth>
       <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-4 px-4 py-5 sm:px-5">
+        {data && result.error ? (
+          <WorkspaceStaleNotice
+            message={parseIpcError(result.error).message}
+            onRetry={() => void result.refetch()}
+            retryDisabled={result.isFetching}
+          />
+        ) : null}
         {result.isPending ? (
           <div className="flex flex-col gap-3">
             <Skeleton className="h-24 w-full" />
@@ -214,14 +222,14 @@ function GitHubChecksResult({
                 return (
                   <article
                     key={check.id}
-                    className="hover:bg-accent/30 flex min-w-0 items-center gap-3 border-b px-4 py-3 last:border-b-0"
+                    className="harbor-result-row harbor-subtle-divider flex min-w-0 items-center gap-3 border-b px-4 py-3 last:border-b-0"
                   >
                     <GitHubExecutionStatusIcon
                       status={check.status}
                       conclusion={check.conclusion}
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-[12px] font-medium">{check.name}</p>
+                      <p className="text-[13px] font-medium wrap-anywhere">{check.name}</p>
                       <p className="text-muted-foreground mt-0.5 text-[11px] leading-5">
                         {check.description ?? t(`workspace.repositories.checkBuckets.${bucket}`)}
                       </p>
@@ -235,6 +243,7 @@ function GitHubChecksResult({
                         variant="ghost"
                         size="icon-xs"
                         aria-label={t("workspace.repositories.openCheck")}
+                        title={t("workspace.repositories.openCheck")}
                         onClick={() => check.url && void openExternalUrl(check.url)}
                       >
                         <ExternalLink />
