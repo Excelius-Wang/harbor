@@ -291,7 +291,7 @@ function GitHubIssueDetailScreen({
           <div className="mx-auto w-full max-w-[1100px] px-4 py-5 sm:px-5">
             <div className="mb-5 flex flex-wrap items-start gap-3">
               <div className="min-w-0 flex-1">
-                <h2 className="text-foreground text-xl leading-7 font-semibold tracking-[-0.025em]">
+                <h2 className="text-foreground text-2xl leading-8 font-semibold tracking-[-0.025em]">
                   {detail.issue.title}{" "}
                   <span className="text-muted-foreground font-normal">#{detail.issue.number}</span>
                 </h2>

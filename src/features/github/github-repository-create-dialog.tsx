@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpen, GitBranch, Plus } from "lucide-react";
+import { BookOpen, CircleAlert, GitBranch, Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -14,17 +14,27 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Field, FieldContent, FieldDescription, FieldLabel } from "@/components/ui/field";
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { parseIpcError } from "@/lib/ipc-error";
 import type { GitHubRepository, GitHubRepositoryVisibility } from "./github-data";
 import { repositoryCreationOptionsQueryOptions } from "./github-queries";
@@ -50,6 +60,10 @@ export function GitHubRepositoryCreateDialog({
   const nameId = useId();
   const descriptionId = useId();
   const homepageId = useId();
+  const visibilityId = useId();
+  const readmeId = useId();
+  const gitignoreId = useId();
+  const licenseId = useId();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [homepage, setHomepage] = useState("");
@@ -65,21 +79,6 @@ export function GitHubRepositoryCreateDialog({
     ...repositoryCreationOptionsQueryOptions(),
     enabled: open,
   });
-
-  useEffect(() => {
-    if (!open) return;
-    setName("");
-    setDescription("");
-    setHomepage("");
-    setVisibility("private");
-    setInitializeWithReadme(true);
-    setGitignoreTemplate(NO_TEMPLATE);
-    setLicenseTemplate(NO_TEMPLATE);
-    setHasIssues(true);
-    setHasProjects(true);
-    setHasWiki(false);
-    setHasDiscussions(false);
-  }, [open]);
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -109,33 +108,57 @@ export function GitHubRepositoryCreateDialog({
         })
       );
     },
-    onError: (error) =>
-      toast.error(t("workspace.repositories.settings.createFailed"), {
-        description: parseIpcError(error).message,
-      }),
   });
+
+  const resetCreation = mutation.reset;
+  useEffect(() => {
+    if (!open) return;
+    resetCreation();
+    setName("");
+    setDescription("");
+    setHomepage("");
+    setVisibility("private");
+    setInitializeWithReadme(true);
+    setGitignoreTemplate(NO_TEMPLATE);
+    setLicenseTemplate(NO_TEMPLATE);
+    setHasIssues(true);
+    setHasProjects(true);
+    setHasWiki(false);
+    setHasDiscussions(false);
+  }, [open, resetCreation]);
+
+  const creationError = mutation.error ? parseIpcError(mutation.error) : null;
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (name.trim()) mutation.mutate();
+    if (name.trim() && !mutation.isPending) mutation.mutate();
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[min(760px,calc(100vh-2rem))] overflow-y-auto sm:max-w-xl">
-        <form onSubmit={submit} className="flex flex-col gap-5">
-          <DialogHeader>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!mutation.isPending) onOpenChange(next);
+      }}
+    >
+      <DialogContent
+        showCloseButton={!mutation.isPending}
+        className="max-h-[min(760px,calc(100vh-2rem))] overflow-y-auto sm:max-w-xl"
+      >
+        <form onSubmit={submit} aria-busy={mutation.isPending} className="flex flex-col gap-5">
+          <DialogHeader className="pr-8">
             <DialogTitle>{t("workspace.repositories.settings.createTitle")}</DialogTitle>
             <DialogDescription>
               {t("workspace.repositories.settings.createDescription")}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <FieldGroup className="grid sm:grid-cols-2">
             <Field className="sm:col-span-2">
               <FieldLabel htmlFor={nameId}>{t("workspace.repositories.settings.name")}</FieldLabel>
               <Input
                 id={nameId}
+                disabled={mutation.isPending}
                 value={name}
                 maxLength={100}
                 autoFocus
@@ -150,6 +173,7 @@ export function GitHubRepositoryCreateDialog({
               </FieldLabel>
               <Input
                 id={descriptionId}
+                disabled={mutation.isPending}
                 value={description}
                 maxLength={350}
                 onChange={(event) => setDescription(event.currentTarget.value)}
@@ -161,29 +185,35 @@ export function GitHubRepositoryCreateDialog({
               </FieldLabel>
               <Input
                 id={homepageId}
+                disabled={mutation.isPending}
                 type="url"
                 value={homepage}
                 placeholder="https://example.com"
                 onChange={(event) => setHomepage(event.currentTarget.value)}
               />
             </Field>
-          </div>
+          </FieldGroup>
 
-          <Field>
-            <FieldLabel>{t("workspace.repositories.settings.visibility")}</FieldLabel>
+          <FieldSet disabled={mutation.isPending}>
+            <FieldLegend id={visibilityId} variant="label">
+              {t("workspace.repositories.settings.visibility")}
+            </FieldLegend>
             <RadioGroup
               value={visibility}
+              aria-labelledby={visibilityId}
+              disabled={mutation.isPending}
               onValueChange={(value) => setVisibility(value as GitHubRepositoryVisibility)}
               className="grid gap-2 sm:grid-cols-2"
             >
               {(["private", "public"] as const).map((value) => (
                 <FieldLabel
                   key={value}
+                  htmlFor={`${visibilityId}-${value}`}
                   className="border-border/70 bg-muted/20 flex cursor-pointer items-start gap-3 rounded-md border p-3"
                 >
-                  <RadioGroupItem value={value} />
+                  <RadioGroupItem id={`${visibilityId}-${value}`} value={value} />
                   <FieldContent>
-                    <span className="text-xs font-medium">
+                    <span className="text-[13px] font-medium">
                       {t(`workspace.repositories.settings.visibilityOptions.${value}.label`)}
                     </span>
                     <FieldDescription>
@@ -193,12 +223,13 @@ export function GitHubRepositoryCreateDialog({
                 </FieldLabel>
               ))}
             </RadioGroup>
-          </Field>
+          </FieldSet>
 
-          <div className="border-border/60 flex flex-col gap-3 rounded-md border p-3">
+          <FieldGroup className="border-border/60 gap-3 rounded-md border p-3">
             <Field orientation="horizontal">
               <Checkbox
-                id="create-readme"
+                id={readmeId}
+                disabled={mutation.isPending}
                 checked={initializeWithReadme}
                 onCheckedChange={(checked) => {
                   const enabled = checked === true;
@@ -210,7 +241,7 @@ export function GitHubRepositoryCreateDialog({
                 }}
               />
               <FieldContent>
-                <FieldLabel htmlFor="create-readme">
+                <FieldLabel htmlFor={readmeId}>
                   <BookOpen /> {t("workspace.repositories.settings.initializeReadme")}
                 </FieldLabel>
                 <FieldDescription>
@@ -218,7 +249,14 @@ export function GitHubRepositoryCreateDialog({
                 </FieldDescription>
               </FieldContent>
             </Field>
-            {optionsResult.isError ? (
+            {optionsResult.data && optionsResult.error ? (
+              <WorkspaceStaleNotice
+                message={parseIpcError(optionsResult.error).message}
+                onRetry={() => void optionsResult.refetch()}
+                retryDisabled={optionsResult.isFetching || mutation.isPending}
+              />
+            ) : null}
+            {optionsResult.isError && !optionsResult.data ? (
               <Alert variant="destructive">
                 <GitBranch />
                 <AlertTitle>{t("workspace.repositories.settings.templatesLoadFailed")}</AlertTitle>
@@ -228,62 +266,75 @@ export function GitHubRepositoryCreateDialog({
                     variant="outline"
                     size="sm"
                     onClick={() => void optionsResult.refetch()}
+                    disabled={optionsResult.isFetching || mutation.isPending}
                   >
                     {t("common.retry")}
                   </Button>
                 </AlertDescription>
               </Alert>
             ) : (
-              <div className="grid gap-3 sm:grid-cols-2">
+              <FieldGroup className="grid gap-3 sm:grid-cols-2">
                 <Field>
-                  <FieldLabel>{t("workspace.repositories.settings.gitignore")}</FieldLabel>
+                  <FieldLabel htmlFor={gitignoreId}>
+                    {t("workspace.repositories.settings.gitignore")}
+                  </FieldLabel>
                   <Select
                     value={gitignoreTemplate}
-                    disabled={!initializeWithReadme || optionsResult.isPending}
+                    disabled={
+                      !initializeWithReadme || optionsResult.isPending || mutation.isPending
+                    }
                     onValueChange={setGitignoreTemplate}
                   >
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger id={gitignoreId} className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value={NO_TEMPLATE}>
-                        {t("workspace.repositories.settings.noTemplate")}
-                      </SelectItem>
-                      {optionsResult.data?.gitignoreTemplates.map((template) => (
-                        <SelectItem key={template} value={template}>
-                          {template}
+                      <SelectGroup>
+                        <SelectItem value={NO_TEMPLATE}>
+                          {t("workspace.repositories.settings.noTemplate")}
                         </SelectItem>
-                      ))}
+                        {optionsResult.data?.gitignoreTemplates.map((template) => (
+                          <SelectItem key={template} value={template}>
+                            {template}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
                     </SelectContent>
                   </Select>
                 </Field>
                 <Field>
-                  <FieldLabel>{t("workspace.repositories.settings.license")}</FieldLabel>
+                  <FieldLabel htmlFor={licenseId}>
+                    {t("workspace.repositories.settings.license")}
+                  </FieldLabel>
                   <Select
                     value={licenseTemplate}
-                    disabled={!initializeWithReadme || optionsResult.isPending}
+                    disabled={
+                      !initializeWithReadme || optionsResult.isPending || mutation.isPending
+                    }
                     onValueChange={setLicenseTemplate}
                   >
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger id={licenseId} className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value={NO_TEMPLATE}>
-                        {t("workspace.repositories.settings.noTemplate")}
-                      </SelectItem>
-                      {optionsResult.data?.licenses.map((license) => (
-                        <SelectItem key={license.key} value={license.key}>
-                          {license.name}
+                      <SelectGroup>
+                        <SelectItem value={NO_TEMPLATE}>
+                          {t("workspace.repositories.settings.noTemplate")}
                         </SelectItem>
-                      ))}
+                        {optionsResult.data?.licenses.map((license) => (
+                          <SelectItem key={license.key} value={license.key}>
+                            {license.name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
                     </SelectContent>
                   </Select>
                 </Field>
-              </div>
+              </FieldGroup>
             )}
-          </div>
+          </FieldGroup>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <FieldGroup className="grid gap-3 sm:grid-cols-2">
             {[
               ["issues", hasIssues, setHasIssues],
               ["projects", hasProjects, setHasProjects],
@@ -292,21 +343,35 @@ export function GitHubRepositoryCreateDialog({
             ].map(([key, checked, setChecked]) => (
               <Field key={key as string} orientation="horizontal">
                 <Checkbox
-                  id={`create-${key}`}
+                  id={`${nameId}-${key}`}
+                  disabled={mutation.isPending}
                   checked={checked as boolean}
                   onCheckedChange={(value) =>
                     (setChecked as (value: boolean) => void)(value === true)
                   }
                 />
-                <FieldLabel htmlFor={`create-${key}`}>
+                <FieldLabel htmlFor={`${nameId}-${key}`}>
                   {t(`workspace.repositories.settings.features.${key}`)}
                 </FieldLabel>
               </Field>
             ))}
-          </div>
+          </FieldGroup>
+
+          {creationError ? (
+            <Alert variant="destructive">
+              <CircleAlert />
+              <AlertTitle>{t("workspace.repositories.settings.createFailed")}</AlertTitle>
+              <AlertDescription>{creationError.message}</AlertDescription>
+            </Alert>
+          ) : null}
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={mutation.isPending}
+              onClick={() => onOpenChange(false)}
+            >
               {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={!name.trim() || mutation.isPending}>

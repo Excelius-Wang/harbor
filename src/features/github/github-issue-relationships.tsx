@@ -108,6 +108,7 @@ function GitHubIssueRelationshipsContent({
         {error ? (
           <div className="px-3 pt-2">
             <GitHubIssueRelationLoadError
+              stale
               title={t(
                 error.code === "githubPermission"
                   ? "workspace.repositories.issueRelationshipsPermissionDenied"
@@ -132,7 +133,7 @@ function GitHubIssueRelationshipsContent({
         ) : null}
         {parent ? (
           <section className="border-b px-1.5 py-1.5">
-            <h3 className="text-muted-foreground px-2.5 pb-1 text-[10px] font-medium uppercase">
+            <h3 className="text-muted-foreground px-2.5 pb-1 text-[11px] font-medium uppercase">
               {t("workspace.repositories.parentIssue")}
             </h3>
             <GitHubIssueRelatedIssueRow summary={parent} onNavigate={onNavigate} />
@@ -140,7 +141,7 @@ function GitHubIssueRelationshipsContent({
         ) : null}
         {subIssues.length > 0 ? (
           <section className="px-1.5 py-1.5">
-            <h3 className="text-muted-foreground px-2.5 pb-1 text-[10px] font-medium uppercase">
+            <h3 className="text-muted-foreground px-2.5 pb-1 text-[11px] font-medium uppercase">
               {t("workspace.repositories.subIssues")}
             </h3>
             <div className="flex flex-col gap-0.5">

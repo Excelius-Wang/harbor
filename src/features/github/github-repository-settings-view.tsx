@@ -53,6 +53,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { parseIpcError } from "@/lib/ipc-error";
 import { GitHubRepositoryAccessCard } from "./github-repository-access-card";
 import { GitHubRepositoryTopicsCard } from "./github-repository-topics";
@@ -234,7 +235,7 @@ export function GitHubRepositorySettingsView({
   });
 
   if (settingsResult.isPending) return <SettingsSkeleton />;
-  if (settingsResult.isError) {
+  if (settingsResult.isError && !settings) {
     const error = parseIpcError(settingsResult.error);
     return (
       <div className="mx-auto grid w-full max-w-3xl place-items-center p-6">
@@ -293,7 +294,7 @@ export function GitHubRepositorySettingsView({
     <ScrollArea className="min-h-0 flex-1" constrainContentWidth>
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-5 pb-10">
         <div>
-          <h3 className="text-base font-semibold tracking-[-0.02em]">
+          <h3 className="text-2xl leading-8 font-semibold tracking-[-0.025em]">
             {t("workspace.repositories.settings.title")}
           </h3>
           <p className="text-muted-foreground mt-1 text-xs">
@@ -301,6 +302,18 @@ export function GitHubRepositorySettingsView({
           </p>
         </div>
 
+        {settingsResult.error ? (
+          <WorkspaceStaleNotice
+            message={parseIpcError(settingsResult.error).message}
+            onRetry={() => void settingsResult.refetch()}
+          />
+        ) : null}
+        {codeResult.error ? (
+          <WorkspaceStaleNotice
+            message={parseIpcError(codeResult.error).message}
+            onRetry={() => void codeResult.refetch()}
+          />
+        ) : null}
         {archived ? (
           <Alert>
             <Archive />
@@ -336,13 +349,15 @@ export function GitHubRepositorySettingsView({
               />
             </Field>
             <Field>
-              <FieldLabel>{t("workspace.repositories.settings.defaultBranch")}</FieldLabel>
+              <FieldLabel htmlFor="repository-settings-defaultBranch">
+                {t("workspace.repositories.settings.defaultBranch")}
+              </FieldLabel>
               <Select
                 value={draft.defaultBranch}
                 disabled={archived}
                 onValueChange={(value) => updateDraft("defaultBranch", value)}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger id="repository-settings-defaultBranch" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -379,7 +394,9 @@ export function GitHubRepositorySettingsView({
               />
             </Field>
             <Field>
-              <FieldLabel>{t("workspace.repositories.settings.visibility")}</FieldLabel>
+              <FieldLabel htmlFor="repository-settings-visibility">
+                {t("workspace.repositories.settings.visibility")}
+              </FieldLabel>
               <Select
                 value={draft.visibility}
                 disabled={archived}
@@ -387,7 +404,7 @@ export function GitHubRepositorySettingsView({
                   updateDraft("visibility", value as GitHubRepositoryVisibility)
                 }
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger id="repository-settings-visibility" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -519,7 +536,7 @@ export function GitHubRepositorySettingsView({
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col divide-y">
-            <div className="flex items-center justify-between gap-4 py-3 first:pt-0">
+            <div className="flex flex-wrap items-center justify-between gap-4 py-3 first:pt-0">
               <div>
                 <p className="text-sm font-medium">
                   {t(
@@ -549,7 +566,7 @@ export function GitHubRepositorySettingsView({
                 )}
               </Button>
             </div>
-            <div className="flex items-center justify-between gap-4 py-3 last:pb-0">
+            <div className="flex flex-wrap items-center justify-between gap-4 py-3 last:pb-0">
               <div>
                 <p className="text-sm font-medium">{t("workspace.repositories.settings.delete")}</p>
                 <p className="text-muted-foreground mt-1 text-xs">

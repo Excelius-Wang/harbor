@@ -38,8 +38,10 @@ export function GitHubCommentForm({
   const { t } = useTranslation();
 
   return (
-    <section className={cn("bg-card/30 mt-5 ml-10 overflow-hidden rounded-lg border", className)}>
-      <header className="bg-card/40 flex min-h-11 items-center border-b px-3.5 py-2">
+    <section
+      className={cn("harbor-reading mt-5 ml-10 overflow-hidden rounded-lg border", className)}
+    >
+      <header className="harbor-subtle-divider flex min-h-11 items-center border-b px-3.5 py-2">
         <h3 className="text-foreground/90 text-xs font-medium">
           {t("workspace.repositories.addComment")}
         </h3>
@@ -68,7 +70,7 @@ export function GitHubCommentForm({
               minHeightClassName="min-h-28"
               onChange={onBodyChange}
             />
-            <FieldDescription className="text-[10px]">
+            <FieldDescription className="text-[11px]">
               {t("workspace.repositories.markdownSupported")}
             </FieldDescription>
             <FieldError>{errorMessage}</FieldError>

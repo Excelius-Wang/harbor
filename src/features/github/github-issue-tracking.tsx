@@ -29,13 +29,13 @@ function TrackingIssueRow({
     <Button
       type="button"
       variant="ghost"
-      className="hover:bg-accent/30 flex h-auto w-full min-w-0 items-center justify-start gap-2 rounded-md px-2.5 py-2 text-left"
+      className="harbor-result-row flex h-auto w-full min-w-0 items-center justify-start gap-2 rounded-md px-2.5 py-2 text-left whitespace-normal"
       onClick={() => onNavigate(issue)}
     >
       <StateIcon data-icon="inline-start" className="text-muted-foreground size-4 shrink-0" />
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-xs font-medium">{issue.title}</span>
-        <span className="text-muted-foreground block truncate text-[10px] font-normal">
+        <span className="block text-[13px] font-medium break-words">{issue.title}</span>
+        <span className="text-muted-foreground block truncate text-[11px] font-normal">
           {issue.repository.fullName} #{issue.number}
         </span>
       </span>
@@ -79,7 +79,7 @@ function TrackingSection({
   if (result.isPending) {
     return (
       <section className="px-1.5 py-2">
-        <h3 className="text-muted-foreground px-2.5 pb-1 text-[10px] font-medium uppercase">
+        <h3 className="text-muted-foreground px-2.5 pb-1 text-[11px] font-medium uppercase">
           {title}
         </h3>
         <div className="flex flex-col gap-2 px-2.5">
@@ -116,7 +116,7 @@ function TrackingSection({
   return (
     <section className="border-border/60 px-1.5 py-2 first:border-b" aria-busy={result.isFetching}>
       <div className="flex items-center gap-2 px-2.5 pb-1">
-        <h3 className="text-muted-foreground text-[10px] font-medium uppercase">{title}</h3>
+        <h3 className="text-muted-foreground text-[11px] font-medium uppercase">{title}</h3>
         {result.isFetching ? (
           <RefreshCw className="text-muted-foreground size-3 animate-spin" />
         ) : null}
@@ -124,6 +124,7 @@ function TrackingSection({
       {error ? (
         <div className="px-1">
           <GitHubIssueRelationLoadError
+            stale
             title={t(errorTitle)}
             error={error}
             onRetry={() => void result.refetch()}

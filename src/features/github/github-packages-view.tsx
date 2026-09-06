@@ -1,3 +1,5 @@
+import { WorkspacePageHeader } from "@/features/workspace/workspace-page-header";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { useEffect, useState } from "react";
 import { isTauri } from "@tauri-apps/api/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -150,25 +152,24 @@ function PackageRow({
       type="button"
       variant="ghost"
       onClick={onSelect}
+      aria-current={selected ? "true" : undefined}
       className={cn(
-        "h-auto w-full justify-start gap-3 rounded-lg border px-3 py-3 text-left whitespace-normal",
-        selected
-          ? "border-primary/30 bg-primary/8 hover:bg-primary/10"
-          : "hover:border-border border-transparent"
+        "harbor-result-row h-auto w-full justify-start gap-3 rounded-md border border-transparent px-3 py-3 text-left whitespace-normal",
+        selected && "harbor-row-selected"
       )}
     >
-      <span className="border-primary/20 bg-primary/[0.06] text-primary grid size-8 shrink-0 place-items-center rounded-md border">
+      <span className="border-border bg-muted/25 text-muted-foreground grid size-8 shrink-0 place-items-center rounded-md border">
         <Box className="size-4" />
       </span>
       <span className="flex min-w-0 flex-1 flex-col items-start gap-1.5">
-        <span className="w-full truncate text-[12px] font-medium">{item.name}</span>
+        <span className="w-full truncate text-[13px] font-medium">{item.name}</span>
         <span className="flex flex-wrap items-center gap-1.5">
-          <Badge variant="outline" className="font-mono text-[9px] font-normal uppercase">
+          <Badge variant="outline" className="font-mono text-[11px] font-normal uppercase">
             {t(`workspace.packages.type.${item.packageType}`)}
           </Badge>
           <PackageVisibilityBadge visibility={item.visibility} />
         </span>
-        <span className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px]">
+        <span className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
           <span>{t("workspace.packages.versionCount", { count: item.versionCount })}</span>
           <span>{formatIssueDate(item.updatedAt, locale)}</span>
         </span>
@@ -215,18 +216,16 @@ function PackageVersionRow({
           {tags.length > 0 ? (
             <div className="flex flex-wrap gap-1">
               {tags.map((tag) => (
-                <Badge key={tag} variant="secondary" className="font-mono text-[9px] font-normal">
+                <Badge key={tag} variant="secondary" className="font-mono text-[11px] font-normal">
                   {tag}
                 </Badge>
               ))}
             </div>
           ) : null}
           {version.description ? (
-            <p className="text-muted-foreground line-clamp-2 text-xs leading-5">
-              {version.description}
-            </p>
+            <p className="text-muted-foreground text-[13px] leading-5">{version.description}</p>
           ) : null}
-          <p className="text-muted-foreground text-[10px]">
+          <p className="text-muted-foreground text-[11px]">
             {deleted && version.deletedAt
               ? t("workspace.packages.deletedAt", {
                   date: formatIssueDate(version.deletedAt, locale),
@@ -389,7 +388,7 @@ function GitHubPackageDetail({
           </Tooltip>
           <div className="min-w-0">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <h2 className="truncate text-base font-semibold tracking-[-0.02em]">
+              <h2 className="text-2xl leading-7 font-semibold tracking-tight">
                 {packageDetail.name}
               </h2>
               <PackageVisibilityBadge visibility={packageDetail.visibility} />
@@ -431,15 +430,15 @@ function GitHubPackageDetail({
 
       <ScrollArea className="min-h-0 flex-1" constrainContentWidth>
         <div className="flex flex-col gap-4 p-4">
-          <section className="bg-card/35 grid gap-3 rounded-lg border p-4 sm:grid-cols-3">
+          <section className="bg-muted/15 grid gap-3 rounded-lg border p-4 sm:grid-cols-3">
             <div className="flex flex-col gap-1">
-              <span className="text-muted-foreground text-[10px] tracking-wide uppercase">
+              <span className="text-muted-foreground text-[11px] tracking-wide uppercase">
                 {t("workspace.packages.versions")}
               </span>
               <span className="font-mono text-sm tabular-nums">{packageDetail.versionCount}</span>
             </div>
             <div className="flex min-w-0 flex-col gap-1">
-              <span className="text-muted-foreground text-[10px] tracking-wide uppercase">
+              <span className="text-muted-foreground text-[11px] tracking-wide uppercase">
                 {t("workspace.packages.linkedRepository")}
               </span>
               {packageDetail.repository ? (
@@ -459,7 +458,7 @@ function GitHubPackageDetail({
               )}
             </div>
             <div className="flex flex-col gap-1">
-              <span className="text-muted-foreground text-[10px] tracking-wide uppercase">
+              <span className="text-muted-foreground text-[11px] tracking-wide uppercase">
                 {t("workspace.packages.updated")}
               </span>
               <span className="text-sm">
@@ -517,11 +516,13 @@ function GitHubPackageDetail({
           </div>
 
           {supplementalError ? (
-            <Alert variant="destructive">
-              <CircleAlert />
-              <AlertTitle>{t("workspace.packages.refreshFailed")}</AlertTitle>
-              <AlertDescription>{supplementalError.message}</AlertDescription>
-            </Alert>
+            <WorkspaceStaleNotice
+              message={supplementalError.message}
+              onRetry={() => {
+                void detailResult.refetch();
+                void versionsResult.refetch();
+              }}
+            />
           ) : null}
 
           <section className="overflow-hidden rounded-lg border">
@@ -705,7 +706,7 @@ export function GitHubPackagesView() {
   const [page, setPage] = useState(1);
   const [selectedName, setSelectedName] = useState<string | null>(null);
   const [wideLayout, setWideLayout] = useState(
-    () => window.matchMedia("(min-width: 1180px)").matches
+    () => window.matchMedia("(min-width: 80rem)").matches
   );
   const result = useQuery({
     ...personalPackagesQueryOptions({ packageType, visibility, page }),
@@ -720,7 +721,7 @@ export function GitHubPackagesView() {
   const supplementalError = packagePage && result.error ? parseIpcError(result.error) : null;
 
   useEffect(() => {
-    const media = window.matchMedia("(min-width: 1180px)");
+    const media = window.matchMedia("(min-width: 80rem)");
     const updateLayout = () => setWideLayout(media.matches);
     updateLayout();
     media.addEventListener("change", updateLayout);
@@ -739,15 +740,10 @@ export function GitHubPackagesView() {
 
   return (
     <section className="harbor-content @container/packages flex min-w-0 flex-1 flex-col">
-      <header className="flex min-h-[74px] shrink-0 items-center justify-between gap-4 border-b px-5 py-3">
-        <div>
-          <p className="text-primary/80 text-[10px] font-medium tracking-[0.14em] uppercase">
-            {t("workspace.packages.eyebrow")}
-          </p>
-          <h1 className="mt-0.5 text-xl font-semibold tracking-[-0.03em]">
-            {t("workspace.nav.packages")}
-          </h1>
-        </div>
+      <WorkspacePageHeader
+        title={t("workspace.nav.packages")}
+        description={t("workspace.packages.eyebrow")}
+      >
         <Button
           variant="outline"
           size="sm"
@@ -761,7 +757,7 @@ export function GitHubPackagesView() {
           )}
           {t("common.refresh")}
         </Button>
-      </header>
+      </WorkspacePageHeader>
 
       <div className="flex min-h-0 flex-1">
         <aside
@@ -851,13 +847,15 @@ export function GitHubPackagesView() {
             ) : (
               <div className="flex flex-col gap-1.5 p-2">
                 {supplementalError ? (
-                  <Alert variant="destructive">
-                    <CircleAlert />
-                    <AlertDescription>{supplementalError.message}</AlertDescription>
-                  </Alert>
+                  <WorkspaceStaleNotice
+                    message={supplementalError.message}
+                    onRetry={() => {
+                      void result.refetch();
+                    }}
+                  />
                 ) : null}
                 <div className="flex items-center justify-between px-2 py-1">
-                  <span className="text-muted-foreground text-[10px]">
+                  <span className="text-muted-foreground text-[11px]">
                     {t("workspace.packages.loadedCount", { count: packagePage.packages.length })}
                   </span>
                   <Badge variant="outline" className="font-normal">

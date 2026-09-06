@@ -82,8 +82,8 @@ export function GitHubCommitCommentCard({
   };
 
   return (
-    <article className="bg-card/30 min-w-0 overflow-hidden rounded-lg border">
-      <header className="bg-card/40 flex min-h-11 min-w-0 items-center gap-2 border-b px-3 py-2">
+    <article className="harbor-reading min-w-0 overflow-hidden rounded-lg border">
+      <header className="flex min-h-11 min-w-0 flex-wrap items-center gap-2 border-b bg-transparent px-3 py-2">
         <Avatar size="sm" className="shrink-0">
           {comment.author?.avatarUrl ? <AvatarImage src={comment.author.avatarUrl} alt="" /> : null}
           <AvatarFallback>
@@ -93,14 +93,14 @@ export function GitHubCommitCommentCard({
         <span className="min-w-0 truncate text-xs font-medium">
           {comment.author ? `@${author}` : author}
         </span>
-        <span className="text-muted-foreground shrink-0 text-[10px]">
+        <span className="text-muted-foreground shrink-0 text-[11px]">
           {t("workspace.repositories.commentedAt", {
             date: formatIssueDate(comment.createdAt, i18n.language),
           })}
         </span>
         <span className="ml-auto flex shrink-0 items-center gap-1">
           {comment.authorAssociation ? (
-            <Badge variant="outline" className="h-5 rounded-md text-[9px] font-normal">
+            <Badge variant="outline" className="h-5 rounded-md text-[11px] font-normal">
               {comment.authorAssociation.toLowerCase()}
             </Badge>
           ) : null}
@@ -165,9 +165,9 @@ export function GitHubCommitCommentCard({
         </span>
       </header>
       {comment.path ? (
-        <div className="text-muted-foreground flex min-w-0 flex-wrap items-center gap-2 border-b px-3 py-1.5 text-[9px]">
+        <div className="text-muted-foreground flex min-w-0 flex-wrap items-center gap-2 border-b px-3 py-1.5 text-[11px]">
           <span className="truncate font-mono">{comment.path}</span>
-          <Badge variant="outline" className="rounded-md text-[9px] font-normal">
+          <Badge variant="outline" className="rounded-md text-[11px] font-normal">
             {comment.line !== null
               ? t("workspace.repositories.commitCommentLine", { line: comment.line })
               : t("workspace.repositories.commitCommentPosition", {

@@ -11,8 +11,10 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { useAppTranslation } from "@/hooks/use-app-translation";
 import { parseIpcError } from "@/lib/ipc-error";
 import type { GitHubIssue, GitHubIssueClone, GitHubRepositoryContentContext } from "./github-data";
@@ -78,20 +80,21 @@ export function GitHubIssueCloneAction({
         if (!nextOpen) mutation.reset();
       }}
     >
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        disabled={statusResult.isPending || mutation.isPending}
-        onClick={() => setOpen(true)}
-      >
-        {statusResult.isPending ? (
-          <Spinner data-icon="inline-start" />
-        ) : (
-          <Copy data-icon="inline-start" />
-        )}
-        {t("workspace.repositories.cloneIssue")}
-      </Button>
+      <DialogTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={statusResult.isPending || mutation.isPending}
+        >
+          {statusResult.isPending ? (
+            <Spinner data-icon="inline-start" />
+          ) : (
+            <Copy data-icon="inline-start" />
+          )}
+          {t("workspace.repositories.cloneIssue")}
+        </Button>
+      </DialogTrigger>
       <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-[680px]">
         <DialogHeader>
           <DialogTitle>{t("workspace.repositories.cloneIssue")}</DialogTitle>
@@ -102,12 +105,18 @@ export function GitHubIssueCloneAction({
             })}
           </DialogDescription>
         </DialogHeader>
+        {statusError && statusResult.data ? (
+          <WorkspaceStaleNotice
+            message={statusError.message}
+            onRetry={() => void statusResult.refetch()}
+          />
+        ) : null}
         {statusResult.isPending ? (
           <div className="text-muted-foreground flex items-center gap-2 py-4 text-xs" role="status">
             <Spinner />
             {t("workspace.repositories.checkingCloneIssue")}
           </div>
-        ) : statusError ? (
+        ) : statusError && !statusResult.data ? (
           <Alert variant="destructive">
             <CircleAlert />
             <AlertTitle>{t("workspace.repositories.cloneIssueStatusLoadFailed")}</AlertTitle>
@@ -134,6 +143,7 @@ export function GitHubIssueCloneAction({
             submitLabel={t("workspace.repositories.cloneIssueConfirm")}
             pendingLabel={t("workspace.repositories.cloningIssue")}
             pending={mutation.isPending}
+            submitDisabled={Boolean(statusError)}
             errorTitle={t(cloneErrorTitle(error?.code ?? "github"))}
             errorMessage={
               error?.code === "github"

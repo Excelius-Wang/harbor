@@ -1,3 +1,4 @@
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -127,7 +128,7 @@ export function GitHubSecurityAlertDetail({
     return <SecurityDetailSkeleton />;
   }
 
-  if (!detail || result.error) {
+  if (!detail) {
     const error = parseIpcError(result.error);
     return (
       <Empty className="min-h-80 flex-1">
@@ -175,13 +176,20 @@ export function GitHubSecurityAlertDetail({
 
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <header className="flex shrink-0 flex-wrap items-start justify-between gap-3 border-b border-white/[0.065] px-4 py-3">
+      {result.error ? (
+        <WorkspaceStaleNotice
+          message={parseIpcError(result.error).message}
+          onRetry={() => void result.refetch()}
+        />
+      ) : null}
+      <header className="border-border/60 flex shrink-0 flex-wrap items-start justify-between gap-3 border-b px-4 py-3">
         <div className="flex min-w-0 items-start gap-2.5">
           <Button
             type="button"
             variant="ghost"
             size="icon-sm"
             aria-label={backLabel}
+            title={backLabel}
             onClick={onBack}
           >
             <ArrowLeft />
@@ -202,10 +210,10 @@ export function GitHubSecurityAlertDetail({
                 {t("workspace.security.alertNumber", { number: alertNumber })}
               </Badge>
             </div>
-            <h2 className="max-w-[70ch] text-base leading-6 font-semibold tracking-[-0.015em]">
+            <h2 className="max-w-[70ch] text-2xl leading-7 font-semibold tracking-tight">
               {detail.alert.title}
             </h2>
-            <span className="text-muted-foreground text-[10px]">
+            <span className="text-muted-foreground text-[11px]">
               {t(`workspace.security.kinds.${detail.kind}`)}
               {" · "}
               {formatIssueDate(detail.alert.updatedAt ?? detail.alert.createdAt, i18n.language)}
@@ -286,7 +294,11 @@ export function GitHubSecurityAlertDetail({
               <label className="flex flex-col gap-2 text-xs font-medium">
                 {t("workspace.security.reason")}
                 <Select value={reason} onValueChange={setReason}>
-                  <SelectTrigger className="w-full" aria-label={t("workspace.security.reason")}>
+                  <SelectTrigger
+                    className="w-full"
+                    aria-label={t("workspace.security.reason")}
+                    title={t("workspace.security.reason")}
+                  >
                     <SelectValue placeholder={t("workspace.security.selectReason")} />
                   </SelectTrigger>
                   <SelectContent>
@@ -310,7 +322,7 @@ export function GitHubSecurityAlertDetail({
                   className="min-h-24 resize-y"
                 />
               </label>
-              <span className="text-muted-foreground text-right text-[10px]">
+              <span className="text-muted-foreground text-right text-[11px]">
                 {t("workspace.security.commentCount", { count: comment.length })}
               </span>
             </div>
@@ -410,7 +422,7 @@ function DependabotDetail({
       <DetailSection title={t("workspace.security.sections.risk")}>
         <DefinitionGrid items={metrics} />
         {detail.cvssVector ? (
-          <code className="text-muted-foreground block overflow-x-auto rounded-md bg-black/15 px-3 py-2 text-[11px]">
+          <code className="text-muted-foreground harbor-reading block overflow-x-auto rounded-md px-3 py-2 text-[11px]">
             {detail.cvssVector}
           </code>
         ) : null}
@@ -513,16 +525,22 @@ function CodeScanningDetail({
         </DetailSection>
       ) : null}
       <DetailSection title={t("workspace.security.sections.instances")}>
+        {instances.data && instances.error ? (
+          <WorkspaceStaleNotice
+            message={parseIpcError(instances.error).message}
+            onRetry={() => void instances.refetch()}
+          />
+        ) : null}
         {instances.isPending ? (
           <EvidenceSkeleton />
-        ) : instances.error || !instances.data ? (
+        ) : !instances.data ? (
           <EvidenceError onRetry={() => void instances.refetch()} />
         ) : instances.data.instances.length ? (
-          <div className="overflow-hidden rounded-md border border-white/[0.07]">
+          <div className="border-border/60 overflow-hidden rounded-md border">
             {instances.data.instances.map((instance, index) => (
               <div
                 key={`${instance.commitSha}-${instance.path}-${instance.startLine}-${index}`}
-                className="flex min-w-0 gap-3 border-b border-white/[0.06] px-3 py-3 last:border-b-0"
+                className="border-border/60 flex min-w-0 gap-3 border-b px-3 py-3 last:border-b-0"
               >
                 <FileCode2 className="text-muted-foreground mt-0.5 size-4 shrink-0" />
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -533,7 +551,7 @@ function CodeScanningDetail({
                   <span className="text-muted-foreground line-clamp-2 text-[11px] leading-4">
                     {instance.message}
                   </span>
-                  <span className="text-muted-foreground truncate font-mono text-[10px]">
+                  <span className="text-muted-foreground truncate font-mono text-[11px]">
                     {instance.reference} · {instance.commitSha.slice(0, 12)}
                   </span>
                 </div>
@@ -626,16 +644,22 @@ function SecretScanningDetail({
         </DetailSection>
       ) : null}
       <DetailSection title={t("workspace.security.sections.locations")}>
+        {locations.data && locations.error ? (
+          <WorkspaceStaleNotice
+            message={parseIpcError(locations.error).message}
+            onRetry={() => void locations.refetch()}
+          />
+        ) : null}
         {locations.isPending ? (
           <EvidenceSkeleton />
-        ) : locations.error || !locations.data ? (
+        ) : !locations.data ? (
           <EvidenceError onRetry={() => void locations.refetch()} />
         ) : locations.data.locations.length ? (
-          <div className="overflow-hidden rounded-md border border-white/[0.07]">
+          <div className="border-border/60 overflow-hidden rounded-md border">
             {locations.data.locations.map((location, index) => (
               <div
                 key={`${location.kind}-${location.commitSha ?? location.url ?? index}`}
-                className="flex min-w-0 gap-3 border-b border-white/[0.06] px-3 py-3 last:border-b-0"
+                className="border-border/60 flex min-w-0 gap-3 border-b px-3 py-3 last:border-b-0"
               >
                 <KeyRound className="text-muted-foreground mt-0.5 size-4 shrink-0" />
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -651,7 +675,7 @@ function SecretScanningDetail({
                     </span>
                   ) : null}
                   {location.commitSha ? (
-                    <span className="text-muted-foreground font-mono text-[10px]">
+                    <span className="text-muted-foreground font-mono text-[11px]">
                       {location.commitSha.slice(0, 12)}
                     </span>
                   ) : null}
@@ -730,7 +754,7 @@ function ResolutionSection({
         ]}
       />
       {resolution.comment ? (
-        <p className="text-muted-foreground rounded-md border border-white/[0.07] bg-white/[0.02] px-3 py-2 text-xs leading-5 whitespace-pre-wrap">
+        <p className="text-muted-foreground border-border/60 harbor-reading rounded-md border px-3 py-2 text-xs leading-5 whitespace-pre-wrap">
           {resolution.comment}
         </p>
       ) : null}
@@ -753,7 +777,7 @@ function DefinitionGrid({ items }: { items: { label: string; value: string }[] }
     <dl className="grid grid-cols-1 gap-x-6 gap-y-3 min-[760px]:grid-cols-2">
       {items.map((item) => (
         <div key={`${item.label}-${item.value}`} className="flex min-w-0 flex-col gap-1">
-          <dt className="text-muted-foreground text-[10px] font-medium">{item.label}</dt>
+          <dt className="text-muted-foreground text-[11px] font-medium">{item.label}</dt>
           <dd className="text-foreground text-xs leading-5 break-words">{item.value}</dd>
         </div>
       ))}

@@ -73,12 +73,12 @@ export function GitHubPullRequestInlineComment({
 
   if (draft && !editing) {
     return (
-      <section className="bg-background/80 overflow-hidden rounded-md border shadow-sm">
-        <header className="bg-card/70 flex min-h-9 items-center gap-2 border-b px-3 py-1.5">
-          <Badge variant="outline" className="rounded-md text-[9px]">
+      <section className="harbor-reading overflow-hidden rounded-md border">
+        <header className="harbor-subtle-divider flex min-h-9 min-w-0 flex-wrap items-center gap-2 border-b px-3 py-1.5">
+          <Badge variant="outline" className="rounded-md text-[11px]">
             {t("workspace.repositories.pendingReviewComment")}
           </Badge>
-          <span className="text-muted-foreground text-[10px]">{locationLabel}</span>
+          <span className="text-muted-foreground text-[11px] wrap-anywhere">{locationLabel}</span>
         </header>
         <div className="harbor-markdown min-w-0 px-3 py-2.5 text-[12px]">
           <Suspense fallback={<Skeleton className="h-10 w-full" />}>
@@ -136,7 +136,7 @@ export function GitHubPullRequestInlineComment({
 
   return (
     <form
-      className="bg-background/80 overflow-hidden rounded-md border shadow-sm"
+      className="harbor-reading overflow-hidden rounded-md border"
       onSubmit={(event) => {
         event.preventDefault();
         setSubmitted(true);
@@ -183,7 +183,7 @@ export function GitHubPullRequestInlineComment({
         ) : null}
       </div>
       <footer className="flex flex-wrap items-center justify-between gap-2 border-t px-3 py-2">
-        <span className="text-muted-foreground text-[10px]">{locationLabel}</span>
+        <span className="text-muted-foreground text-[11px] wrap-anywhere">{locationLabel}</span>
         <div className="flex items-center gap-2">
           {draft ? (
             <Button

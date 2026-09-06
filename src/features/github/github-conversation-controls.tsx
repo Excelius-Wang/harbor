@@ -28,6 +28,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { useAppTranslation } from "@/hooks/use-app-translation";
 import { parseIpcError } from "@/lib/ipc-error";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import {
   syncConversationControls,
   updateRepositoryConversationLock,
@@ -180,7 +181,16 @@ export function GitHubConversationControls({
 
   return (
     <div className="flex min-w-0 flex-col gap-2.5">
-      <p className="text-muted-foreground text-[10px] font-medium tracking-[0.08em] uppercase">
+      {result.error ? (
+        <WorkspaceStaleNotice
+          message={parseIpcError(result.error).message}
+          onRetry={() => void result.refetch()}
+          retryDisabled={
+            result.isFetching || subscriptionMutation.isPending || lockMutation.isPending
+          }
+        />
+      ) : null}
+      <p className="text-muted-foreground text-[11px] font-medium tracking-[0.08em] uppercase">
         {t("workspace.repositories.conversationControls")}
       </p>
       <div className="flex min-w-0 items-center justify-between gap-2">

@@ -31,6 +31,7 @@ type GitHubTitleBodyFormProps = {
   submitLabel: string;
   pendingLabel: string;
   pending: boolean;
+  submitDisabled?: boolean;
   requireChanges?: boolean;
   hasExternalChanges?: boolean;
   errorTitle?: string;
@@ -50,6 +51,7 @@ export function GitHubTitleBodyForm({
   submitLabel,
   pendingLabel,
   pending,
+  submitDisabled = false,
   requireChanges = false,
   hasExternalChanges = false,
   errorTitle,
@@ -74,7 +76,7 @@ export function GitHubTitleBodyForm({
         event.preventDefault();
         setSubmitted(true);
         const trimmedTitle = title.trim();
-        if (!trimmedTitle || pending || (requireChanges && !hasChanges)) return;
+        if (!trimmedTitle || pending || submitDisabled || (requireChanges && !hasChanges)) return;
         onSubmit({ title: trimmedTitle, body });
       }}
     >
@@ -113,7 +115,7 @@ export function GitHubTitleBodyForm({
               onChange?.();
             }}
           />
-          <FieldDescription className="text-[10px]">
+          <FieldDescription className="text-[11px]">
             {t("workspace.repositories.markdownSupported")}
           </FieldDescription>
         </Field>
@@ -131,7 +133,7 @@ export function GitHubTitleBodyForm({
           </Button>
           <Button
             type="submit"
-            disabled={pending || !title.trim() || (requireChanges && !hasChanges)}
+            disabled={pending || submitDisabled || !title.trim() || (requireChanges && !hasChanges)}
           >
             {pending ? <Spinner data-icon="inline-start" /> : null}
             {pending ? pendingLabel : submitLabel}

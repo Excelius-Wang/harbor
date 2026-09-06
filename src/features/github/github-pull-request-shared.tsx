@@ -81,7 +81,7 @@ export function GitHubPullRequestRevisionGuard({
   description: string;
 }) {
   return (
-    <div className="bg-muted/45 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-md border px-3 py-2.5 text-xs">
+    <div className="harbor-reading grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-md border px-3 py-2.5 text-xs">
       <div className="min-w-0">
         <p className="text-foreground truncate font-mono">
           {from}
@@ -90,7 +90,7 @@ export function GitHubPullRequestRevisionGuard({
         </p>
         <p className="text-muted-foreground mt-1">{description}</p>
       </div>
-      <code className="text-primary bg-background rounded border px-2 py-1 font-mono text-[10px]">
+      <code className="text-primary harbor-control rounded border px-2 py-1 font-mono text-[11px]">
         {expectedHeadSha.slice(0, 7)}
       </code>
     </div>

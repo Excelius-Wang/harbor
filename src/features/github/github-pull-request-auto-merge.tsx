@@ -15,6 +15,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import {
   Dialog,
   DialogContent,
@@ -133,6 +134,16 @@ export function GitHubPullRequestAutoMerge({
     },
   });
   const status = statusResult.data;
+  const staleNotice =
+    status && statusResult.error ? (
+      <WorkspaceStaleNotice
+        message={
+          autoMergeErrorMessage(statusResult.error, t) ??
+          t("workspace.repositories.pullRequestAutoMergeStatusLoadFailed")
+        }
+        onRetry={() => void statusResult.refetch()}
+      />
+    ) : null;
 
   useEffect(() => {
     if (!status || status.allowedMergeMethods.includes(method ?? "merge")) return;
@@ -155,7 +166,7 @@ export function GitHubPullRequestAutoMerge({
     if (nextOpen) disableMutation.reset();
   }
 
-  if (status && HIDDEN_AUTO_MERGE_STATES.includes(status.state)) return null;
+  if (status && HIDDEN_AUTO_MERGE_STATES.includes(status.state)) return staleNotice;
 
   let icon: React.ReactNode = <Clock3 className="text-primary size-4 shrink-0" />;
   let title = t("workspace.repositories.checkingPullRequestAutoMerge");
@@ -235,6 +246,7 @@ export function GitHubPullRequestAutoMerge({
 
   return (
     <>
+      {staleNotice}
       <div className="border-t px-4 py-3">
         <div className="flex min-w-0 items-center gap-3 @max-[520px]/pull-detail:flex-col @max-[520px]/pull-detail:items-stretch">
           <div className="flex min-w-0 flex-1 items-start gap-3">
@@ -251,7 +263,10 @@ export function GitHubPullRequestAutoMerge({
       </div>
 
       <Dialog open={enableOpen} onOpenChange={changeEnableOpen}>
-        <DialogContent aria-busy={enableMutation.isPending}>
+        <DialogContent
+          aria-busy={enableMutation.isPending}
+          showCloseButton={!enableMutation.isPending}
+        >
           <DialogHeader>
             <DialogTitle>
               {t("workspace.repositories.enablePullRequestAutoMergeTitle", {

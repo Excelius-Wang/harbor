@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { ArrowUpRight, Bot, CheckCircle2, CircleAlert, MessageCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -53,12 +53,18 @@ export function HarborRail({
   const [answer, setAnswer] = useState<RepositoryContextAnswer | null>(null);
   const [agentError, setAgentError] = useState("");
   const [asking, setAsking] = useState(false);
+  const requestVersion = useRef(0);
 
   useEffect(() => {
+    requestVersion.current++;
+    setAsking(false);
     setAnswer(null);
     setAgentError("");
     setQuestion("");
-  }, [selectedRepository?.owner, selectedRepository?.name]);
+    return () => {
+      requestVersion.current++;
+    };
+  }, [selectedRepository?.owner, selectedRepository?.name, selectedRepository?.isPrivate]);
 
   useEffect(() => {
     if (!selectedRepository) setSheetOpen(false);
@@ -71,7 +77,7 @@ export function HarborRail({
 
   const handleAskHarbor = async () => {
     const nextQuestion = question.trim();
-    if (!nextQuestion) return;
+    if (!nextQuestion || asking) return;
     if (!selectedRepository) {
       setAgentError(t("workspace.agent.selectRepository"));
       return;
@@ -85,6 +91,7 @@ export function HarborRail({
       return;
     }
 
+    const version = ++requestVersion.current;
     setAsking(true);
     setAgentError("");
     setAnswer(null);
@@ -94,12 +101,13 @@ export function HarborRail({
         repository: selectedRepository.name,
         question: nextQuestion,
       });
+      if (version !== requestVersion.current) return;
       setAnswer(nextAnswer);
       setQuestion("");
     } catch (reason) {
-      setAgentError(parseIpcError(reason).message);
+      if (version === requestVersion.current) setAgentError(parseIpcError(reason).message);
     } finally {
-      setAsking(false);
+      if (version === requestVersion.current) setAsking(false);
     }
   };
 
@@ -120,8 +128,9 @@ export function HarborRail({
                 <button
                   type="button"
                   onClick={() => selectView(item.id)}
-                  className="harbor-rail-item text-muted-foreground hover:text-foreground focus-visible:ring-primary/70 grid size-10 place-items-center rounded-full transition-[background-color,color,transform] hover:bg-white/[0.05] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.96]"
+                  className="harbor-rail-item text-muted-foreground hover:text-foreground focus-visible:ring-ring hover:bg-accent/70 grid size-10 place-items-center rounded-full transition-[background-color,color,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.96]"
                   data-active={isActive}
+                  aria-pressed={isActive}
                   aria-label={t(`workspace.rail.${item.id}`)}
                 >
                   <Icon className="size-4" strokeWidth={1.75} />
@@ -136,7 +145,7 @@ export function HarborRail({
       </aside>
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent className="harbor-sheet w-[390px] border-white/10 p-0 sm:max-w-[390px]">
+        <SheetContent className="w-[390px] p-0 sm:max-w-[390px]">
           <SheetHeader className="border-b p-5">
             <SheetTitle className="text-lg tracking-[-0.02em]">
               {t(`workspace.rail.${activeView}`)}
@@ -150,56 +159,62 @@ export function HarborRail({
           <div className="flex min-h-0 flex-1 flex-col gap-4 p-5">
             {activeView === "harbor" ? (
               <>
-                {selectedRepository?.isPrivate ? (
-                  <Alert>
-                    <CircleAlert />
-                    <AlertTitle>{t("workspace.agent.publicOnlyTitle")}</AlertTitle>
-                    <AlertDescription>{t("workspace.agent.publicOnly")}</AlertDescription>
-                  </Alert>
-                ) : selectedRepository ? (
-                  <Alert>
-                    <Bot />
-                    <AlertTitle>{t("workspace.agent.ready")}</AlertTitle>
-                    <AlertDescription>{t("workspace.agent.description")}</AlertDescription>
-                  </Alert>
-                ) : (
-                  <Alert>
-                    <CircleAlert />
-                    <AlertTitle>{t("workspace.agent.selectRepositoryTitle")}</AlertTitle>
-                    <AlertDescription>{t("workspace.agent.selectRepository")}</AlertDescription>
-                  </Alert>
-                )}
+                <ScrollArea className="min-h-0 flex-1" constrainContentWidth>
+                  <div className="flex flex-col gap-4">
+                    {selectedRepository?.isPrivate ? (
+                      <Alert>
+                        <CircleAlert />
+                        <AlertTitle>{t("workspace.agent.publicOnlyTitle")}</AlertTitle>
+                        <AlertDescription>{t("workspace.agent.publicOnly")}</AlertDescription>
+                      </Alert>
+                    ) : selectedRepository ? (
+                      <Alert>
+                        <Bot />
+                        <AlertTitle>{t("workspace.agent.ready")}</AlertTitle>
+                        <AlertDescription>{t("workspace.agent.description")}</AlertDescription>
+                      </Alert>
+                    ) : (
+                      <Alert>
+                        <CircleAlert />
+                        <AlertTitle>{t("workspace.agent.selectRepositoryTitle")}</AlertTitle>
+                        <AlertDescription>{t("workspace.agent.selectRepository")}</AlertDescription>
+                      </Alert>
+                    )}
 
-                {agentError ? (
-                  <Alert variant="destructive">
-                    <CircleAlert />
-                    <AlertTitle>{t("workspace.agent.failed")}</AlertTitle>
-                    <AlertDescription>{agentError}</AlertDescription>
-                  </Alert>
-                ) : null}
+                    {agentError ? (
+                      <Alert variant="destructive">
+                        <CircleAlert />
+                        <AlertTitle>{t("workspace.agent.failed")}</AlertTitle>
+                        <AlertDescription>{agentError}</AlertDescription>
+                      </Alert>
+                    ) : null}
 
-                {!selectedRepository || selectedRepository.isPrivate ? (
-                  <div className="flex-1" />
-                ) : asking ? (
-                  <div className="text-muted-foreground flex flex-1 items-center justify-center gap-2 text-xs">
-                    <Spinner />
-                    {t("workspace.agent.thinking")}
-                  </div>
-                ) : answer ? (
-                  <ScrollArea className="min-h-0 flex-1 pr-3">
-                    <div className="flex flex-col gap-2">
-                      <div className="text-primary text-[10px] font-semibold tracking-[0.12em] uppercase">
-                        {answer.provider}
+                    {!selectedRepository || selectedRepository.isPrivate ? (
+                      <div className="flex-1" />
+                    ) : asking ? (
+                      <div
+                        role="status"
+                        className="text-muted-foreground flex min-h-40 items-center justify-center gap-2 text-[13px]"
+                      >
+                        <Spinner />
+                        {t("workspace.agent.thinking")}
                       </div>
-                      <p className="text-foreground/90 text-xs leading-6 whitespace-pre-wrap">
-                        {answer.answer}
-                      </p>
-                    </div>
-                  </ScrollArea>
-                ) : (
-                  <div className="flex-1" />
-                )}
-
+                    ) : answer ? (
+                      <div>
+                        <div className="flex flex-col gap-2">
+                          <div className="text-primary text-[11px] font-semibold tracking-[0.12em] uppercase">
+                            {answer.provider}
+                          </div>
+                          <p className="text-foreground text-[13px] leading-6 wrap-anywhere whitespace-pre-wrap">
+                            {answer.answer}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex-1" />
+                    )}
+                  </div>
+                </ScrollArea>
                 {selectedRepository && !selectedRepository.isPrivate ? (
                   <form
                     className="mt-auto"
@@ -218,13 +233,14 @@ export function HarborRail({
                         onChange={(event) => setQuestion(event.currentTarget.value)}
                         placeholder={t("workspace.agent.placeholder")}
                         disabled={asking}
-                        className="bg-black/10 text-xs"
+                        className="text-[13px]"
                       />
                       <Button
                         type="submit"
                         size="icon"
                         disabled={asking || !question.trim()}
                         aria-label={t("workspace.agent.send")}
+                        title={t("workspace.agent.send")}
                       >
                         {asking ? <Spinner /> : <ArrowUpRight />}
                       </Button>

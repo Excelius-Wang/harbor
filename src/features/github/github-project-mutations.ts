@@ -98,11 +98,9 @@ export function syncPersonalProjectItem(
           ...page,
           items: {
             ...page.items,
-            items: page.items.items
-              .filter((current) => current.id !== targetId)
-              .concat(
-                item && page.items.items.some((current) => current.id === targetId) ? [item] : []
-              ),
+            items: page.items.items.flatMap((current) =>
+              current.id !== targetId ? [current] : item ? [item] : []
+            ),
           },
         })),
       };

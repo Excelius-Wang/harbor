@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from "react";
+import { type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, FileSearch, RefreshCw, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -14,24 +14,29 @@ import {
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { parseIpcError } from "@/lib/ipc-error";
 import type { GitHubCodeSearchResult, GitHubRepository } from "./github-data";
 import { GitHubPagination } from "./github-issue-shared";
 import { repositoryCodeSearchQueryOptions } from "./github-queries";
 
+export type GitHubCodeSearchState = { input: string; query: string; page: number };
+
 export function GitHubCodeSearch({
   repository,
+  state,
+  onStateChange,
   onBack,
   onOpenResult,
 }: {
   repository: GitHubRepository;
+  state: GitHubCodeSearchState;
+  onStateChange: (state: GitHubCodeSearchState) => void;
   onBack: () => void;
   onOpenResult: (result: GitHubCodeSearchResult) => void;
 }) {
   const { t } = useTranslation();
-  const [input, setInput] = useState("");
-  const [query, setQuery] = useState("");
-  const [page, setPage] = useState(1);
+  const { input, query, page } = state;
   const result = useQuery({
     ...repositoryCodeSearchQueryOptions({
       owner: repository.owner,
@@ -48,8 +53,7 @@ export function GitHubCodeSearch({
     event.preventDefault();
     const nextQuery = input.trim();
     if (!nextQuery) return;
-    setPage(1);
-    setQuery(nextQuery);
+    onStateChange({ input, query: nextQuery, page: 1 });
   };
 
   return (
@@ -60,13 +64,16 @@ export function GitHubCodeSearch({
           variant="ghost"
           size="icon-sm"
           aria-label={t("workspace.repositories.backToCode")}
+          title={t("workspace.repositories.backToCode")}
           onClick={onBack}
         >
           <ArrowLeft />
         </Button>
         <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-semibold">{t("workspace.repositories.searchCode")}</h3>
-          <p className="text-muted-foreground mt-0.5 truncate text-[10px]">
+          <h3 className="text-2xl leading-8 font-semibold tracking-tight">
+            {t("workspace.repositories.searchCode")}
+          </h3>
+          <p className="text-muted-foreground mt-1 text-[11px] break-words">
             {t("workspace.repositories.searchDefaultBranch", {
               branch: repository.defaultBranch,
             })}
@@ -83,7 +90,7 @@ export function GitHubCodeSearch({
             <Input
               id="repository-code-search"
               value={input}
-              onChange={(event) => setInput(event.target.value)}
+              onChange={(event) => onStateChange({ ...state, input: event.target.value })}
               placeholder={t("workspace.repositories.searchCodePlaceholder")}
               maxLength={256}
             />
@@ -94,6 +101,13 @@ export function GitHubCodeSearch({
           </Field>
         </FieldGroup>
       </form>
+
+      {result.data && result.error ? (
+        <WorkspaceStaleNotice
+          message={parseIpcError(result.error).message}
+          onRetry={() => void result.refetch()}
+        />
+      ) : null}
 
       {result.isFetching && !data ? (
         <div className="flex flex-col gap-2">
@@ -119,7 +133,7 @@ export function GitHubCodeSearch({
         </Empty>
       ) : data?.results.length ? (
         <div className="overflow-hidden rounded-lg border">
-          <div className="text-muted-foreground border-b px-3 py-2 text-[10px]">
+          <div className="text-muted-foreground border-b px-3 py-2 text-[11px]">
             {t("workspace.repositories.codeSearchResultCount", { count: data.totalCount })}
             {data.incompleteResults ? ` ${t("workspace.repositories.codeSearchIncomplete")}` : ""}
           </div>
@@ -128,17 +142,17 @@ export function GitHubCodeSearch({
               key={`${item.sha}:${item.path}`}
               type="button"
               onClick={() => onOpenResult(item)}
-              className="hover:bg-accent/30 block w-full min-w-0 border-b px-4 py-3 text-left last:border-b-0"
+              className="harbor-result-row harbor-subtle-divider focus-visible:ring-ring block w-full min-w-0 border-b px-4 py-3 text-left outline-none last:border-b-0 focus-visible:ring-2"
             >
               <span className="text-primary block truncate font-mono text-[11px] font-medium">
                 {item.path}
               </span>
               {item.fragment ? (
-                <code className="text-muted-foreground mt-2 block max-h-[4.5rem] overflow-hidden text-[10px] leading-4 whitespace-pre-wrap">
+                <code className="text-muted-foreground mt-2 block max-h-[4.5rem] overflow-hidden text-[13px] leading-5 whitespace-pre-wrap">
                   {item.fragment}
                 </code>
               ) : (
-                <span className="text-muted-foreground mt-1 block text-[10px]">
+                <span className="text-muted-foreground mt-1 block text-[11px]">
                   {t("workspace.repositories.openSearchResult")}
                 </span>
               )}
@@ -176,7 +190,7 @@ export function GitHubCodeSearch({
           page={data.page}
           hasPrevious={data.hasPrevious}
           hasMore={data.hasMore}
-          onPageChange={setPage}
+          onPageChange={(page) => onStateChange({ ...state, page })}
           ariaLabel={t("workspace.repositories.codeSearchPagination")}
         />
       ) : null}

@@ -1,3 +1,4 @@
+import { useListScroll } from "@/hooks/use-list-scroll";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, GitPullRequest, Plus, RefreshCw, Search, TriangleAlert } from "lucide-react";
@@ -99,6 +100,25 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
   const [page, setPage] = useState(1);
   const [selectedPullRequestNumber, setSelectedPullRequestNumber] = useState<number | null>(null);
   const [creatingPullRequest, setCreatingPullRequest] = useState(false);
+  const listScroll = useListScroll(
+    JSON.stringify([
+      repository.fullName,
+      state,
+      query,
+      label,
+      draft,
+      linkedIssue,
+      reviewRequested,
+      createdByMe,
+      assignedToMe,
+      mentionedToMe,
+      review,
+      merge,
+      status,
+      sort,
+      page,
+    ])
+  );
   const pullRequestsResult = useQuery({
     ...repositoryPullRequestsQueryOptions({
       owner: repository.owner,
@@ -207,7 +227,7 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
             </TabsList>
           </Tabs>
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground flex items-center gap-2 text-[10px]">
+            <span className="text-muted-foreground flex items-center gap-2 text-[11px]">
               {pullRequestsResult.isFetching ? <RefreshCw className="size-3 animate-spin" /> : null}
               {pullRequestPage
                 ? t("workspace.repositories.pullRequestCount", {
@@ -554,7 +574,7 @@ export function GitHubPullRequestView({ repository }: { repository: GitHubReposi
           </AlertDescription>
         </Alert>
       ) : null}
-      <ScrollArea className="min-h-0 flex-1">
+      <ScrollArea className="min-h-0 flex-1" {...listScroll}>
         {pullRequestsResult.isPending ? (
           <PullRequestSkeletons />
         ) : error ? (

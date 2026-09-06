@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/empty";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
+import { useListScroll } from "@/hooks/use-list-scroll";
 import { parseIpcError } from "@/lib/ipc-error";
 import { GitHubCommitList } from "./github-commit-list";
 import { GitHubCommitDetail } from "./github-commit-detail";
@@ -35,6 +37,9 @@ export function GitHubPullRequestCommits({
 }) {
   const { t } = useTranslation();
   const [selectedCommitSha, setSelectedCommitSha] = useState<string | null>(null);
+  const scroll = useListScroll(
+    JSON.stringify([repository.owner, repository.name, pullRequestNumber, page, selectedCommitSha])
+  );
   const result = useQuery({
     ...pullRequestCommitsQueryOptions({
       owner: repository.owner,
@@ -49,8 +54,14 @@ export function GitHubPullRequestCommits({
   const error = !data && result.error ? parseIpcError(result.error) : null;
 
   return (
-    <ScrollArea className="min-h-0 flex-1">
+    <ScrollArea className="min-h-0 flex-1" {...scroll}>
       <div className="mx-auto flex w-full max-w-[1100px] flex-col px-4 py-5 sm:px-5">
+        {!selectedCommitSha && result.error && data ? (
+          <WorkspaceStaleNotice
+            message={parseIpcError(result.error).message}
+            onRetry={() => void result.refetch()}
+          />
+        ) : null}
         {selectedCommitSha ? (
           <GitHubCommitDetail
             key={selectedCommitSha}

@@ -15,6 +15,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import {
   Dialog,
   DialogContent,
@@ -96,6 +97,16 @@ export function GitHubPullRequestMergeAutomation({
     enabled: canCheck,
   });
   const status = statusResult.data;
+  const staleNotice =
+    status && statusResult.error ? (
+      <WorkspaceStaleNotice
+        message={
+          mergeQueueErrorMessage(statusResult.error, t) ??
+          t("workspace.repositories.pullRequestMergeQueueStatusLoadFailed")
+        }
+        onRetry={() => void statusResult.refetch()}
+      />
+    ) : null;
 
   function syncStatus(updated: GitHubPullRequestMergeQueueStatus) {
     queryClient.setQueryData(githubQueryKeys.pullRequestMergeQueueStatus(target), updated);
@@ -136,9 +147,14 @@ export function GitHubPullRequestMergeAutomation({
   if (!canCheck) return null;
 
   if (status?.state === "notConfigured") {
-    return <GitHubPullRequestAutoMerge repository={repository} pullRequest={pullRequest} />;
+    return (
+      <>
+        {staleNotice}
+        <GitHubPullRequestAutoMerge repository={repository} pullRequest={pullRequest} />
+      </>
+    );
   }
-  if (status && ["draft", "closed", "merged"].includes(status.state)) return null;
+  if (status && ["draft", "closed", "merged"].includes(status.state)) return staleNotice;
 
   if (statusResult.error && !status) {
     return (
@@ -231,6 +247,7 @@ export function GitHubPullRequestMergeAutomation({
 
   return (
     <>
+      {staleNotice}
       <div className="border-t px-4 py-3">
         <div className="flex min-w-0 items-center gap-3 @max-[520px]/pull-detail:flex-col @max-[520px]/pull-detail:items-stretch">
           <div className="flex min-w-0 flex-1 items-start gap-3">
@@ -254,7 +271,10 @@ export function GitHubPullRequestMergeAutomation({
           if (open) enqueueMutation.reset();
         }}
       >
-        <DialogContent aria-busy={enqueueMutation.isPending}>
+        <DialogContent
+          aria-busy={enqueueMutation.isPending}
+          showCloseButton={!enqueueMutation.isPending}
+        >
           <DialogHeader>
             <DialogTitle>
               {t("workspace.repositories.addPullRequestToMergeQueueTitle", {

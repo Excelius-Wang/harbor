@@ -142,7 +142,7 @@ export function GitHubReleaseForm({
                 if (submitted && event.target.value.trim()) setSubmitted(false);
               }}
             />
-            <FieldDescription className="text-[10px]">
+            <FieldDescription className="text-[11px]">
               {t("workspace.repositories.releaseTargetCommitishDescription")}
             </FieldDescription>
             <FieldError>
@@ -181,7 +181,7 @@ export function GitHubReleaseForm({
             disabled={pending}
             onChange={(body) => update({ body })}
           />
-          <FieldDescription className="text-[10px]">
+          <FieldDescription className="text-[11px]">
             {t("workspace.repositories.markdownSupported")}
           </FieldDescription>
         </Field>
@@ -197,7 +197,7 @@ export function GitHubReleaseForm({
               <FieldLabel htmlFor={`${idPrefix}-draft`}>
                 <FieldTitle>{t("workspace.repositories.releaseSaveAsDraft")}</FieldTitle>
               </FieldLabel>
-              <FieldDescription className="text-[10px]">
+              <FieldDescription className="text-[11px]">
                 {t("workspace.repositories.releaseSaveAsDraftDescription")}
               </FieldDescription>
             </FieldContent>
@@ -213,7 +213,7 @@ export function GitHubReleaseForm({
               <FieldLabel htmlFor={`${idPrefix}-prerelease`}>
                 <FieldTitle>{t("workspace.repositories.releaseSetAsPrerelease")}</FieldTitle>
               </FieldLabel>
-              <FieldDescription className="text-[10px]">
+              <FieldDescription className="text-[11px]">
                 {t("workspace.repositories.releaseSetAsPrereleaseDescription")}
               </FieldDescription>
             </FieldContent>

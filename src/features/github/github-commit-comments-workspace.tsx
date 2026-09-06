@@ -13,6 +13,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { useAppTranslation } from "@/hooks/use-app-translation";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { parseIpcError } from "@/lib/ipc-error";
 import { GitHubCommitCommentCard } from "./github-commit-comment-card";
 import { GitHubCommitCommentComposer } from "./github-commit-comment-composer";
@@ -111,7 +112,7 @@ export function GitHubCommitCommentsWorkspace({
       <section className="flex min-w-0 flex-col gap-3">
         <div>
           <h4 className="text-sm font-semibold">{t("workspace.repositories.commitComments")}</h4>
-          <p className="text-muted-foreground text-[10px]">
+          <p className="text-muted-foreground text-[11px]">
             {t("workspace.repositories.commitCommentsDescription")}
           </p>
         </div>
@@ -159,10 +160,8 @@ export function GitHubCommitCommentsWorkspace({
         ) : null}
 
         {refreshError ? (
-          <CommitCommentsLoadError
-            title={t("workspace.repositories.commitCommentsRefreshFailed")}
+          <WorkspaceStaleNotice
             message={refreshError.message}
-            retryLabel={t("workspace.repositories.retry")}
             onRetry={() => void result.refetch()}
           />
         ) : null}
@@ -211,7 +210,7 @@ export function GitHubCommitCommentsWorkspace({
             <h4 className="text-sm font-semibold">
               {t("workspace.repositories.unplacedCommitComments")}
             </h4>
-            <p className="text-muted-foreground text-[10px]">
+            <p className="text-muted-foreground text-[11px]">
               {t(
                 filesStillLoading
                   ? "workspace.repositories.unplacedCommitCommentsLoadingFiles"

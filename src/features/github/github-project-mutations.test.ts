@@ -146,7 +146,18 @@ describe("personal GitHub Projects", () => {
       pages: [{ projects: [project] } as GitHubProjectPage],
       pageParams: [null],
     });
-    client.setQueryData(detailKey, { pages: [detail], pageParams: [null] });
+    client.setQueryData(detailKey, {
+      pages: [
+        {
+          ...detail,
+          items: {
+            ...detail.items,
+            items: [{ ...item, id: "before" }, item, { ...item, id: "after" }],
+          },
+        },
+      ],
+      pageParams: [null],
+    });
     const updated = {
       ...item,
       content: { ...item.content, title: "Projects shipped" },
@@ -154,9 +165,15 @@ describe("personal GitHub Projects", () => {
 
     syncPersonalProjectItem(client, 3, updated);
     expect(
-      client.getQueryData<{ pages: GitHubProjectDetail[] }>(detailKey)?.pages[0].items.items[0]
-        .content
+      client
+        .getQueryData<{ pages: GitHubProjectDetail[] }>(detailKey)
+        ?.pages[0].items.items.find((current) => current.id === item.id)?.content
     ).toMatchObject({ title: "Projects shipped" });
+    expect(
+      client
+        .getQueryData<{ pages: GitHubProjectDetail[] }>(detailKey)
+        ?.pages[0].items.items.map((current) => current.id)
+    ).toEqual(["before", item.id, "after"]);
 
     syncDeletedPersonalProject(client, 3);
     expect(client.getQueryData<{ pages: GitHubProjectPage[] }>(listKey)?.pages[0].projects).toEqual(

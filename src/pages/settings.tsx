@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { emit } from "@tauri-apps/api/event";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/theme-provider";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { NavigationButton } from "@/features/workspace/navigation-button";
 import { TitleBar } from "@/components/title-bar";
 import { WindowFrame } from "@/components/window-frame";
 import { LanguageToggle } from "@/components/language-toggle";
@@ -18,8 +21,11 @@ const SHORTCUT_KEY = "global-shortcut-show-main";
 
 type SettingSection = "appearance" | "shortcut";
 
-export default function SettingsPage() {
+function SettingsContents() {
   const [shortcut, setShortcut] = useState<string>("");
+  const [shortcutPending, setShortcutPending] = useState(false);
+  const [shortcutError, setShortcutError] = useState(false);
+  const changingShortcut = useRef(false);
   const [activeSection, setActiveSection] = useState<SettingSection>("appearance");
   const { t } = useAppTranslation();
   const { theme, setTheme } = useTheme();
@@ -38,23 +44,29 @@ export default function SettingsPage() {
   }, [handleShowMainWindow]);
 
   const handleShortcutChange = async (newShortcut: string) => {
-    const oldShortcut = shortcut;
-    setShortcut(newShortcut);
-
-    if (newShortcut) {
-      localStorage.setItem(SHORTCUT_KEY, newShortcut);
-      await registerShortcut(newShortcut, handleShowMainWindow, oldShortcut);
-      // Notify main window to update shortcut
-      await emit("shortcut-changed", { shortcut: newShortcut });
-      toast.success(t("settings.shortcut.setSuccess", { shortcut: newShortcut }));
-    } else {
-      localStorage.removeItem(SHORTCUT_KEY);
-      if (oldShortcut) {
-        await unregisterShortcut(oldShortcut);
+    if (changingShortcut.current || newShortcut === shortcut) return;
+    changingShortcut.current = true;
+    setShortcutPending(true);
+    setShortcutError(false);
+    try {
+      const changed = newShortcut
+        ? await registerShortcut(newShortcut, handleShowMainWindow, shortcut)
+        : await unregisterShortcut(shortcut);
+      if (!changed) {
+        setShortcutError(true);
+        return;
       }
-      // Notify main window to clear shortcut
-      await emit("shortcut-changed", { shortcut: "" });
-      toast.info(t("settings.shortcut.cleared"));
+      setShortcut(newShortcut);
+      if (newShortcut) localStorage.setItem(SHORTCUT_KEY, newShortcut);
+      else localStorage.removeItem(SHORTCUT_KEY);
+      await emit("shortcut-changed", { shortcut: newShortcut }).catch((error) => {
+        console.error("Failed to notify other windows about the shortcut:", error);
+      });
+      if (newShortcut) toast.success(t("settings.shortcut.setSuccess", { shortcut: newShortcut }));
+      else toast.info(t("settings.shortcut.cleared"));
+    } finally {
+      changingShortcut.current = false;
+      setShortcutPending(false);
     }
   };
 
@@ -72,113 +84,120 @@ export default function SettingsPage() {
   ];
 
   return (
-    <WindowFrame
-      titleBar={<TitleBar title={t("settings.title")} showMaximize={false} />}
-      contentClassName="flex flex-1 overflow-hidden"
-    >
+    <>
       <Toaster />
-      <aside className="harbor-glass flex w-40 flex-col border-r p-4">
-        <nav className="flex-1 space-y-1">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.id}
-                onClick={() => setActiveSection(item.id)}
-                className={cn(
-                  "flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
-                  activeSection === item.id
-                    ? "bg-accent text-accent-foreground font-medium"
-                    : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-                )}
-              >
-                <Icon className="h-4 w-4" />
-                {item.label}
-              </button>
-            );
-          })}
+      <aside className="harbor-subtle-divider flex w-40 shrink-0 flex-col border-r p-3">
+        <nav aria-label={t("settings.title")} className="flex-1 space-y-1">
+          {menuItems.map((item) => (
+            <NavigationButton
+              key={item.id}
+              icon={item.icon}
+              label={item.label}
+              active={activeSection === item.id}
+              alwaysExpanded
+              onClick={() => setActiveSection(item.id)}
+            />
+          ))}
         </nav>
       </aside>
-
-      <div className="harbor-content flex-1 overflow-auto">
-        <div className="max-w-3xl p-4">
-          {activeSection === "appearance" && (
-            <div className="space-y-4">
-              <div>
-                <h2 className="mb-1 text-lg font-semibold">{t("settings.appearance.title")}</h2>
-                <p className="text-muted-foreground text-sm">
+      <ScrollArea className="min-h-0 min-w-0 flex-1">
+        <div className="max-w-3xl p-5">
+          {activeSection === "appearance" ? (
+            <section className="space-y-5">
+              <header>
+                <h1 className="text-2xl leading-7 font-semibold tracking-tight">
+                  {t("settings.appearance.title")}
+                </h1>
+                <p className="text-muted-foreground mt-1 text-[13px] leading-5">
                   {t("settings.appearance.description")}
                 </p>
-              </div>
-
-              <div className="space-y-0">
-                <div className="flex items-center justify-between py-2.5">
-                  <label className="text-sm font-medium">{t("settings.appearance.theme")}</label>
-                  <div className="flex gap-2">
-                    <Button
-                      variant={theme === "light" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setTheme("light")}
-                      className="flex items-center gap-1.5"
-                    >
-                      <Sun className="h-3.5 w-3.5" />
-                      {t("settings.appearance.light")}
-                    </Button>
-                    <Button
-                      variant={theme === "dark" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setTheme("dark")}
-                      className="flex items-center gap-1.5"
-                    >
-                      <Moon className="h-3.5 w-3.5" />
-                      {t("settings.appearance.dark")}
-                    </Button>
-                    <Button
-                      variant={theme === "system" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setTheme("system")}
-                      className="flex items-center gap-1.5"
-                    >
-                      <Monitor className="h-3.5 w-3.5" />
-                      {t("settings.appearance.system")}
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="border-t" />
-
-                <div className="flex items-center justify-between py-2.5">
-                  <label className="text-sm font-medium">{t("settings.appearance.language")}</label>
-                  <LanguageToggle />
+              </header>
+              <div className="harbor-subtle-divider flex flex-wrap items-center justify-between gap-4 border-b py-4">
+                <span id="settings-theme-label" className="text-[13px] font-medium">
+                  {t("settings.appearance.theme")}
+                </span>
+                <div
+                  role="group"
+                  aria-labelledby="settings-theme-label"
+                  className="flex flex-wrap gap-2"
+                >
+                  {(["light", "dark", "system"] as const).map((value) => {
+                    const Icon = value === "light" ? Sun : value === "dark" ? Moon : Monitor;
+                    return (
+                      <Button
+                        key={value}
+                        type="button"
+                        variant={theme === value ? "default" : "outline"}
+                        size="sm"
+                        aria-pressed={theme === value}
+                        onClick={() => setTheme(value)}
+                      >
+                        <Icon />
+                        {t(`settings.appearance.${value}`)}
+                      </Button>
+                    );
+                  })}
                 </div>
               </div>
-            </div>
-          )}
-
-          {activeSection === "shortcut" && (
-            <div className="space-y-4">
-              <div>
-                <h2 className="mb-1 text-lg font-semibold">{t("settings.shortcut.title")}</h2>
-                <p className="text-muted-foreground text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <span className="text-[13px] font-medium">{t("settings.appearance.language")}</span>
+                <LanguageToggle />
+              </div>
+            </section>
+          ) : (
+            <section className="space-y-5">
+              <header>
+                <h1 className="text-2xl leading-7 font-semibold tracking-tight">
+                  {t("settings.shortcut.title")}
+                </h1>
+                <p className="text-muted-foreground mt-1 text-[13px] leading-5">
                   {t("settings.shortcut.description")}
                 </p>
-              </div>
-
-              <div className="space-y-0">
-                <div className="flex items-center justify-between py-2.5">
-                  <div className="flex-1">
-                    <label className="text-sm font-medium">{t("settings.shortcut.showMain")}</label>
-                    <p className="text-muted-foreground mt-0.5 text-xs">
-                      {t("settings.shortcut.showMainDesc")}
-                    </p>
-                  </div>
-                  <ShortcutInput value={shortcut} onChange={handleShortcutChange} />
+              </header>
+              <div className="flex flex-wrap items-center justify-between gap-4 py-4">
+                <div className="min-w-40 flex-1">
+                  <p className="text-[13px] font-medium">{t("settings.shortcut.showMain")}</p>
+                  <p
+                    id="settings-shortcut-description"
+                    className="text-muted-foreground mt-1 text-xs leading-5"
+                  >
+                    {t("settings.shortcut.showMainDesc")}
+                  </p>
                 </div>
+                <ShortcutInput
+                  value={shortcut}
+                  onChange={(value) => void handleShortcutChange(value)}
+                  disabled={shortcutPending}
+                  describedBy="settings-shortcut-description"
+                />
               </div>
-            </div>
+              {shortcutPending ? (
+                <p role="status" className="text-muted-foreground flex items-center gap-2 text-xs">
+                  <Spinner className="size-3" />
+                  {t("settings.shortcut.updating")}
+                </p>
+              ) : null}
+              {shortcutError ? (
+                <Alert variant="destructive">
+                  <AlertDescription>{t("settings.shortcut.updateFailed")}</AlertDescription>
+                </Alert>
+              ) : null}
+            </section>
           )}
         </div>
-      </div>
+      </ScrollArea>
+    </>
+  );
+}
+
+export default function SettingsPage() {
+  const { t } = useAppTranslation();
+  return (
+    <WindowFrame
+      titleBar={<TitleBar title={t("settings.title")} showMaximize={false} />}
+      contentClassName="harbor-workspace-shell flex min-h-0 flex-1 overflow-hidden"
+    >
+      <SettingsContents />
     </WindowFrame>
   );
 }

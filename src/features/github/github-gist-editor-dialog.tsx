@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { FilePlus2, LockKeyhole, Plus, Save, Trash2, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -12,7 +12,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Spinner } from "@/components/ui/spinner";
@@ -72,6 +79,8 @@ export function GitHubGistEditorDialog({
   onUpdate: (input: GitHubGistUpdateInput) => void;
 }) {
   const { t } = useTranslation();
+  const id = useId();
+  const initialized = useRef<string | null>(null);
   const [description, setDescription] = useState("");
   const [visibility, setVisibility] = useState<"secret" | "public">("secret");
   const [files, setFiles] = useState<EditableGistFile[]>(() => initialFiles(gist));
@@ -81,7 +90,13 @@ export function GitHubGistEditorDialog({
   const invalid = activeFiles.length === 0 || normalizedNames.some((name) => !name) || hasDuplicate;
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      initialized.current = null;
+      return;
+    }
+    const identity = gist?.id ?? "new";
+    if (initialized.current === identity) return;
+    initialized.current = identity;
     setDescription(gist?.description ?? "");
     setVisibility(gist?.public ? "public" : "secret");
     setFiles(initialFiles(gist));
@@ -128,9 +143,17 @@ export function GitHubGistEditorDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-3xl">
-        <DialogHeader>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!pending) onOpenChange(next);
+      }}
+    >
+      <DialogContent
+        showCloseButton={!pending}
+        className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-3xl"
+      >
+        <DialogHeader className="pr-8">
           <DialogTitle>
             {t(gist ? "workspace.gists.editTitle" : "workspace.gists.createTitle")}
           </DialogTitle>
@@ -141,9 +164,11 @@ export function GitHubGistEditorDialog({
 
         <FieldGroup className="gap-4">
           <Field>
-            <FieldLabel htmlFor="gist-description">{t("workspace.gists.description")}</FieldLabel>
+            <FieldLabel htmlFor={`${id}-description`}>
+              {t("workspace.gists.description")}
+            </FieldLabel>
             <Input
-              id="gist-description"
+              id={`${id}-description`}
               value={description}
               disabled={pending}
               maxLength={1024}
@@ -153,9 +178,12 @@ export function GitHubGistEditorDialog({
           </Field>
 
           {!gist ? (
-            <Field>
-              <FieldLabel>{t("workspace.gists.visibility")}</FieldLabel>
+            <FieldSet>
+              <FieldLegend id={`${id}-visibility`} variant="label">
+                {t("workspace.gists.visibility")}
+              </FieldLegend>
               <RadioGroup
+                aria-labelledby={`${id}-visibility`}
                 value={visibility}
                 onValueChange={(value) => setVisibility(value as typeof visibility)}
                 className="grid gap-2 sm:grid-cols-2"
@@ -166,7 +194,7 @@ export function GitHubGistEditorDialog({
                   <span className="flex min-w-0 gap-2">
                     <LockKeyhole className="text-muted-foreground mt-0.5 size-4 shrink-0" />
                     <span>
-                      <span className="block text-xs font-medium">
+                      <span className="block text-[13px] font-medium">
                         {t("workspace.gists.secret")}
                       </span>
                       <span className="text-muted-foreground block text-[11px] leading-4">
@@ -180,7 +208,7 @@ export function GitHubGistEditorDialog({
                   <span className="flex min-w-0 gap-2">
                     <Users className="text-muted-foreground mt-0.5 size-4 shrink-0" />
                     <span>
-                      <span className="block text-xs font-medium">
+                      <span className="block text-[13px] font-medium">
                         {t("workspace.gists.public")}
                       </span>
                       <span className="text-muted-foreground block text-[11px] leading-4">
@@ -190,12 +218,12 @@ export function GitHubGistEditorDialog({
                   </span>
                 </label>
               </RadioGroup>
-            </Field>
+            </FieldSet>
           ) : null}
 
           <div className="flex items-center justify-between gap-3">
             <div>
-              <FieldLabel>{t("workspace.gists.files")}</FieldLabel>
+              <p className="text-[13px] font-medium">{t("workspace.gists.files")}</p>
               <p className="text-muted-foreground mt-1 text-[11px]">
                 {t("workspace.gists.filesDescription")}
               </p>
@@ -224,8 +252,8 @@ export function GitHubGistEditorDialog({
 
           <div className="space-y-3">
             {activeFiles.map((file, index) => (
-              <section key={file.key} className="overflow-hidden rounded-lg border">
-                <header className="bg-muted/25 flex items-center gap-2 border-b p-2">
+              <section key={file.key} className="harbor-reading overflow-hidden rounded-lg border">
+                <header className="harbor-subtle-divider flex items-center gap-2 border-b p-2">
                   <FilePlus2 className="text-muted-foreground size-4 shrink-0" />
                   <Input
                     aria-label={t("workspace.gists.fileName", { number: index + 1 })}
@@ -242,6 +270,7 @@ export function GitHubGistEditorDialog({
                     variant="ghost"
                     size="icon-sm"
                     aria-label={t("workspace.gists.removeFile", { name: file.filename })}
+                    title={t("workspace.gists.removeFile", { name: file.filename })}
                     disabled={pending || activeFiles.length <= 1}
                     onClick={() => removeFile(file)}
                   >
@@ -252,7 +281,7 @@ export function GitHubGistEditorDialog({
                   aria-label={t("workspace.gists.fileContent", { name: file.filename })}
                   value={file.content}
                   disabled={pending}
-                  className="min-h-44 resize-y rounded-none border-0 bg-transparent font-mono text-xs shadow-none focus-visible:ring-0"
+                  className="min-h-44 resize-y rounded-none border-0 bg-transparent font-mono text-[13px] shadow-none focus-visible:ring-inset"
                   onChange={(event) => updateFile(file.key, { content: event.currentTarget.value })}
                 />
               </section>

@@ -194,6 +194,7 @@ export function GitHubIssueRemoveSubIssueAction({
         variant="ghost"
         size="icon-xs"
         aria-label={t("workspace.repositories.removeSubIssue")}
+        title={t("workspace.repositories.removeSubIssue")}
         disabled={mutation.isPending}
         onClick={() => setOpen(true)}
       >
@@ -283,6 +284,7 @@ export function GitHubIssueReorderSubIssueActions({
           variant="ghost"
           size="icon-xs"
           aria-label={`${t("workspace.repositories.moveSubIssueUp")} ${subIssueNumber}`}
+          title={`${t("workspace.repositories.moveSubIssueUp")} ${subIssueNumber}`}
           disabled={mutation.isPending}
           onClick={() =>
             mutation.mutate({
@@ -304,6 +306,7 @@ export function GitHubIssueReorderSubIssueActions({
           variant="ghost"
           size="icon-xs"
           aria-label={`${t("workspace.repositories.moveSubIssueDown")} ${subIssueNumber}`}
+          title={`${t("workspace.repositories.moveSubIssueDown")} ${subIssueNumber}`}
           disabled={mutation.isPending}
           onClick={() =>
             mutation.mutate({

@@ -15,6 +15,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { Spinner } from "@/components/ui/spinner";
 import { parseIpcError } from "@/lib/ipc-error";
 import type { GitHubPullRequest, GitHubPullRequestRepository } from "./github-data";
@@ -81,6 +82,13 @@ export function GitHubPullRequestBranchUpdate({
   });
   const mutationError = mutation.error ? parseIpcError(mutation.error) : null;
   const statusError = statusResult.error ? parseIpcError(statusResult.error) : null;
+  const staleNotice =
+    statusError && statusResult.data ? (
+      <WorkspaceStaleNotice
+        message={statusError.message}
+        onRetry={() => void statusResult.refetch()}
+      />
+    ) : null;
   const updateCompleted = reconciliation
     ? hasPullRequestBranchUpdateCompleted(reconciliation.expectedHeadSha, [
         pullRequest.headSha,
@@ -130,7 +138,7 @@ export function GitHubPullRequestBranchUpdate({
     content = (
       <div className="flex min-w-0 flex-1 items-center gap-3">
         {reconciliation.timedOut ? (
-          <CircleAlert className="text-warning size-4 shrink-0" />
+          <CircleAlert className="text-attention size-4 shrink-0" />
         ) : (
           <Spinner className="text-primary size-4 shrink-0" />
         )}
@@ -226,7 +234,7 @@ export function GitHubPullRequestBranchUpdate({
     );
   }
 
-  if (!content) return null;
+  if (!content) return staleNotice;
 
   const mutationErrorMessage =
     mutationError?.code === "githubPermission"
@@ -239,6 +247,7 @@ export function GitHubPullRequestBranchUpdate({
 
   return (
     <>
+      {staleNotice}
       <div className="border-t px-4 py-3">{content}</div>
 
       <AlertDialog open={open} onOpenChange={changeOpen}>

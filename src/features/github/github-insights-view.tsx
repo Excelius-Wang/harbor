@@ -1,3 +1,4 @@
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -13,7 +14,6 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -130,19 +130,7 @@ function InsightsError({
 }
 
 function SupplementalError({ error, onRetry }: { error: unknown; onRetry: () => void }) {
-  const { t } = useTranslation();
-  return (
-    <Alert variant="destructive" className="rounded-none border-x-0 border-t-0">
-      <CircleAlert />
-      <AlertTitle>{t("workspace.repositories.insights.refreshFailed")}</AlertTitle>
-      <AlertDescription className="flex min-w-0 items-center gap-3">
-        <span className="min-w-0 flex-1 truncate">{parseIpcError(error).message}</span>
-        <Button variant="ghost" size="xs" onClick={onRetry}>
-          {t("workspace.repositories.retry")}
-        </Button>
-      </AlertDescription>
-    </Alert>
-  );
+  return <WorkspaceStaleNotice message={parseIpcError(error).message} onRetry={onRetry} />;
 }
 
 function StatisticNotice({ status }: { status: Exclude<GitHubInsightsStatisticStatus, "ready"> }) {
@@ -217,14 +205,14 @@ function CommunityCard({ overview }: { overview: GitHubRepositoryInsightsOvervie
               onClick={() => {
                 if (file.url) void openExternalUrl(file.url);
               }}
-              className="justify-start"
+              className="h-auto min-h-8 justify-start py-1.5 whitespace-normal"
             >
               {file.present ? (
                 <CheckCircle2 data-icon="inline-start" />
               ) : (
                 <FileQuestion data-icon="inline-start" />
               )}
-              <span className="truncate">
+              <span className="text-left">
                 {t(`workspace.repositories.insights.communityFiles.${file.key}`, {
                   defaultValue: file.name,
                 })}
@@ -234,7 +222,7 @@ function CommunityCard({ overview }: { overview: GitHubRepositoryInsightsOvervie
           ))}
         </div>
         {community.documentation ? (
-          <p className="text-muted-foreground text-[10px]">
+          <p className="text-muted-foreground text-[11px]">
             {t("workspace.repositories.insights.documentation", {
               documentation: community.documentation,
             })}
@@ -276,12 +264,22 @@ function CommitActivityCard({ overview }: { overview: GitHubRepositoryInsightsOv
         {activity.status === "ready" ? (
           data.length ? (
             <ChartContainer config={chartConfig} className="aspect-auto h-[210px] w-full">
-              <BarChart accessibilityLayer data={data} margin={{ left: 4, right: 4 }}>
+              <BarChart
+                accessibilityLayer
+                aria-label={t("workspace.repositories.insights.commitActivity")}
+                data={data}
+                margin={{ left: 4, right: 4 }}
+              >
                 <CartesianGrid vertical={false} />
                 <XAxis dataKey="label" tickLine={false} axisLine={false} minTickGap={30} />
                 <YAxis hide />
                 <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                <Bar dataKey="commits" fill="var(--color-commits)" radius={[3, 3, 0, 0]} />
+                <Bar
+                  isAnimationActive={false}
+                  dataKey="commits"
+                  fill="var(--color-commits)"
+                  radius={[3, 3, 0, 0]}
+                />
               </BarChart>
             </ChartContainer>
           ) : (
@@ -326,13 +324,28 @@ function CodeFrequencyCard({ overview }: { overview: GitHubRepositoryInsightsOve
         {frequency.status === "ready" ? (
           data.length ? (
             <ChartContainer config={chartConfig} className="aspect-auto h-[240px] w-full">
-              <BarChart accessibilityLayer data={data} margin={{ left: 4, right: 4 }}>
+              <BarChart
+                accessibilityLayer
+                aria-label={t("workspace.repositories.insights.codeFrequency")}
+                data={data}
+                margin={{ left: 4, right: 4 }}
+              >
                 <CartesianGrid vertical={false} />
                 <XAxis dataKey="label" tickLine={false} axisLine={false} minTickGap={30} />
                 <YAxis hide />
                 <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                <Bar dataKey="additions" fill="var(--color-additions)" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="deletions" fill="var(--color-deletions)" radius={[3, 3, 0, 0]} />
+                <Bar
+                  isAnimationActive={false}
+                  dataKey="additions"
+                  fill="var(--color-additions)"
+                  radius={[3, 3, 0, 0]}
+                />
+                <Bar
+                  isAnimationActive={false}
+                  dataKey="deletions"
+                  fill="var(--color-deletions)"
+                  radius={[3, 3, 0, 0]}
+                />
               </BarChart>
             </ChartContainer>
           ) : (
@@ -401,12 +414,23 @@ function ContributorsPanel({ data }: { data: GitHubRepositoryInsightsContributor
         </CardHeader>
         <CardContent className="px-2 @min-[600px]/insights:px-4">
           <ChartContainer config={chartConfig} className="aspect-auto h-[260px] w-full">
-            <BarChart accessibilityLayer data={chartData} layout="vertical" margin={{ left: 8 }}>
+            <BarChart
+              accessibilityLayer
+              aria-label={t("workspace.repositories.insights.tabs.contributors")}
+              data={chartData}
+              layout="vertical"
+              margin={{ left: 8 }}
+            >
               <CartesianGrid horizontal={false} />
               <XAxis type="number" hide />
               <YAxis dataKey="login" type="category" tickLine={false} axisLine={false} width={90} />
               <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-              <Bar dataKey="commits" fill="var(--color-commits)" radius={[0, 3, 3, 0]} />
+              <Bar
+                isAnimationActive={false}
+                dataKey="commits"
+                fill="var(--color-commits)"
+                radius={[0, 3, 3, 0]}
+              />
             </BarChart>
           </ChartContainer>
         </CardContent>
@@ -524,7 +548,7 @@ function TrafficSeriesCard({
           <p className="font-mono text-lg font-semibold tabular-nums">
             {new Intl.NumberFormat(i18n.language).format(series.count)}
           </p>
-          <p className="text-muted-foreground text-[10px]">
+          <p className="text-muted-foreground text-[11px]">
             {t("workspace.repositories.insights.uniqueCount", {
               value: new Intl.NumberFormat(i18n.language).format(series.uniques),
             })}
@@ -534,12 +558,18 @@ function TrafficSeriesCard({
       <CardContent className="px-2 @min-[600px]/insights:px-4">
         {data.length ? (
           <ChartContainer config={chartConfig} className="aspect-auto h-[210px] w-full">
-            <LineChart accessibilityLayer data={data} margin={{ left: 4, right: 4 }}>
+            <LineChart
+              accessibilityLayer
+              aria-label={title}
+              data={data}
+              margin={{ left: 4, right: 4 }}
+            >
               <CartesianGrid vertical={false} />
               <XAxis dataKey="label" tickLine={false} axisLine={false} minTickGap={24} />
               <YAxis hide />
               <ChartTooltip content={<ChartTooltipContent hideLabel />} />
               <Line
+                isAnimationActive={false}
                 dataKey="count"
                 type="monotone"
                 stroke="var(--color-count)"
@@ -547,6 +577,7 @@ function TrafficSeriesCard({
                 dot={false}
               />
               <Line
+                isAnimationActive={false}
                 dataKey="uniques"
                 type="monotone"
                 stroke="var(--color-uniques)"
@@ -773,7 +804,7 @@ export function GitHubInsightsView({ repository }: { repository: GitHubRepositor
             <h2 className="truncate text-sm font-semibold">
               {t("workspace.repositories.insights.title")}
             </h2>
-            <p className="text-muted-foreground truncate text-[10px]">
+            <p className="text-muted-foreground truncate text-[11px]">
               {t("workspace.repositories.insights.description")}
             </p>
           </div>

@@ -473,11 +473,9 @@ describe("GitHub Issue relationships", () => {
       }),
     });
 
-    expect(
-      await screen.findByText("workspace.repositories.issueRelationshipsPermissionDenied")
-    ).toBeDefined();
+    expect(await screen.findByText("common.staleResults")).toBeDefined();
     expect(screen.getByText("Cached child")).toBeDefined();
-    await user.click(screen.getByRole("button", { name: "workspace.repositories.retry" }));
+    await user.click(screen.getByRole("button", { name: "common.retry" }));
     expect(await screen.findByText("Refreshed child")).toBeDefined();
   });
 

@@ -1,3 +1,6 @@
+import { useListScroll } from "@/hooks/use-list-scroll";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
+import { WorkspacePageHeader } from "@/features/workspace/workspace-page-header";
 import { useEffect, useState } from "react";
 import { isTauri } from "@tauri-apps/api/core";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -8,11 +11,9 @@ import {
   Github,
   RefreshCw,
   Search,
-  TriangleAlert,
   UserCheck,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Empty,
@@ -90,6 +91,7 @@ export function GitHubIssueInbox({
   const [sort, setSort] = useState<GitHubIssueSort>("updated");
   const [page, setPage] = useState(1);
   const [selectedIssue, setSelectedIssue] = useState<GitHubIssueSummary | null>(null);
+  const listScroll = useListScroll(JSON.stringify([scope, state, query, sort, page]));
   const result = useQuery({
     ...issueInboxQueryOptions({ scope, state, query, sort, page }),
     enabled: desktopRuntime,
@@ -137,40 +139,34 @@ export function GitHubIssueInbox({
   };
 
   return (
-    <section className="harbor-content flex min-w-0 flex-1 flex-col">
-      <header className="h-[74px] shrink-0 border-b border-white/[0.075] px-5">
-        <div className="mx-auto flex h-full w-full max-w-[1120px] items-center justify-between gap-4">
-          <div>
-            <p className="text-primary/80 text-[10px] font-medium tracking-[0.14em] uppercase">
-              {t("workspace.issues.eyebrow")}
-            </p>
-            <h1 className="mt-0.5 text-xl font-semibold tracking-[-0.03em]">
-              {t("workspace.nav.issues")}
-            </h1>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => void result.refetch()}
-            disabled={result.isFetching || !desktopRuntime}
-          >
-            {result.isFetching ? (
-              <Spinner data-icon="inline-start" />
-            ) : (
-              <RefreshCw data-icon="inline-start" />
-            )}
-            {t("workspace.issues.refresh")}
-          </Button>
-        </div>
-      </header>
+    <section className="harbor-content flex min-h-0 min-w-0 flex-1 flex-col">
+      <WorkspacePageHeader
+        title={t("workspace.nav.issues")}
+        description={t("workspace.issues.eyebrow")}
+        contained
+      >
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => void result.refetch()}
+          disabled={result.isFetching || !desktopRuntime}
+        >
+          {result.isFetching ? (
+            <Spinner data-icon="inline-start" />
+          ) : (
+            <RefreshCw data-icon="inline-start" />
+          )}
+          {t("workspace.issues.refresh")}
+        </Button>
+      </WorkspacePageHeader>
 
-      <div className="mx-auto flex min-h-0 w-full max-w-[1120px] flex-1 flex-col border-x border-white/[0.055]">
+      <div className="harbor-subtle-divider mx-auto flex min-h-0 w-full max-w-[1120px] flex-1 flex-col border-x">
         <Tabs
           value={scope}
           onValueChange={(value) => resetPage(() => setScope(value as GitHubIssueInboxScope))}
           className="gap-0"
         >
-          <div className="border-b border-white/[0.065] px-4">
+          <div className="harbor-subtle-divider border-b px-4">
             <TabsList variant="line" className="h-11 gap-5 p-0">
               <TabsTrigger value="authored" className="px-1.5 text-xs">
                 <CircleDot /> {t("workspace.issues.authored")}
@@ -185,7 +181,7 @@ export function GitHubIssueInbox({
           </div>
         </Tabs>
 
-        <div className="flex flex-col gap-2 border-b border-white/[0.065] px-4 py-3">
+        <div className="harbor-subtle-divider flex flex-col gap-2 border-b px-4 py-3">
           <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
             <Select
               value={state}
@@ -201,13 +197,13 @@ export function GitHubIssueInbox({
                 </SelectGroup>
               </SelectContent>
             </Select>
-            <span className="text-muted-foreground flex min-h-6 items-center gap-2 text-[10px]">
+            <span className="text-muted-foreground flex min-h-6 items-center gap-2 text-[11px]">
               {result.isFetching && data ? <RefreshCw className="size-3 animate-spin" /> : null}
               {data ? t("workspace.issues.count", { count: data.totalCount }) : null}
             </span>
           </div>
           <form
-            className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-[minmax(220px,1fr)_150px]"
+            className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-[minmax(220px,1fr)_176px]"
             onSubmit={(event) => {
               event.preventDefault();
               resetPage(() => setQuery(draftQuery.trim()));
@@ -268,18 +264,13 @@ export function GitHubIssueInbox({
         </div>
 
         {supplementalError ? (
-          <Alert variant="destructive" className="rounded-none border-x-0 border-t-0 px-4 py-2">
-            <TriangleAlert />
-            <AlertDescription className="flex min-w-0 items-center gap-3 text-[11px]">
-              <span className="min-w-0 flex-1 truncate">{supplementalError.message}</span>
-              <Button variant="ghost" size="xs" onClick={() => void result.refetch()}>
-                {t("workspace.repositories.retry")}
-              </Button>
-            </AlertDescription>
-          </Alert>
+          <WorkspaceStaleNotice
+            message={supplementalError.message}
+            onRetry={() => void result.refetch()}
+          />
         ) : null}
 
-        <ScrollArea className="min-h-0 flex-1">
+        <ScrollArea className="min-h-0 flex-1" {...listScroll}>
           {result.isPending && !data ? (
             <IssueInboxSkeletons />
           ) : error ? (

@@ -17,4 +17,30 @@ describe("Progress", () => {
     expect(indicator?.className.split(" ")).toContain("harbor-progress-indeterminate");
     expect(indicator?.getAttribute("style")).toBeNull();
   });
+
+it("keeps the visible fill consistent with the announced custom maximum", () => {
+  const view = render(<Progress aria-label="Download" value={150} max={200} />);
+  const bar = screen.getByRole("progressbar", { name: "Download" });
+  const indicator = bar.querySelector<HTMLElement>("[data-slot=progress-indicator]")!;
+  expect(bar.getAttribute("aria-valuetext")).toBe("75%");
+  expect(indicator.style.transform).toBe("translateX(-25%)");
+
+  view.rerender(<Progress aria-label="Download" value={200} max={200} />);
+  expect(bar.getAttribute("data-state")).toBe("complete");
+  expect(indicator.style.transform).toBe("translateX(-0%)");
+
+  view.rerender(<Progress aria-label="Download" max={200} />);
+  expect(bar.hasAttribute("aria-valuenow")).toBe(false);
+  expect(indicator.style.transform).toBe("");
+  expect(indicator.classList.contains("harbor-progress-indeterminate")).toBe(true);
+});
+
+
+it.each([[-2, 0, "loading"], [100.4, 100, "complete"]])("clamps finite progress %s to %s", (value, expected, state) => {
+  render(<Progress aria-label="Download" value={value as number} />);
+  const bar = screen.getByRole("progressbar", { name: "Download" });
+  expect(bar.getAttribute("aria-valuenow")).toBe(String(expected));
+  expect(bar.dataset.state).toBe(state);
+  expect(bar.querySelector("[data-slot=progress-indicator]")?.className).not.toContain("harbor-progress-indeterminate");
+});
 });

@@ -189,7 +189,7 @@ function DiscussionCommentEditor({
 
   return (
     <form
-      className="bg-muted/10 border-t p-3"
+      className="harbor-reading border-t p-3"
       onSubmit={(event) => {
         event.preventDefault();
         setSubmitted(true);
@@ -317,11 +317,11 @@ export function GitHubDiscussionCommentCard({
     <article
       className={
         nested
-          ? "bg-card/20 overflow-hidden rounded-md border"
-          : "bg-card/30 overflow-hidden rounded-lg border"
+          ? "harbor-reading overflow-hidden rounded-md border"
+          : "harbor-reading overflow-hidden rounded-lg border"
       }
     >
-      <header className="bg-card/40 flex min-h-11 min-w-0 items-center gap-2 border-b px-3.5 py-2">
+      <header className="flex min-h-11 min-w-0 flex-wrap items-center gap-2 border-b bg-transparent px-3.5 py-2">
         <Avatar size="sm">
           {comment.authorAvatarUrl ? (
             <AvatarImage src={comment.authorAvatarUrl} alt="" referrerPolicy="no-referrer" />
@@ -336,18 +336,18 @@ export function GitHubDiscussionCommentCard({
               : t("workspace.repositories.unknownActor")}
         </span>
         {!deleted && comment.authorAssociation !== "NONE" ? (
-          <Badge variant="outline" className="h-5 rounded-md text-[9px] font-normal">
+          <Badge variant="outline" className="h-5 rounded-md text-[11px] font-normal">
             {comment.authorAssociation.toLowerCase()}
           </Badge>
         ) : null}
         {comment.isAnswer ? (
-          <Badge variant="secondary" className="h-5 rounded-md text-[9px] font-normal">
+          <Badge variant="secondary" className="h-5 rounded-md text-[11px] font-normal">
             <CheckCircle2 /> {t("workspace.repositories.discussionAnswer")}
           </Badge>
         ) : null}
         <time
           dateTime={comment.createdAt}
-          className="text-muted-foreground ml-auto shrink-0 text-[9px]"
+          className="text-muted-foreground ml-auto shrink-0 text-[11px]"
         >
           {formatIssueDate(comment.createdAt, i18n.language)}
         </time>
@@ -357,6 +357,7 @@ export function GitHubDiscussionCommentCard({
             variant="ghost"
             size="icon-xs"
             aria-label={t("workspace.repositories.openDiscussionCommentOnGitHub")}
+            title={t("workspace.repositories.openDiscussionCommentOnGitHub")}
             onClick={() => void openExternalUrl(comment.url)}
           >
             <ExternalLink />
@@ -403,6 +404,9 @@ export function GitHubDiscussionCommentCard({
             type="button"
             variant={comment.viewerHasUpvoted ? "secondary" : "ghost"}
             size="xs"
+            aria-pressed={comment.viewerHasUpvoted}
+            aria-label={t("workspace.repositories.upvoteDiscussionComment")}
+            title={t("workspace.repositories.upvoteDiscussionComment")}
             disabled={!comment.viewerCanUpvote || voteMutation.isPending}
             onClick={() => voteMutation.mutate()}
           >
@@ -484,7 +488,7 @@ export function GitHubDiscussionCommentCard({
         />
       ) : null}
       {comment.replies.length ? (
-        <div className="bg-muted/5 flex flex-col gap-2 border-t px-3 py-3 pl-7">
+        <div className="flex flex-col gap-2 border-t bg-transparent px-3 py-3 pl-7">
           {comment.replies.map((reply) => (
             <GitHubDiscussionCommentCard
               key={reply.id}

@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { parseIpcError } from "@/lib/ipc-error";
 import type { GitHubIssue, GitHubRepositoryIdentity } from "./github-data";
 import { invalidateRepositoryIssue } from "./github-issue-mutations";
@@ -124,9 +125,15 @@ export function GitHubIssueProjectAction({
               {t("workspace.repositories.addToProjectDescription", { number: issue.number })}
             </DialogDescription>
           </DialogHeader>
+          {projectError && projectsResult.data ? (
+            <WorkspaceStaleNotice
+              message={projectError.message}
+              onRetry={() => void projectsResult.refetch()}
+            />
+          ) : null}
           {projectsResult.isPending ? (
             <Skeleton className="h-9 w-full" />
-          ) : projectsResult.error ? (
+          ) : projectsResult.error && !projectsResult.data ? (
             <Alert variant="destructive">
               <CircleAlert />
               <AlertTitle>{t(projectLoadErrorTitle(projectError?.code ?? ""))}</AlertTitle>
@@ -217,11 +224,15 @@ export function GitHubIssueProjectAction({
             <Button
               type="button"
               onClick={() => {
-                if (selectedProject?.viewerCanUpdate) {
+                if (selectedProject?.viewerCanUpdate && !projectsResult.error) {
                   addMutation.mutate(selectedProject.number);
                 }
               }}
-              disabled={!selectedProject?.viewerCanUpdate || addMutation.isPending}
+              disabled={
+                !selectedProject?.viewerCanUpdate ||
+                addMutation.isPending ||
+                Boolean(projectsResult.error)
+              }
             >
               <Plus data-icon="inline-start" />
               {t("workspace.repositories.addToProject")}

@@ -25,7 +25,6 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-  CommandShortcut,
 } from "@/components/ui/command";
 import {
   DropdownMenu,
@@ -36,7 +35,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/sonner";
 import type { GitHubDiscoveryRepositoryTarget } from "@/features/github/github-discovery-view";
 import type {
   GitHubIssueRepository,
@@ -50,6 +49,7 @@ import { GitHubRepositoryBrowser } from "@/features/github/github-repository-bro
 import { openExternalUrl, openSettingsWindow } from "@/lib/window";
 import { HarborRail, type RailView, type RepositoryTarget } from "./harbor-rail";
 import type { WorkspaceSection } from "./workspace-types";
+import { NavigationButton } from "./navigation-button";
 
 const GitHubDiscovery = lazy(() =>
   import("@/features/github/github-discovery-view").then((module) => ({
@@ -101,40 +101,6 @@ const secondaryNavItems: NavigationItem[] = [
 ];
 
 const navItems = [...primaryNavItems, ...secondaryNavItems];
-
-function NavigationButton({
-  item,
-  active,
-  onSelect,
-}: {
-  item: NavigationItem;
-  active: boolean;
-  onSelect: () => void;
-}) {
-  const { t } = useTranslation();
-  const Icon = item.icon;
-  const label = t(`workspace.nav.${item.id}`);
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          type="button"
-          onClick={onSelect}
-          className="harbor-nav-item relative flex h-10 w-full items-center gap-3 rounded-[8px] px-3 text-left text-[13px] font-medium transition-[background-color,color,box-shadow,transform] active:scale-[0.98]"
-          aria-current={active ? "page" : undefined}
-          aria-label={label}
-        >
-          <Icon className="size-4 shrink-0" strokeWidth={1.75} />
-          <span className="workspace-wide:block hidden min-w-0 flex-1 truncate">{label}</span>
-        </button>
-      </TooltipTrigger>
-      <TooltipContent side="right" sideOffset={8} className="workspace-wide:hidden">
-        {label}
-      </TooltipContent>
-    </Tooltip>
-  );
-}
 
 function WorkspaceFallback() {
   const { t } = useTranslation();
@@ -204,15 +170,16 @@ function PrimaryNavigation({
   return (
     <aside className="harbor-pane harbor-primary-nav harbor-subtle-divider workspace-wide:w-[226px] flex min-h-0 w-[58px] shrink-0 flex-col border-r">
       <nav
-        className="flex flex-col gap-1.5 px-2.5 py-4"
+        className="workspace-wide:px-2.5 flex flex-col gap-1.5 px-2 py-4"
         aria-label={t("workspace.primaryNavigation")}
       >
         {primaryNavItems.map((item) => (
           <NavigationButton
             key={item.id}
-            item={item}
+            icon={item.icon}
+            label={t(`workspace.nav.${item.id}`)}
             active={activeSection === item.id}
-            onSelect={() => onSectionChange(item.id)}
+            onClick={() => onSectionChange(item.id)}
           />
         ))}
 
@@ -220,19 +187,14 @@ function PrimaryNavigation({
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className="harbor-nav-item relative flex h-10 w-full items-center gap-3 rounded-[8px] px-3 text-left text-[13px] font-medium transition-[background-color,color,box-shadow,transform] active:scale-[0.98]"
-              aria-current={activeSecondaryItem ? "page" : undefined}
-              aria-label={t("workspace.nav.more")}
-            >
-              <SecondaryIcon className="size-4 shrink-0" strokeWidth={1.75} />
-              <span className="workspace-wide:block hidden min-w-0 flex-1 truncate">
-                {activeSecondaryItem
-                  ? t(`workspace.nav.${activeSecondaryItem.id}`)
-                  : t("workspace.nav.more")}
-              </span>
-            </button>
+            <NavigationButton
+              icon={SecondaryIcon}
+              label={t("workspace.nav.more")}
+              caption={
+                activeSecondaryItem ? t(`workspace.nav.${activeSecondaryItem.id}`) : undefined
+              }
+              active={Boolean(activeSecondaryItem)}
+            />
           </DropdownMenuTrigger>
           <DropdownMenuContent side="right" align="start" className="harbor-popover w-48">
             <DropdownMenuGroup>
@@ -252,40 +214,18 @@ function PrimaryNavigation({
 
       <div className="flex-1" />
 
-      <div className="flex flex-col gap-1.5 p-2.5 pb-4">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              aria-label={t("workspace.account")}
-              aria-current={activeSection === "profile" ? "page" : undefined}
-              onClick={() => onSectionChange("profile")}
-              className="harbor-nav-item relative flex h-10 w-full items-center gap-3 rounded-[8px] px-3 text-[13px] font-medium transition-[background-color,color,box-shadow,transform] active:scale-[0.98]"
-            >
-              <UserRound className="size-4" />
-              <span className="workspace-wide:inline hidden">{t("workspace.account")}</span>
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="right" sideOffset={8} className="workspace-wide:hidden">
-            {t("workspace.account")}
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              aria-label={t("settings.title")}
-              onClick={() => void handleOpenSettings()}
-              className="harbor-nav-item relative flex h-10 w-full items-center gap-3 rounded-[8px] px-3 text-[13px] font-medium transition-[background-color,color,box-shadow,transform] active:scale-[0.98]"
-            >
-              <Settings className="size-4" />
-              <span className="workspace-wide:inline hidden">{t("settings.title")}</span>
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="right" sideOffset={8} className="workspace-wide:hidden">
-            {t("settings.title")}
-          </TooltipContent>
-        </Tooltip>
+      <div className="workspace-wide:px-2.5 flex flex-col gap-1.5 px-2 py-2.5 pb-4">
+        <NavigationButton
+          icon={UserRound}
+          label={t("workspace.account")}
+          active={activeSection === "profile"}
+          onClick={() => onSectionChange("profile")}
+        />
+        <NavigationButton
+          icon={Settings}
+          label={t("settings.title")}
+          onClick={() => void handleOpenSettings()}
+        />
       </div>
     </aside>
   );
@@ -356,6 +296,7 @@ export function HarborWorkspace() {
       titleBar={<MainTitleBar onOpenCommand={() => setCommandOpen(true)} />}
       contentClassName="harbor-workspace-shell flex min-h-0 flex-1 overflow-hidden"
     >
+      <Toaster />
       <PrimaryNavigation activeSection={activeSection} onSectionChange={setActiveSection} />
       {activeSection === "discover" ? (
         <Suspense fallback={<WorkspaceFallback />}>
@@ -397,7 +338,7 @@ export function HarborWorkspace() {
         onOpenChange={setCommandOpen}
         title={t("workspace.command.title")}
         description={t("workspace.command.description")}
-        className="harbor-command top-[28%] max-w-xl translate-y-0 border-white/10 shadow-2xl"
+        className="max-w-xl"
       >
         <CommandInput placeholder={t("workspace.command.placeholder")} />
         <CommandList className="max-h-[360px]">
@@ -412,7 +353,6 @@ export function HarborWorkspace() {
                 >
                   <Icon />
                   {t(`workspace.nav.${item.id}`)}
-                  {item.id === "discover" ? <CommandShortcut>G D</CommandShortcut> : null}
                 </CommandItem>
               );
             })}
@@ -429,7 +369,6 @@ export function HarborWorkspace() {
             >
               <ExternalLink />
               {t("workspace.command.openSelected")}
-              <CommandShortcut>⌘ ↵</CommandShortcut>
             </CommandItem>
           </CommandGroup>
         </CommandList>

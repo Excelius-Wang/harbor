@@ -54,4 +54,41 @@ describe("ThemeProvider", () => {
       radius: 10,
     });
   });
+  it("removes and restores native vibrancy when reduced transparency changes", async () => {
+    let reduced = true;
+    let notify: (() => void) | undefined;
+    vi.mocked(window.matchMedia).mockImplementation(
+      (query) =>
+        ({
+          get matches() {
+            return query.includes("reduced-transparency") && reduced;
+          },
+          addEventListener: (_event: string, listener: () => void) => {
+            if (query.includes("reduced-transparency")) notify = listener;
+          },
+          removeEventListener: vi.fn(),
+        }) as unknown as MediaQueryList
+    );
+    render(
+      <ThemeProvider defaultTheme="dark">
+        <span>Harbor</span>
+      </ThemeProvider>
+    );
+    await waitFor(() =>
+      expect(nativeWindow.setEffects).toHaveBeenLastCalledWith({
+        effects: [],
+        state: "followsWindowActiveState",
+        radius: 10,
+      })
+    );
+    reduced = false;
+    notify?.();
+    await waitFor(() =>
+      expect(nativeWindow.setEffects).toHaveBeenLastCalledWith({
+        effects: ["hudWindow"],
+        state: "followsWindowActiveState",
+        radius: 10,
+      })
+    );
+  });
 });

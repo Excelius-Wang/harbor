@@ -3,6 +3,7 @@ import { isTauri } from "@tauri-apps/api/core";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { Minus, Maximize2, Minimize2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 interface TitleBarProps {
   title?: string;
@@ -31,6 +32,7 @@ function TrafficLight({ kind, label, onPress, children }: TrafficLightProps) {
       className="title-bar-traffic-control"
       data-window-control={kind}
       aria-label={label}
+      title={label}
       onClick={() => void onPress()}
     >
       <span className="title-bar-traffic-dot">{children}</span>
@@ -50,6 +52,7 @@ export function TitleBar({
   size = "default",
   className,
 }: TitleBarProps) {
+  const { t } = useTranslation();
   const [isMaximized, setIsMaximized] = useState(false);
 
   useEffect(() => {
@@ -125,7 +128,7 @@ export function TitleBar({
   return (
     <div
       className={cn(
-        "harbor-glass relative flex items-center justify-between border-b select-none",
+        "harbor-subtle-divider relative flex shrink-0 items-center justify-between border-b select-none",
         size === "workspace" ? "h-[52px]" : "h-8",
         showMaximize && isMaximized
           ? ""
@@ -138,23 +141,23 @@ export function TitleBar({
       {hasWindowControls ? (
         <div
           role="group"
-          aria-label="Window controls"
+          aria-label={t("window.controls")}
           className="harbor-traffic-lights relative z-20 flex h-full shrink-0 items-center gap-0.5 pr-2 pl-3"
         >
           {showClose ? (
-            <TrafficLight kind="close" label="Close" onPress={handleClose}>
+            <TrafficLight kind="close" label={t("common.close")} onPress={handleClose}>
               <X className="title-bar-traffic-glyph" strokeWidth={2.6} />
             </TrafficLight>
           ) : null}
           {showMinimize ? (
-            <TrafficLight kind="minimize" label="Minimize" onPress={handleMinimize}>
+            <TrafficLight kind="minimize" label={t("window.minimize")} onPress={handleMinimize}>
               <Minus className="title-bar-traffic-glyph" strokeWidth={2.6} />
             </TrafficLight>
           ) : null}
           {showMaximize ? (
             <TrafficLight
               kind="maximize"
-              label={isMaximized ? "Restore" : "Maximize"}
+              label={t(isMaximized ? "window.restore" : "window.maximize")}
               onPress={handleToggleMaximize}
             >
               {isMaximized ? (
@@ -175,7 +178,7 @@ export function TitleBar({
           hasWindowControls ? "pl-0" : "pl-2"
         )}
       >
-        {title && <span className="text-sm font-medium text-slate-400">{title}</span>}
+        {title && <span className="text-foreground truncate text-[13px] font-medium">{title}</span>}
         {leftActions}
       </div>
 

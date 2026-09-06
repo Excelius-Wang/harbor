@@ -1,3 +1,5 @@
+import { WorkspacePageHeader } from "@/features/workspace/workspace-page-header";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { useEffect, useMemo, useState } from "react";
 import { isTauri } from "@tauri-apps/api/core";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -110,7 +112,7 @@ function ContributionCalendar({ summary }: { summary: GitHubContributionSummary 
           {t("workspace.profile.contributions", { count: summary.totalContributions })}
         </h2>
         {summary.hasRestrictedContributions ? (
-          <span className="text-muted-foreground text-[10px]">
+          <span className="text-muted-foreground text-[11px]">
             {t("workspace.profile.privateContributions", {
               count: summary.restrictedContributions,
             })}
@@ -140,7 +142,7 @@ function ContributionCalendar({ summary }: { summary: GitHubContributionSummary 
         </div>
         <ScrollBar orientation="horizontal" />
       </ScrollArea>
-      <dl className="bg-border grid grid-cols-2 gap-px overflow-hidden rounded-md border min-[700px]:grid-cols-5">
+      <dl className="grid grid-cols-2 gap-1 overflow-hidden rounded-md border min-[700px]:grid-cols-5">
         {[
           ["total", summary.totalContributions],
           ["commits", summary.commits],
@@ -148,8 +150,8 @@ function ContributionCalendar({ summary }: { summary: GitHubContributionSummary 
           ["reviews", summary.pullRequestReviews],
           ["issues", summary.issues],
         ].map(([label, value]) => (
-          <div key={label} className="bg-background px-3 py-2">
-            <dt className="text-muted-foreground text-[10px]">
+          <div key={label} className="bg-muted/15 px-3 py-2">
+            <dt className="text-muted-foreground text-[11px]">
               {t(`workspace.profile.metrics.${label}`)}
             </dt>
             <dd className="font-mono text-sm font-medium tabular-nums">{value}</dd>
@@ -160,24 +162,24 @@ function ContributionCalendar({ summary }: { summary: GitHubContributionSummary 
   );
 }
 
-function activityIcon(eventType: string) {
-  if (eventType === "PushEvent") return GitCommitHorizontal;
-  if (eventType === "PullRequestEvent" || eventType === "PullRequestReviewEvent") {
-    return GitPullRequest;
-  }
-  if (eventType === "IssuesEvent") return CircleDot;
-  if (eventType === "ForkEvent") return GitFork;
-  if (eventType === "WatchEvent") return Star;
-  if (eventType === "CreateEvent" || eventType === "DeleteEvent") return Tag;
-  if (eventType.includes("Comment") || eventType.includes("Discussion")) {
-    return MessageSquareText;
-  }
-  return FileCode2;
-}
+const activityIcons: Record<string, typeof FileCode2> = {
+  PushEvent: GitCommitHorizontal,
+  PullRequestEvent: GitPullRequest,
+  PullRequestReviewEvent: GitPullRequest,
+  IssuesEvent: CircleDot,
+  ForkEvent: GitFork,
+  WatchEvent: Star,
+  CreateEvent: Tag,
+  DeleteEvent: Tag,
+};
 
 function ActivityRow({ activity, locale }: { activity: GitHubProfileActivity; locale: string }) {
   const { t } = useTranslation();
-  const Icon = activityIcon(activity.eventType);
+  const Icon =
+    activityIcons[activity.eventType] ??
+    (activity.eventType.includes("Comment") || activity.eventType.includes("Discussion")
+      ? MessageSquareText
+      : FileCode2);
   const action = activity.action
     ? t(`workspace.profile.actions.${activity.action}`, { defaultValue: activity.action })
     : undefined;
@@ -201,10 +203,10 @@ function ActivityRow({ activity, locale }: { activity: GitHubProfileActivity; lo
           })}
         </p>
         {activity.resourceTitle ? (
-          <p className="text-muted-foreground truncate text-[10px]">{activity.resourceTitle}</p>
+          <p className="text-muted-foreground truncate text-[11px]">{activity.resourceTitle}</p>
         ) : null}
       </div>
-      <time className="text-muted-foreground pt-0.5 text-[10px] whitespace-nowrap">
+      <time className="text-muted-foreground pt-0.5 text-[11px] whitespace-nowrap">
         {new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" }).format(
           new Date(activity.createdAt)
         )}
@@ -242,14 +244,14 @@ function ProfileIdentity({
 
   return (
     <aside className="flex min-w-0 flex-col gap-4 min-[1180px]:border-r min-[1180px]:pr-5">
-      <Avatar className="size-28 border shadow-sm">
+      <Avatar className="size-28 border">
         <AvatarImage src={profile.avatarUrl} alt={`@${profile.login}`} />
         <AvatarFallback>{initials(profile)}</AvatarFallback>
       </Avatar>
       <div className="min-w-0">
-        <h1 className="truncate text-xl font-semibold tracking-[-0.03em]">
+        <h2 className="text-2xl font-semibold tracking-[-0.03em]">
           {profile.name ?? profile.login}
-        </h1>
+        </h2>
         <p className="text-muted-foreground truncate text-sm">{profile.login}</p>
       </div>
       {profile.bio ? <p className="text-xs leading-5">{profile.bio}</p> : null}
@@ -274,7 +276,7 @@ function ProfileIdentity({
         </Button>
       )}
       {!profile.viewerOwnsProfile && profile.followsViewer ? (
-        <span className="text-muted-foreground text-[10px]">
+        <span className="text-muted-foreground text-[11px]">
           {t("workspace.profile.followsYou")}
         </span>
       ) : null}
@@ -309,18 +311,18 @@ function ProfileIdentity({
           ))}
         </ul>
       ) : null}
-      <p className="text-muted-foreground text-[10px]">
+      <p className="text-muted-foreground text-[11px]">
         {t("workspace.profile.joined", { date: joined })}
       </p>
-      <dl className="bg-border grid grid-cols-2 gap-px overflow-hidden rounded-md border">
-        <div className="bg-background px-3 py-2">
-          <dt className="text-muted-foreground text-[10px]">
+      <dl className="grid grid-cols-2 gap-1 overflow-hidden rounded-md border">
+        <div className="bg-muted/15 px-3 py-2">
+          <dt className="text-muted-foreground text-[11px]">
             {t("workspace.profile.repositories")}
           </dt>
           <dd className="font-mono text-sm tabular-nums">{profile.publicRepositories}</dd>
         </div>
-        <div className="bg-background px-3 py-2">
-          <dt className="text-muted-foreground text-[10px]">{t("workspace.nav.gists")}</dt>
+        <div className="bg-muted/15 px-3 py-2">
+          <dt className="text-muted-foreground text-[11px]">{t("workspace.nav.gists")}</dt>
           <dd className="font-mono text-sm tabular-nums">{profile.publicGists}</dd>
         </div>
       </dl>
@@ -350,22 +352,33 @@ function ConnectionList({
         value={kind}
         onValueChange={(value) => onKindChange(value as GitHubProfileConnectionKind)}
       >
-        <TabsList>
+        <TabsList variant="line">
           <TabsTrigger value="followers">{t("workspace.profile.followers")}</TabsTrigger>
           <TabsTrigger value="following">{t("workspace.profile.following")}</TabsTrigger>
         </TabsList>
       </Tabs>
+      {result.data && result.error ? (
+        <WorkspaceStaleNotice
+          message={parseIpcError(result.error).message}
+          onRetry={() => void result.refetch()}
+        />
+      ) : null}
       {result.isPending ? (
         <div className="flex flex-col gap-2">
           {Array.from({ length: 4 }, (_, index) => (
             <Skeleton key={index} className="h-10 w-full" />
           ))}
         </div>
-      ) : result.error ? (
+      ) : result.error && !result.data ? (
         <Alert variant="destructive">
           <CircleAlert />
           <AlertTitle>{t("workspace.profile.connectionsFailed")}</AlertTitle>
           <AlertDescription>{parseIpcError(result.error).message}</AlertDescription>
+          <div className="col-start-2 mt-2">
+            <Button variant="outline" size="sm" onClick={() => void result.refetch()}>
+              {t("common.retry")}
+            </Button>
+          </div>
         </Alert>
       ) : users.length === 0 ? (
         <p className="text-muted-foreground py-4 text-center text-xs">
@@ -378,7 +391,7 @@ function ConnectionList({
               key={user.id}
               type="button"
               variant="ghost"
-              className="h-auto justify-start px-2 py-2"
+              className="harbor-result-row h-auto justify-start px-2 py-2"
               onClick={() => onSelect(user.login)}
             >
               <Avatar size="sm">
@@ -461,6 +474,11 @@ export function GitHubProfileView({
       );
       void invalidateProfiles(queryClient, updated.login);
     },
+    onError: (error) => {
+      toast.error(t("workspace.profile.followFailed"), {
+        description: parseIpcError(error).message,
+      });
+    },
   });
   const runtimeError = !desktopRuntime
     ? { code: "desktopOnly", message: t("workspace.profile.desktopOnly") }
@@ -488,27 +506,23 @@ export function GitHubProfileView({
 
   return (
     <section className="harbor-content flex min-w-0 flex-1 flex-col">
-      <header className="flex h-[74px] shrink-0 items-center justify-between gap-4 border-b px-5">
-        <div className="flex min-w-0 items-center gap-3">
-          {selectedUsername || onBack ? (
+      <WorkspacePageHeader
+        title={profile?.viewerOwnsProfile === false ? profile.login : t("workspace.nav.profile")}
+        description={t("workspace.profile.eyebrow")}
+        leading={
+          selectedUsername || onBack ? (
             <Button
               variant="ghost"
               size="icon-sm"
               aria-label={backLabel ?? t("workspace.profile.backToYours")}
+              title={backLabel ?? t("workspace.profile.backToYours")}
               onClick={handleBack}
             >
               <ArrowLeft />
             </Button>
-          ) : null}
-          <div className="min-w-0">
-            <p className="text-primary/80 text-[10px] font-medium tracking-[0.14em] uppercase">
-              {t("workspace.profile.eyebrow")}
-            </p>
-            <h1 className="truncate text-xl font-semibold tracking-[-0.03em]">
-              {profile?.viewerOwnsProfile === false ? profile.login : t("workspace.nav.profile")}
-            </h1>
-          </div>
-        </div>
+          ) : undefined
+        }
+      >
         <Button
           variant="outline"
           size="sm"
@@ -522,7 +536,13 @@ export function GitHubProfileView({
           )}
           {t("common.refresh")}
         </Button>
-      </header>
+      </WorkspacePageHeader>
+      {profile && profileResult.error ? (
+        <WorkspaceStaleNotice
+          message={parseIpcError(profileResult.error).message}
+          onRetry={() => void profileResult.refetch()}
+        />
+      ) : null}
 
       <ScrollArea className="min-h-0 flex-1" constrainContentWidth>
         {runtimeError ? (
@@ -566,13 +586,28 @@ export function GitHubProfileView({
               onShowConnections={setConnectionKind}
             />
             <main className="flex min-w-0 flex-col gap-5">
+              {contributions.data && contributions.error ? (
+                <WorkspaceStaleNotice
+                  message={parseIpcError(contributions.error).message}
+                  onRetry={() => void contributions.refetch()}
+                />
+              ) : null}
               {contributions.isPending ? (
                 <Skeleton className="h-40 w-full" />
-              ) : contributions.error ? (
+              ) : contributions.error && !contributions.data ? (
                 <Alert variant="destructive">
                   <CircleAlert />
                   <AlertTitle>{t("workspace.profile.contributionsFailed")}</AlertTitle>
                   <AlertDescription>{parseIpcError(contributions.error).message}</AlertDescription>
+                  <div className="col-start-2 mt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void contributions.refetch()}
+                    >
+                      {t("common.retry")}
+                    </Button>
+                  </div>
                 </Alert>
               ) : contributions.data ? (
                 <ContributionCalendar summary={contributions.data} />
@@ -588,21 +623,32 @@ export function GitHubProfileView({
               <section className="flex flex-col gap-2">
                 <div className="flex items-center justify-between gap-3">
                   <h2 className="text-sm font-semibold">{t("workspace.profile.publicActivity")}</h2>
-                  <span className="text-muted-foreground text-[10px]">
+                  <span className="text-muted-foreground text-[11px]">
                     {t("workspace.profile.activityWindow")}
                   </span>
                 </div>
+                {activity.data && activity.error ? (
+                  <WorkspaceStaleNotice
+                    message={parseIpcError(activity.error).message}
+                    onRetry={() => void activity.refetch()}
+                  />
+                ) : null}
                 {activity.isPending ? (
                   <div className="flex flex-col gap-2">
                     {Array.from({ length: 5 }, (_, index) => (
                       <Skeleton key={index} className="h-12 w-full" />
                     ))}
                   </div>
-                ) : activity.error ? (
+                ) : activity.error && !activity.data ? (
                   <Alert variant="destructive">
                     <CircleAlert />
                     <AlertTitle>{t("workspace.profile.activityFailed")}</AlertTitle>
                     <AlertDescription>{parseIpcError(activity.error).message}</AlertDescription>
+                    <div className="col-start-2 mt-2">
+                      <Button variant="outline" size="sm" onClick={() => void activity.refetch()}>
+                        {t("common.retry")}
+                      </Button>
+                    </div>
                   </Alert>
                 ) : activities.length === 0 ? (
                   <p className="text-muted-foreground py-8 text-center text-xs">

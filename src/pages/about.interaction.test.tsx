@@ -4,7 +4,7 @@ import type { Update } from "@tauri-apps/plugin-updater";
 import type { ReactNode } from "react";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const updaterPlugin = vi.hoisted(() => ({
   check: vi.fn(),
@@ -60,7 +60,19 @@ function reviewedUpdate() {
   } as unknown as Update;
 }
 
+beforeEach(() => {
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+  );
+});
+
 afterEach(() => {
+  vi.unstubAllGlobals();
   cleanup();
   vi.restoreAllMocks();
   vi.resetAllMocks();

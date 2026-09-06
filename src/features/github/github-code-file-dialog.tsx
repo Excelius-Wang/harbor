@@ -200,7 +200,7 @@ export function GitHubCodeFileDialog({
                   disabled={mutation.isPending}
                   spellCheck={false}
                   placeholder={t("workspace.repositories.repositoryFileContentPlaceholder")}
-                  className="bg-background/40 max-h-[45vh] min-h-72 resize-y font-mono text-[12px] leading-5 [tab-size:2]"
+                  className="harbor-reading max-h-[45vh] min-h-72 resize-y font-mono text-[13px] leading-5 [tab-size:2]"
                   onChange={(event) => setContent(event.target.value)}
                 />
               )}
@@ -274,7 +274,7 @@ export function GitHubCodeFileDialog({
             {mutation.isPending ? <Spinner data-icon="inline-start" /> : null}
             {mutation.isPending
               ? t("workspace.repositories.committingRepositoryFile")
-              : t("workspace.repositories.commitChanges")}
+              : t("workspace.repositories.commitFileChanges")}
           </Button>
         </DialogFooter>
       </DialogContent>

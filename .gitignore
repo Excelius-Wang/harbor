@@ -32,3 +32,9 @@ vite.config.d.ts
 # Local browser QA artifacts
 .playwright-cli/
 output/playwright/
+
+# Third-party design originals are a local reference cache; source links are tracked.
+/docs/design/references/sidebar-04.webp
+/docs/design/references/leonand-workspace.webp
+/docs/design/references/vorssaint-volume.jpg
+/docs/design/references/vorssaint-system.jpg

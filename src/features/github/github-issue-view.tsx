@@ -1,3 +1,4 @@
+import { useListScroll } from "@/hooks/use-list-scroll";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -110,6 +111,23 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
   const [selectedIssueNumber, setSelectedIssueNumber] = useState<number | null>(null);
   const [creatingIssue, setCreatingIssue] = useState(false);
   const [managingTaxonomy, setManagingTaxonomy] = useState(false);
+  const listScroll = useListScroll(
+    JSON.stringify([
+      repository.fullName,
+      state,
+      assignment,
+      createdByMe,
+      mentionedToMe,
+      query,
+      label,
+      milestone,
+      linkedPullRequest,
+      issueType,
+      closeReason,
+      sort,
+      page,
+    ])
+  );
   const issuesResult = useQuery({
     ...repositoryIssuesQueryOptions({
       owner: repository.owner,
@@ -584,7 +602,7 @@ export function GitHubIssueView({ repository }: { repository: GitHubRepository }
           </AlertDescription>
         </Alert>
       ) : null}
-      <ScrollArea className="min-h-0 flex-1">
+      <ScrollArea className="min-h-0 flex-1" {...listScroll}>
         <GitHubPinnedIssues
           repository={repository}
           onSelect={(issueNumber) => setSelectedIssueNumber(issueNumber)}

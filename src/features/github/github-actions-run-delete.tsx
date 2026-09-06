@@ -207,6 +207,7 @@ export function GitHubWorkflowRunDeleteMenu({
             variant="ghost"
             size="icon-xs"
             aria-label={t("workspace.repositories.workflowRunActions")}
+            title={t("workspace.repositories.workflowRunActions")}
             disabled={controller.mutation.isPending}
           >
             <MoreHorizontal />

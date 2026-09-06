@@ -59,7 +59,7 @@ export function UpdaterAvailableDialog({ update }: UpdaterAvailableDialogProps) 
             <div className="flex flex-col gap-2">
               <p>{t("updater.versionAvailable", { version: update?.version })}</p>
               {update?.body && (
-                <div className="bg-muted mt-2 rounded-md p-3 text-sm">
+                <div className="harbor-reading mt-2 rounded-md border p-3 text-left text-sm">
                   <p className="font-semibold">{t("updater.releaseNotes")}</p>
                   <p className="mt-1 whitespace-pre-wrap">{update.body}</p>
                 </div>

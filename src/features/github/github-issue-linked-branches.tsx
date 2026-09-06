@@ -1,3 +1,4 @@
+import { Skeleton } from "@/components/ui/skeleton";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CircleAlert, GitBranch, RefreshCw, Unlink } from "lucide-react";
@@ -25,6 +26,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { useAppTranslation } from "@/hooks/use-app-translation";
@@ -51,13 +53,13 @@ function LinkedBranchesSkeleton() {
     <Card className="gap-3 py-4 shadow-none">
       <CardHeader className="px-4">
         <div className="flex items-center justify-between gap-2">
-          <div className="bg-muted h-4 w-32 animate-pulse rounded" />
-          <div className="bg-muted h-7 w-24 animate-pulse rounded" />
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-7 w-24" />
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-2 px-4">
-        <div className="bg-muted h-10 w-full animate-pulse rounded" />
-        <div className="bg-muted h-10 w-full animate-pulse rounded" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
       </CardContent>
     </Card>
   );
@@ -85,11 +87,11 @@ function LinkedBranchRow({
 }) {
   const { t } = useAppTranslation();
   return (
-    <div className="hover:bg-accent/30 flex min-w-0 items-center gap-2 rounded-md px-2.5 py-2">
+    <div className="harbor-result-row flex min-w-0 items-center gap-2 rounded-md px-2.5 py-2">
       <GitBranch data-icon="inline-start" className="text-muted-foreground" />
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-xs font-medium">{branch.name}</span>
-        <span className="text-muted-foreground block truncate text-[10px] font-normal">
+        <span className="block truncate text-[13px] font-medium">{branch.name}</span>
+        <span className="text-muted-foreground block truncate text-[11px] font-normal">
           {branch.repositoryFullName} · {branch.oid.slice(0, 7)}
         </span>
       </span>
@@ -100,6 +102,7 @@ function LinkedBranchRow({
           size="icon-xs"
           disabled={pending}
           aria-label={t("workspace.repositories.unlinkLinkedBranch")}
+          title={t("workspace.repositories.unlinkLinkedBranch")}
           onClick={onUnlink}
         >
           {pending ? <Spinner /> : <Unlink />}
@@ -246,87 +249,89 @@ export function GitHubIssueLinkedBranches({
 
   return (
     <>
-      <Card className="gap-0 overflow-hidden py-0 shadow-none" aria-busy={result.isFetching}>
-        <CardHeader className="border-b px-4 py-3">
-          <div className="flex items-center justify-between gap-3">
-            <CardTitle className="flex items-center gap-2 text-xs">
-              <GitBranch className="text-muted-foreground size-3.5" />
-              {t("workspace.repositories.linkedBranches")}
-              {result.isFetching ? (
-                <RefreshCw className="text-muted-foreground size-3 animate-spin" />
-              ) : null}
-            </CardTitle>
-            {page.viewerCanCreate || page.viewerCanRead ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="xs"
-                onClick={() => {
-                  createMutation.reset();
-                  setBranchName("");
-                  setBranchRepository(currentRepository);
-                  setSubmitted(false);
-                  setCreateOpen(true);
-                }}
-              >
-                <GitBranch data-icon="inline-start" />
-                {t("workspace.repositories.createLinkedBranch")}
-              </Button>
-            ) : null}
-          </div>
-        </CardHeader>
-        <CardContent className="px-1.5 py-1.5">
-          {error ? (
-            <div className="px-1.5 pt-1.5">
-              <GitHubIssueRelationLoadError
-                title={relationErrorTitle(error)}
-                error={error}
-                message={relationErrorMessage(error)}
-                onRetry={() => void result.refetch()}
-              />
-            </div>
-          ) : null}
-          {page.branches.length === 0 ? (
-            <Empty className="min-h-0 gap-2 px-4 py-5 md:p-5">
-              <EmptyHeader className="gap-1">
-                <EmptyTitle className="text-xs">
-                  {t("workspace.repositories.noLinkedBranches")}
-                </EmptyTitle>
-                <EmptyDescription className="text-[11px]">
-                  {t("workspace.repositories.noLinkedBranchesDescription")}
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          ) : (
-            <div className="flex flex-col gap-0.5">
-              {page.branches.map((branch) => (
-                <LinkedBranchRow
-                  key={branch.id}
-                  branch={branch}
-                  canUnlink={page.viewerCanCreate}
-                  pending={deleteMutation.isPending && unlinkCandidate?.id === branch.id}
-                  onUnlink={() => {
-                    deleteMutation.reset();
-                    setUnlinkCandidate(branch);
-                  }}
-                />
-              ))}
-            </div>
-          )}
-        </CardContent>
-        <GitHubPagination
-          page={pageNumber}
-          hasPrevious={pageNumber > 1}
-          hasMore={Boolean(page.nextCursor)}
-          onPageChange={changePage}
-          ariaLabel={t("workspace.repositories.linkedBranchPagination")}
-        />
-      </Card>
-
       <Dialog
         open={createOpen}
         onOpenChange={(open) => !createMutation.isPending && setCreateOpen(open)}
       >
+        <Card className="gap-0 overflow-hidden py-0 shadow-none" aria-busy={result.isFetching}>
+          <CardHeader className="border-b px-4 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle className="flex items-center gap-2 text-xs">
+                <GitBranch className="text-muted-foreground size-3.5" />
+                {t("workspace.repositories.linkedBranches")}
+                {result.isFetching ? (
+                  <RefreshCw className="text-muted-foreground size-3 animate-spin" />
+                ) : null}
+              </CardTitle>
+              {page.viewerCanCreate || page.viewerCanRead ? (
+                <DialogTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    onClick={() => {
+                      createMutation.reset();
+                      setBranchName("");
+                      setBranchRepository(currentRepository);
+                      setSubmitted(false);
+                    }}
+                  >
+                    <GitBranch data-icon="inline-start" />
+                    {t("workspace.repositories.createLinkedBranch")}
+                  </Button>
+                </DialogTrigger>
+              ) : null}
+            </div>
+          </CardHeader>
+          <CardContent className="px-1.5 py-1.5">
+            {error ? (
+              <div className="px-1.5 pt-1.5">
+                <GitHubIssueRelationLoadError
+                  stale
+                  title={relationErrorTitle(error)}
+                  error={error}
+                  message={relationErrorMessage(error)}
+                  onRetry={() => void result.refetch()}
+                />
+              </div>
+            ) : null}
+            {page.branches.length === 0 ? (
+              <Empty className="min-h-0 gap-2 px-4 py-5 md:p-5">
+                <EmptyHeader className="gap-1">
+                  <EmptyTitle className="text-xs">
+                    {t("workspace.repositories.noLinkedBranches")}
+                  </EmptyTitle>
+                  <EmptyDescription className="text-[11px]">
+                    {t("workspace.repositories.noLinkedBranchesDescription")}
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            ) : (
+              <div className="flex flex-col gap-0.5">
+                {page.branches.map((branch) => (
+                  <LinkedBranchRow
+                    key={branch.id}
+                    branch={branch}
+                    canUnlink={page.viewerCanCreate}
+                    pending={deleteMutation.isPending && unlinkCandidate?.id === branch.id}
+                    onUnlink={() => {
+                      deleteMutation.reset();
+                      setUnlinkCandidate(branch);
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </CardContent>
+          <GitHubPagination
+            page={pageNumber}
+            hasPrevious={pageNumber > 1}
+            hasMore={Boolean(page.nextCursor)}
+            onPageChange={changePage}
+            ariaLabel={t("workspace.repositories.linkedBranchPagination")}
+          />
+        </Card>
+
         <DialogContent>
           <DialogHeader>
             <DialogTitle>

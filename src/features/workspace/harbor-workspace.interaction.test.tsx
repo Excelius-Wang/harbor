@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { cleanup, render, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 const lazyModuleState = vi.hoisted(() => ({
@@ -17,6 +17,7 @@ vi.mock("react-i18next", () => ({
 vi.mock("@/components/main-title-bar", () => ({
   MainTitleBar: () => null,
 }));
+vi.mock("@/components/ui/sonner", () => ({ Toaster: () => null }));
 vi.mock("@/components/window-frame", () => ({
   WindowFrame: ({
     children,
@@ -62,7 +63,19 @@ vi.mock("./harbor-rail", () => ({
 
 import { HarborWorkspace } from "./harbor-workspace";
 
+beforeEach(() => {
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+  );
+});
+
 afterEach(() => {
+  vi.unstubAllGlobals();
   lazyModuleState.suspendGists = false;
   cleanup();
 });
@@ -114,7 +127,7 @@ describe("HarborWorkspace navigation", () => {
       </TooltipProvider>
     );
 
-    await user.click(getByRole("button", { name: "workspace.nav.more" }));
+    await user.click(getByRole("button", { name: /^workspace.nav.more/ }));
     await user.click(await findByRole("menuitem", { name: "workspace.nav.gists" }));
 
     await waitFor(() => {
@@ -139,7 +152,7 @@ describe("HarborWorkspace navigation", () => {
     expect(queryByRole("button", { name: "workspace.nav.gists" })).toBeNull();
     expect(queryByRole("button", { name: "workspace.nav.packages" })).toBeNull();
 
-    await user.click(getByRole("button", { name: "workspace.nav.more" }));
+    await user.click(getByRole("button", { name: /^workspace.nav.more/ }));
 
     expect(await findByRole("menuitem", { name: "workspace.nav.projects" })).toBeTruthy();
     expect(getByRole("menuitem", { name: "workspace.nav.gists" })).toBeTruthy();

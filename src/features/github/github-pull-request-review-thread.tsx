@@ -72,7 +72,7 @@ function ReviewThreadComment({
   useEffect(() => setOpen(!comment.isMinimized), [comment.isMinimized]);
   return (
     <article className="min-w-0 border-b last:border-b-0">
-      <header className="bg-card/50 flex min-h-10 min-w-0 items-center gap-2 px-3 py-2">
+      <header className="harbor-subtle-divider flex min-h-10 min-w-0 flex-wrap items-center gap-2 px-3 py-2">
         <Avatar size="sm">
           {comment.authorAvatarUrl ? (
             <AvatarImage src={comment.authorAvatarUrl} alt="" referrerPolicy="no-referrer" />
@@ -81,18 +81,18 @@ function ReviewThreadComment({
         </Avatar>
         <span className="truncate text-[11px] font-medium">{comment.author}</span>
         {comment.authorAssociation && comment.authorAssociation !== "NONE" ? (
-          <Badge variant="outline" className="h-4 rounded-sm px-1 text-[8px] font-normal">
+          <Badge variant="outline" className="h-4 rounded-sm px-1 text-[11px] font-normal">
             {comment.authorAssociation.toLowerCase()}
           </Badge>
         ) : null}
         {comment.pending ? (
-          <Badge variant="outline" className="h-4 rounded-sm px-1 text-[8px] font-normal">
+          <Badge variant="outline" className="h-4 rounded-sm px-1 text-[11px] font-normal">
             {t("workspace.repositories.pendingReviewComment")}
           </Badge>
         ) : null}
         <time
           dateTime={comment.createdAt}
-          className="text-muted-foreground ml-auto shrink-0 text-[9px]"
+          className="text-muted-foreground ml-auto shrink-0 text-[11px]"
         >
           {formatIssueDate(comment.createdAt, i18n.language)}
         </time>
@@ -101,6 +101,7 @@ function ReviewThreadComment({
           variant="ghost"
           size="icon-xs"
           aria-label={t("workspace.repositories.openReviewCommentOnGitHub")}
+          title={t("workspace.repositories.openReviewCommentOnGitHub")}
           onClick={() => void openExternalUrl(comment.url)}
         >
           <ExternalLink />
@@ -206,7 +207,7 @@ function ReviewThreadReplyForm({
 
   return (
     <form
-      className="bg-muted/10 border-t p-3"
+      className="harbor-subtle-divider border-t p-3"
       onSubmit={(event) => {
         event.preventDefault();
         setSubmitted(true);
@@ -321,9 +322,9 @@ export function GitHubPullRequestReviewThreadView({
     <Collapsible
       open={open}
       onOpenChange={setOpen}
-      className="bg-background/90 group/review-thread min-w-0 overflow-hidden rounded-md border shadow-sm"
+      className="harbor-reading group/review-thread min-w-0 overflow-hidden rounded-md border"
     >
-      <div className="bg-card/70 flex min-h-10 min-w-0 items-center gap-2 border-b px-2 py-1.5">
+      <div className="harbor-subtle-divider flex min-h-10 min-w-0 items-center gap-2 border-b px-2 py-1.5">
         <CollapsibleTrigger asChild>
           <Button
             type="button"
@@ -339,7 +340,7 @@ export function GitHubPullRequestReviewThreadView({
             ) : (
               <MessageSquareText className="text-primary shrink-0" />
             )}
-            <span className="truncate text-[10px] font-medium">
+            <span className="truncate text-[11px] font-medium">
               {compact
                 ? t("workspace.repositories.reviewConversation")
                 : thread.subjectType === "file"
@@ -348,7 +349,7 @@ export function GitHubPullRequestReviewThreadView({
                       line: locationLine,
                     })}
             </span>
-            <span className="text-muted-foreground shrink-0 text-[9px]">
+            <span className="text-muted-foreground shrink-0 text-[11px]">
               {t("workspace.repositories.reviewReplyCount", {
                 count: thread.comments.length,
               })}
@@ -356,19 +357,19 @@ export function GitHubPullRequestReviewThreadView({
           </Button>
         </CollapsibleTrigger>
         {thread.isResolved ? (
-          <Badge className="bg-success/10 text-success border-success/25 h-5 rounded-sm px-1.5 text-[9px]">
+          <Badge className="bg-success/10 text-success border-success/25 h-5 rounded-sm px-1.5 text-[11px]">
             {t("workspace.repositories.resolvedConversation")}
           </Badge>
         ) : null}
         {thread.isOutdated ? (
-          <Badge variant="secondary" className="h-5 rounded-sm px-1.5 text-[9px]">
+          <Badge variant="secondary" className="h-5 rounded-sm px-1.5 text-[11px]">
             {t("workspace.repositories.outdatedConversation")}
           </Badge>
         ) : null}
       </div>
       <CollapsibleContent>
         {thread.resolvedBy ? (
-          <p className="text-muted-foreground border-b px-3 py-2 text-[10px]">
+          <p className="text-muted-foreground border-b px-3 py-2 text-[11px]">
             {t("workspace.repositories.resolvedConversationBy", {
               author: thread.resolvedBy,
             })}
@@ -385,8 +386,8 @@ export function GitHubPullRequestReviewThreadView({
           />
         ))}
         {thread.commentsHaveMore ? (
-          <div className="bg-muted/20 flex flex-wrap items-center justify-between gap-2 border-t px-3 py-2">
-            <p className="text-muted-foreground text-[10px]">
+          <div className="harbor-subtle-divider flex flex-wrap items-center justify-between gap-2 border-t px-3 py-2">
+            <p className="text-muted-foreground text-[11px]">
               {t("workspace.repositories.moreReviewRepliesOnGitHub")}
             </p>
             <Button

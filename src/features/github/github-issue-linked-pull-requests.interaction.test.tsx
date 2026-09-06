@@ -2,7 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { GitHubIssue } from "./github-data";
@@ -59,10 +59,9 @@ const firstPage = {
 };
 
 function renderLinkedPullRequests(onNavigate = vi.fn()) {
-  return render(
-    <QueryClientProvider
-      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-    >
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const result = render(
+    <QueryClientProvider client={queryClient}>
       <GitHubIssueLinkedPullRequests
         repository={repository}
         issue={issue}
@@ -70,6 +69,7 @@ function renderLinkedPullRequests(onNavigate = vi.fn()) {
       />
     </QueryClientProvider>
   );
+  return { ...result, queryClient };
 }
 
 beforeEach(() => {
@@ -79,6 +79,22 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe("GitHub Issue linked pull requests", () => {
+  it("marks retained links stale and keeps navigation available until retry recovers", async () => {
+    vi.mocked(invoke).mockResolvedValue(firstPage);
+    const user = userEvent.setup();
+    const onNavigate = vi.fn();
+    const { queryClient } = renderLinkedPullRequests(onNavigate);
+    await screen.findByText("Ship API");
+    vi.mocked(invoke).mockRejectedValueOnce({ code: "githubNetwork", message: "offline" });
+    await act(() => queryClient.invalidateQueries());
+
+    expect(await screen.findByText("common.staleResults")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: /Ship API/ }));
+    expect(onNavigate).toHaveBeenCalledWith(firstPage.pullRequests[0]);
+    await user.click(screen.getByRole("button", { name: "common.retry" }));
+    await waitFor(() => expect(screen.queryByText("common.staleResults")).toBeNull());
+  });
+
   it("shows a loading placeholder before the linked pull requests arrive", async () => {
     let resolvePage: ((value: unknown) => void) | undefined;
     vi.mocked(invoke).mockReturnValueOnce(

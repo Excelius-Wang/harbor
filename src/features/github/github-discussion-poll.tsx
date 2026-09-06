@@ -75,8 +75,8 @@ export function GitHubDiscussionPollCard({
     !mutation.isPending;
 
   return (
-    <section className="bg-card/30 mt-4 overflow-hidden rounded-lg border">
-      <header className="bg-card/40 flex min-h-11 items-center gap-2 border-b px-3.5 py-2 text-xs font-medium">
+    <section className="harbor-reading mt-4 overflow-hidden rounded-lg border">
+      <header className="flex min-h-11 items-center gap-2 border-b bg-transparent px-3.5 py-2 text-xs font-medium">
         <BarChart3 />
         {t("workspace.repositories.discussionPoll")}
       </header>
@@ -131,7 +131,7 @@ export function GitHubDiscussionPollCard({
                     </FieldLabel>
                     {showResults ? (
                       <div className="flex flex-col gap-1.5">
-                        <div className="text-muted-foreground flex items-center justify-between gap-3 text-[10px]">
+                        <div className="text-muted-foreground flex items-center justify-between gap-3 text-[11px]">
                           <span>
                             {t("workspace.repositories.discussionPollVotes", {
                               count: option.totalVoteCount,
@@ -194,7 +194,7 @@ export function GitHubDiscussionPollCard({
                   )}
                 </Button>
               ) : null}
-              <span className="text-muted-foreground ml-auto text-[10px]">
+              <span className="text-muted-foreground ml-auto text-[11px]">
                 {t("workspace.repositories.discussionPollTotalVotes", {
                   count: poll.totalVoteCount,
                 })}

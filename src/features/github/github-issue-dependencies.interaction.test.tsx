@@ -220,11 +220,9 @@ describe("GitHub Issue dependencies", () => {
       }),
     });
 
-    expect(
-      await screen.findByText("workspace.repositories.issueDependenciesPermissionDenied")
-    ).toBeDefined();
+    expect(await screen.findByText("common.staleResults")).toBeDefined();
     expect(screen.getByText("Cached prerequisite")).toBeDefined();
-    await user.click(screen.getByRole("button", { name: "workspace.repositories.retry" }));
+    await user.click(screen.getByRole("button", { name: "common.retry" }));
     expect(await screen.findByText("Refreshed prerequisite")).toBeDefined();
   });
 

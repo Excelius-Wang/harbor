@@ -1,14 +1,38 @@
-import { defineConfig } from "vite";
+import { defineConfig, normalizePath } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 
-// @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vite.dev/config/
-export default defineConfig(async () => ({
-  plugins: [react(), tailwindcss()],
+export default defineConfig(({ command, mode }) => ({
+  plugins: [
+    react(),
+    tailwindcss(),
+    command === "serve" &&
+      mode === "ui-preview" && {
+        name: "harbor-ui-preview",
+        enforce: "pre",
+        transform(code, id) {
+          const sourceRoot = normalizePath(path.resolve(__dirname, "src")) + "/";
+          const normalizedId = normalizePath(id);
+          if (!normalizedId.startsWith(sourceRoot) || normalizedId.startsWith(sourceRoot + "dev/"))
+            return;
+          const transformed = code.replace(
+            /(["'])@tauri-apps\/api\/core\1/g,
+            '"@/dev/preview-core"'
+          );
+          return transformed === code ? undefined : { code: transformed, map: null };
+        },
+        transformIndexHtml: {
+          order: "pre",
+          handler(html) {
+            return html.replace('src="/src/main.tsx"', 'src="/src/dev/preview-main.ts"');
+          },
+        },
+      },
+  ],
 
   resolve: {
     alias: {

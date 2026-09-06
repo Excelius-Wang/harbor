@@ -21,7 +21,7 @@ export function GitHubCommitList({
       {commits.map((commit) => (
         <article
           key={commit.sha}
-          className="hover:bg-accent/30 flex min-w-0 items-start gap-3 border-b px-4 py-3.5 last:border-b-0"
+          className="harbor-result-row harbor-subtle-divider flex min-w-0 items-start gap-3 border-b px-4 py-3.5 last:border-b-0"
         >
           <button
             type="button"
@@ -36,13 +36,13 @@ export function GitHubCommitList({
             </Avatar>
             <div className="min-w-0 flex-1">
               <p className="text-foreground/95 text-[13px] leading-5 font-medium">{commit.title}</p>
-              <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-2 text-[10px]">
+              <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-2 text-[11px]">
                 <span>{commit.authorLogin ? `@${commit.authorLogin}` : commit.author}</span>
                 {commit.committedAt ? (
                   <span>{formatIssueDate(commit.committedAt, i18n.language)}</span>
                 ) : null}
                 {commit.verified ? (
-                  <Badge variant="outline" className="text-success h-5 rounded-md text-[9px]">
+                  <Badge variant="outline" className="text-success h-5 rounded-md text-[11px]">
                     <BadgeCheck /> {t("workspace.repositories.verified")}
                   </Badge>
                 ) : null}

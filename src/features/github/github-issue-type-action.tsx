@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { parseIpcError } from "@/lib/ipc-error";
 import { toast } from "sonner";
 import type { GitHubIssue, GitHubRepositoryIdentity } from "./github-data";
@@ -71,7 +72,7 @@ export function GitHubIssueTypeAction({
   if (result.isPending) {
     return (
       <div className="flex flex-col gap-2">
-        <p className="text-muted-foreground flex items-center gap-1.5 text-[10px] font-medium tracking-[0.08em] uppercase">
+        <p className="text-muted-foreground flex items-center gap-1.5 text-[11px] font-medium tracking-[0.08em] uppercase">
           <ListChecks /> {t("workspace.repositories.issueType")}
         </p>
         <Skeleton className="h-8 w-full" />
@@ -79,7 +80,7 @@ export function GitHubIssueTypeAction({
     );
   }
 
-  if (result.error || !result.data) {
+  if (!result.data) {
     const error = result.error ? parseIpcError(result.error) : null;
     return (
       <Alert variant="destructive" className="py-2.5 text-xs">
@@ -101,7 +102,7 @@ export function GitHubIssueTypeAction({
   const mutationErrorMessageKey = mutationError
     ? issueTypeErrorMessage(mutationError.code)
     : undefined;
-  const canUpdate = status.viewerCanType && !mutation.isPending;
+  const canUpdate = status.viewerCanType && !mutation.isPending && !result.error;
   const issueTypeOptions =
     status.currentIssueType &&
     !status.availableIssueTypes.some(
@@ -112,14 +113,20 @@ export function GitHubIssueTypeAction({
 
   return (
     <div className="flex min-w-0 flex-col gap-2">
-      <p className="text-muted-foreground flex items-center gap-1.5 text-[10px] font-medium tracking-[0.08em] uppercase">
+      {result.error ? (
+        <WorkspaceStaleNotice
+          message={parseIpcError(result.error).message}
+          onRetry={() => void result.refetch()}
+        />
+      ) : null}
+      <p className="text-muted-foreground flex items-center gap-1.5 text-[11px] font-medium tracking-[0.08em] uppercase">
         <ListChecks /> {t("workspace.repositories.issueType")}
       </p>
       <Select
         value={currentValue}
         disabled={!canUpdate}
         onValueChange={(value) => {
-          if (value === currentValue) return;
+          if (!canUpdate || value === currentValue) return;
           mutation.reset();
           mutation.mutate(value === "none" ? null : value);
         }}

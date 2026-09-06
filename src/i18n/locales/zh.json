@@ -18,7 +18,16 @@
     "save": "保存",
     "loadMore": "加载更多",
     "edit": "编辑",
-    "delete": "删除"
+    "delete": "删除",
+    "close": "关闭",
+    "loading": "加载中",
+    "staleResults": "刷新失败，当前显示上次结果。",
+    "staleRetry": "已过期 · 重试",
+    "breadcrumb": "路径导航",
+    "pagination": "分页",
+    "previousPage": "上一页",
+    "nextPage": "下一页",
+    "feedback": "提示"
   },
   "workspace": {
     "primaryNavigation": "主导航",
@@ -47,6 +56,27 @@
       "more": "更多"
     },
     "discovery": {
+      "modes": "发现导航",
+      "trendingKind": "热门内容",
+      "developers": {
+        "tab": "开发者",
+        "source": "来自 GitHub 热门开发者榜单",
+        "popularRepository": "热门项目",
+        "list": "热门开发者",
+        "refresh": "刷新开发者榜单",
+        "loading": "正在加载热门开发者",
+        "failed": "暂时无法加载热门开发者",
+        "refreshFailed": "刷新失败，仍显示上次加载的榜单",
+        "empty": "暂无热门开发者",
+        "emptyDescription": "可以换一种编程语言、取消赞助筛选，或调整时间范围。",
+        "language": "编程语言",
+        "allLanguages": "全部语言",
+        "unknownLanguage": "未识别语言",
+        "searchLanguages": "搜索编程语言…",
+        "noLanguages": "没有找到匹配的语言",
+        "sponsorable": "只看可赞助作者",
+        "clearFilters": "清除筛选"
+      },
       "searchLabel": "搜索 GitHub",
       "searchPlaceholder": "输入关键词或限定词，例如 language:rust stars:>100",
       "search": "搜索",
@@ -118,7 +148,8 @@
         "ReleaseEvent": "{{actor}} 在 {{repository}} {{action}}版本发布",
         "PublicEvent": "{{actor}} 把 {{repository}} 设为公开仓库",
         "fallback": "{{actor}} 在 {{repository}} 产生了 {{type}} 动态"
-      }
+      },
+      "feedMoreFailed": "更多动态加载失败"
     },
     "profile": {
       "eyebrow": "个人账户",
@@ -198,7 +229,8 @@
         "followers": "这个用户还没有关注者。",
         "following": "这个用户还没有关注任何人。",
         "activity": "近 30 天没有可显示的公开动态。"
-      }
+      },
+      "followFailed": "关注状态更新失败"
     },
     "notifications": {
       "eyebrow": "GitHub 收件箱",
@@ -352,6 +384,8 @@
       "itemUrl": "GitHub 链接",
       "itemUrlDescription": "粘贴 Issue 或拉取请求的完整 github.com 链接。",
       "itemAdded": "条目已添加",
+      "noFieldOptions": "这个字段暂无可选项。",
+      "readOnlyDescription": "你当前只能查看这个 Project。",
       "editDraftTitle": "编辑草稿条目",
       "editDraftDescription": "修改会直接保存到这个 Project。",
       "editFieldDescription": "修改这个 Project 字段的值。",
@@ -483,6 +517,7 @@
       "loadMoreComments": "加载更多评论",
       "addComment": "添加评论",
       "commentPlaceholder": "写一条支持 Markdown 的评论…",
+      "editComment": "编辑评论",
       "comment": "评论",
       "commentsDisabled": "这个 Gist 已关闭评论。",
       "commentCreated": "评论已发布",
@@ -787,7 +822,7 @@
       "pagination": "拉取请求收件箱分页"
     },
     "repositories": {
-      "eyebrow": "GitHub 真实数据",
+      "eyebrow": "GitHub 数据",
       "desktopOnly": "仓库数据需要在 Harbor 桌面端读取。",
       "desktopOnlyTitle": "请在 Harbor 桌面端打开",
       "connectTitle": "连接 GitHub 后读取仓库",
@@ -1239,11 +1274,13 @@
         "history": "历史",
         "historyTitle": "“{{title}}”的修改历史",
         "historyDescription": "可以查看旧版本、和当前页面比较，也可以新建一次提交来恢复旧内容。",
+        "historyEmpty": "这个页面暂无历史版本。",
         "historyLoadFailed": "暂时无法读取页面历史",
         "historyTruncated": "这个页面的历史超过了 Harbor 的本地扫描上限",
         "revisionLoadFailed": "暂时无法读取这个版本",
         "revisionDeleted": "这次提交删除了页面",
         "changesSinceRevision": "此版本之后的修改",
+        "comparisonTruncated": "仅显示部分版本差异。",
         "compareFailed": "暂时无法比较这两个版本",
         "noRevisionChanges": "没有可显示的正文差异。",
         "previousHistoryPage": "上一页历史",
@@ -1393,7 +1430,7 @@
       "repositoryFileConflictTitle": "提交前仓库内容发生了变化",
       "repositoryFileCommitFailed": "这个文件没有提交成功",
       "committingRepositoryFile": "正在提交改动…",
-      "commitChanges": "提交改动",
+      "commitChanges": "变更文件",
       "repositoryFileCommitted": "改动已提交",
       "repositoryFileCommittedDescription": "{{branch}} 已包含提交 {{sha}}。",
       "deleteRepositoryFile": "删除",
@@ -1853,11 +1890,21 @@
         }
       },
       "pullRequestMergeQueueEntryStates": {
-        "awaitingChecks": { "title": "正在运行合并队列检查" },
-        "locked": { "title": "当前队列项已经锁定" },
-        "mergeable": { "title": "已经可以从队列合并" },
-        "queued": { "title": "拉取请求已进入合并队列" },
-        "unmergeable": { "title": "GitHub 暂时无法合并这个队列项" }
+        "awaitingChecks": {
+          "title": "正在运行合并队列检查"
+        },
+        "locked": {
+          "title": "当前队列项已经锁定"
+        },
+        "mergeable": {
+          "title": "已经可以从队列合并"
+        },
+        "queued": {
+          "title": "拉取请求已进入合并队列"
+        },
+        "unmergeable": {
+          "title": "GitHub 暂时无法合并这个队列项"
+        }
       },
       "pullRequestMergeQueueWait": {
         "minute_one": "预计还要约 {{count}} 分钟。",
@@ -1988,7 +2035,6 @@
       "unplacedCommitCommentsLoadingFiles": "继续加载变更文件后，这些评论可能会回到对应的 Diff 行。",
       "commitCommentLine": "第 {{line}} 行",
       "commitCommentPosition": "Diff 位置 {{position}}",
-      "commitChanges": "变更文件",
       "commitChangesDescription": "较大的提交会按每页 100 个文件从 GitHub 分批加载。",
       "commitFileRenamed": "从 {{previousPath}} 重命名为 {{path}}",
       "commitPatchUnavailable": "GitHub 没有返回文本补丁。这个文件可能是二进制文件、生成文件，或者体积太大。",
@@ -2115,7 +2161,7 @@
       "workflowRunDeleteConflict": "这次运行在 GitHub 上已经发生变化或已不存在，请刷新 Actions 后再试。",
       "runWorkflow": "运行工作流",
       "runningWorkflow": "正在提交…",
-      "runWorkflowDescription": "选择工作流和分支或标签。Harbor 会先读取这个版本的 workflow_dispatch 输入，再提交运行请求。",
+      "runWorkflowDescription": "选择工作流、分支或标签，再填写本次运行的参数。",
       "workflow": "工作流",
       "workflowPlaceholder": "选择工作流",
       "workflowReference": "分支或标签",
@@ -2472,7 +2518,6 @@
       "milestoneCreated": "里程碑已创建",
       "milestoneUpdated": "里程碑已更新",
       "milestoneDeleted": "里程碑已删除",
-      "editMilestone": "编辑里程碑",
       "closeMilestone": "关闭里程碑",
       "reopenMilestone": "重新打开里程碑",
       "deleteMilestone": "删除里程碑",
@@ -2646,9 +2691,9 @@
       },
       "allIssueMilestones": "全部里程碑",
       "issueMilestoneFilter": "Issue 里程碑",
-      "allIssueLinkedPullRequests": "全部关联 Pull Request",
+      "allIssueLinkedPullRequests": "不限 PR 关联",
       "issueLinkedPullRequestFilter": "Issue 关联 Pull Request",
-      "issueLinkedPullRequest": "已关联 Pull Request",
+      "issueLinkedPullRequest": "已关联 PR",
       "allDiscussionCategories": "全部分类",
       "discussionCount": "{{count}} 条讨论",
       "openDiscussions": "开放的讨论",
@@ -2703,7 +2748,6 @@
       "noDiscussionCommentsDescription": "来发表第一条评论吧。",
       "loadMoreDiscussionComments": "加载更多评论",
       "reply": "回复",
-      "edit": "编辑",
       "discussionAnswer": "答案",
       "markDiscussionAnswer": "设为答案",
       "unmarkDiscussionAnswer": "取消答案",
@@ -2738,7 +2782,6 @@
         "duplicate": "重复讨论"
       },
       "discussionStateChangeFailed": "讨论状态没有更新成功",
-      "delete": "删除",
       "deleteDiscussion": "删除讨论",
       "deletingDiscussion": "正在删除…",
       "discussionDeleted": "讨论已删除",
@@ -2783,7 +2826,14 @@
         "convertToDraft": "将这个拉取请求改为草稿",
         "headRefDeleted": "删除了来源分支",
         "baseRefChanged": "将目标分支改为 {{detail}}"
-      }
+      },
+      "repositoryPath": "仓库路径",
+      "upvoteDiscussion": "赞同此讨论",
+      "upvoteDiscussionComment": "赞同此评论",
+      "backToCodeSearch": "返回搜索结果",
+      "diffView": "差异布局",
+      "codeReference": "分支或标签",
+      "commitFileChanges": "提交改动"
     },
     "filters": {
       "period": "时间范围",
@@ -2850,8 +2900,8 @@
       "permissionsTitle": "登录信息只交给 GitHub",
       "permissionsDescription": "授权前，可以在 GitHub 查看 Harbor 申请的仓库、工作流、安全告警、个人 Projects、Gists 和仓库删除权限。",
       "notConfiguredTitle": "这个版本还不能登录 GitHub",
-      "notConfiguredDescription": "当前构建没有配置 Harbor 的 classic GitHub OAuth App，因此不会发起登录，也不会读取你的钥匙串。",
-      "notConfiguredAction": "GitHub 登录未配置",
+      "notConfiguredDescription": "请使用支持 GitHub 登录的 Harbor 版本连接账号。",
+      "notConfiguredAction": "GitHub 登录不可用",
       "browserSecurity": "密码、Passkey、两步验证和企业 SSO 都只在 github.com 处理。",
       "connected": "GitHub 已连接",
       "connectionFailed": "连接失败",
@@ -2860,13 +2910,16 @@
       "notConnected": "尚未连接 GitHub",
       "secureStorage": "登录状态由操作系统安全保存",
       "local": "本地工作区",
-      "desktopOnly": "GitHub 连接功能需要在 Harbor 桌面端使用。"
+      "desktopOnly": "GitHub 连接功能需要在 Harbor 桌面端使用。",
+      "checkingAvailability": "正在检查登录功能…",
+      "availabilityFailed": "登录功能检查失败",
+      "connectedDescription": "当前连接的 GitHub 账号为 @{{username}}。"
     },
     "command": {
       "title": "Harbor 命令面板",
       "description": "跳转到工作区或执行操作",
       "trigger": "搜索或运行命令",
-      "placeholder": "输入命令或仓库名…",
+      "placeholder": "输入命令…",
       "empty": "没有匹配的命令。",
       "navigation": "导航",
       "repository": "仓库",
@@ -2896,7 +2949,9 @@
   "language": {
     "toggle": "切换语言",
     "en": "English",
-    "zh": "中文"
+    "zh": "中文",
+    "switchToEnglish": "切换为英文",
+    "switchToChinese": "切换为中文"
   },
   "tray": {
     "show": "显示窗口",
@@ -2933,7 +2988,10 @@
       "showMain": "显示主窗口",
       "showMainDesc": "使用快捷键快速显示主窗口",
       "setSuccess": "已将快捷键设为 {{shortcut}}！",
-      "cleared": "已取消快捷键！"
+      "cleared": "已取消快捷键！",
+      "clear": "清除快捷键",
+      "updating": "正在更新快捷键…",
+      "updateFailed": "快捷键更新失败，请重试。"
     }
   },
   "releaseVersion": {
@@ -2985,5 +3043,71 @@
       "tauriVersionInvalid": "src-tauri/tauri.conf.json 中的版本号缺失或无效",
       "invalidLang": "无效的 --lang 参数，请使用 zh 或 en。"
     }
+  },
+  "uiGallery": {
+    "title": "Harbor 组件",
+    "description": "使用生产组件与正式主题。预览数据用于界面和键盘验收。",
+    "theme": "切换主题",
+    "actions": "操作",
+    "primary": "主要操作",
+    "outline": "边框按钮",
+    "secondary": "次要操作",
+    "ghost": "轻量按钮",
+    "link": "在 GitHub 查看",
+    "destructive": "删除",
+    "disabled": "已禁用",
+    "loading": "加载中",
+    "forms": "表单",
+    "search": "搜索",
+    "placeholder": "搜索仓库…",
+    "invalid": "无效内容",
+    "body": "描述",
+    "longText": "长描述自然换行，在紧凑窗口内保持名称、操作和辅助信息清楚可读。",
+    "checked": "包含归档仓库",
+    "navigation": "导航",
+    "menus": "菜单与筛选",
+    "branch": "分支",
+    "menu": "打开菜单",
+    "command": "命令面板",
+    "overlays": "浮层",
+    "dialog": "打开对话框",
+    "sheet": "打开侧边面板",
+    "states": "反馈与状态",
+    "error": "刷新失败",
+    "retry": "当前显示上次结果，可重试刷新。",
+    "empty": "没有结果",
+    "choices": "选择与校验",
+    "validation": "请使用字母、数字和连字符。",
+    "indeterminate": "部分已选中",
+    "data": "表格与分组",
+    "item": "条目",
+    "status": "状态",
+    "selected": "已选中",
+    "details": "显示详情",
+    "popover": "打开弹出面板",
+    "confirmation": "打开确认框",
+    "toast": "显示反馈",
+    "toastSuccess": "已保存",
+    "toastError": "保存失败",
+    "tableCaption": "受控仓库示例",
+    "radioGroup": "仓库可见范围",
+    "public": "公开",
+    "private": "私有",
+    "menuOptions": "菜单选项",
+    "menuSub": "更多操作",
+    "divider": "或",
+    "chart": "图表与提示",
+    "series": "变更",
+    "progress": "自定义最大值的进度",
+    "code": "代码",
+    "checks": "检查",
+    "open": "已开启",
+    "merged": "已合并"
+  },
+  "window": {
+    "controls": "窗口控制",
+    "minimize": "最小化",
+    "maximize": "最大化",
+    "restore": "还原窗口"
   }
 }

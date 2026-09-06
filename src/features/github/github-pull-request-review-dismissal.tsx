@@ -170,7 +170,7 @@ export function GitHubPullRequestReviewDismissalDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !pending && onOpenChange(next)}>
-      <DialogContent>
+      <DialogContent showCloseButton={!pending}>
         <DialogHeader>
           <DialogTitle>{t("workspace.repositories.dismissReviewTitle")}</DialogTitle>
           <DialogDescription>

@@ -455,7 +455,14 @@ function MetadataHeading({
         <Icon />
         {title}
       </p>
-      <Button type="button" variant="ghost" size="icon-xs" aria-label={editLabel} onClick={onEdit}>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-xs"
+        aria-label={editLabel}
+        title={editLabel}
+        onClick={onEdit}
+      >
         <Pencil />
       </Button>
     </div>

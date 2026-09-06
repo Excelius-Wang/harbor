@@ -100,7 +100,7 @@ function GitHubIssueDuplicateContent({
 
   if (result.isPending) return <DuplicateSkeleton />;
 
-  if (result.error)
+  if (result.error && !duplicate)
     return (
       <GitHubIssueRelationLoadError
         title={t(duplicateLoadErrorTitle(error?.code))}
@@ -133,7 +133,7 @@ function GitHubIssueDuplicateContent({
                 type="button"
                 variant="outline"
                 size="xs"
-                disabled={mutation.isPending}
+                disabled={mutation.isPending || Boolean(result.error)}
                 onClick={() => setConfirmOpen(true)}
               >
                 <Undo2 data-icon="inline-start" />
@@ -155,7 +155,7 @@ function GitHubIssueDuplicateContent({
                     {t("common.cancel")}
                   </AlertDialogCancel>
                   <AlertDialogAction
-                    disabled={mutation.isPending}
+                    disabled={mutation.isPending || Boolean(result.error)}
                     onClick={(event) => {
                       event.preventDefault();
                       mutation.mutate();
@@ -179,16 +179,24 @@ function GitHubIssueDuplicateContent({
         </div>
       </CardHeader>
       <CardContent className="px-1.5 py-1.5">
+        {error ? (
+          <GitHubIssueRelationLoadError
+            stale
+            title={t(duplicateLoadErrorTitle(error.code))}
+            error={error}
+            onRetry={() => void result.refetch()}
+          />
+        ) : null}
         <Button
           type="button"
           variant="ghost"
-          className="h-auto w-full min-w-0 justify-start gap-2 rounded-md px-2.5 py-2 text-left"
+          className="h-auto w-full min-w-0 justify-start gap-2 rounded-md px-2.5 py-2 text-left whitespace-normal"
           onClick={() => onNavigate(duplicate)}
         >
           <Copy data-icon="inline-start" className="text-muted-foreground" />
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-xs font-medium">{duplicate.title}</span>
-            <span className="text-muted-foreground block truncate text-[10px] font-normal">
+            <span className="block text-[13px] font-medium break-words">{duplicate.title}</span>
+            <span className="text-muted-foreground block truncate text-[11px] font-normal">
               {duplicate.fullName} #{duplicate.issueNumber}
             </span>
           </span>

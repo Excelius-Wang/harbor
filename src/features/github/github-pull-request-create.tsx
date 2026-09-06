@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Empty,
@@ -58,16 +58,16 @@ import { pullRequestComparisonQueryOptions, repositoryCodeQueryOptions } from ".
 
 function PullRequestComparisonSkeleton() {
   return (
-    <Card>
-      <CardHeader>
+    <section className="harbor-subtle-divider border-b pb-5">
+      <header className="mb-4 flex flex-col gap-1.5">
         <Skeleton className="h-4 w-48" />
         <Skeleton className="h-3 w-3/4" />
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3">
+      </header>
+      <div className="flex flex-col gap-3">
         <Skeleton className="h-8 w-full" />
         <Skeleton className="h-16 w-full" />
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }
 
@@ -91,20 +91,20 @@ function PullRequestComparisonSummary({
     );
   }
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-sm">
+    <section className="harbor-subtle-divider border-b pb-5">
+      <header className="mb-4 flex flex-col gap-1.5">
+        <h3 className="flex items-center gap-2 text-sm font-semibold">
           <GitCompareArrows />
           {t("workspace.repositories.pullRequestComparisonReady")}
-        </CardTitle>
-        <CardDescription>
+        </h3>
+        <p className="text-muted-foreground text-xs leading-5">
           {t("workspace.repositories.pullRequestComparisonDescription", {
             head: comparison.head,
             base: comparison.base,
           })}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
+        </p>
+      </header>
+      <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="secondary">
             <GitCommitHorizontal />
@@ -135,7 +135,7 @@ function PullRequestComparisonSummary({
           <>
             <Separator />
             <div className="flex flex-col gap-2">
-              <p className="text-muted-foreground text-[10px] font-medium tracking-[0.08em] uppercase">
+              <p className="text-muted-foreground text-[11px] font-medium tracking-[0.08em] uppercase">
                 {t("workspace.repositories.pullRequestComparisonCommits")}
               </p>
               <GitHubCommitList
@@ -145,8 +145,8 @@ function PullRequestComparisonSummary({
             </div>
           </>
         ) : null}
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }
 
@@ -211,8 +211,9 @@ export function GitHubPullRequestCreate({
         ? current
         : (branches.find((branch) => branch !== base) ?? "")
     );
-    setDraft(false);
   }, [base, branches]);
+
+  useEffect(() => setDraft(false), [base, head]);
 
   const canCompare = Boolean(base && head && base !== head);
   const comparisonResult = useQuery({
@@ -261,7 +262,7 @@ export function GitHubPullRequestCreate({
       <ScrollArea className="min-h-0 flex-1">
         <div className="mx-auto flex w-full max-w-[920px] flex-col gap-5 px-4 py-5 sm:px-5">
           <header>
-            <h2 className="text-foreground text-xl leading-7 font-semibold tracking-[-0.025em]">
+            <h2 className="text-foreground text-2xl leading-7 font-semibold tracking-tight">
               {t("workspace.repositories.newPullRequest")}
             </h2>
             <p className="text-muted-foreground mt-1 text-xs leading-5">
@@ -271,22 +272,28 @@ export function GitHubPullRequestCreate({
             </p>
           </header>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">
+          <section className="harbor-subtle-divider border-b pb-5">
+            <header className="mb-4 flex flex-col gap-1.5">
+              <h3 className="text-sm font-semibold">
                 {t("workspace.repositories.choosePullRequestBranches")}
-              </CardTitle>
-              <CardDescription>
+              </h3>
+              <p className="text-muted-foreground text-xs leading-5">
                 {t("workspace.repositories.choosePullRequestBranchesDescription")}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+              </p>
+            </header>
+            <div>
+              {branchesError && branchesResult.data ? (
+                <WorkspaceStaleNotice
+                  message={branchesError.message}
+                  onRetry={() => void branchesResult.refetch()}
+                />
+              ) : null}
               {branchesResult.isPending ? (
                 <div className="grid gap-4 @min-[560px]/pull-create:grid-cols-2">
                   <Skeleton className="h-9 w-full" />
                   <Skeleton className="h-9 w-full" />
                 </div>
-              ) : branchesError ? (
+              ) : branchesError && !branchesResult.data ? (
                 <Alert variant="destructive">
                   <CircleAlert />
                   <AlertTitle>
@@ -369,12 +376,18 @@ export function GitHubPullRequestCreate({
                   </Field>
                 </FieldGroup>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </section>
 
+          {comparisonError && comparison ? (
+            <WorkspaceStaleNotice
+              message={comparisonErrorMessage(comparisonError.code, comparisonError.message, t)}
+              onRetry={() => void comparisonResult.refetch()}
+            />
+          ) : null}
           {canCompare && comparisonResult.isPending ? (
             <PullRequestComparisonSkeleton />
-          ) : comparisonError ? (
+          ) : comparisonError && !comparison ? (
             <Alert variant="destructive">
               <CircleAlert />
               <AlertTitle>{t("workspace.repositories.pullRequestComparisonFailed")}</AlertTitle>
@@ -411,18 +424,18 @@ export function GitHubPullRequestCreate({
           ) : comparison && canCreate ? (
             <>
               <PullRequestComparisonSummary comparison={comparison} repository={repository} />
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm">
+              <section className="harbor-subtle-divider border-b pb-5">
+                <header className="mb-4 flex flex-col gap-1.5">
+                  <h3 className="text-sm font-semibold">
                     {t("workspace.repositories.describePullRequest")}
-                  </CardTitle>
-                  <CardDescription>
+                  </h3>
+                  <p className="text-muted-foreground text-xs leading-5">
                     {t("workspace.repositories.describePullRequestDescription")}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
+                  </p>
+                </header>
+                <div>
                   <GitHubTitleBodyForm
-                    key={`${base}:${head}:${comparison.suggestedTitle}`}
+                    key={`${base}:${head}`}
                     repository={repository}
                     reference={head}
                     idPrefix="github-new-pull-request"
@@ -441,6 +454,7 @@ export function GitHubPullRequestCreate({
                     )}
                     pendingLabel={t("workspace.repositories.creatingPullRequest")}
                     pending={mutation.isPending}
+                    submitDisabled={Boolean(branchesError || comparisonError)}
                     errorTitle={t("workspace.repositories.createPullRequestFailed")}
                     errorMessage={
                       mutationError
@@ -473,8 +487,8 @@ export function GitHubPullRequestCreate({
                     onSubmit={(value) => mutation.mutate(value)}
                     onCancel={onCancel}
                   />
-                </CardContent>
-              </Card>
+                </div>
+              </section>
             </>
           ) : null}
         </div>

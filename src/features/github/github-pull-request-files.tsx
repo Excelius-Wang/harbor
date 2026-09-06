@@ -14,6 +14,7 @@ import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Empty,
@@ -170,7 +171,7 @@ function PullRequestFileDiff({
   if (!diff?.hunks.length) {
     return (
       <div className="min-w-0">
-        <div className="text-muted-foreground bg-muted/20 px-4 py-8 text-center text-[11px]">
+        <div className="text-muted-foreground harbor-reading px-4 py-8 text-center text-[11px]">
           {t("workspace.repositories.diffUnavailable")}
         </div>
         {fileThreads.length ? (
@@ -461,8 +462,8 @@ function ReviewThreadList({
 }) {
   const { t } = useTranslation();
   return (
-    <section className="bg-muted/10 flex min-w-0 flex-col gap-2 border-t p-3">
-      <h4 className="text-muted-foreground text-[10px] font-medium tracking-[0.12em] uppercase">
+    <section className="harbor-subtle-divider flex min-w-0 flex-col gap-2 border-t p-3">
+      <h4 className="text-muted-foreground text-[11px] font-medium tracking-[0.12em] uppercase">
         {t("workspace.repositories.earlierReviewConversations")}
       </h4>
       {threads.map((thread) => (
@@ -595,7 +596,7 @@ export function GitHubPullRequestFiles({
           </p>
           <div className="flex flex-wrap items-center justify-end gap-2">
             {reviewThreadsResult.isPending || pendingReviewResult.isPending ? (
-              <span className="text-muted-foreground inline-flex items-center gap-1.5 text-[10px]">
+              <span className="text-muted-foreground inline-flex items-center gap-1.5 text-[11px]">
                 <Spinner className="size-3" />
                 {t("workspace.repositories.reviewThreadsLoading")}
               </span>
@@ -621,7 +622,7 @@ export function GitHubPullRequestFiles({
                 <ShieldCheck data-icon="inline-start" />
                 {t("workspace.repositories.reviewChanges")}
                 {comments.length + (pendingReview?.uneditableCommentCount ?? 0) ? (
-                  <Badge className="bg-primary-foreground/15 text-primary-foreground ml-1 rounded-sm px-1 py-0 text-[9px]">
+                  <Badge className="bg-primary-foreground/15 text-primary-foreground ml-1 rounded-sm px-1 py-0 text-[11px]">
                     {comments.length + (pendingReview?.uneditableCommentCount ?? 0)}
                   </Badge>
                 ) : null}
@@ -631,8 +632,15 @@ export function GitHubPullRequestFiles({
         </div>
         <ScrollArea className="min-h-0 min-w-0 flex-1" constrainContentWidth>
           <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-3 px-4 py-5 sm:px-5">
+            {result.error && data ? (
+              <WorkspaceStaleNotice
+                message={parseIpcError(result.error).message}
+                onRetry={() => void result.refetch()}
+              />
+            ) : null}
             {reviewThreadsError ? (
               <GitHubPullRequestFilesErrorAlert
+                stale={Boolean(reviewThreadsResult.data)}
                 title={t("workspace.repositories.reviewThreadsLoadFailed")}
                 message={reviewThreadsError.message}
                 actionLabel={t("workspace.repositories.retry")}
@@ -641,6 +649,7 @@ export function GitHubPullRequestFiles({
             ) : null}
             {pendingReviewError ? (
               <GitHubPullRequestFilesErrorAlert
+                stale={pendingReviewResult.data !== undefined}
                 title={t("workspace.repositories.pendingReviewLoadFailed")}
                 message={pendingReviewError.message}
                 actionLabel={t("workspace.repositories.retry")}
@@ -649,6 +658,7 @@ export function GitHubPullRequestFiles({
             ) : null}
             {fileViewStatesError || hasUnmatchedFileViewStates ? (
               <GitHubPullRequestFilesErrorAlert
+                stale={Boolean(fileViewStatesError && fileViewStatesResult.data)}
                 title={t("workspace.repositories.fileViewStatesLoadFailed")}
                 message={
                   fileViewStatesError?.message ?? t("workspace.repositories.fileViewStatesOutdated")
@@ -717,7 +727,7 @@ export function GitHubPullRequestFiles({
                   defaultOpen={index < 2}
                   className="overflow-hidden rounded-lg border"
                 >
-                  <div className="bg-card/45 flex min-w-0 items-center gap-2 border-b px-2 py-1.5">
+                  <div className="harbor-control flex min-w-0 items-center gap-2 border-b px-2 py-1.5">
                     <CollapsibleTrigger asChild>
                       <Button
                         type="button"
@@ -738,13 +748,13 @@ export function GitHubPullRequestFiles({
                         onError={setFileViewMutationError}
                       />
                     ) : null}
-                    <Badge variant="outline" className="shrink-0 rounded-md text-[9px]">
+                    <Badge variant="outline" className="shrink-0 rounded-md text-[11px]">
                       {t(`workspace.repositories.fileStatuses.${file.status}`, {
                         defaultValue: file.status,
                       })}
                     </Badge>
-                    <span className="text-success text-[10px]">+{file.additions}</span>
-                    <span className="text-destructive text-[10px]">-{file.deletions}</span>
+                    <span className="text-success text-[11px]">+{file.additions}</span>
+                    <span className="text-destructive text-[11px]">-{file.deletions}</span>
                     {file.blobUrl ? (
                       <Tooltip>
                         <TooltipTrigger asChild>

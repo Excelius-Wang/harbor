@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ListFilter, PlayCircle, RefreshCw, Workflow as WorkflowIcon } from "lucide-react";
@@ -74,7 +76,7 @@ export function GitHubActionsWorkflowNavigation({
       repository: repository.name,
     })
   );
-  const workflows = result.data ?? [];
+  const workflows = useMemo(() => result.data ?? [], [result.data]);
   const visibleWorkflows = useMemo(() => {
     const normalizedFilter = filter.trim().toLocaleLowerCase();
     if (!normalizedFilter) return workflows;
@@ -82,7 +84,7 @@ export function GitHubActionsWorkflowNavigation({
       workflow.name.toLocaleLowerCase().includes(normalizedFilter)
     );
   }, [filter, workflows]);
-  const error = result.error ? parseIpcError(result.error) : null;
+  const error = !result.data && result.error ? parseIpcError(result.error) : null;
   const selectedValue =
     selectedWorkflowId === null ? ALL_WORKFLOWS_VALUE : String(selectedWorkflowId);
 
@@ -123,6 +125,13 @@ export function GitHubActionsWorkflowNavigation({
         </div>
 
         <ScrollArea className="min-h-0 flex-1">
+          {" "}
+          {result.data && result.error ? (
+            <WorkspaceStaleNotice
+              message={parseIpcError(result.error).message}
+              onRetry={() => void result.refetch()}
+            />
+          ) : null}
           {result.isPending ? <WorkflowNavigationSkeleton /> : null}
           {error ? (
             <Alert variant="destructive" className="m-2">
@@ -145,9 +154,12 @@ export function GitHubActionsWorkflowNavigation({
             <div className="flex flex-col gap-1 p-2">
               <Button
                 type="button"
-                variant={selectedWorkflowId === null ? "secondary" : "ghost"}
+                variant="ghost"
                 size="sm"
-                className="w-full justify-start px-2"
+                className={cn(
+                  "harbor-result-row w-full justify-start px-2",
+                  selectedWorkflowId === null && "harbor-row-selected"
+                )}
                 aria-current={selectedWorkflowId === null ? "page" : undefined}
                 onClick={() => onSelect(null)}
               >
@@ -158,9 +170,12 @@ export function GitHubActionsWorkflowNavigation({
                 <Button
                   key={workflow.id}
                   type="button"
-                  variant={selectedWorkflowId === workflow.id ? "secondary" : "ghost"}
+                  variant="ghost"
                   size="sm"
-                  className="h-auto min-h-8 w-full justify-start px-2"
+                  className={cn(
+                    "harbor-result-row h-auto min-h-8 w-full justify-start px-2",
+                    selectedWorkflowId === workflow.id && "harbor-row-selected"
+                  )}
                   aria-current={selectedWorkflowId === workflow.id ? "page" : undefined}
                   onClick={() => onSelect(workflow)}
                 >
@@ -190,7 +205,7 @@ export function GitHubActionsWorkflowNavigation({
         </ScrollArea>
       </aside>
 
-      <div className="hidden min-w-0 items-center gap-2 border-b px-4 py-2 @max-[760px]/actions:flex">
+      <div className="hidden min-w-0 flex-wrap items-center gap-2 border-b px-4 py-2 @max-[760px]/actions:flex">
         <Select
           value={selectedValue}
           onValueChange={selectValue}
@@ -224,10 +239,19 @@ export function GitHubActionsWorkflowNavigation({
             variant="outline"
             size="icon-sm"
             aria-label={t("workspace.repositories.retry")}
+            title={t("workspace.repositories.retry")}
             onClick={() => void result.refetch()}
           >
             <RefreshCw />
           </Button>
+        ) : null}
+        {result.data && result.error ? (
+          <div className="w-full">
+            <WorkspaceStaleNotice
+              message={parseIpcError(result.error).message}
+              onRetry={() => void result.refetch()}
+            />
+          </div>
         ) : null}
       </div>
     </>

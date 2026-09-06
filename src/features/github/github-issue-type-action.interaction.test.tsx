@@ -2,7 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GitHubIssueTypeAction } from "./github-issue-type-action";
@@ -77,6 +77,33 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe("GitHub Issue type action", () => {
+  it("retains the current type after a failed refresh and locks edits until retry succeeds", async () => {
+    const user = userEvent.setup();
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <GitHubIssueTypeAction repository={repository} issue={issue} />
+      </QueryClientProvider>
+    );
+    const trigger = await screen.findByRole("combobox");
+    await user.click(trigger);
+    vi.mocked(invoke).mockRejectedValueOnce({ code: "githubNetwork", message: "offline" });
+    await act(() => queryClient.invalidateQueries());
+
+    expect(await screen.findByText("common.staleResults")).toBeTruthy();
+    expect(trigger.textContent).toContain("Bug");
+    expect(trigger.hasAttribute("disabled")).toBe(true);
+    await user.click(screen.getByRole("option", { name: "Task" }));
+    await user.click(screen.getByRole("button", { name: "common.retry" }));
+    await waitFor(() => expect(trigger.hasAttribute("disabled")).toBe(false));
+    expect(screen.queryByText("common.staleResults")).toBeNull();
+    expect(
+      vi
+        .mocked(invoke)
+        .mock.calls.every(([command]) => command === "github_get_repository_issue_type_status")
+    ).toBe(true);
+  });
+
   it("shows the authoritative type choices and sends a selected type", async () => {
     const user = userEvent.setup();
     render(

@@ -12,11 +12,13 @@ type ThemeProviderProps = {
 
 type ThemeProviderState = {
   theme: Theme;
+  resolvedTheme: "light" | "dark";
   setTheme: (theme: Theme) => void;
 };
 
 const initialState: ThemeProviderState = {
   theme: "system",
+  resolvedTheme: "light",
   setTheme: () => null,
 };
 
@@ -32,30 +34,42 @@ export function ThemeProvider({
     () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
   );
 
+  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">(() =>
+    theme === "system"
+      ? window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light"
+      : theme
+  );
+
   useEffect(() => {
     const root = window.document.documentElement;
     const colorScheme = window.matchMedia("(prefers-color-scheme: dark)");
+    const transparency = window.matchMedia("(prefers-reduced-transparency: reduce)");
+    let appearanceVersion = 0;
 
     const applyTheme = () => {
-      const resolvedTheme = theme === "system" ? (colorScheme.matches ? "dark" : "light") : theme;
+      const version = ++appearanceVersion;
+      const nextTheme = theme === "system" ? (colorScheme.matches ? "dark" : "light") : theme;
 
       root.classList.remove("light", "dark");
-      root.classList.add(resolvedTheme);
+      root.classList.add(nextTheme);
+      setResolvedTheme(nextTheme);
 
       if (isTauri()) {
         const appWindow = getCurrentWindow();
-        const glassEffect =
-          resolvedTheme === "dark" ? Effect.HudWindow : Effect.UnderWindowBackground;
+        const glassEffect = nextTheme === "dark" ? Effect.HudWindow : Effect.UnderWindowBackground;
 
         void appWindow
-          .setTheme(resolvedTheme)
-          .then(() =>
-            appWindow.setEffects({
-              effects: [glassEffect],
+          .setTheme(nextTheme)
+          .then(() => {
+            if (version !== appearanceVersion) return;
+            return appWindow.setEffects({
+              effects: transparency.matches ? [] : [glassEffect],
               state: EffectState.FollowsWindowActiveState,
               radius: 10,
-            })
-          )
+            });
+          })
           .catch((error) => {
             console.warn("Failed to synchronize the native window appearance:", error);
           });
@@ -63,10 +77,13 @@ export function ThemeProvider({
     };
 
     applyTheme();
-    if (theme !== "system") return;
-
-    colorScheme.addEventListener("change", applyTheme);
-    return () => colorScheme.removeEventListener("change", applyTheme);
+    if (theme === "system") colorScheme.addEventListener("change", applyTheme);
+    transparency.addEventListener("change", applyTheme);
+    return () => {
+      appearanceVersion++;
+      colorScheme.removeEventListener("change", applyTheme);
+      transparency.removeEventListener("change", applyTheme);
+    };
   }, [theme]);
 
   // Listen for localStorage changes to sync theme across windows
@@ -83,6 +100,7 @@ export function ThemeProvider({
 
   const value = {
     theme,
+    resolvedTheme,
     setTheme: (newTheme: Theme) => {
       localStorage.setItem(storageKey, newTheme);
       setTheme(newTheme);

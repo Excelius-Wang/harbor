@@ -1,0 +1,15 @@
+/* Test environments only. These backgrounds are never shipped with the app. */
+:root[data-preview-background] {
+  background: #a5b6c8;
+}
+:root[data-preview-background="cool"] {
+  background: linear-gradient(125deg, #93b0c3 0%, #576d8a 35%, #27374e 65%, #afc4d1 100%);
+}
+:root[data-preview-background="neutral"] {
+  background: linear-gradient(120deg, #c2c3c6, #6e7177 48%, #adadb0);
+}
+:root[data-preview-background="bright"] {
+  background:
+    repeating-linear-gradient(35deg, #b3c6d5 0 3px, transparent 3px 45px),
+    linear-gradient(125deg, #f4f7fa, #d5e7e8, #a6b9cf);
+}

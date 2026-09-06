@@ -174,18 +174,20 @@ export function GitHubPullRequestMergePanel({
             ? "border-success/35 bg-success/[0.045] rounded-lg border"
             : status === "conflicts"
               ? "border-destructive/35 bg-destructive/[0.045] rounded-lg border"
-              : "bg-card rounded-lg border"
+              : "harbor-surface rounded-lg"
         }
         aria-labelledby={`pull-request-${pullRequest.number}-merge-status`}
       >
         <div className="flex min-w-0 items-center gap-3 p-4 @max-[520px]/pull-detail:items-start">
           <div
             className={
-              canMerge || status === "merged"
-                ? "bg-success/12 text-success flex size-8 shrink-0 items-center justify-center rounded-md [&>svg]:size-4"
-                : status === "conflicts"
-                  ? "bg-destructive/12 text-destructive flex size-8 shrink-0 items-center justify-center rounded-md [&>svg]:size-4"
-                  : "bg-muted text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-md [&>svg]:size-4"
+              status === "merged"
+                ? "bg-merged/12 text-merged flex size-8 shrink-0 items-center justify-center rounded-md [&>svg]:size-4"
+                : canMerge
+                  ? "bg-success/12 text-success flex size-8 shrink-0 items-center justify-center rounded-md [&>svg]:size-4"
+                  : status === "conflicts"
+                    ? "bg-destructive/12 text-destructive flex size-8 shrink-0 items-center justify-center rounded-md [&>svg]:size-4"
+                    : "harbor-control text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-md [&>svg]:size-4"
             }
           >
             {statusIcon}
@@ -241,6 +243,7 @@ export function GitHubPullRequestMergePanel({
 
       <Dialog open={open} onOpenChange={changeOpen}>
         <DialogContent
+          showCloseButton={!mutation.isPending}
           className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-[560px]"
           aria-busy={mutation.isPending}
         >

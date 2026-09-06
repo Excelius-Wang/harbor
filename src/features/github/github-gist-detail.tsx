@@ -1,3 +1,4 @@
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -172,11 +173,11 @@ function GistFilePanel({ gist, file }: { gist: GitHubGist; file: GitHubGistFile 
           <div
             key={index}
             role="row"
-            className="hover:bg-primary/[0.025] grid min-w-max grid-cols-[3.75rem_minmax(max-content,1fr)]"
+            className="harbor-result-row grid min-w-max grid-cols-[3.75rem_minmax(max-content,1fr)]"
           >
             <span
               role="rowheader"
-              className="text-muted-foreground/55 border-r border-white/[0.045] pr-3 text-right tabular-nums select-none"
+              className="harbor-subtle-divider text-muted-foreground border-r pr-3 text-right tabular-nums select-none"
             >
               {index + 1}
             </span>
@@ -198,14 +199,14 @@ function GistFilePanel({ gist, file }: { gist: GitHubGist; file: GitHubGistFile 
     );
 
   return (
-    <section className="overflow-hidden rounded-lg border bg-white/[0.015]">
+    <section className="harbor-reading overflow-hidden rounded-lg border">
       <header className="flex min-h-11 items-center gap-2 border-b px-3 py-2">
         <FileCode2 className="text-primary size-4 shrink-0" />
         <span className="min-w-0 flex-1 truncate font-mono text-xs font-medium">
           {file.filename}
         </span>
         {file.language ? <Badge variant="outline">{file.language}</Badge> : null}
-        <span className="text-muted-foreground text-[10px] tabular-nums">
+        <span className="text-muted-foreground text-[11px] tabular-nums">
           {t("workspace.gists.bytes", { count: file.size })}
         </span>
         {file.rawUrl ? (
@@ -254,11 +255,12 @@ function GistComments({ gist }: { gist: GitHubGist }) {
       if (mutation.action === "delete") {
         syncDeletedGistComment(queryClient, gist.id, mutation.commentId);
         setDeleteTarget(null);
+        setEditing((current) => (current?.id === mutation.commentId ? null : current));
         toast.success(t("workspace.gists.commentDeleted"));
       } else if (comment) {
         syncGistComment(queryClient, gist.id, comment, mutation.action === "create");
-        setBody("");
-        setEditing(null);
+        if (mutation.action === "create") setBody("");
+        else setEditing(null);
         toast.success(
           t(
             mutation.action === "create"
@@ -271,6 +273,8 @@ function GistComments({ gist }: { gist: GitHubGist }) {
     },
   });
   const mutationError = mutation.error ? parseIpcError(mutation.error).message : "";
+  const pendingAction = mutation.isPending ? mutation.variables?.action : undefined;
+  const failedAction = mutation.error ? mutation.variables : undefined;
 
   if (result.isPending) {
     return (
@@ -280,7 +284,7 @@ function GistComments({ gist }: { gist: GitHubGist }) {
       </div>
     );
   }
-  if (result.error) {
+  if (result.error && !result.data) {
     const error = parseIpcError(result.error);
     return (
       <Empty className="min-h-64">
@@ -303,6 +307,13 @@ function GistComments({ gist }: { gist: GitHubGist }) {
 
   return (
     <div className="mx-auto flex w-full max-w-[920px] flex-col gap-4 p-4">
+      {result.data && result.error ? (
+        <WorkspaceStaleNotice
+          message={parseIpcError(result.error).message}
+          retryDisabled={result.isFetching || mutation.isPending}
+          onRetry={() => void result.refetch()}
+        />
+      ) : null}
       {comments.length === 0 ? (
         <Empty className="min-h-40">
           <EmptyHeader>
@@ -315,8 +326,8 @@ function GistComments({ gist }: { gist: GitHubGist }) {
         </Empty>
       ) : (
         comments.map((comment) => (
-          <article key={comment.id} className="overflow-hidden rounded-lg border">
-            <header className="bg-muted/20 flex items-center gap-2 border-b px-3 py-2">
+          <article key={comment.id} className="harbor-reading overflow-hidden rounded-lg border">
+            <header className="harbor-subtle-divider flex flex-wrap items-center gap-2 border-b px-3 py-2">
               <Avatar className="size-6">
                 <AvatarImage src={comment.authorAvatarUrl} alt="" />
                 <AvatarFallback>{comment.author?.slice(0, 1).toUpperCase() ?? "?"}</AvatarFallback>
@@ -324,12 +335,20 @@ function GistComments({ gist }: { gist: GitHubGist }) {
               <span className="text-xs font-medium">
                 {comment.author ?? t("workspace.gists.anonymous")}
               </span>
-              <time className="text-muted-foreground text-[10px]">
+              <time className="text-muted-foreground text-[11px]">
                 {formatIssueDate(comment.createdAt, i18n.language)}
               </time>
               <span className="flex-1" />
               {comment.viewerCanUpdate ? (
-                <Button variant="ghost" size="xs" onClick={() => setEditing(comment)}>
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  disabled={mutation.isPending}
+                  onClick={() => {
+                    mutation.reset();
+                    setEditing(comment);
+                  }}
+                >
                   <Pencil data-icon="inline-start" />
                   {t("common.edit")}
                 </Button>
@@ -338,8 +357,13 @@ function GistComments({ gist }: { gist: GitHubGist }) {
                 <Button
                   variant="ghost"
                   size="icon-xs"
-                  onClick={() => setDeleteTarget(comment)}
+                  disabled={mutation.isPending}
+                  onClick={() => {
+                    mutation.reset();
+                    setDeleteTarget(comment);
+                  }}
                   aria-label={t("workspace.gists.deleteComment")}
+                  title={t("workspace.gists.deleteComment")}
                 >
                   <Trash2 />
                 </Button>
@@ -348,17 +372,25 @@ function GistComments({ gist }: { gist: GitHubGist }) {
             {editing?.id === comment.id ? (
               <div className="space-y-2 p-3">
                 <Textarea
+                  aria-label={t("workspace.gists.editComment")}
                   value={editing.body}
                   disabled={mutation.isPending}
-                  className="min-h-28 text-xs"
+                  className="min-h-28 text-[13px]"
                   onChange={(event) => setEditing({ ...editing, body: event.currentTarget.value })}
                 />
-                <FieldError>{mutationError}</FieldError>
+                <FieldError>
+                  {failedAction?.action === "update" && failedAction.commentId === comment.id
+                    ? mutationError
+                    : ""}
+                </FieldError>
                 <div className="flex justify-end gap-2">
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setEditing(null)}
+                    onClick={() => {
+                      setEditing(null);
+                      mutation.reset();
+                    }}
                     disabled={mutation.isPending}
                   >
                     {t("common.cancel")}
@@ -374,7 +406,7 @@ function GistComments({ gist }: { gist: GitHubGist }) {
                       })
                     }
                   >
-                    {mutation.isPending ? <Spinner data-icon="inline-start" /> : null}
+                    {pendingAction === "update" ? <Spinner data-icon="inline-start" /> : null}
                     {t("common.save")}
                   </Button>
                 </div>
@@ -405,7 +437,7 @@ function GistComments({ gist }: { gist: GitHubGist }) {
           className="space-y-2 rounded-lg border p-3"
           onSubmit={(event) => {
             event.preventDefault();
-            if (body.trim()) mutation.mutate({ action: "create", body });
+            if (body.trim() && !mutation.isPending) mutation.mutate({ action: "create", body });
           }}
         >
           <Field>
@@ -416,15 +448,15 @@ function GistComments({ gist }: { gist: GitHubGist }) {
               id={`gist-${gist.id}-comment`}
               value={body}
               disabled={mutation.isPending}
-              className="min-h-28 text-xs"
+              className="min-h-28 text-[13px]"
               placeholder={t("workspace.gists.commentPlaceholder")}
               onChange={(event) => setBody(event.currentTarget.value)}
             />
-            <FieldError>{!editing ? mutationError : ""}</FieldError>
+            <FieldError>{failedAction?.action === "create" ? mutationError : ""}</FieldError>
           </Field>
           <div className="flex justify-end">
             <Button type="submit" size="sm" disabled={!body.trim() || mutation.isPending}>
-              {mutation.isPending ? (
+              {pendingAction === "create" ? (
                 <Spinner data-icon="inline-start" />
               ) : (
                 <Send data-icon="inline-start" />
@@ -442,7 +474,12 @@ function GistComments({ gist }: { gist: GitHubGist }) {
 
       <AlertDialog
         open={Boolean(deleteTarget)}
-        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        onOpenChange={(open) => {
+          if (!open && !mutation.isPending) {
+            setDeleteTarget(null);
+            mutation.reset();
+          }
+        }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -451,7 +488,7 @@ function GistComments({ gist }: { gist: GitHubGist }) {
               {t("workspace.gists.deleteCommentDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          {mutationError && deleteTarget ? (
+          {failedAction?.action === "delete" && deleteTarget ? (
             <Alert variant="destructive">
               <AlertDescription>{mutationError}</AlertDescription>
             </Alert>
@@ -465,7 +502,8 @@ function GistComments({ gist }: { gist: GitHubGist }) {
               disabled={mutation.isPending}
               onClick={(event) => {
                 event.preventDefault();
-                if (deleteTarget) mutation.mutate({ action: "delete", commentId: deleteTarget.id });
+                if (deleteTarget && !mutation.isPending)
+                  mutation.mutate({ action: "delete", commentId: deleteTarget.id });
               }}
             >
               {mutation.isPending ? (
@@ -571,7 +609,7 @@ export function GitHubGistDetail({
       </div>
     );
   }
-  if (!gist || result.error) {
+  if (!gist) {
     const error = parseIpcError(result.error);
     return (
       <Empty className="flex-1">
@@ -601,6 +639,12 @@ export function GitHubGistDetail({
 
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col">
+      {result.error ? (
+        <WorkspaceStaleNotice
+          message={parseIpcError(result.error).message}
+          onRetry={() => void result.refetch()}
+        />
+      ) : null}
       <header className="shrink-0 border-b px-4 py-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-2.5">
@@ -609,6 +653,7 @@ export function GitHubGistDetail({
               size="icon-sm"
               className="workspace-wide:hidden"
               aria-label={t("workspace.gists.back")}
+              title={t("workspace.gists.back")}
               onClick={onBack}
             >
               <ArrowLeft />
@@ -619,7 +664,7 @@ export function GitHubGistDetail({
             </Avatar>
             <div className="min-w-0">
               <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                <h2 className="max-w-[64ch] truncate text-base font-semibold tracking-[-0.02em]">
+                <h2 className="max-w-[64ch] text-2xl leading-7 font-semibold tracking-tight">
                   {gist.description ?? gist.files[0]?.filename ?? gist.id}
                 </h2>
                 <Badge variant="outline" className="gap-1 font-normal">
@@ -647,7 +692,7 @@ export function GitHubGistDetail({
                 <Spinner data-icon="inline-start" />
               ) : (
                 <Star
-                  className={gist.starred ? "fill-current text-amber-400" : ""}
+                  className={gist.starred ? "text-attention fill-current" : ""}
                   data-icon="inline-start"
                 />
               )}
@@ -681,6 +726,7 @@ export function GitHubGistDetail({
               variant="outline"
               size="icon-sm"
               aria-label={t("workspace.gists.openOnGitHub")}
+              title={t("workspace.gists.openOnGitHub")}
               onClick={() => void openExternalUrl(gist.url)}
             >
               <ExternalLink />
@@ -690,6 +736,7 @@ export function GitHubGistDetail({
                 variant="destructive"
                 size="icon-sm"
                 aria-label={t("workspace.gists.delete")}
+                title={t("workspace.gists.delete")}
                 onClick={() => setDeleteOpen(true)}
               >
                 <Trash2 />
@@ -767,7 +814,16 @@ export function GitHubGistDetail({
               {revisionResult.error ? (
                 <Alert variant="destructive">
                   <CircleAlert />
-                  <AlertDescription>{parseIpcError(revisionResult.error).message}</AlertDescription>
+                  <AlertDescription>
+                    {parseIpcError(revisionResult.error).message}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void revisionResult.refetch()}
+                    >
+                      {t("common.retry")}
+                    </Button>
+                  </AlertDescription>
                 </Alert>
               ) : null}
             </div>
@@ -775,6 +831,12 @@ export function GitHubGistDetail({
         </TabsContent>
 
         <TabsContent value="revisions" className="min-h-0 flex-1">
+          {revisionsResult.data && revisionsResult.error ? (
+            <WorkspaceStaleNotice
+              message={parseIpcError(revisionsResult.error).message}
+              onRetry={() => void revisionsResult.refetch()}
+            />
+          ) : null}
           <ScrollArea className="h-full">
             {revisionsResult.isPending ? (
               <div className="space-y-2 p-4">
@@ -782,7 +844,7 @@ export function GitHubGistDetail({
                   <Skeleton key={index} className="h-16 w-full" />
                 ))}
               </div>
-            ) : revisionsResult.error ? (
+            ) : revisionsResult.error && !revisionsResult.data ? (
               <Empty className="min-h-64">
                 <EmptyHeader>
                   <EmptyMedia variant="icon">
@@ -793,6 +855,11 @@ export function GitHubGistDetail({
                     {parseIpcError(revisionsResult.error).message}
                   </EmptyDescription>
                 </EmptyHeader>
+                <EmptyContent>
+                  <Button variant="outline" onClick={() => void revisionsResult.refetch()}>
+                    {t("common.retry")}
+                  </Button>
+                </EmptyContent>
               </Empty>
             ) : (
               <div className="mx-auto flex w-full max-w-[920px] flex-col gap-2 p-4">
@@ -800,7 +867,7 @@ export function GitHubGistDetail({
                   <button
                     key={revision.version}
                     type="button"
-                    className="hover:bg-muted/25 flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors"
+                    className="harbor-result-row focus-visible:ring-ring/50 flex w-full items-center gap-3 rounded-md border p-3 text-left outline-none focus-visible:ring-2"
                     onClick={() => {
                       setSelectedVersion(revision.version);
                       setActiveTab("files");
@@ -811,14 +878,14 @@ export function GitHubGistDetail({
                       <span className="block font-mono text-xs font-medium">
                         {revision.version.slice(0, 12)}
                       </span>
-                      <span className="text-muted-foreground mt-1 block text-[10px]">
+                      <span className="text-muted-foreground mt-1 block text-[11px]">
                         {revision.author ?? t("workspace.gists.anonymous")} ·{" "}
                         {formatIssueDate(revision.committedAt, i18n.language)}
                       </span>
                     </span>
-                    <span className="text-[10px] tabular-nums">
-                      <span className="text-emerald-400">+{revision.additions}</span>{" "}
-                      <span className="text-rose-400">−{revision.deletions}</span>
+                    <span className="text-[11px] tabular-nums">
+                      <span className="text-success">+{revision.additions}</span>{" "}
+                      <span className="text-destructive">−{revision.deletions}</span>
                     </span>
                   </button>
                 ))}
@@ -863,6 +930,7 @@ export function GitHubGistDetail({
       <AlertDialog
         open={deleteOpen}
         onOpenChange={(open) => {
+          if (deleteMutation.isPending) return;
           setDeleteOpen(open);
           if (!open) {
             setDeleteConfirmation("");
@@ -903,7 +971,11 @@ export function GitHubGistDetail({
               }
               onClick={(event) => {
                 event.preventDefault();
-                deleteMutation.mutate();
+                if (
+                  !deleteMutation.isPending &&
+                  deleteConfirmation.trim().toLowerCase() === gist.id.toLowerCase()
+                )
+                  deleteMutation.mutate();
               }}
             >
               {deleteMutation.isPending ? (

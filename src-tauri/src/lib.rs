@@ -50,6 +50,7 @@ pub fn run() {
             commands::github_connection_status,
             commands::github_disconnect,
             commands::github_search_discovery,
+            commands::github_list_trending_developers,
             commands::github_list_developer_feed,
             commands::github_get_user_profile,
             commands::github_update_personal_profile,

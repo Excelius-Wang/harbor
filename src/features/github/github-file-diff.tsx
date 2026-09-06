@@ -41,7 +41,7 @@ export function GitHubReadOnlyFileDiff({
 
   if (!diff?.hunks.length) {
     return (
-      <div className="text-muted-foreground bg-muted/20 px-4 py-8 text-center text-[11px]">
+      <div className="text-muted-foreground harbor-reading px-4 py-8 text-center text-[11px]">
         {t(
           file.patch
             ? "workspace.repositories.commitPatchInvalid"

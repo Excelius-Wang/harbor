@@ -16,6 +16,9 @@ const pageMap = {
   "/": HomePage,
   "/about": AboutPage,
   "/settings": SettingsPage,
+  ...(import.meta.env.DEV
+    ? { "/ui-components": lazy(() => import("./dev/component-gallery")) }
+    : {}),
 };
 
 const pathname = window.location.pathname;

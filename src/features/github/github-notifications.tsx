@@ -1,3 +1,6 @@
+import { useListScroll } from "@/hooks/use-list-scroll";
+import { WorkspacePageHeader } from "@/features/workspace/workspace-page-header";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isTauri } from "@tauri-apps/api/core";
@@ -5,7 +8,6 @@ import {
   Archive,
   Bell,
   CheckCheck,
-  CircleAlert,
   CircleDot,
   ExternalLink,
   GitCommitHorizontal,
@@ -32,7 +34,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -178,7 +179,7 @@ function NotificationRow({
   const threadPending = pending?.threadId === notification.id;
 
   return (
-    <article className="group grid min-w-0 grid-cols-[28px_minmax(0,1fr)_auto] gap-3 border-b px-4 py-3.5">
+    <article className="harbor-result-row group grid min-w-0 grid-cols-[28px_minmax(0,1fr)_auto] gap-3 border-b px-4 py-3.5">
       <span className="border-border bg-muted/40 text-muted-foreground grid size-7 place-items-center rounded-md border">
         <Icon className="size-3.5" />
       </span>
@@ -189,7 +190,7 @@ function NotificationRow({
         className="h-auto min-w-0 justify-start rounded-none p-0 text-left whitespace-normal hover:bg-transparent"
       >
         <span className="flex min-w-0 flex-1 flex-col items-start gap-1.5">
-          <span className="text-muted-foreground flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-normal">
+          <span className="text-muted-foreground flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-normal">
             <span className="text-foreground/75 truncate font-medium">
               {notification.repository.fullName}
             </span>
@@ -197,10 +198,10 @@ function NotificationRow({
               {t(`workspace.notifications.kinds.${notification.subject.kind}`)}
             </Badge>
           </span>
-          <span className="text-foreground line-clamp-2 text-[13px] leading-5 font-medium">
+          <span className="text-foreground text-[13px] leading-5 font-medium">
             {notification.subject.title}
           </span>
-          <span className="text-muted-foreground flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-normal">
+          <span className="text-muted-foreground flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-normal">
             <span>
               {t(`workspace.notifications.reasons.${notification.reason}`, {
                 defaultValue: notification.reason,
@@ -279,6 +280,7 @@ export function GitHubNotifications({
   const desktopRuntime = isTauri();
   const [scope, setScope] = useState<NotificationScope>("all");
   const [page, setPage] = useState(1);
+  const listScroll = useListScroll(JSON.stringify([scope, page]));
   const [selectedNotification, setSelectedNotification] = useState<GitHubNotification | null>(null);
   const [showRepositoryInvitations, setShowRepositoryInvitations] = useState(false);
   const [doneCandidate, setDoneCandidate] = useState<GitHubNotification | null>(null);
@@ -497,59 +499,51 @@ export function GitHubNotifications({
 
   return (
     <section className="harbor-content flex min-w-0 flex-1 flex-col">
-      <header className="h-[74px] shrink-0 border-b border-white/[0.075] px-5">
-        <div className="mx-auto flex h-full w-full max-w-[1120px] items-center justify-between gap-4">
-          <div>
-            <p className="text-primary/80 text-[10px] font-medium tracking-[0.14em] uppercase">
-              {t("workspace.notifications.eyebrow")}
-            </p>
-            <h1 className="mt-0.5 text-xl font-semibold tracking-[-0.03em]">
-              {t("workspace.nav.notifications")}
-            </h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setSelectedNotification(null);
-                setShowRepositoryInvitations(true);
-              }}
-            >
-              <UserPlus data-icon="inline-start" />
-              {t("workspace.notifications.invitations.open")}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setMarkAllOpen(true)}
-              disabled={markAllMutation.isPending || !data?.notifications.length}
-            >
-              {markAllMutation.isPending ? (
-                <Spinner data-icon="inline-start" />
-              ) : (
-                <CheckCheck data-icon="inline-start" />
-              )}
-              {t("workspace.notifications.markAllRead")}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void result.refetch()}
-              disabled={result.isFetching || !desktopRuntime}
-            >
-              {result.isFetching ? (
-                <Spinner data-icon="inline-start" />
-              ) : (
-                <RefreshCw data-icon="inline-start" />
-              )}
-              {t("workspace.notifications.refresh")}
-            </Button>
-          </div>
-        </div>
-      </header>
+      <WorkspacePageHeader
+        title={t("workspace.nav.notifications")}
+        description={t("workspace.notifications.eyebrow")}
+        contained
+      >
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            setSelectedNotification(null);
+            setShowRepositoryInvitations(true);
+          }}
+        >
+          <UserPlus data-icon="inline-start" />
+          {t("workspace.notifications.invitations.open")}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setMarkAllOpen(true)}
+          disabled={markAllMutation.isPending || !data?.notifications.length}
+        >
+          {markAllMutation.isPending ? (
+            <Spinner data-icon="inline-start" />
+          ) : (
+            <CheckCheck data-icon="inline-start" />
+          )}
+          {t("workspace.notifications.markAllRead")}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => void result.refetch()}
+          disabled={result.isFetching || !desktopRuntime}
+        >
+          {result.isFetching ? (
+            <Spinner data-icon="inline-start" />
+          ) : (
+            <RefreshCw data-icon="inline-start" />
+          )}
+          {t("workspace.notifications.refresh")}
+        </Button>
+      </WorkspacePageHeader>
 
-      <div className="mx-auto flex min-h-0 w-full max-w-[1120px] flex-1 flex-col border-x border-white/[0.055]">
+      <div className="border-border/60 mx-auto flex min-h-0 w-full max-w-[1120px] flex-1 flex-col border-x">
         <Tabs
           value={scope}
           onValueChange={(value) => {
@@ -558,7 +552,7 @@ export function GitHubNotifications({
           }}
           className="gap-0"
         >
-          <div className="flex min-h-11 items-center justify-between gap-3 border-b border-white/[0.065] px-4">
+          <div className="border-border/60 flex min-h-11 items-center justify-between gap-3 border-b px-4">
             <TabsList variant="line" className="h-11 gap-5 p-0">
               <TabsTrigger value="all" className="px-1.5 text-xs">
                 <Bell /> {t("workspace.notifications.all")}
@@ -567,7 +561,7 @@ export function GitHubNotifications({
                 <MessageCircle /> {t("workspace.notifications.participating")}
               </TabsTrigger>
             </TabsList>
-            <span className="text-muted-foreground flex items-center gap-2 text-[10px]">
+            <span className="text-muted-foreground flex items-center gap-2 text-[11px]">
               {result.isFetching && data ? <RefreshCw className="size-3 animate-spin" /> : null}
               {data
                 ? t("workspace.notifications.pageCount", { count: data.notifications.length })
@@ -577,18 +571,13 @@ export function GitHubNotifications({
         </Tabs>
 
         {supplementalError ? (
-          <Alert variant="destructive" className="rounded-none border-x-0 border-t-0 px-4 py-2">
-            <CircleAlert />
-            <AlertDescription className="flex min-w-0 items-center gap-3 text-[11px]">
-              <span className="min-w-0 flex-1 truncate">{supplementalError.message}</span>
-              <Button variant="ghost" size="xs" onClick={() => void result.refetch()}>
-                {t("workspace.repositories.retry")}
-              </Button>
-            </AlertDescription>
-          </Alert>
+          <WorkspaceStaleNotice
+            message={supplementalError.message}
+            onRetry={() => void result.refetch()}
+          />
         ) : null}
 
-        <ScrollArea className="min-h-0 flex-1">
+        <ScrollArea className="min-h-0 flex-1" {...listScroll}>
           {result.isPending && !data ? (
             <NotificationSkeletons />
           ) : error ? (

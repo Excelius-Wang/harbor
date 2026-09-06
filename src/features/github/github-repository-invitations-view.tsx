@@ -48,6 +48,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { WorkspacePageHeader } from "@/features/workspace/workspace-page-header";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { parseIpcError } from "@/lib/ipc-error";
 import { cn } from "@/lib/utils";
 import type {
@@ -173,65 +175,55 @@ export function GitHubRepositoryInvitations({
 
   return (
     <section className="harbor-content flex min-w-0 flex-1 flex-col">
-      <header className="h-[74px] shrink-0 border-b px-4 sm:px-5">
-        <div className="mx-auto flex h-full w-full max-w-[960px] items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={t("workspace.notifications.back")}
-                  onClick={onBack}
-                >
-                  <ArrowLeft />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t("workspace.notifications.back")}</TooltipContent>
-            </Tooltip>
-            <div className="min-w-0">
-              <p className="text-primary/80 text-[10px] font-medium tracking-[0.14em] uppercase">
-                {t("workspace.notifications.invitations.eyebrow")}
-              </p>
-              <h1 className="mt-0.5 truncate text-xl font-semibold tracking-[-0.03em]">
-                {t("workspace.notifications.invitations.title")}
-              </h1>
-            </div>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={result.isFetching || !desktopRuntime}
-            onClick={() => void result.refetch()}
-          >
-            {result.isFetching ? (
-              <Spinner data-icon="inline-start" />
-            ) : (
-              <RefreshCw data-icon="inline-start" />
-            )}
-            {t("workspace.notifications.refresh")}
-          </Button>
-        </div>
-      </header>
+      <WorkspacePageHeader
+        title={t("workspace.notifications.invitations.title")}
+        description={t("workspace.notifications.invitations.eyebrow")}
+        contained
+        leading={
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label={t("workspace.notifications.back")}
+                onClick={onBack}
+              >
+                <ArrowLeft />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t("workspace.notifications.back")}</TooltipContent>
+          </Tooltip>
+        }
+      >
+        {" "}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={result.isFetching || !desktopRuntime}
+          onClick={() => void result.refetch()}
+        >
+          {result.isFetching ? (
+            <Spinner data-icon="inline-start" />
+          ) : (
+            <RefreshCw data-icon="inline-start" />
+          )}
+          {t("workspace.notifications.refresh")}
+        </Button>
+      </WorkspacePageHeader>
 
-      <div className="mx-auto flex min-h-0 w-full max-w-[960px] flex-1 flex-col border-x">
+      <div className="mx-auto flex min-h-0 w-full max-w-[1120px] flex-1 flex-col">
         <div className="border-b px-4 py-3 sm:px-5">
           <p className="text-muted-foreground max-w-2xl text-xs leading-5">
             {t("workspace.notifications.invitations.description")}
           </p>
         </div>
         {supplementalError ? (
-          <Alert variant="destructive" className="rounded-none border-x-0 border-t-0 px-4 py-2">
-            <CircleAlert />
-            <AlertDescription className="flex min-w-0 items-center gap-3 text-[11px]">
-              <span className="min-w-0 flex-1 truncate">{supplementalError.message}</span>
-              <Button variant="ghost" size="xs" onClick={() => void result.refetch()}>
-                {t("workspace.repositories.retry")}
-              </Button>
-            </AlertDescription>
-          </Alert>
+          <WorkspaceStaleNotice
+            message={supplementalError.message}
+            onRetry={() => void result.refetch()}
+          />
         ) : null}
         <ScrollArea className="min-h-0 flex-1">
           {result.isPending && !result.data ? (
@@ -267,10 +259,10 @@ export function GitHubRepositoryInvitations({
                     )}
                   >
                     <CardHeader className="gap-2 px-5">
-                      <CardTitle className="truncate text-sm">
+                      <CardTitle className="text-sm break-words">
                         {invitation.repository.fullName}
                       </CardTitle>
-                      <CardDescription className="line-clamp-2 text-xs leading-5">
+                      <CardDescription className="text-xs leading-5">
                         {invitation.repository.description ||
                           t("workspace.repositories.noDescription")}
                       </CardDescription>
