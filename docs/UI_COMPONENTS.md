@@ -6,7 +6,7 @@ The component gallery uses production React components and `src/index.css`. It i
 pnpm dev:ui --port 1423
 ```
 
-Open `http://localhost:1423/ui-components` for controls, navigation, filters, dialogs, sheets and feedback states. Switch theme/language in the gallery. Open `http://localhost:1423/` for the real workspace with controlled discovery data.
+Open `http://localhost:1423/ui-components` for controls, navigation, filters, forms, tables, charts, dialogs, sheets and feedback states. Switch theme/language using the production controls in the gallery. Open `http://localhost:1423/` for the real workspace with controlled discovery data.
 
 The preview replaces the HTML entry only when Vite is **serving** in `ui-preview` mode. Normal development and production builds use the regular application entry. Fixtures now cover discovery, repository/code, Issue and PR core reads. Other commands still fail visibly until their fixtures are added. Fixtures are intercepted through Tauri's official `mockIPC` interface. Unknown business commands fail visibly; no GitHub mutation falls through to a real backend. Native window calls may pass through when running a native preview. Fixture data is synthetic and does not verify real GitHub API responses.
 
@@ -102,3 +102,13 @@ About uses a local ScrollArea layout selector to center its content while allowi
 The context Agent sheet keeps the question control outside its scrollable response area. Repository changes invalidate in-flight answers/errors, including public/private changes. Closing and reopening the same repository does not discard an active request.
 
 Account preview scenarios are `?auth=loading|unavailable|availability-error` (Retry succeeds after the initial availability failure), `?repo=private`, and `?agent=slow`. Scoped loading/error command states also cover sign-in, disconnect, follow and Agent requests. The fake auth URL is intercepted by browser SDK mocks; these scenarios do not establish native plugin or real GitHub authentication behavior.
+
+## Complete primitive examples
+
+The gallery includes every local UI primitive family. Radio groups, mixed/disabled checkboxes, linked validation errors, breadcrumb/current-page links, selected table rows, pagination, collapsible groups, charts with keyboard tooltips, checkbox/radio/submenus, popovers, confirmations and success/error toasts supplement the original examples. Each section includes its production import/composition. Gallery navigation uses the actual 58/226 px container widths.
+
+`FieldGroup` and `FieldSet` default to 16 px gaps. `FieldSeparator` draws separated lines around its label without an opaque patch. `Checkbox` uses a minus for `indeterminate`; Radix still supplies the mixed accessible state. `Progress` accepts a finite positive `max`, normalizes the visual fill against it, and displays unspecified/invalid values as indeterminate. Its default maximum remains 100.
+
+`ModeToggle`, breadcrumb and pagination defaults, and Sonner region/close labels use i18next. Consumers may still provide specific accessible labels. `Toaster.toastOptions` merges caller options with the shared material class. Keep theme icons positioned inside their trigger; the gallery verifies that scrolling the header away also removes the icons from view.
+
+Browser reduced-transparency checks use actual media emulation and computed styles, not a manually added CSS class. Reduced window/dialog surfaces are opaque with no backdrop filter. Reduced motion stops indeterminate progress and minimizes skeleton animation. The browser background matrix remains separate from native Tauri acceptance.

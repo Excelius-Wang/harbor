@@ -185,3 +185,20 @@ The workspace command palette uses the shared dialog material and position, labe
 Completed scripts/logs: `/private/tmp/harbor-context-{qa,states}.py` and `harbor-command-final-qa.py`, with matching logs. Browser SDK mocks intercept a single fake auth opener URL and deliver controlled `github-auth` events; no real sign-in, disconnect, follow or Agent request is sent. Native SDK plugin behavior remains a separate acceptance boundary.
 
 A read-only `ioreg` session-state check now reports `CGSSessionScreenIsLocked=true`. The user has been asked to unlock the Mac before another native observation attempt. This establishes the current lock state; it does not prove the cause of every earlier window-access failure. Native material acceptance remains open.
+
+## Shared primitives and complete component gallery — 2026-09-06
+
+The remaining primitive families were audited, and the production gallery now includes their major states and interactions. Shared form groups use 16 px spacing; separators keep the underlying material visible. Theme/navigation/toast accessibility defaults are localized. Mixed checkboxes have a distinct minus indicator. Progress with a custom maximum now shows the same proportion it announces to assistive technology.
+
+| Check | Evidence / result |
+| --- | --- |
+| Before | Four `ui-before-gallery-{final,forms}-dark-{900,1440}.png` captures. The custom-max Progress regression fails before the fix: value150/max200 announces75% but produces an invalid visual transform (`/private/tmp/harbor-progress-before.log`). The existing indeterminate regression is retained. |
+| Complete gallery | 192 `ui-gallery-final-{key}-{en,zh}-{light,dark}-{900,1440}.png` captures cover controls/validation, radio and mixed checkbox states, navigation/tabs, selects, checkbox/radio/submenus, popover/tooltip, command empty state, dialog/confirmation/long sheet, table/pagination/collapsible group, keyboard chart tooltip, progress/skeleton, success/error toast and empty state. |
+| Interaction assertions | Named controls, linked validation, disabled/selected states, radio/tab keyboard movement, mixed checkbox toggle, nested menu bounds, overlay Escape focus return, pagination, collapsible keyboard activation, chart tooltip, localized toast close and no window overflow. The theme menu switches both ways and reports its selected value. The gallery's navigation container matches 58/226 px. |
+| Preferences / backgrounds | 72 `ui-gallery-preferences-{window,feedback,dialog}-{normal,reduced}-{light,dark}-{cool,neutral,bright}-{900,1440}.png` captures use Chrome media emulation for reduced motion/transparency. Assertions verify matching media queries, opaque window/dialog fills, no backdrop filter, stopped indeterminate animation and reduced skeleton duration. Cool and neutral backgrounds show broad variation; bright includes detail. These are browser-only environments. |
+| Existing forms | 12 `ui-gallery-form-{project-add,project-settings,auto-merge}-{light,dark}-{900,1440}.png` captures verify 16 px default gaps and reachable footers in existing consumers. No form is submitted. |
+| Final capture correction | Visual inspection found the ModeToggle moon icon positioned outside its scrolled-away button. The trigger now establishes its positioning context. All 192 gallery, 72 preference and 12 existing-form captures were refreshed after the correction; they replace earlier attempts. |
+
+Completed scripts: `/private/tmp/harbor-gallery-{qa,preferences,forms}.py`. Final logs: `harbor-gallery-matrix-final.log`, `harbor-gallery-preferences-final.log`, `harbor-gallery-forms-final.log`. A first radio harness released ArrowDown before Radix's deferred focus selected the next item; holding the key through the selection verifies actual keyboard behavior. No vendor behavior was changed. There are 276 distinct current captures in this batch. Native material and the remaining feature/action inventory are still open.
+
+Final shared/gallery checks pass: `pnpm check` (513 tests/114 files, full-source lint/format/build) and separate `tsc -b`. Logs: `/private/tmp/harbor-gallery-verified-check.log`, `harbor-gallery-verified-tsc.log`.

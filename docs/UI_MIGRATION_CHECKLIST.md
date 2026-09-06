@@ -10,7 +10,7 @@ Status: in progress. A source inventory is not visual acceptance. Every row belo
 - [x] Baseline `pnpm check` (454 tests, lint, formatting, build) and Rust `cargo check` pass.
 - [ ] Same-content before/after captures in `output/playwright/`.
 - [ ] Formal tokens and shared navigation/control/overlay migration.
-- [x] React production-component gallery established with minimal usage examples (additional component/state coverage remains below).
+- [x] React production-component gallery includes all local primitive families and their major states, with usage examples and browser verification.
 - [ ] All owned pages and overlays inspected and migrated (inventory below).
 - [ ] Light/dark, English/Chinese, 900 px/wide desktop, long text and dense lists.
 - [ ] Keyboard, menu search, focus, scroll containment, list/detail return/cache behavior.
@@ -77,42 +77,42 @@ Generated from existing JSX-bearing production files at task start. Each file mu
 | `src/pages/settings.tsx` | Audited shared material, layout and keyboard controls | Settings/About/titlebar matrix in UI_VERIFICATION.md; native material gate remains |
 | `src/components/language-toggle.tsx` | Audited shared material, layout and keyboard controls | Settings/About/titlebar matrix in UI_VERIFICATION.md; native material gate remains |
 | `src/components/main-title-bar.tsx` | Audited shared material, layout and keyboard controls | Settings/About/titlebar matrix in UI_VERIFICATION.md; native material gate remains |
-| `src/components/mode-toggle.tsx` | Pending | Pending |
+| `src/components/mode-toggle.tsx` | Localized checked theme menu and icon positioning | Gallery theme switching, keyboard/focus and scroll verification |
 | `src/components/shortcut-input.tsx` | Audited shared material, layout and keyboard controls | Settings/About/titlebar matrix in UI_VERIFICATION.md; native material gate remains |
 | `src/components/theme-provider.tsx` | Audited shared material, layout and keyboard controls | Settings/About/titlebar matrix in UI_VERIFICATION.md; native material gate remains |
 | `src/components/title-bar.tsx` | Audited shared material, layout and keyboard controls | Settings/About/titlebar matrix in UI_VERIFICATION.md; native material gate remains |
-| `src/components/ui/alert-dialog.tsx` | Shared defaults audited and migrated | Gallery basics inspected; feature-specific states pending |
-| `src/components/ui/alert.tsx` | Shared defaults audited and migrated | Gallery basics inspected; feature-specific states pending |
-| `src/components/ui/avatar.tsx` | Pending | Pending |
-| `src/components/ui/badge.tsx` | Shared defaults audited and migrated | Gallery basics inspected; feature-specific states pending |
-| `src/components/ui/breadcrumb.tsx` | Pending | Pending |
-| `src/components/ui/button.tsx` | Shared defaults audited and migrated | Gallery basics inspected; feature-specific states pending |
-| `src/components/ui/card.tsx` | Shared defaults audited and migrated | Gallery basics inspected; feature-specific states pending |
-| `src/components/ui/chart.tsx` | Tick selector, semantic colors, focus and tooltip migrated | Insights named charts and keyboard tooltip matrix verified |
-| `src/components/ui/checkbox.tsx` | Shared defaults audited and migrated | Gallery basics inspected; feature-specific states pending |
-| `src/components/ui/collapsible.tsx` | Pending | Pending |
-| `src/components/ui/command.tsx` | Shared defaults audited and migrated | Gallery basics inspected; feature-specific states pending |
-| `src/components/ui/dialog.tsx` | Shared defaults audited and migrated | Gallery basics inspected; feature-specific states pending |
-| `src/components/ui/dropdown-menu.tsx` | Shared defaults audited and migrated | Gallery basics inspected; feature-specific states pending |
-| `src/components/ui/empty.tsx` | Pending | Pending |
-| `src/components/ui/field.tsx` | Pending | Pending |
-| `src/components/ui/input.tsx` | Shared defaults audited and migrated | Gallery basics inspected; feature-specific states pending |
-| `src/components/ui/label.tsx` | Pending | Pending |
-| `src/components/ui/pagination.tsx` | Pending | Pending |
-| `src/components/ui/popover.tsx` | Shared defaults audited and migrated | Gallery basics inspected; feature-specific states pending |
-| `src/components/ui/progress.tsx` | Pending | Pending |
-| `src/components/ui/radio-group.tsx` | Shared defaults audited and migrated | Gallery basics inspected; feature-specific states pending |
-| `src/components/ui/scroll-area.tsx` | Pending | Pending |
-| `src/components/ui/select.tsx` | Shared defaults audited and migrated | Gallery basics inspected; feature-specific states pending |
-| `src/components/ui/separator.tsx` | Pending | Pending |
-| `src/components/ui/sheet.tsx` | Shared defaults audited and migrated | Gallery basics inspected; feature-specific states pending |
-| `src/components/ui/skeleton.tsx` | Pending | Pending |
-| `src/components/ui/sonner.tsx` | Shared defaults audited and migrated | Gallery basics inspected; feature-specific states pending |
-| `src/components/ui/spinner.tsx` | Shared defaults audited and migrated | Gallery basics inspected; feature-specific states pending |
-| `src/components/ui/table.tsx` | Pending | Pending |
-| `src/components/ui/tabs.tsx` | Shared defaults audited and migrated | Gallery basics inspected; feature-specific states pending |
-| `src/components/ui/textarea.tsx` | Shared defaults audited and migrated | Gallery basics inspected; feature-specific states pending |
-| `src/components/ui/tooltip.tsx` | Shared defaults audited and migrated | Gallery basics inspected; feature-specific states pending |
+| `src/components/ui/alert-dialog.tsx` | Audited shared semantic material, layout and applicable accessibility defaults | Complete gallery matrix and feature matrices in UI_VERIFICATION.md; native material gate remains |
+| `src/components/ui/alert.tsx` | Audited shared semantic material, layout and applicable accessibility defaults | Complete gallery matrix and feature matrices in UI_VERIFICATION.md; native material gate remains |
+| `src/components/ui/avatar.tsx` | Audited shared semantic material, layout and applicable accessibility defaults | Complete gallery matrix and feature matrices in UI_VERIFICATION.md; native material gate remains |
+| `src/components/ui/badge.tsx` | Audited shared semantic material, layout and applicable accessibility defaults | Complete gallery matrix and feature matrices in UI_VERIFICATION.md; native material gate remains |
+| `src/components/ui/breadcrumb.tsx` | Audited shared semantic material, layout and applicable accessibility defaults | Complete gallery matrix and feature matrices in UI_VERIFICATION.md; native material gate remains |
+| `src/components/ui/button.tsx` | Audited shared semantic material, layout and applicable accessibility defaults | Complete gallery matrix and feature matrices in UI_VERIFICATION.md; native material gate remains |
+| `src/components/ui/card.tsx` | Audited shared semantic material, layout and applicable accessibility defaults | Complete gallery matrix and feature matrices in UI_VERIFICATION.md; native material gate remains |
+| `src/components/ui/chart.tsx` | Audited shared semantic material, layout and applicable accessibility defaults | Complete gallery matrix and feature matrices in UI_VERIFICATION.md; native material gate remains |
+| `src/components/ui/checkbox.tsx` | Audited shared semantic material, layout and applicable accessibility defaults | Complete gallery matrix and feature matrices in UI_VERIFICATION.md; native material gate remains |
+| `src/components/ui/collapsible.tsx` | Audited shared semantic material, layout and applicable accessibility defaults | Complete gallery matrix and feature matrices in UI_VERIFICATION.md; native material gate remains |
+| `src/components/ui/command.tsx` | Audited shared semantic material, layout and applicable accessibility defaults | Complete gallery matrix and feature matrices in UI_VERIFICATION.md; native material gate remains |
+| `src/components/ui/dialog.tsx` | Audited shared semantic material, layout and applicable accessibility defaults | Complete gallery matrix and feature matrices in UI_VERIFICATION.md; native material gate remains |
+| `src/components/ui/dropdown-menu.tsx` | Audited shared semantic material, layout and applicable accessibility defaults | Complete gallery matrix and feature matrices in UI_VERIFICATION.md; native material gate remains |
+| `src/components/ui/empty.tsx` | Audited shared semantic material, layout and applicable accessibility defaults | Complete gallery matrix and feature matrices in UI_VERIFICATION.md; native material gate remains |
+| `src/components/ui/field.tsx` | Audited shared semantic material, layout and applicable accessibility defaults | Complete gallery matrix and feature matrices in UI_VERIFICATION.md; native material gate remains |
+| `src/components/ui/input.tsx` | Audited shared semantic material, layout and applicable accessibility defaults | Complete gallery matrix and feature matrices in UI_VERIFICATION.md; native material gate remains |
+| `src/components/ui/label.tsx` | Audited shared semantic material, layout and applicable accessibility defaults | Complete gallery matrix and feature matrices in UI_VERIFICATION.md; native material gate remains |
+| `src/components/ui/pagination.tsx` | Audited shared semantic material, layout and applicable accessibility defaults | Complete gallery matrix and feature matrices in UI_VERIFICATION.md; native material gate remains |
+| `src/components/ui/popover.tsx` | Audited shared semantic material, layout and applicable accessibility defaults | Complete gallery matrix and feature matrices in UI_VERIFICATION.md; native material gate remains |
+| `src/components/ui/progress.tsx` | Audited shared semantic material, layout and applicable accessibility defaults | Complete gallery matrix and feature matrices in UI_VERIFICATION.md; native material gate remains |
+| `src/components/ui/radio-group.tsx` | Audited shared semantic material, layout and applicable accessibility defaults | Complete gallery matrix and feature matrices in UI_VERIFICATION.md; native material gate remains |
+| `src/components/ui/scroll-area.tsx` | Audited shared semantic material, layout and applicable accessibility defaults | Complete gallery matrix and feature matrices in UI_VERIFICATION.md; native material gate remains |
+| `src/components/ui/select.tsx` | Audited shared semantic material, layout and applicable accessibility defaults | Complete gallery matrix and feature matrices in UI_VERIFICATION.md; native material gate remains |
+| `src/components/ui/separator.tsx` | Audited shared semantic material, layout and applicable accessibility defaults | Complete gallery matrix and feature matrices in UI_VERIFICATION.md; native material gate remains |
+| `src/components/ui/sheet.tsx` | Audited shared semantic material, layout and applicable accessibility defaults | Complete gallery matrix and feature matrices in UI_VERIFICATION.md; native material gate remains |
+| `src/components/ui/skeleton.tsx` | Audited shared semantic material, layout and applicable accessibility defaults | Complete gallery matrix and feature matrices in UI_VERIFICATION.md; native material gate remains |
+| `src/components/ui/sonner.tsx` | Audited shared semantic material, layout and applicable accessibility defaults | Complete gallery matrix and feature matrices in UI_VERIFICATION.md; native material gate remains |
+| `src/components/ui/spinner.tsx` | Audited shared semantic material, layout and applicable accessibility defaults | Complete gallery matrix and feature matrices in UI_VERIFICATION.md; native material gate remains |
+| `src/components/ui/table.tsx` | Audited shared semantic material, layout and applicable accessibility defaults | Complete gallery matrix and feature matrices in UI_VERIFICATION.md; native material gate remains |
+| `src/components/ui/tabs.tsx` | Audited shared semantic material, layout and applicable accessibility defaults | Complete gallery matrix and feature matrices in UI_VERIFICATION.md; native material gate remains |
+| `src/components/ui/textarea.tsx` | Audited shared semantic material, layout and applicable accessibility defaults | Complete gallery matrix and feature matrices in UI_VERIFICATION.md; native material gate remains |
+| `src/components/ui/tooltip.tsx` | Audited shared semantic material, layout and applicable accessibility defaults | Complete gallery matrix and feature matrices in UI_VERIFICATION.md; native material gate remains |
 | `src/components/updater-dialog.tsx` | Audited shared material, layout and keyboard controls | Settings/About/titlebar matrix in UI_VERIFICATION.md; native material gate remains |
 | `src/components/window-frame.tsx` | Audited shared material, layout and keyboard controls | Settings/About/titlebar matrix in UI_VERIFICATION.md; native material gate remains |
 | `src/features/github/github-actions-artifacts.tsx` | Audited; shared material/metadata/feedback applied where needed | Repository-tab matrix and listed states/actions in UI_VERIFICATION.md; advanced variants are recorded there |
@@ -253,7 +253,7 @@ Generated from existing JSX-bearing production files at task start. Each file mu
 | `src/features/workspace/harbor-workspace.tsx` | Audited shared material, layout, keyboard and asynchronous context handling | Context/auth matrix in UI_VERIFICATION.md; native material gate remains |
 
 | `src/features/workspace/navigation-button.tsx` | Extracted and reused by all primary controls, including Settings | Gallery, More menu, window and context matrices verified |
-| `src/dev/component-gallery.tsx` | Production component examples | Light/dark controls, dialog and command captures; additional examples pending |
+| `src/dev/component-gallery.tsx` | All local primitive families use production components | 192 gallery and 72 preference/background captures; browser assertions in UI_VERIFICATION.md |
 
 ## Repository batch evidence
 

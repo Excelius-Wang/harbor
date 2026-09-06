@@ -1,16 +1,91 @@
 import { useState, type ReactNode } from "react";
-import { CheckCircle2, CircleAlert, Compass, GitMerge, Inbox, Search } from "lucide-react";
+import {
+  CheckCircle2,
+  CircleAlert,
+  Compass,
+  GitMerge,
+  Inbox,
+  Search,
+  ChevronDown,
+  Info,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { WindowFrame } from "@/components/window-frame";
 import { TitleBar } from "@/components/title-bar";
-import { useTheme } from "@/components/theme-provider";
+import { ModeToggle } from "@/components/mode-toggle";
+import { LanguageToggle } from "@/components/language-toggle";
+import { toast } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
+import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+  FieldDescription,
+  FieldError,
+  FieldSet,
+  FieldLegend,
+  FieldSeparator,
+} from "@/components/ui/field";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+  BreadcrumbEllipsis,
+} from "@/components/ui/breadcrumb";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationPrevious,
+  PaginationLink,
+  PaginationNext,
+  PaginationEllipsis,
+} from "@/components/ui/pagination";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableCaption,
+} from "@/components/ui/table";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarGroup, AvatarGroupCount } from "@/components/ui/avatar";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Empty,
@@ -56,6 +131,14 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuCheckboxItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
 import {
   CommandDialog,
@@ -92,13 +175,18 @@ function Example({
 }
 
 function Gallery() {
-  const { t, i18n } = useTranslation();
-  const { theme, setTheme } = useTheme();
+  const { t } = useTranslation();
   const [commandOpen, setCommandOpen] = useState(false);
+  const [page, setPage] = useState(2);
+  const [menuChecked, setMenuChecked] = useState(true);
+  const [menuValue, setMenuValue] = useState("public");
+  const [rowSelected, setRowSelected] = useState(true);
+  const [partialChecked, setPartialChecked] = useState<boolean | "indeterminate">("indeterminate");
   const [filters, setFilters] = useState(DEFAULT_TRENDING_FILTERS);
   const copy = (key: string) => t(`uiGallery.${key}`);
   return (
-    <ScrollArea className="min-h-0 flex-1">
+    <ScrollArea className="min-h-0 flex-1" constrainContentWidth>
+      <Toaster closeButton />
       <div className="mx-auto flex max-w-[1120px] flex-col px-6 pb-8">
         <header className="harbor-subtle-divider flex flex-wrap items-start justify-between gap-4 border-b py-6">
           <div className="flex flex-col gap-2">
@@ -106,27 +194,18 @@ function Gallery() {
             <p className="text-muted-foreground text-sm">{copy("description")}</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            >
-              {copy("theme")}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void i18n.changeLanguage(i18n.language.startsWith("zh") ? "en" : "zh")}
-            >
-              中文 / English
-            </Button>
+            <ModeToggle />
+            <LanguageToggle />
           </div>
         </header>
         <Example
           title={copy("navigation")}
-          usage={'<WorkspacePageHeader title="Issues" contained />'}
+          usage={'<WorkspacePageHeader title={t("workspace.nav.issues")} contained />'}
         >
-          <WorkspacePageHeader title="Issues" description={t("workspace.issues.eyebrow")}>
+          <WorkspacePageHeader
+            title={t("workspace.nav.issues")}
+            description={t("workspace.issues.eyebrow")}
+          >
             <Button variant="outline" size="sm">
               {t("common.refresh")}
             </Button>
@@ -156,9 +235,15 @@ function Gallery() {
             </Field>
             <Field data-invalid>
               <FieldLabel htmlFor="gallery-invalid">{copy("invalid")}</FieldLabel>
-              <Input id="gallery-invalid" aria-invalid defaultValue="harbor / workspace" />
+              <Input
+                id="gallery-invalid"
+                aria-invalid
+                aria-describedby="gallery-validation"
+                defaultValue="harbor / workspace"
+              />
+              <FieldError id="gallery-validation">{copy("validation")}</FieldError>
             </Field>
-            <Field>
+            <Field data-disabled>
               <FieldLabel htmlFor="gallery-disabled">{copy("disabled")}</FieldLabel>
               <Input id="gallery-disabled" disabled defaultValue="harbor-preview" />
             </Field>
@@ -172,21 +257,56 @@ function Gallery() {
             </Field>
           </FieldGroup>
         </Example>
+        <Example title={copy("choices")} usage="<FieldSet> · <RadioGroup> · <FieldError>">
+          <FieldGroup className="max-w-xl">
+            <FieldSet>
+              <FieldLegend variant="label">{copy("radioGroup")}</FieldLegend>
+              <RadioGroup defaultValue="public" aria-label={copy("radioGroup")}>
+                <Field orientation="horizontal">
+                  <RadioGroupItem id="gallery-public" value="public" />
+                  <FieldLabel htmlFor="gallery-public">{copy("public")}</FieldLabel>
+                </Field>
+                <Field orientation="horizontal">
+                  <RadioGroupItem id="gallery-private" value="private" />
+                  <FieldLabel htmlFor="gallery-private">{copy("private")}</FieldLabel>
+                </Field>
+                <Field orientation="horizontal" data-disabled>
+                  <RadioGroupItem id="gallery-radio-disabled" value="disabled" disabled />
+                  <FieldLabel htmlFor="gallery-radio-disabled">{copy("disabled")}</FieldLabel>
+                </Field>
+              </RadioGroup>
+            </FieldSet>
+            <FieldSeparator>{copy("divider")}</FieldSeparator>
+            <Field orientation="horizontal">
+              <Checkbox
+                id="gallery-partial"
+                checked={partialChecked}
+                onCheckedChange={setPartialChecked}
+              />
+              <FieldLabel htmlFor="gallery-partial">{copy("indeterminate")}</FieldLabel>
+            </Field>
+            <Field orientation="horizontal" data-disabled>
+              <Checkbox id="gallery-disabled-check" disabled checked />
+              <FieldLabel htmlFor="gallery-disabled-check">{copy("disabled")}</FieldLabel>
+            </Field>
+            <FieldDescription>{copy("longText")}</FieldDescription>
+          </FieldGroup>
+        </Example>
         <Example
           title={copy("navigation")}
           usage={'<NavigationButton icon={Compass} label="Discover" active />'}
         >
-          <div className="flex max-w-56 flex-col gap-1">
+          <div className="workspace-wide:w-[226px] flex w-[58px] flex-col gap-1">
             <NavigationButton icon={Compass} label={t("workspace.nav.discover")} active />
             <NavigationButton icon={Inbox} label={t("workspace.nav.notifications")} />
             <NavigationButton icon={Search} label={copy("disabled")} disabled />
           </div>
           <Tabs defaultValue="code">
             <TabsList variant="line">
-              <TabsTrigger value="code">Code</TabsTrigger>
-              <TabsTrigger value="issues">Issues</TabsTrigger>
+              <TabsTrigger value="code">{copy("code")}</TabsTrigger>
+              <TabsTrigger value="issues">{t("workspace.nav.issues")}</TabsTrigger>
               <TabsTrigger value="checks" disabled>
-                Checks
+                {copy("checks")}
               </TabsTrigger>
             </TabsList>
             <TabsContent value="code">
@@ -225,6 +345,59 @@ function Gallery() {
                 </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">{copy("menuOptions")}</Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuGroup>
+                  <DropdownMenuCheckboxItem checked={menuChecked} onCheckedChange={setMenuChecked}>
+                    {copy("checked")}
+                  </DropdownMenuCheckboxItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuRadioGroup value={menuValue} onValueChange={setMenuValue}>
+                  <DropdownMenuRadioItem value="public">{copy("public")}</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="private">{copy("private")}</DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>{copy("menuSub")}</DropdownMenuSubTrigger>
+                    <DropdownMenuPortal>
+                      <DropdownMenuSubContent>
+                        <DropdownMenuGroup>
+                          <DropdownMenuItem>{t("common.edit")}</DropdownMenuItem>
+                          <DropdownMenuItem disabled>{copy("disabled")}</DropdownMenuItem>
+                        </DropdownMenuGroup>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuPortal>
+                  </DropdownMenuSub>
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline">{copy("popover")}</Button>
+              </PopoverTrigger>
+              <PopoverContent>
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel htmlFor="gallery-popover-input">{copy("search")}</FieldLabel>
+                    <Input id="gallery-popover-input" placeholder={copy("placeholder")} />
+                  </Field>
+                  <FieldDescription>{copy("longText")}</FieldDescription>
+                </FieldGroup>
+              </PopoverContent>
+            </Popover>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon" aria-label={copy("details")}>
+                  <Info />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{copy("longText")}</TooltipContent>
+            </Tooltip>
             <Button variant="outline" onClick={() => setCommandOpen(true)}>
               {copy("command")}
             </Button>
@@ -265,6 +438,21 @@ function Gallery() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline">{copy("confirmation")}</Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent size="sm">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{copy("confirmation")}</AlertDialogTitle>
+                  <AlertDialogDescription>{copy("longText")}</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                  <AlertDialogAction variant="destructive">{copy("destructive")}</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="outline">{copy("sheet")}</Button>
@@ -274,9 +462,163 @@ function Gallery() {
                   <SheetTitle>{copy("sheet")}</SheetTitle>
                   <SheetDescription>{copy("longText")}</SheetDescription>
                 </SheetHeader>
+                <ScrollArea className="min-h-0 flex-1 px-4 pb-4" constrainContentWidth>
+                  <div className="flex flex-col gap-4">
+                    {Array.from({ length: 12 }, (_, index) => (
+                      <p key={index} className="text-sm leading-relaxed">
+                        {copy("longText")}
+                      </p>
+                    ))}
+                  </div>
+                </ScrollArea>
               </SheetContent>
             </Sheet>
           </div>
+        </Example>
+        <Example title={copy("data")} usage="<Breadcrumb> · <Table> · <Pagination> · <Card>">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="#" onClick={(event) => event.preventDefault()}>
+                  harbor-preview
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbEllipsis />
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>harbor</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+          <Table>
+            <TableCaption>{copy("tableCaption")}</TableCaption>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-10">
+                  <span className="sr-only">{copy("selected")}</span>
+                </TableHead>
+                <TableHead>{copy("item")}</TableHead>
+                <TableHead>{copy("status")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow data-state={rowSelected ? "selected" : undefined}>
+                <TableCell>
+                  <Checkbox
+                    checked={rowSelected}
+                    onCheckedChange={(checked) => setRowSelected(checked === true)}
+                    aria-label={copy("selected")}
+                  />
+                </TableCell>
+                <TableCell className="whitespace-normal">
+                  <p className="font-medium">harbor-preview/accessible-desktop-workspace</p>
+                  <p className="text-muted-foreground mt-1 max-w-xl text-xs leading-relaxed">
+                    {copy("longText")}
+                  </p>
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline">{copy("public")}</Badge>
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell />
+                <TableCell>harbor-preview/design-system</TableCell>
+                <TableCell>
+                  <Badge variant="secondary">{copy("private")}</Badge>
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    setPage(Math.max(1, page - 1));
+                  }}
+                />
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationLink
+                  href="#"
+                  isActive
+                  aria-label={t("workspace.repositories.pageNumber", { page })}
+                  onClick={(event) => event.preventDefault()}
+                >
+                  {page}
+                </PaginationLink>
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationEllipsis />
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    setPage(page + 1);
+                  }}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+          <Card className="max-w-xl">
+            <CardHeader>
+              <CardTitle>Harbor</CardTitle>
+              <CardDescription>{copy("longText")}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Collapsible>
+                <CollapsibleTrigger asChild>
+                  <Button variant="outline">
+                    {copy("details")}
+                    <ChevronDown data-icon="inline-end" />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <p className="pt-4 text-sm leading-relaxed">{copy("longText")}</p>
+                </CollapsibleContent>
+              </Collapsible>
+            </CardContent>
+            <CardFooter>
+              <AvatarGroup>
+                <Avatar>
+                  <AvatarFallback>HB</AvatarFallback>
+                </Avatar>
+                <Avatar>
+                  <AvatarFallback>UI</AvatarFallback>
+                </Avatar>
+                <AvatarGroupCount>+2</AvatarGroupCount>
+              </AvatarGroup>
+            </CardFooter>
+          </Card>
+        </Example>
+        <Example title={copy("chart")} usage="<ChartContainer> · <ChartTooltipContent>">
+          <ChartContainer
+            className="h-48 w-full max-w-xl"
+            config={{ changes: { label: copy("series"), color: "var(--primary)" } }}
+          >
+            <BarChart
+              data={[
+                { day: "01", changes: 8 },
+                { day: "02", changes: 12 },
+                { day: "03", changes: 5 },
+                { day: "04", changes: 16 },
+              ]}
+              accessibilityLayer
+              aria-label={copy("chart")}
+            >
+              <CartesianGrid vertical={false} />
+              <XAxis dataKey="day" tickLine={false} axisLine={false} />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <Bar dataKey="changes" fill="var(--color-changes)" isAnimationActive={false} />
+            </BarChart>
+          </ChartContainer>
         </Example>
         <Example title={copy("states")} usage={"<Badge /> · <Alert /> · <Progress /> · <Empty />"}>
           <div className="flex flex-wrap items-center gap-2">
@@ -285,10 +627,10 @@ function Gallery() {
             </Avatar>
             <Badge variant="secondary">{copy("secondary")}</Badge>
             <Badge variant="outline">
-              <CheckCircle2 className="text-success" /> Open
+              <CheckCircle2 className="text-success" /> {copy("open")}
             </Badge>
             <Badge variant="outline">
-              <GitMerge className="text-merged" /> Merged
+              <GitMerge className="text-merged" /> {copy("merged")}
             </Badge>
             <Badge variant="destructive">{copy("destructive")}</Badge>
           </div>
@@ -297,11 +639,28 @@ function Gallery() {
             <AlertTitle>{copy("error")}</AlertTitle>
             <AlertDescription>{copy("retry")}</AlertDescription>
           </Alert>
-          <Progress value={65} aria-label={copy("loading")} />
+          <p className="text-sm">{copy("progress")} · 150 / 200</p>
+          <Progress value={150} max={200} aria-label={copy("progress")} />
           <Progress aria-label={copy("loading")} />
           <div className="flex max-w-xl flex-col gap-2">
             <Skeleton className="h-4 w-2/3" />
             <Skeleton className="h-4 w-full" />
+          </div>
+          <Separator />
+          <div className="flex flex-wrap items-center gap-3">
+            <Label>{copy("toast")}</Label>
+            <Button
+              variant="outline"
+              onClick={() => toast.success(copy("toastSuccess"), { description: copy("longText") })}
+            >
+              {copy("toastSuccess")}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => toast.error(copy("toastError"), { description: copy("longText") })}
+            >
+              {copy("toastError")}
+            </Button>
           </div>
           <Empty>
             <EmptyHeader>
