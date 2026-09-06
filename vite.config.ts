@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig, normalizePath } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
@@ -15,8 +15,10 @@ export default defineConfig(({ command, mode }) => ({
         name: "harbor-ui-preview",
         enforce: "pre",
         transform(code, id) {
-          const sourceRoot = path.resolve(__dirname, "src") + "/";
-          if (!id.startsWith(sourceRoot) || id.startsWith(sourceRoot + "dev/")) return;
+          const sourceRoot = normalizePath(path.resolve(__dirname, "src")) + "/";
+          const normalizedId = normalizePath(id);
+          if (!normalizedId.startsWith(sourceRoot) || normalizedId.startsWith(sourceRoot + "dev/"))
+            return;
           const transformed = code.replace(
             /(["'])@tauri-apps\/api\/core\1/g,
             '"@/dev/preview-core"'

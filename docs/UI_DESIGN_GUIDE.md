@@ -19,25 +19,25 @@ Harbor 的视觉方向是**带冷蓝底色的半透明玻璃、柔和的边缘�
 
 ### 侧栏采用图四
 
-![已选侧栏参考：原笔记图四，展示展开与收起两种形态](design/references/sidebar-04.webp)
+[已选侧栏参考：原笔记图四，展示展开与收起两种形态的来源与本地缓存说明](design/references/README.md)
 
 采用图中的导航分组、紧凑排列及两种宽度之间的对应关系。图中的黑色底与偏紫选中区域不改变 Harbor 的冷蓝灰配色。搜索控件可以参考其层级与快捷键提示，Harbor 的全局搜索继续位于标题栏。原笔记的其他侧栏方案不作为并行标准。
 
 ### 整页层次参考 LeonAnd
 
-![已选整页参考：LeonAnd 玻璃工作台](design/references/leonand-workspace.webp)
+[已选整页参考：LeonAnd 玻璃工作台的来源与本地缓存说明](design/references/README.md)
 
 侧栏和顶部工具区共享背景色彩，内容面板通过更稳定的填充承载文字。Harbor 采用这种表面关系，并保留已有导航、内容密度和页面宽度规则。图中的大标题、营收图表与装饰背景不决定 Harbor 的页面结构。
 
 ### 音量面板：看材质、控件和颜色分工
 
-![用户选定的外部参考：Vorssaint 音量面板](design/references/vorssaint-volume.jpg)
+[用户选定的外部参考：Vorssaint 音量面板的来源与本地缓存说明](design/references/README.md)
 
 外框有很细的亮边，面板内部带冷蓝灰色。图标分段和音量区域略亮于外层，边缘柔和。蓝色标识选中项，绿色标识运行状态，橙色用于特定数值。大部分面积仍然留给中性的背景和文字。
 
 ### 系统面板：看背景透入和长面板的层次
 
-![用户选定的外部参考：Vorssaint 系统面板](design/references/vorssaint-system.jpg)
+[用户选定的外部参考：Vorssaint 系统面板的来源与本地缓存说明](design/references/README.md)
 
 面板右侧能够看见背景带来的蓝色明暗变化。温度组、图表和底部操作靠浅薄的表面、间距与细分隔线区分。这里参考的是材质和层次；Harbor 的仓库、开发者、Issues 和 PR 仍然沿用适合阅读的列表结构。
 

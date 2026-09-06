@@ -451,7 +451,8 @@
     color: var(--foreground);
   }
 
-  .harbor-segmented [data-slot="tabs-trigger"][data-state="active"] {
+  .harbor-segmented [data-slot="tabs-trigger"][data-state="active"],
+  .harbor-segmented [role="radio"][data-state="checked"] {
     border-color: transparent;
     background: var(--harbor-selected-fill);
     box-shadow: inset 0 1px 0 var(--harbor-glass-edge);
@@ -515,6 +516,7 @@
   --diff-code-selected-background-color: color-mix(in srgb, var(--primary) 12%, transparent);
   --diff-gutter-selected-background-color: color-mix(in srgb, var(--primary) 16%, transparent);
   --diff-omit-gutter-line-color: var(--muted-foreground);
+
   font-size: 12px;
   line-height: 1.55;
 }

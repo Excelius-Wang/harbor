@@ -25,7 +25,7 @@ export const NavigationButton = forwardRef<HTMLButtonElement, NavigationButtonPr
             type="button"
             className="harbor-nav-item focus-visible:ring-ring focus-visible:ring-offset-background relative flex h-10 w-full items-center gap-3 rounded-lg px-3 text-left text-[13px] font-medium transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
             aria-current={active ? "page" : undefined}
-            aria-label={label}
+            aria-label={caption && caption !== label ? `${label}: ${caption}` : label}
           >
             <Icon className="size-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />
             <span

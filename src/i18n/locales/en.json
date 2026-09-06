@@ -2839,7 +2839,8 @@
       "upvoteDiscussionComment": "Upvote comment",
       "backToCodeSearch": "Back to search results",
       "diffView": "Diff layout",
-      "codeReference": "Branch or tag"
+      "codeReference": "Branch or tag",
+      "commitFileChanges": "Commit changes"
     },
     "filters": {
       "period": "Time range",
@@ -2955,7 +2956,9 @@
   "language": {
     "toggle": "Switch language",
     "en": "English",
-    "zh": "中文"
+    "zh": "中文",
+    "switchToEnglish": "Switch to English",
+    "switchToChinese": "Switch to Chinese"
   },
   "tray": {
     "show": "Show Window",

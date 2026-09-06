@@ -34,7 +34,9 @@ describe("shortcut capture keyboard access", () => {
         <button>After</button>
       </TooltipProvider>
     );
-    const capture = screen.getByRole("button", { name: "Show Main Window" });
+    const capture = screen.getByRole("button", { name: /^Show Main Window/ });
+    expect(capture.textContent).toContain("Cmd+Shift+H");
+    expect(screen.getByRole("button", { name: /Show Main Window.*Cmd\+Shift\+H/ })).toBe(capture);
     capture.focus();
     await user.tab({ shift: true });
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "Before" }));
@@ -52,7 +54,7 @@ describe("shortcut capture keyboard access", () => {
     const onChange = vi.fn();
     const user = userEvent.setup();
     render(<ShortcutInput onChange={onChange} />);
-    screen.getByRole("button", { name: "Show Main Window" }).focus();
+    screen.getByRole("button", { name: /^Show Main Window/ }).focus();
     await user.keyboard("{Control>}{Shift>}h{/Shift}{/Control}");
     expect(onChange).toHaveBeenCalledWith("Ctrl+Shift+H");
     await user.keyboard("{Backspace}");

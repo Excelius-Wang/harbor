@@ -10,7 +10,7 @@ function Progress({
   ...props
 }: React.ComponentProps<typeof ProgressPrimitive.Root>) {
   const limit = Number.isFinite(max) && max > 0 ? max : 100
-  const current = value != null && Number.isFinite(value) && value >= 0 && value <= limit ? value : null
+  const current = value != null && Number.isFinite(value) ? Math.min(limit, Math.max(0, value)) : null
   const indeterminate = current === null
 
   return (

@@ -2832,7 +2832,8 @@
       "upvoteDiscussionComment": "赞同此评论",
       "backToCodeSearch": "返回搜索结果",
       "diffView": "差异布局",
-      "codeReference": "分支或标签"
+      "codeReference": "分支或标签",
+      "commitFileChanges": "提交改动"
     },
     "filters": {
       "period": "时间范围",
@@ -2948,7 +2949,9 @@
   "language": {
     "toggle": "切换语言",
     "en": "English",
-    "zh": "中文"
+    "zh": "中文",
+    "switchToEnglish": "切换为英文",
+    "switchToChinese": "切换为中文"
   },
   "tray": {
     "show": "显示窗口",

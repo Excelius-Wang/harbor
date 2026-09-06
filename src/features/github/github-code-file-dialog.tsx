@@ -274,7 +274,7 @@ export function GitHubCodeFileDialog({
             {mutation.isPending ? <Spinner data-icon="inline-start" /> : null}
             {mutation.isPending
               ? t("workspace.repositories.committingRepositoryFile")
-              : t("workspace.repositories.commitChanges")}
+              : t("workspace.repositories.commitFileChanges")}
           </Button>
         </DialogFooter>
       </DialogContent>

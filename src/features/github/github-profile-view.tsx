@@ -373,12 +373,12 @@ function ConnectionList({
         <Alert variant="destructive">
           <CircleAlert />
           <AlertTitle>{t("workspace.profile.connectionsFailed")}</AlertTitle>
-          <AlertDescription>
-            {parseIpcError(result.error).message}
+          <AlertDescription>{parseIpcError(result.error).message}</AlertDescription>
+          <div className="col-start-2 mt-2">
             <Button variant="outline" size="sm" onClick={() => void result.refetch()}>
               {t("common.retry")}
             </Button>
-          </AlertDescription>
+          </div>
         </Alert>
       ) : users.length === 0 ? (
         <p className="text-muted-foreground py-4 text-center text-xs">
@@ -523,7 +523,6 @@ export function GitHubProfileView({
           ) : undefined
         }
       >
-        {" "}
         <Button
           variant="outline"
           size="sm"
@@ -599,8 +598,8 @@ export function GitHubProfileView({
                 <Alert variant="destructive">
                   <CircleAlert />
                   <AlertTitle>{t("workspace.profile.contributionsFailed")}</AlertTitle>
-                  <AlertDescription>
-                    {parseIpcError(contributions.error).message}
+                  <AlertDescription>{parseIpcError(contributions.error).message}</AlertDescription>
+                  <div className="col-start-2 mt-2">
                     <Button
                       variant="outline"
                       size="sm"
@@ -608,7 +607,7 @@ export function GitHubProfileView({
                     >
                       {t("common.retry")}
                     </Button>
-                  </AlertDescription>
+                  </div>
                 </Alert>
               ) : contributions.data ? (
                 <ContributionCalendar summary={contributions.data} />
@@ -644,12 +643,12 @@ export function GitHubProfileView({
                   <Alert variant="destructive">
                     <CircleAlert />
                     <AlertTitle>{t("workspace.profile.activityFailed")}</AlertTitle>
-                    <AlertDescription>
-                      {parseIpcError(activity.error).message}
+                    <AlertDescription>{parseIpcError(activity.error).message}</AlertDescription>
+                    <div className="col-start-2 mt-2">
                       <Button variant="outline" size="sm" onClick={() => void activity.refetch()}>
                         {t("common.retry")}
                       </Button>
-                    </AlertDescription>
+                    </div>
                   </Alert>
                 ) : activities.length === 0 ? (
                   <p className="text-muted-foreground py-8 text-center text-xs">

@@ -82,7 +82,7 @@ function WorkflowJob({
           >
             <GitHubExecutionStatusIcon status={job.status} conclusion={job.conclusion} />
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13px] font-medium" title={job.name}>
+              <span className="block text-[13px] font-medium wrap-anywhere" title={job.name}>
                 {job.name}
               </span>
               <span className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-2 text-[11px] font-normal">

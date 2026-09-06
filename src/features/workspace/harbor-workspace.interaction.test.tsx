@@ -127,7 +127,7 @@ describe("HarborWorkspace navigation", () => {
       </TooltipProvider>
     );
 
-    await user.click(getByRole("button", { name: "workspace.nav.more" }));
+    await user.click(getByRole("button", { name: /^workspace.nav.more/ }));
     await user.click(await findByRole("menuitem", { name: "workspace.nav.gists" }));
 
     await waitFor(() => {
@@ -152,7 +152,7 @@ describe("HarborWorkspace navigation", () => {
     expect(queryByRole("button", { name: "workspace.nav.gists" })).toBeNull();
     expect(queryByRole("button", { name: "workspace.nav.packages" })).toBeNull();
 
-    await user.click(getByRole("button", { name: "workspace.nav.more" }));
+    await user.click(getByRole("button", { name: /^workspace.nav.more/ }));
 
     expect(await findByRole("menuitem", { name: "workspace.nav.projects" })).toBeTruthy();
     expect(getByRole("menuitem", { name: "workspace.nav.gists" })).toBeTruthy();

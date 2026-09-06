@@ -210,7 +210,7 @@ export function workspaceFixture(
         ...pullRequest(index + 1, repository),
         repository,
       }));
-  const pagination = { totalCount: items.length, page: 1, hasPrevious: false, hasMore: false };
+  const pagination = { page: 1, hasPrevious: false, hasMore: false };
   const identity = {
     repositoryId: "R_preview",
     repositoryFullName: repository.fullName,
@@ -260,9 +260,13 @@ export function workspaceFixture(
           : 'export function workspaceTitle(name: string) {\n  return name.trim() || "Harbor";\n}\n',
       };
     case "github_list_issue_inbox":
-      return { ...pagination, issues: items.map((issue) => ({ repository, issue })) };
+      return {
+        ...pagination,
+        totalCount: items.length,
+        issues: items.map((issue) => ({ repository, issue })),
+      };
     case "github_list_repository_issues":
-      return { ...pagination, issues: items };
+      return { ...pagination, totalCount: items.length, issues: items };
     case "github_get_repository_issue":
       return {
         issue: currentIssue,

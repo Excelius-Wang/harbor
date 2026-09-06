@@ -27,7 +27,7 @@ export function WorkspaceStaleNotice({
             onClick={onRetry}
             disabled={retryDisabled}
           >
-            <TriangleAlert data-icon="inline-start" className="text-destructive" />
+            <TriangleAlert data-icon="inline-start" className="text-muted-foreground" />
             {t("common.staleRetry")}
           </Button>
         </TooltipTrigger>
@@ -39,7 +39,7 @@ export function WorkspaceStaleNotice({
     );
   }
   return (
-    <Alert variant="destructive" className="shrink-0 rounded-none border-x-0 border-t-0">
+    <Alert className="shrink-0 rounded-none border-x-0 border-t-0">
       <TriangleAlert />
       <AlertTitle>{t("common.staleResults")}</AlertTitle>
       <AlertDescription className="flex min-w-0 flex-wrap items-center gap-3">

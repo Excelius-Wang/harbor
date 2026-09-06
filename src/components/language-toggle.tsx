@@ -32,7 +32,9 @@ export function LanguageToggle() {
       size="sm"
       onClick={() => void toggleLanguage()}
       aria-label={t("language.toggle")}
-      title={i18n.language.startsWith("zh") ? "Switch to English" : "Switch to 中文"}
+      title={t(
+        i18n.language.startsWith("zh") ? "language.switchToEnglish" : "language.switchToChinese"
+      )}
     >
       <Languages />
       {t(i18n.language.startsWith("zh") ? "language.zh" : "language.en")}

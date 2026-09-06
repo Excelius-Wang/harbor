@@ -188,9 +188,9 @@ describe("GitHub discovery navigation", () => {
       )
     ).toHaveLength(3);
 
-    await user.click(screen.getByRole("tab", { name: "workspace.discovery.tabs.feed" }));
+    await user.click(screen.getByRole("radio", { name: "workspace.discovery.tabs.feed" }));
     expect(screen.queryByRole("tab", { name: "workspace.discovery.developers.tab" })).toBeNull();
-    await user.click(screen.getByRole("tab", { name: "workspace.discovery.tabs.trending" }));
+    await user.click(screen.getByRole("radio", { name: "workspace.discovery.tabs.trending" }));
     expect(await screen.findByRole("button", { name: "The Octocat (@octocat)" })).toBeTruthy();
     client.clear();
   });
@@ -205,12 +205,13 @@ describe("GitHub discovery navigation", () => {
       </QueryClientProvider>
     );
 
-    const tabList = screen.getByRole("tablist", { name: "workspace.discovery.modes" });
-    const activeTab = screen.getByRole("tab", { name: "workspace.discovery.tabs.trending" });
+    const tabList = screen.getByRole("radiogroup", { name: "workspace.discovery.modes" });
+    const activeTab = screen.getByRole("radio", { name: "workspace.discovery.tabs.trending" });
 
     expect(tabList.closest("section")?.className).toContain("harbor-content");
-    expect(within(tabList).getAllByRole("tab")).toHaveLength(3);
-    expect(activeTab.getAttribute("aria-selected")).toBe("true");
+    expect(within(tabList).getAllByRole("radio")).toHaveLength(3);
+    expect(activeTab.getAttribute("aria-checked")).toBe("true");
+    expect(activeTab.hasAttribute("aria-controls")).toBe(false);
     expect(
       screen.getByRole("combobox", { name: "workspace.discovery.trendingPeriod" })
     ).toBeTruthy();
@@ -229,11 +230,11 @@ describe("GitHub discovery navigation", () => {
       "https://github.com/trending?since=weekly"
     );
 
-    await user.click(screen.getByRole("tab", { name: "workspace.discovery.tabs.feed" }));
+    await user.click(screen.getByRole("radio", { name: "workspace.discovery.tabs.feed" }));
     expect(
       screen
-        .getByRole("tab", { name: "workspace.discovery.tabs.feed" })
-        .getAttribute("aria-selected")
+        .getByRole("radio", { name: "workspace.discovery.tabs.feed" })
+        .getAttribute("aria-checked")
     ).toBe("true");
   });
 
@@ -248,7 +249,7 @@ describe("GitHub discovery navigation", () => {
     );
 
     expect(screen.queryByRole("search")).toBeNull();
-    await user.click(screen.getByRole("tab", { name: "workspace.discovery.tabs.search" }));
+    await user.click(screen.getByRole("radio", { name: "workspace.discovery.tabs.search" }));
 
     expect(screen.getByRole("search")).toBeTruthy();
     expect(screen.getByRole("textbox", { name: "workspace.discovery.searchLabel" })).toBeTruthy();
@@ -540,7 +541,9 @@ it("keeps cached following events visible when their refresh fails", async () =>
     )
   );
   const client = renderRetainedDiscovery();
-  await userEvent.setup().click(screen.getByRole("tab", { name: "workspace.discovery.tabs.feed" }));
+  await userEvent
+    .setup()
+    .click(screen.getByRole("radio", { name: "workspace.discovery.tabs.feed" }));
   await screen.findByText("workspace.discovery.events.PushEvent");
   tauriApi.invoke.mockRejectedValue(new Error("Feed refresh unavailable"));
   await act(async () => {
@@ -574,7 +577,7 @@ it("retains following events and retries a failed next page independently of ref
   });
   const client = renderRetainedDiscovery();
   const user = userEvent.setup();
-  await user.click(screen.getByRole("tab", { name: "workspace.discovery.tabs.feed" }));
+  await user.click(screen.getByRole("radio", { name: "workspace.discovery.tabs.feed" }));
   await screen.findByText("workspace.discovery.events.PushEvent");
   await user.click(screen.getByRole("button", { name: "common.loadMore" }));
   expect(await screen.findByText("workspace.discovery.feedMoreFailed")).toBeTruthy();

@@ -201,21 +201,22 @@ export function moreFixture(
     case "github_list_notifications":
       return {
         ...page,
-        notifications: empty
-          ? []
-          : titles.map((title, index) => ({
-              id: index + 1,
-              repository: repositories[index],
-              subject: {
-                title,
-                kind: index % 2 ? "pullRequest" : "issue",
-                number: 1,
-                url: `${repositories[index].url}/issues/1`,
-              },
-              reason: index % 2 ? "review_requested" : "mention",
-              unread: true,
-              updatedAt: timestamp,
-            })),
+        notifications:
+          empty || repositories.length === 0
+            ? []
+            : titles.map((title, index) => ({
+                id: index + 1,
+                repository: repositories[index % repositories.length],
+                subject: {
+                  title,
+                  kind: index % 2 ? "pullRequest" : "issue",
+                  number: 1,
+                  url: `${repositories[index % repositories.length].url}/issues/1`,
+                },
+                reason: index % 2 ? "review_requested" : "mention",
+                unread: true,
+                updatedAt: timestamp,
+              })),
       } satisfies Data.GitHubNotificationPage;
     case "github_list_received_repository_invitations":
       return {

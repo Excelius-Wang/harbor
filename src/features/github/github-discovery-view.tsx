@@ -1,4 +1,6 @@
 import { lazy, Suspense, useEffect, useState, type CSSProperties, type FormEvent } from "react";
+import { RadioGroup as RadioGroupPrimitive } from "radix-ui";
+import { RadioGroup } from "@/components/ui/radio-group";
 import { isTauri } from "@tauri-apps/api/core";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -1049,22 +1051,24 @@ export function GitHubDiscoveryView({
               <h1 className="shrink-0 text-2xl font-semibold tracking-[-0.04em]">
                 {t("workspace.nav.discover")}
               </h1>
-              <Tabs value={mode} onValueChange={changeMode} className="min-w-0 gap-0">
-                <TabsList
-                  aria-label={t("workspace.discovery.modes")}
-                  className="harbor-segmented h-10 justify-start gap-1 p-1"
-                >
-                  <TabsTrigger value="trending" className="rounded-[6px] px-3.5">
-                    <Flame /> {t("workspace.discovery.tabs.trending")}
-                  </TabsTrigger>
-                  <TabsTrigger value="feed" className="rounded-[6px] px-3.5">
-                    <UsersRound /> {t("workspace.discovery.tabs.feed")}
-                  </TabsTrigger>
-                  <TabsTrigger value="search" className="rounded-[6px] px-3.5">
-                    <Search /> {t("workspace.discovery.tabs.search")}
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
+              <RadioGroup
+                value={mode}
+                onValueChange={changeMode}
+                aria-label={t("workspace.discovery.modes")}
+                className="harbor-segmented bg-muted text-muted-foreground flex h-10 w-fit min-w-0 items-center justify-start gap-1 rounded-lg p-1"
+              >
+                {(["trending", "feed", "search"] as const).map((value) => {
+                  const Icon =
+                    value === "trending" ? Flame : value === "feed" ? UsersRound : Search;
+                  return (
+                    <RadioGroupPrimitive.Item key={value} value={value} asChild>
+                      <Button variant="ghost" size="sm" className="h-full rounded-[6px] px-3.5">
+                        <Icon /> {t(`workspace.discovery.tabs.${value}`)}
+                      </Button>
+                    </RadioGroupPrimitive.Item>
+                  );
+                })}
+              </RadioGroup>
 
               {mode === "trending" ? (
                 <div className="ml-auto shrink-0">

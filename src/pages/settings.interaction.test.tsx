@@ -73,11 +73,11 @@ it("retains the saved shortcut when registration fails", async () => {
   );
   await user.click(screen.getByRole("button", { name: "Shortcuts" }));
   vi.mocked(registerShortcut).mockResolvedValue(false);
-  const capture = screen.getByRole("button", { name: "Show Main Window" });
+  const capture = screen.getByRole("button", { name: /^Show Main Window/ });
   capture.focus();
   await user.keyboard("{Control>}{Shift>}k{/Shift}{/Control}");
   expect(await screen.findByRole("alert")).toBeTruthy();
-  expect(capture.textContent).toBe("Ctrl+Shift+H");
+  expect(capture.querySelector("kbd")?.textContent).toBe("Ctrl+Shift+H");
   expect(localStorage.getItem("global-shortcut-show-main")).toBe("Ctrl+Shift+H");
 });
 
@@ -96,7 +96,7 @@ it("disables capture during registration and saves only its successful result", 
     </TooltipProvider>
   );
   await user.click(screen.getByRole("button", { name: "Shortcuts" }));
-  const capture = screen.getByRole("button", { name: "Show Main Window" });
+  const capture = screen.getByRole("button", { name: /^Show Main Window/ });
   capture.focus();
   await user.keyboard("{Control>}{Shift>}h{/Shift}{/Control}");
   await waitFor(() => expect((capture as HTMLButtonElement).disabled).toBe(true));
@@ -105,5 +105,5 @@ it("disables capture during registration and saves only its successful result", 
   await waitFor(() =>
     expect(localStorage.getItem("global-shortcut-show-main")).toBe("Ctrl+Shift+H")
   );
-  expect(capture.textContent).toBe("Ctrl+Shift+H");
+  expect(capture.querySelector("kbd")?.textContent).toBe("Ctrl+Shift+H");
 });

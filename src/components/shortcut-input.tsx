@@ -32,12 +32,12 @@ export function ShortcutInput({ value, onChange, describedBy, disabled }: Shortc
       <Button
         type="button"
         variant="outline"
-        aria-label={t("settings.shortcut.showMain")}
         aria-describedby={describedBy}
         disabled={disabled}
         className="h-auto min-h-9 min-w-0 flex-1 px-2 py-1.5 whitespace-normal"
         onKeyDown={handleKeydown}
       >
+        <span className="sr-only">{t("settings.shortcut.showMain")}</span>
         {value ? (
           <kbd className="font-mono text-xs wrap-anywhere">{value}</kbd>
         ) : (

@@ -26,7 +26,7 @@ Status: in progress. A source inventory is not visual acceptance. Every row belo
 - [ ] Update AGENTS.md and design guide with implemented entry points and verified values.
 - [ ] Final `pnpm check`, required native checks and necessary final-head CI.
 - [ ] PR created, actual CodeRabbit review received, valid issues fixed and reverified, final-head review checked.
-- [ ] Deliver PR URL, final SHA, actual screenshots and review disposition; leave PR unmerged.
+- [ ] Deliver PR URL, final SHA, actual screenshots and review disposition; merge the phase-one PR after actual CodeRabbit review, valid fixes and final checks.
 
 ## Entry coverage
 
