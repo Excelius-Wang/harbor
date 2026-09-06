@@ -25,7 +25,6 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-  CommandShortcut,
 } from "@/components/ui/command";
 import {
   DropdownMenu,
@@ -36,6 +35,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Toaster } from "@/components/ui/sonner";
 import type { GitHubDiscoveryRepositoryTarget } from "@/features/github/github-discovery-view";
 import type {
   GitHubIssueRepository,
@@ -296,6 +296,7 @@ export function HarborWorkspace() {
       titleBar={<MainTitleBar onOpenCommand={() => setCommandOpen(true)} />}
       contentClassName="harbor-workspace-shell flex min-h-0 flex-1 overflow-hidden"
     >
+      <Toaster />
       <PrimaryNavigation activeSection={activeSection} onSectionChange={setActiveSection} />
       {activeSection === "discover" ? (
         <Suspense fallback={<WorkspaceFallback />}>
@@ -337,7 +338,7 @@ export function HarborWorkspace() {
         onOpenChange={setCommandOpen}
         title={t("workspace.command.title")}
         description={t("workspace.command.description")}
-        className="harbor-command top-[28%] max-w-xl translate-y-0 border-white/10 shadow-2xl"
+        className="max-w-xl"
       >
         <CommandInput placeholder={t("workspace.command.placeholder")} />
         <CommandList className="max-h-[360px]">
@@ -352,7 +353,6 @@ export function HarborWorkspace() {
                 >
                   <Icon />
                   {t(`workspace.nav.${item.id}`)}
-                  {item.id === "discover" ? <CommandShortcut>G D</CommandShortcut> : null}
                 </CommandItem>
               );
             })}
@@ -369,7 +369,6 @@ export function HarborWorkspace() {
             >
               <ExternalLink />
               {t("workspace.command.openSelected")}
-              <CommandShortcut>⌘ ↵</CommandShortcut>
             </CommandItem>
           </CommandGroup>
         </CommandList>

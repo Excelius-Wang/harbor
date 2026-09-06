@@ -474,6 +474,11 @@ export function GitHubProfileView({
       );
       void invalidateProfiles(queryClient, updated.login);
     },
+    onError: (error) => {
+      toast.error(t("workspace.profile.followFailed"), {
+        description: parseIpcError(error).message,
+      });
+    },
   });
   const runtimeError = !desktopRuntime
     ? { code: "desktopOnly", message: t("workspace.profile.desktopOnly") }

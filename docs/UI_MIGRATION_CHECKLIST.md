@@ -26,7 +26,7 @@ Status: in progress. A source inventory is not visual acceptance. Every row belo
 
 | Entry | Owned scope | Migration / visual evidence |
 | --- | --- | --- |
-| Workspace | Window/title bar, primary navigation, More menu, command palette, context rail and Agent sheet | Pending |
+| Workspace | Window/title bar, primary navigation, More menu, command palette, context rail and Agent sheet | Window/context matrices, keyboard/focus, pending/error/private and long-answer states verified; native material gate remains |
 | Notifications | Inbox, filters, retained results, target detail | Inbox matrix, stale notice and mark-all dialog verified; destination variants/invitations pending |
 | Issues | Inbox/repository lists, details, timeline, metadata, relationships, all actions/forms | Inbox/detail/edit/preview and return checks done; advanced actions still pending |
 | Pull requests | Inbox/repository lists, details, commits, files/diff, reviews, checks, merge/lifecycle forms | Inbox/detail/commits/files, lifecycle dialogs, creation drafts and review variants verified; native/final delivery gates remain |
@@ -43,7 +43,7 @@ Status: in progress. A source inventory is not visual acceptance. Every row belo
 | Projects | Lists/detail fields/items and dialogs | Table/board/roadmap and create/add/settings/status dialogs verified; remaining field/draft action variants pending |
 | Gists | Lists/detail/editor and files/comments | List/files/revisions/comments, editor/delete and stale/return matrix verified; mutation state variants pending |
 | Packages | Lists/details and actions | List/detail/version-delete dialog and stale matrix verified; restore/mutation variants pending |
-| Profile/account | Profile data/edit, connection/authentication dialogs | Profile/read/edit matrix verified; authentication and follow-failure feedback pending |
+| Profile/account | Profile data/edit, connection/authentication dialogs | Profile/read/edit and auth availability/login/disconnect/follow pending/error matrices verified |
 | Settings window | Theme/language/shortcut controls | Native-size/common-size browser matrices, keyboard, OS theme and failure/pending states verified |
 | About/update | Version/release info, progress, error, update dialogs/toasts | Both native/common sizes and languages, long notes, loading/error/up-to-date and focus return verified; native material gate remains |
 | Third-party web | Preserve third-party presentation; inspect Harbor launch/switch controls | Pending |
@@ -73,7 +73,7 @@ Generated from existing JSX-bearing production files at task start. Each file mu
 | Production source | Source audit | Render / states evidence |
 | --- | --- | --- |
 | `src/pages/about.tsx` | Audited shared material, layout and keyboard controls | Settings/About/titlebar matrix in UI_VERIFICATION.md; native material gate remains |
-| `src/pages/home.tsx` | Pending | Pending |
+| `src/pages/home.tsx` | Audited shared material, layout, keyboard and asynchronous context handling | Context/auth matrix in UI_VERIFICATION.md; native material gate remains |
 | `src/pages/settings.tsx` | Audited shared material, layout and keyboard controls | Settings/About/titlebar matrix in UI_VERIFICATION.md; native material gate remains |
 | `src/components/language-toggle.tsx` | Audited shared material, layout and keyboard controls | Settings/About/titlebar matrix in UI_VERIFICATION.md; native material gate remains |
 | `src/components/main-title-bar.tsx` | Audited shared material, layout and keyboard controls | Settings/About/titlebar matrix in UI_VERIFICATION.md; native material gate remains |
@@ -143,7 +143,7 @@ Generated from existing JSX-bearing production files at task start. Each file mu
 | `src/features/github/github-commit-comments-workspace.tsx` | Audited; shared source/reading/metadata/feedback applied where needed | Code core/state/action/return matrices in UI_VERIFICATION.md; broader mutation audit remains |
 | `src/features/github/github-commit-detail.tsx` | Audited; shared source/reading/metadata/feedback applied where needed | Code core/state/action/return matrices in UI_VERIFICATION.md; broader mutation audit remains |
 | `src/features/github/github-commit-list.tsx` | Audited; shared source/reading/metadata/feedback applied where needed | Code core/state/action/return matrices in UI_VERIFICATION.md; broader mutation audit remains |
-| `src/features/github/github-connection-dialog.tsx` | Pending | Pending |
+| `src/features/github/github-connection-dialog.tsx` | Audited shared material, layout, keyboard and asynchronous context handling | Context/auth matrix in UI_VERIFICATION.md; native material gate remains |
 | `src/features/github/github-conversation-comment-actions.tsx` | Pending | Pending |
 | `src/features/github/github-conversation-controls.tsx` | Pending | Pending |
 | `src/features/github/github-discovery-view.tsx` | Pending | Pending |
@@ -249,10 +249,10 @@ Generated from existing JSX-bearing production files at task start. Each file mu
 | `src/features/github/github-trending-filters.tsx` | Pending | Pending |
 | `src/features/github/github-wiki-history-dialog.tsx` | Audited; shared material/metadata/feedback applied where needed | Repository-tab matrix and listed states/actions in UI_VERIFICATION.md; advanced variants are recorded there |
 | `src/features/github/github-wiki-view.tsx` | Audited; shared material/metadata/feedback applied where needed | Repository-tab matrix and listed states/actions in UI_VERIFICATION.md; advanced variants are recorded there |
-| `src/features/workspace/harbor-rail.tsx` | Pending | Pending |
-| `src/features/workspace/harbor-workspace.tsx` | Pending | Pending |
+| `src/features/workspace/harbor-rail.tsx` | Audited shared material, layout, keyboard and asynchronous context handling | Context/auth matrix in UI_VERIFICATION.md; native material gate remains |
+| `src/features/workspace/harbor-workspace.tsx` | Audited shared material, layout, keyboard and asynchronous context handling | Context/auth matrix in UI_VERIFICATION.md; native material gate remains |
 
-| `src/features/workspace/navigation-button.tsx` | Extracted and reused by all primary controls | Gallery + More menu; full workspace matrix pending |
+| `src/features/workspace/navigation-button.tsx` | Extracted and reused by all primary controls, including Settings | Gallery, More menu, window and context matrices verified |
 | `src/dev/component-gallery.tsx` | Production component examples | Light/dark controls, dialog and command captures; additional examples pending |
 
 ## Repository batch evidence

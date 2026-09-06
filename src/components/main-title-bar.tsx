@@ -165,11 +165,11 @@ export function MainTitleBar({ onOpenCommand }: MainTitleBarProps) {
               <DropdownMenuContent align="end" className="harbor-popover w-48">
                 <DropdownMenuLabel>
                   <p className="text-xs font-medium">{accountLabel}</p>
-                  <p className="text-muted-foreground mt-0.5 text-[11px] font-normal">
-                    {githubConnection.connected
-                      ? t("workspace.github.secureStorage")
-                      : t("workspace.github.notConnected")}
-                  </p>
+                  {githubConnection.connected ? (
+                    <p className="text-muted-foreground mt-0.5 text-[11px] font-normal">
+                      {t("workspace.github.secureStorage")}
+                    </p>
+                  ) : null}
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={() => setGithubDialogOpen(true)}>

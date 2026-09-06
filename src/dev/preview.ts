@@ -31,7 +31,7 @@ export function invokePreview<T>(
   return previewHandler(command, args, options) as Promise<T>;
 }
 
-const repositories: GitHubRepository[] = [
+const repositoryFixtures: GitHubRepository[] = [
   [
     "harbor",
     "A focused GitHub workspace for reading code, reviewing changes and keeping work in view.",
@@ -98,10 +98,16 @@ const languages = [
 
 export function installPreview() {
   Object.assign(window, { __harborPreviewCalls: previewCalls });
-  // Native window commands remain real; every business command is intercepted.
+  // Native window calls remain real; application business invokes are intercepted.
   const native = isTauri();
   const parameters = new URLSearchParams(location.search);
   const state = parameters.get("state") ?? "populated";
+  const repositories =
+    parameters.get("repo") === "private"
+      ? repositoryFixtures.map((repository, index) =>
+          index ? repository : { ...repository, isPrivate: true }
+        )
+      : repositoryFixtures;
   const scenarioCommands = parameters.get("commands")?.split(",").filter(Boolean);
   const requestCounts = new Map<string, number>();
   const shortcuts = new Set(
@@ -168,10 +174,24 @@ export function installPreview() {
       return null;
     }
     if (command === "update_tray_menu") return null;
-    if (command === "github_login_availability") return { available: false, reason: "UI preview" };
+    if (command === "github_login_availability") {
+      const auth = parameters.get("auth");
+      if (auth === "loading") return new Promise(() => {});
+      await new Promise((resolve) => setTimeout(resolve, 120));
+      const attempt = (requestCounts.get(command) ?? 0) + 1;
+      requestCounts.set(command, attempt);
+      if (auth === "availability-error" && attempt === 1)
+        throw new Error("Preview sign-in check failed");
+      return { configured: auth !== "unavailable" };
+    }
+    if (
+      command === "plugin:opener|open_url" &&
+      args.url === "https://example.invalid/harbor-preview-auth"
+    )
+      return null;
     if (command === "github_connection_status")
       return { connected: true, identity: { login: "harbor-preview" } };
-    if (command.startsWith("github_")) {
+    if (command.startsWith("github_") || command === "repository_context_ask") {
       if (commandState === "loading") return new Promise(() => {});
       await new Promise((resolve) => setTimeout(resolve, 120));
       const requestKey = JSON.stringify([command, args]);
@@ -182,6 +202,22 @@ export function installPreview() {
           code: "preview",
           message: "Preview request failed. Retry to check error feedback.",
         };
+    }
+    if (command === "github_begin_login")
+      return { authorizationUrl: "https://example.invalid/harbor-preview-auth" };
+    if (command === "github_disconnect") return { connected: false };
+    if (command === "repository_context_ask") {
+      if (parameters.get("agent") === "slow")
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+      return {
+        repository: `${args.owner}/${args.repository}`,
+        provider: "Controlled preview",
+        answer:
+          "This is a controlled response for the selected repository.\n\n" +
+          "Repository navigation keeps lists, reading surfaces and review actions together. A long response stays inside this pane while the question control remains available.\n\n".repeat(
+            12
+          ),
+      };
     }
     if (command === "github_search_discovery") {
       return {

@@ -96,3 +96,9 @@ Separate Settings windows reuse `NavigationButton` with `alwaysExpanded`; main w
 `ShortcutInput` is a keyboard capture button followed by a named Clear action. Plain Tab/Shift+Tab navigate; modified key combinations and Delete/Backspace retain their existing capture/clear behavior. `disabled` locks pending changes. Shortcut registration helpers return success booleans so settings persist a value only after the native operation succeeds.
 
 About uses a local ScrollArea layout selector to center its content while allowing overflow at its 500 × 400 creation size. Keep update notes left-aligned on `harbor-reading`; they and the dialog footer stay reachable by scrolling.
+
+`CommandDialog` supplies its translated title as the inner Command's accessible label. Workspace commands use the shared modal placement and display only implemented actions. Put `Toaster` beneath the window ThemeProvider so explicit light/dark settings reach its description styles.
+
+The context Agent sheet keeps the question control outside its scrollable response area. Repository changes invalidate in-flight answers/errors, including public/private changes. Closing and reopening the same repository does not discard an active request.
+
+Account preview scenarios are `?auth=loading|unavailable|availability-error` (Retry succeeds after the initial availability failure), `?repo=private`, and `?agent=slow`. Scoped loading/error command states also cover sign-in, disconnect, follow and Agent requests. The fake auth URL is intercepted by browser SDK mocks; these scenarios do not establish native plugin or real GitHub authentication behavior.

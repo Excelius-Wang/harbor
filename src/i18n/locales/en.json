@@ -222,7 +222,8 @@
         "followers": "This user has no followers yet.",
         "following": "This user is not following anyone yet.",
         "activity": "No public activity is available for the last 30 days."
-      }
+      },
+      "followFailed": "Harbor could not update the follow status"
     },
     "notifications": {
       "eyebrow": "GitHub inbox",
@@ -2893,8 +2894,8 @@
       "permissionsTitle": "Your GitHub credentials stay with GitHub",
       "permissionsDescription": "Review Harbor's requested repository, workflow, security alert, personal Projects, Gist, and repository deletion permissions on GitHub before you approve them.",
       "notConfiguredTitle": "GitHub sign-in is not available in this build",
-      "notConfiguredDescription": "This build has no classic Harbor GitHub OAuth App configuration, so it will not start sign-in or access your Keychain.",
-      "notConfiguredAction": "GitHub sign-in not configured",
+      "notConfiguredDescription": "Use a Harbor version with GitHub sign-in enabled to connect your account.",
+      "notConfiguredAction": "GitHub sign-in unavailable",
       "browserSecurity": "Passwords, passkeys, 2FA, and SSO are handled only by github.com.",
       "connected": "GitHub connected",
       "connectionFailed": "Connection failed",
@@ -2903,13 +2904,16 @@
       "notConnected": "GitHub not connected",
       "secureStorage": "Sign-in stored by the operating system",
       "local": "Local workspace",
-      "desktopOnly": "GitHub connection is available in the Harbor desktop runtime."
+      "desktopOnly": "GitHub connection is available in the Harbor desktop runtime.",
+      "checkingAvailability": "Checking sign-in…",
+      "availabilityFailed": "Harbor could not check sign-in availability",
+      "connectedDescription": "Harbor is connected as @{{username}}."
     },
     "command": {
       "title": "Harbor command palette",
       "description": "Navigate the workspace or run an action",
       "trigger": "Search or run a command",
-      "placeholder": "Type a command or repository…",
+      "placeholder": "Type a command…",
       "empty": "No matching command.",
       "navigation": "Navigate",
       "repository": "Repository",

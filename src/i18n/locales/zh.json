@@ -222,7 +222,8 @@
         "followers": "这个用户还没有关注者。",
         "following": "这个用户还没有关注任何人。",
         "activity": "近 30 天没有可显示的公开动态。"
-      }
+      },
+      "followFailed": "关注状态更新失败"
     },
     "notifications": {
       "eyebrow": "GitHub 收件箱",
@@ -2886,8 +2887,8 @@
       "permissionsTitle": "登录信息只交给 GitHub",
       "permissionsDescription": "授权前，可以在 GitHub 查看 Harbor 申请的仓库、工作流、安全告警、个人 Projects、Gists 和仓库删除权限。",
       "notConfiguredTitle": "这个版本还不能登录 GitHub",
-      "notConfiguredDescription": "当前构建没有配置 Harbor 的 classic GitHub OAuth App，因此不会发起登录，也不会读取你的钥匙串。",
-      "notConfiguredAction": "GitHub 登录未配置",
+      "notConfiguredDescription": "请使用支持 GitHub 登录的 Harbor 版本连接账号。",
+      "notConfiguredAction": "GitHub 登录不可用",
       "browserSecurity": "密码、Passkey、两步验证和企业 SSO 都只在 github.com 处理。",
       "connected": "GitHub 已连接",
       "connectionFailed": "连接失败",
@@ -2896,13 +2897,16 @@
       "notConnected": "尚未连接 GitHub",
       "secureStorage": "登录状态由操作系统安全保存",
       "local": "本地工作区",
-      "desktopOnly": "GitHub 连接功能需要在 Harbor 桌面端使用。"
+      "desktopOnly": "GitHub 连接功能需要在 Harbor 桌面端使用。",
+      "checkingAvailability": "正在检查登录功能…",
+      "availabilityFailed": "登录功能检查失败",
+      "connectedDescription": "当前连接的 GitHub 账号为 @{{username}}。"
     },
     "command": {
       "title": "Harbor 命令面板",
       "description": "跳转到工作区或执行操作",
       "trigger": "搜索或运行命令",
-      "placeholder": "输入命令或仓库名…",
+      "placeholder": "输入命令…",
       "empty": "没有匹配的命令。",
       "navigation": "导航",
       "repository": "仓库",

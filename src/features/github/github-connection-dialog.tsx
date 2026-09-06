@@ -7,6 +7,7 @@ import { ExternalLink, Github, ShieldCheck, Unplug, Waves } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -41,23 +42,11 @@ type GitHubConnectionDialogProps = {
 };
 
 function AccountAvatar({ identity }: { identity: GitHubIdentity }) {
-  const [imageFailed, setImageFailed] = useState(false);
-
-  useEffect(() => setImageFailed(false), [identity.avatarUrl]);
-
   return (
-    <span className="bg-primary/10 text-primary grid size-11 shrink-0 place-items-center overflow-hidden rounded-full border">
-      {identity.avatarUrl && !imageFailed ? (
-        <img
-          src={identity.avatarUrl}
-          alt={`@${identity.login}`}
-          className="size-full object-cover"
-          onError={() => setImageFailed(true)}
-        />
-      ) : (
-        <span className="text-sm font-semibold">{identity.login.charAt(0).toUpperCase()}</span>
-      )}
-    </span>
+    <Avatar className="size-11">
+      <AvatarImage src={identity.avatarUrl} alt={`@${identity.login}`} />
+      <AvatarFallback>{identity.login.charAt(0).toUpperCase()}</AvatarFallback>
+    </Avatar>
   );
 }
 
@@ -89,18 +78,29 @@ export function GitHubConnectionDialog({
   const [waiting, setWaiting] = useState(false);
   const [error, setError] = useState("");
   const [authorizationUrl, setAuthorizationUrl] = useState("");
+  const [availabilityError, setAvailabilityError] = useState("");
+  const [availabilityAttempt, setAvailabilityAttempt] = useState(0);
   const [loginConfigured, setLoginConfigured] = useState<boolean | null>(() =>
     isTauri() ? null : true
   );
 
   useEffect(() => {
     if (!open || !isTauri()) return;
-
+    let current = true;
     setError("");
+    setAvailabilityError("");
+    setLoginConfigured(null);
     void invoke<GitHubLoginAvailability>("github_login_availability")
-      .then(({ configured }) => setLoginConfigured(configured))
-      .catch(() => setLoginConfigured(false));
-  }, [open]);
+      .then(({ configured }) => {
+        if (current) setLoginConfigured(configured);
+      })
+      .catch((reason) => {
+        if (current) setAvailabilityError(parseIpcError(reason).message);
+      });
+    return () => {
+      current = false;
+    };
+  }, [open, availabilityAttempt]);
 
   useEffect(() => {
     if (!isTauri()) return;
@@ -181,21 +181,32 @@ export function GitHubConnectionDialog({
     }
   };
 
+  const checkingAvailability = loginConfigured === null && !availabilityError;
+  const connected = connection.connected && Boolean(connection.identity);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="harbor-popover sm:max-w-[420px]">
+      <DialogContent className="sm:max-w-[420px]">
         <DialogHeader className="items-center text-center sm:text-center">
           <ConnectionRoute />
-          <DialogTitle>{t("workspace.github.title")}</DialogTitle>
-          <DialogDescription>{t("workspace.github.description")}</DialogDescription>
+          <DialogTitle>
+            {t(connected ? "workspace.github.manage" : "workspace.github.title")}
+          </DialogTitle>
+          <DialogDescription>
+            {connected
+              ? t("workspace.github.connectedDescription", { username: connection.identity?.login })
+              : t("workspace.github.description")}
+          </DialogDescription>
         </DialogHeader>
 
         {connection.connected && connection.identity ? (
           <div className="flex flex-col gap-4">
-            <div className="bg-muted/35 flex items-center gap-3 rounded-lg border p-3">
+            <div className="harbor-reading flex items-center gap-3 rounded-lg border p-3">
               <AccountAvatar identity={connection.identity} />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">@{connection.identity.login}</p>
+                <p className="truncate text-sm font-medium" title={`@${connection.identity.login}`}>
+                  @{connection.identity.login}
+                </p>
                 <p className="text-muted-foreground mt-0.5 text-xs">
                   {t("workspace.github.secureStorage")}
                 </p>
@@ -222,27 +233,45 @@ export function GitHubConnectionDialog({
           </div>
         ) : (
           <div className="flex flex-col gap-4">
-            <Alert variant={loginConfigured === false ? "destructive" : "default"}>
-              {waiting ? <ExternalLink /> : <ShieldCheck />}
-              <AlertTitle>
-                {t(
-                  loginConfigured === false
-                    ? "workspace.github.notConfiguredTitle"
-                    : waiting
-                      ? "workspace.github.waitingTitle"
-                      : "workspace.github.permissionsTitle"
-                )}
-              </AlertTitle>
-              <AlertDescription>
-                {t(
-                  loginConfigured === false
-                    ? "workspace.github.notConfiguredDescription"
-                    : waiting
-                      ? "workspace.github.waitingDescription"
-                      : "workspace.github.permissionsDescription"
-                )}
-              </AlertDescription>
-            </Alert>
+            {availabilityError ? (
+              <Alert variant="destructive">
+                <Unplug />
+                <AlertTitle>{t("workspace.github.availabilityFailed")}</AlertTitle>
+                <AlertDescription className="flex flex-col items-start gap-2">
+                  <span>{availabilityError}</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAvailabilityAttempt((attempt) => attempt + 1)}
+                  >
+                    {t("common.retry")}
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <Alert variant={loginConfigured === false ? "destructive" : "default"}>
+                {waiting ? <ExternalLink /> : <ShieldCheck />}
+                <AlertTitle>
+                  {t(
+                    loginConfigured === false
+                      ? "workspace.github.notConfiguredTitle"
+                      : waiting
+                        ? "workspace.github.waitingTitle"
+                        : "workspace.github.permissionsTitle"
+                  )}
+                </AlertTitle>
+                <AlertDescription>
+                  {t(
+                    loginConfigured === false
+                      ? "workspace.github.notConfiguredDescription"
+                      : waiting
+                        ? "workspace.github.waitingDescription"
+                        : "workspace.github.permissionsDescription"
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
 
             {error ? (
               <Alert variant="destructive">
@@ -258,7 +287,7 @@ export function GitHubConnectionDialog({
               onClick={() => void handleLogin()}
               disabled={checking || loginConfigured !== true}
             >
-              {checking ? (
+              {checking || checkingAvailability ? (
                 <Spinner data-icon="inline-start" />
               ) : waiting ? (
                 <ExternalLink data-icon="inline-start" />
@@ -268,11 +297,13 @@ export function GitHubConnectionDialog({
               {t(
                 loginConfigured === false
                   ? "workspace.github.notConfiguredAction"
-                  : checking
-                    ? "workspace.github.opening"
-                    : waiting
-                      ? "workspace.github.openAgain"
-                      : "workspace.github.login"
+                  : checkingAvailability
+                    ? "workspace.github.checkingAvailability"
+                    : checking
+                      ? "workspace.github.opening"
+                      : waiting
+                        ? "workspace.github.openAgain"
+                        : "workspace.github.login"
               )}
             </Button>
             <p className="text-muted-foreground text-center text-xs leading-relaxed">

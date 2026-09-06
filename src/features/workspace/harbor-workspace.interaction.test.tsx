@@ -17,6 +17,7 @@ vi.mock("react-i18next", () => ({
 vi.mock("@/components/main-title-bar", () => ({
   MainTitleBar: () => null,
 }));
+vi.mock("@/components/ui/sonner", () => ({ Toaster: () => null }));
 vi.mock("@/components/window-frame", () => ({
   WindowFrame: ({
     children,

@@ -60,3 +60,9 @@ describe("UI preview isolation", () => {
     expect(document.documentElement.dataset.previewBackground).toBeUndefined();
   });
 });
+
+it("supplies the sign-in configuration shape used by the production dialog", async () => {
+  vi.stubGlobal("isTauri", false);
+  installPreview();
+  await expect(invoke("github_login_availability")).resolves.toEqual({ configured: true });
+});
