@@ -190,3 +190,11 @@ The Gist editor preserves file/description drafts across refreshed props and ini
 Add `writes=accept` to simulate Gist creation, file/description edits, confirmed deletion, Star, Fork and comment creation/editing/deletion. Reads reconcile list sources, content, comment counts and revision snapshots. Previous revisions and returned DTOs remain independent. Revision line statistics are fixed synthetic values, not a computed diff. Scoped `state`/`commands` still provide waiting/failure/refresh scenarios. These fixtures do not change real Gists or verify live GitHub contracts; browser/native acceptance remains pending.
 
 Discovery mode selection uses a named Radix radio group with shared Buttons and roving keyboard focus. The separate repository/developer content tabs retain their own query state.
+
+## Package version recovery
+
+Packages retain detail and version queries independently after refresh failures. An empty cached inventory also exposes `WorkspaceStaleNotice`. Delete/restore actions stay disabled through mutation reconciliation; confirmation input survives a failed submission and resets on reopening. Loading and failed detail views retain a narrow-window Back action. Version row actions respond to the detail pane width, and long package names wrap within the header.
+
+`?packages=standard|long|permission|conflict|retry` selects the package fixtures. The default preview also uses this stateful fixture. `long` adds a dense inventory and long names/descriptions; `permission` and `conflict` reject version writes with production error codes; `retry` rejects the first mutation and accepts the next. Add `writes=accept` to simulate deletion/restoration. Scoped `state=loading|error|stale|empty&commands=...` continues to take precedence.
+
+The fixture reads the production `versionState` argument, keeps active/deleted versions separate, and reconciles both lists and active version counts after accepted writes. Ecosystems and package names scope records; expected package ID, version ID/name and source state guard mutations. Returned DTOs are copied. These simulations do not modify real GitHub Packages or establish live API/native acceptance.

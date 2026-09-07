@@ -98,22 +98,6 @@ export function moreFixture(
   const repository = repositories[0];
   const login = typeof args.username === "string" ? args.username : "harbor-preview";
   const gist = gists.find((item) => item.id === args.gistId) ?? gists[0];
-  const packages: Data.GitHubPackage[] = titles.map(
-    (_, index): Data.GitHubPackage => ({
-      id: index + 1,
-      name: ["harbor-desktop", "workspace-components", "workspace-preview", "documentation-tools"][
-        index
-      ],
-      packageType: (args.packageType ?? "container") as Data.GitHubPackageType,
-      visibility: { kind: args.visibility === "private" || index === 1 ? "private" : "public" },
-      versionCount: 3,
-      owner: "harbor-preview",
-      url: `https://github.com/users/harbor-preview/packages/container/harbor-desktop`,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-      repository,
-    })
-  );
   switch (command) {
     case "github_get_user_profile":
       return {
@@ -326,28 +310,6 @@ export function moreFixture(
               })),
         },
       } satisfies Data.GitHubProjectDetail;
-    case "github_list_personal_packages":
-      return { ...page, packages: empty ? [] : packages } satisfies Data.GitHubPackagePage;
-    case "github_get_personal_package":
-      return packages.find((item) => item.name === args.packageName) ?? packages[0];
-    case "github_list_personal_package_versions":
-      return {
-        ...page,
-        state: args.state === "deleted" ? "deleted" : "active",
-        versions: empty
-          ? []
-          : ["1.4.0", "1.3.2", "1.3.1"].map((name, index) => ({
-              id: index + 1,
-              name,
-              state: args.state === "deleted" ? "deleted" : "active",
-              metadata: { kind: "container", tags: index === 0 ? ["latest", name] : [name] },
-              url: "https://github.com/harbor-preview",
-              description: "Desktop workspace preview",
-              license: "MIT",
-              createdAt: timestamp,
-              updatedAt: timestamp,
-            })),
-      } satisfies Data.GitHubPackageVersionPage;
     default:
       return undefined;
   }

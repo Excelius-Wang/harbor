@@ -321,3 +321,21 @@ Additional changes address the Discovery mode control's missing panel references
 `pnpm check` passes 599 tests/125 files, formatting/lint and build; separate `pnpm exec tsc -b` passes. Existing harbor-rail lint and bundle-size warnings remain. The latest mode/recovery changes have interaction coverage; new native and full visual acceptance remains deferred. Final remote checks/review are recorded on PR #82.
 
 The second CodeRabbit review identified two documentation spacing issues and a notification fixture URL mismatch. The spacing is corrected, and pull-request notifications now use `/pull/1` while issue notifications retain `/issues/1`; the fixture regression checks both kinds. Local Clippy completed successfully with non-blocking warnings; its earlier bot-side timeout is not a compiler failure.
+
+
+## Package version actions and read recovery — 2026-09-07
+
+Branch: `fix/packages-action-states`, based on `39f2a9e`. Packages now show retained detail failures independently of version failures, including stale empty inventories. Version actions remain disabled through reconciliation; narrow loading/error details offer Back. The detail skeleton uses pane-local scrolling so its heading/summary cannot collapse to zero height at 900 × 620. Headers wrap long names, and row action placement follows detail-pane width.
+
+The former read fixture incorrectly inspected `state` while production sends `versionState`, so its deleted tab returned active records. `package-fixtures.ts` replaces that path with isolated, stateful package/version data and guarded local delete/restore simulations. No live GitHub writes were made.
+
+Browser acceptance used the production UI through `pnpm dev:ui --port 1423` and Playwright CLI in independent headless sessions. The initial headed session could locate and operate controls but screenshots timed out; the headless route captured actual screenshots successfully. Early harness selector/timing failures were corrected; final scripts completed:
+
+- `output/playwright/packages-matrix.js`: eight English/Chinese × light/dark × 900 × 620/1440 × 900 combinations. Restore/delete reconcile both tabs and counts; delete requires the package name; Escape returns focus to Restore and Enter reopens it. Narrow list/detail return retains results. 24 captures: `packages-{language}-{theme}-{width}-{restore,restored,delete}.png`.
+- `output/playwright/packages-states.js`: both actions in the same eight combinations with permission, conflict, first-failure/retry and pending states. Pending dialogs reject Escape and disable Cancel; failures retain deletion confirmation; retry succeeds; reopening clears errors. 64 captures ending in `{restore,delete}-{permission,conflict,retry,pending}.png`.
+- `output/playwright/packages-reading.js`: long names/descriptions, stale detail/version reads, loading, empty and failed reads in English, both themes and sizes. Checks document/dialog width containment, loading/error Back, and nonzero list scroll retained across detail return at 900 px. 20 captures ending in `{long,stale,loading,empty,error}.png`.
+- `output/playwright/packages-filters.js`: npm/private filters survive detail return without another inventory request in both languages/themes at 900 px. Four `filter-return.png` captures.
+
+All 112 captures are available locally; [four selected captures](verification/packages-actions/README.md) are also committed for PR review. Logs: `/tmp/harbor-packages-browser-headless.log`, `/tmp/harbor-packages-states.log`, `/tmp/harbor-packages-reading.log`, `/tmp/harbor-packages-filters.log`. Representative restore, delete/permission, long-name and loading screenshots were visually inspected. These controlled browser results do not establish live API behavior or native transparency/accessibility acceptance.
+
+Final `pnpm check` passes 608 tests across 127 files, formatting, lint and the TypeScript/Vite build (`/tmp/harbor-packages-final-check.log`). Nine new fixture/interaction regressions cover version-state routing/reconciliation, identity/write guards, recovery, pending controls, retained detail/empty inventory and loading/error return. Existing `harbor-rail.tsx` hook lint and build chunk-size warnings remain. Rust/native code was unchanged; no new native acceptance is claimed. The broader migration and recent non-Package action browser backlog remain open.
