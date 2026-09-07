@@ -4,7 +4,7 @@
 
 The user requested a phase-one cutoff after the Gist action module, followed by one PR, actual CodeRabbit review/fixes and merge. This supersedes the original requirement to finish every visual variant before delivering a PR. Preserve the remaining items below for the next session; phase-one delivery does not establish full-site acceptance.
 
-Deferred work starts with package restore/mutation states, then remaining Issue lifecycle/comment/candidate states, nested Discussion replies, archived repository/Pages conditions and release/code transfer feedback. Recent repository/conversation/Project/Gist action changes still need browser acceptance. Native background/transparency/accessibility verification and final validation of guide values also remain open. [Selected historical browser captures](verification/ui-phase-one/README.md) are available for remote review.
+The Packages restore/mutation batch was completed on 2026-09-07 (see UI_VERIFICATION.md). Deferred work now starts with remaining Issue lifecycle/comment/candidate states, nested Discussion replies, archived repository/Pages conditions and release/code transfer feedback. Recent repository/conversation/Project/Gist action changes still need browser acceptance. Native background/transparency/accessibility verification and final validation of guide values also remain open. [Selected historical browser captures](verification/ui-phase-one/README.md) are available for remote review.
 
 Status: in progress. A source inventory is not visual acceptance. Every row below remains pending until its production UI and applicable states have been inspected.
 
@@ -48,7 +48,7 @@ Status: in progress. A source inventory is not visual acceptance. Every row belo
 | Repository settings | General/access/topics/taxonomy/pages/invitations and forms | Forms, Pages, taxonomy, invitations, visibility and return/state matrices verified; archived/deployment variants pending |
 | Projects | Lists/detail fields/items and dialogs | Prior core matrix verified; new pending/draft/permission/empty-choice fixes and stateful fixtures pass code checks, visual action matrix pending |
 | Gists | Lists/detail/editor and files/comments | Prior core matrix verified; editor/comment draft retention, pending guards and scoped failure recovery implemented with stateful action fixtures; new visual states pending |
-| Packages | Lists/details and actions | List/detail/version-delete dialog and stale matrix verified; restore/mutation variants pending |
+| Packages | Lists/details and actions | Delete/restore success, pending, permission/conflict/retry, read states and filter/scroll return verified on 2026-09-07; native acceptance remains |
 | Profile/account | Profile data/edit, connection/authentication dialogs | Profile/read/edit and auth availability/login/disconnect/follow pending/error matrices verified |
 | Settings window | Theme/language/shortcut controls | Native-size/common-size browser matrices, keyboard, OS theme and failure/pending states verified |
 | About/update | Version/release info, progress, error, update dialogs/toasts | Both native/common sizes and languages, long notes, loading/error/up-to-date and focus return verified; native material gate remains |
@@ -199,7 +199,7 @@ Generated from existing JSX-bearing production files at task start. Each file mu
 | `src/features/github/github-issue-view.tsx` | Query-specific scroll recovery integrated | Repository Issue list captured; remaining filter/action states pending |
 | `src/features/github/github-markdown-editor.tsx` | Audited shared surfaces / layout in repository batch | Core evidence in UI_VERIFICATION.md; advanced states pending |
 | `src/features/github/github-notifications.tsx` | Audited and migrated in Notifications/More batch | Core matrix and listed dialogs/states in UI_VERIFICATION.md; advanced variants remain explicit there |
-| `src/features/github/github-packages-view.tsx` | Audited and migrated in Notifications/More batch | Core matrix and listed dialogs/states in UI_VERIFICATION.md; advanced variants remain explicit there |
+| `src/features/github/github-packages-view.tsx` | Stale recovery, pending guards, narrow loading/error return and pane layout | Delete/restore/read/return acceptance in UI_VERIFICATION.md (2026-09-07); native acceptance remains |
 | `src/features/github/github-pinned-issues.tsx` | Audited; compact relation rows, shared stale feedback and action focus/draft handling applied where needed | Issue action core/state and draft/duplicate matrices in UI_VERIFICATION.md; candidate and mutation variants remain explicit there |
 | `src/features/github/github-profile-editor-dialog.tsx` | Audited and migrated in Notifications/More batch | Core matrix and listed dialogs/states in UI_VERIFICATION.md; advanced variants remain explicit there |
 | `src/features/github/github-profile-view.tsx` | Audited and migrated in Notifications/More batch | Core matrix and listed dialogs/states in UI_VERIFICATION.md; advanced variants remain explicit there |

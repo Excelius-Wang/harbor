@@ -1,3 +1,4 @@
+import { createPackageFixtures } from "./package-fixtures";
 import { createWorkflowFixtures } from "./workflow-fixtures";
 import { createWikiFixtures } from "./wiki-fixtures";
 import { createRepositoryActionFixtures } from "./repository-action-fixtures";
@@ -131,6 +132,10 @@ export function installPreview() {
     parameters.get("writes") === "accept"
   );
   const notificationTargets = parameters.get("notifications") === "targets";
+  const packageFixtures = createPackageFixtures(
+    parameters.get("packages"),
+    parameters.get("writes") === "accept"
+  );
   const gistFixtures = createGistFixtures(
     parameters.get("gists"),
     parameters.get("writes") === "accept"
@@ -341,6 +346,8 @@ export function installPreview() {
     if (conversationActionResult !== undefined) return conversationActionResult;
     const projectResult = projectFixtures(command, args, commandState === "empty");
     if (projectResult !== undefined) return projectResult;
+    const packageResult = packageFixtures(command, args, commandState === "empty");
+    if (packageResult !== undefined) return packageResult;
     const gistResult = gistFixtures(command, args, commandState === "empty");
     if (gistResult !== undefined) return gistResult;
     const workspaceResult = workspaceFixture(

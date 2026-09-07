@@ -106,16 +106,18 @@ function PackageListSkeleton() {
 
 function PackageDetailSkeleton() {
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 p-5">
-      <Skeleton className="h-7 w-2/5" />
-      <Skeleton className="h-24 w-full" />
-      <Skeleton className="h-9 w-56" />
-      <div className="flex flex-col gap-2">
-        {Array.from({ length: 5 }, (_, index) => (
-          <Skeleton key={index} className="h-20 w-full" />
-        ))}
+    <ScrollArea className="min-h-0 flex-1" constrainContentWidth>
+      <div className="flex flex-col gap-4 p-5">
+        <Skeleton className="h-7 w-2/5" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-9 w-56" />
+        <div className="flex flex-col gap-2">
+          {Array.from({ length: 5 }, (_, index) => (
+            <Skeleton key={index} className="h-20 w-full" />
+          ))}
+        </div>
       </div>
-    </div>
+    </ScrollArea>
   );
 }
 
@@ -189,17 +191,19 @@ function packagesErrorTitle(code: string) {
 function PackageVersionRow({
   version,
   locale,
+  pending,
   onMutate,
 }: {
   version: GitHubPackageVersion;
   locale: string;
+  pending: boolean;
   onMutate: (version: GitHubPackageVersion) => void;
 }) {
   const { t } = useTranslation();
   const deleted = version.state === "deleted";
   const tags = version.metadata.kind === "container" ? version.metadata.tags : [];
   return (
-    <div className="hover:bg-muted/20 flex flex-col gap-3 border-b px-4 py-3 transition-colors last:border-b-0 sm:flex-row sm:items-center">
+    <div className="harbor-result-row flex flex-col gap-3 px-4 py-3 @min-[600px]/package-detail:flex-row @min-[600px]/package-detail:items-center">
       <div className="flex min-w-0 flex-1 gap-3">
         <span className="bg-muted text-muted-foreground grid size-8 shrink-0 place-items-center rounded-md border">
           {deleted ? <History className="size-4" /> : <PackageOpen className="size-4" />}
@@ -236,7 +240,7 @@ function PackageVersionRow({
           </p>
         </div>
       </div>
-      <div className="flex shrink-0 items-center gap-1.5 self-end sm:self-auto">
+      <div className="flex shrink-0 items-center gap-1.5 self-end @min-[600px]/package-detail:self-auto">
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -256,6 +260,7 @@ function PackageVersionRow({
           variant={deleted ? "outline" : "ghost"}
           size="sm"
           className={deleted ? undefined : "text-destructive hover:text-destructive"}
+          disabled={pending}
           onClick={() => onMutate(version)}
         >
           {deleted ? <RotateCcw data-icon="inline-start" /> : <Trash2 data-icon="inline-start" />}
@@ -331,6 +336,8 @@ function GitHubPackageDetail({
     !versionsResult.data && versionsResult.error ? parseIpcError(versionsResult.error) : null;
   const supplementalError =
     versionPage && versionsResult.error ? parseIpcError(versionsResult.error) : null;
+  const detailRefreshError =
+    packageDetail && detailResult.error ? parseIpcError(detailResult.error) : null;
   const mutationError = mutation.error ? parseIpcError(mutation.error) : null;
   const selectedAction: GitHubPackageVersionAction | null = selectedVersion
     ? selectedVersion.state === "deleted"
@@ -345,7 +352,26 @@ function GitHubPackageDetail({
     setConfirmation("");
   }, [packageName, packageType]);
 
-  if (detailResult.isPending) return <PackageDetailSkeleton />;
+  const fallbackBack = (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      className="workspace-wide:hidden self-start"
+      onClick={onBack}
+    >
+      <ArrowLeft data-icon="inline-start" />
+      {t("workspace.packages.back")}
+    </Button>
+  );
+
+  if (detailResult.isPending)
+    return (
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className="workspace-wide:hidden p-4">{fallbackBack}</div>
+        <PackageDetailSkeleton />
+      </div>
+    );
 
   if (detailError || !packageDetail) {
     return (
@@ -358,6 +384,7 @@ function GitHubPackageDetail({
           <EmptyDescription>{detailError?.message}</EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
+          {fallbackBack}
           <Button variant="outline" size="sm" onClick={() => void detailResult.refetch()}>
             <RefreshCw data-icon="inline-start" />
             {t("common.retry")}
@@ -368,8 +395,8 @@ function GitHubPackageDetail({
   }
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <header className="flex min-h-[74px] shrink-0 items-center justify-between gap-3 border-b px-4 py-3">
+    <div className="@container/package-detail flex min-h-0 min-w-0 flex-1 flex-col">
+      <header className="flex min-h-[74px] shrink-0 flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
         <div className="flex min-w-0 items-center gap-2.5">
           <Tooltip>
             <TooltipTrigger asChild>
@@ -388,7 +415,7 @@ function GitHubPackageDetail({
           </Tooltip>
           <div className="min-w-0">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <h2 className="text-2xl leading-7 font-semibold tracking-tight">
+              <h2 className="text-2xl leading-7 font-semibold tracking-tight wrap-anywhere">
                 {packageDetail.name}
               </h2>
               <PackageVisibilityBadge visibility={packageDetail.visibility} />
@@ -403,7 +430,7 @@ function GitHubPackageDetail({
             type="button"
             variant="outline"
             size="sm"
-            disabled={detailResult.isFetching || versionsResult.isFetching}
+            disabled={mutation.isPending || detailResult.isFetching || versionsResult.isFetching}
             onClick={() => {
               void detailResult.refetch();
               void versionsResult.refetch();
@@ -430,6 +457,13 @@ function GitHubPackageDetail({
 
       <ScrollArea className="min-h-0 flex-1" constrainContentWidth>
         <div className="flex flex-col gap-4 p-4">
+          {detailRefreshError ? (
+            <WorkspaceStaleNotice
+              message={detailRefreshError.message}
+              retryDisabled={mutation.isPending || detailResult.isFetching}
+              onRetry={() => void detailResult.refetch()}
+            />
+          ) : null}
           <section className="bg-muted/15 grid gap-3 rounded-lg border p-4 sm:grid-cols-3">
             <div className="flex flex-col gap-1">
               <span className="text-muted-foreground text-[11px] tracking-wide uppercase">
@@ -518,6 +552,7 @@ function GitHubPackageDetail({
           {supplementalError ? (
             <WorkspaceStaleNotice
               message={supplementalError.message}
+              retryDisabled={mutation.isPending || versionsResult.isFetching}
               onRetry={() => {
                 void detailResult.refetch();
                 void versionsResult.refetch();
@@ -579,8 +614,13 @@ function GitHubPackageDetail({
                 <PackageVersionRow
                   key={version.id}
                   version={version}
+                  pending={mutation.isPending}
                   locale={i18n.language}
-                  onMutate={setSelectedVersion}
+                  onMutate={(version) => {
+                    mutation.reset();
+                    setConfirmation("");
+                    setSelectedVersion(version);
+                  }}
                 />
               ))
             )}
@@ -607,7 +647,7 @@ function GitHubPackageDetail({
           }
         }}
       >
-        <AlertDialogContent>
+        <AlertDialogContent aria-busy={mutation.isPending}>
           <AlertDialogHeader>
             <AlertDialogTitle>
               {t(
@@ -812,6 +852,13 @@ export function GitHubPackagesView() {
           </div>
 
           <ScrollArea className="min-h-0 flex-1" constrainContentWidth>
+            {supplementalError ? (
+              <WorkspaceStaleNotice
+                message={supplementalError.message}
+                retryDisabled={result.isFetching}
+                onRetry={() => void result.refetch()}
+              />
+            ) : null}
             {error ? (
               <Empty className="min-h-64">
                 <EmptyHeader>
@@ -846,14 +893,6 @@ export function GitHubPackagesView() {
               </Empty>
             ) : (
               <div className="flex flex-col gap-1.5 p-2">
-                {supplementalError ? (
-                  <WorkspaceStaleNotice
-                    message={supplementalError.message}
-                    onRetry={() => {
-                      void result.refetch();
-                    }}
-                  />
-                ) : null}
                 <div className="flex items-center justify-between px-2 py-1">
                   <span className="text-muted-foreground text-[11px]">
                     {t("workspace.packages.loadedCount", { count: packagePage.packages.length })}
