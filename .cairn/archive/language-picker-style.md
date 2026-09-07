@@ -1,5 +1,10 @@
 # Language picker style
 
+> Historical snapshot: delivery and uncommitted-work statements below describe the
+> checkpoint when it was recorded, not the current branch. These records were included
+> in [PR #84](https://github.com/Excelius-Wang/harbor/pull/84); see the
+> [current checkpoint](../items/ui-follow-up.md) for live delivery status.
+
 ## Goal
 
 Make the trending language picker match Harbor's compact, restrained overlay design while
@@ -7,7 +12,7 @@ preserving search, keyboard selection, and the existing filters.
 
 ## Current state
 
-- Working area: `/Users/bytedance/Documents/Work/Code/harbor`; existing changes are uncommitted.
+- Working area: `repository root`; existing changes are uncommitted.
 - Scoped `harbor-filter-trigger` and `harbor-filter-menu` styles now use 13 px regular text,
   28 px rows, a 240 px menu, a transparent inner Command, quiet scrollbar, and single chevron.
 - Localized unknown-language labels also support localized search. Global UI primitives and

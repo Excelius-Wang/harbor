@@ -1,5 +1,10 @@
 # Trending developer list layout
 
+> Historical snapshot: delivery and uncommitted-work statements below describe the
+> checkpoint when it was recorded, not the current branch. These records were included
+> in [PR #84](https://github.com/Excelius-Wang/harbor/pull/84); see the
+> [current checkpoint](../items/ui-follow-up.md) for live delivery status.
+
 ## Goal
 
 Replace the rejected wide two-column developer list with the approved single-column grouping,
@@ -7,7 +12,7 @@ verified in light and dark themes at wide and minimum window sizes.
 
 ## Current state
 
-- Working area: `/Users/bytedance/Documents/Work/Code/harbor`.
+- Working area: `repository root`.
 - The existing trending feature and design-language documentation are uncommitted. Preserve them.
 - Implemented the approved vertical author / popular repository / description group at every
   width, 40 px avatars, 16 px vertical padding, naturally wrapping account names, and matching

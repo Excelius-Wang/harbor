@@ -372,3 +372,12 @@ Final `pnpm check` passes 610 tests/127 files, formatting, lint and the TypeScri
 
 
 Window-shell PR delivery: the user approved the visual result and authorized submitting the current changes on the existing branch. [Selected screenshots](verification/window-shell/README.md) are included for remote review. Historical Cairn archives are included as snapshots; their earlier delivery-state descriptions are not assertions about the current branch.
+
+
+## PR #84 review fixes — 2026-09-07
+
+CodeRabbit's full review of `5a3fd4e` reported four bounded findings. The Logo double-click bubbling was reproduced by a failing interaction test: the native maximize handler received one unintended call. The Logo now stops double-click propagation; the regression verifies zero native maximize calls from the Logo and one from the actual drag region. A production browser check confirms the same behavior (`/tmp/harbor-pr84-doubleclick-browser.log`).
+
+Newly committed Cairn archives now identify themselves as historical snapshots and link to current delivery state. Machine-specific repository paths were replaced with a generic repository-root label. The window-navigation archive explicitly marks the final Logo native accessibility path as unverified; earlier standalone-toggle evidence does not establish that coverage.
+
+Final `pnpm check` passes 611 tests/127 files, formatting, lint and the TypeScript/Vite build (`/tmp/harbor-pr84-review-check.log`). Local `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets` exited 0 with warnings in unchanged modules (`/tmp/harbor-window-shell-clippy.log`). CodeRabbit's Clippy timed out, but its retried full code review completed separately. Its default docstring coverage warning is not a Harbor project requirement.

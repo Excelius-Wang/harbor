@@ -106,6 +106,7 @@ export function MainTitleBar({
                       type="button"
                       className="border-primary/20 bg-primary/9 text-primary hover:bg-primary/15 focus-visible:ring-ring focus-visible:ring-offset-background grid size-8 shrink-0 cursor-pointer place-items-center rounded-lg border transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                       onClick={onToggleNavigation}
+                      onDoubleClick={(event) => event.stopPropagation()}
                       aria-expanded={navigationExpanded}
                       aria-controls="harbor-primary-navigation"
                       aria-label={t(

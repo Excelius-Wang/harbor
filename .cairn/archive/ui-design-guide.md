@@ -1,5 +1,10 @@
 # Harbor UI design guide
 
+> Historical snapshot: delivery and uncommitted-work statements below describe the
+> checkpoint when it was recorded, not the current branch. These records were included
+> in [PR #84](https://github.com/Excelius-Wang/harbor/pull/84); see the
+> [current checkpoint](../items/ui-follow-up.md) for live delivery status.
+
 ## Goal
 
 Extract the user-selected glass UI references into a durable Harbor design guide, including
@@ -7,7 +12,7 @@ color roles, both theme palettes, original reference images, and an AGENTS.md en
 
 ## Current state
 
-- Working area: `/Users/bytedance/Documents/Work/Code/harbor`.
+- Working area: `repository root`.
 - `docs/UI_DESIGN_GUIDE.md` records the selected glass direction, candidate dark/light palettes,
   material hierarchy, Harbor mappings, and verification criteria.
 - `docs/design/reference-board.html` displays both references and 32 candidate color swatches.

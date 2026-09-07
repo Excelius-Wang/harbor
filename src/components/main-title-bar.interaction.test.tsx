@@ -8,10 +8,15 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { MainTitleBar } from "./main-title-bar";
 import i18n from "@/i18n";
+import { isTauri } from "@tauri-apps/api/core";
 
-vi.mock("@tauri-apps/api/core", () => ({ isTauri: () => false, invoke: vi.fn() }));
+const nativeWindow = vi.hoisted(() => ({ toggleMaximize: vi.fn(async () => {}) }));
+vi.mock("@tauri-apps/api/core", () => ({ isTauri: vi.fn(() => false), invoke: vi.fn() }));
+vi.mock("@tauri-apps/api/webviewWindow", () => ({ getCurrentWebviewWindow: () => nativeWindow }));
 
 beforeEach(async () => {
+  vi.mocked(isTauri).mockReturnValue(false);
+  nativeWindow.toggleMaximize.mockClear();
   localStorage.clear();
   await i18n.changeLanguage("en");
   vi.stubGlobal(
@@ -68,4 +73,31 @@ describe("title bar theme toggle", () => {
       expect(localStorage.getItem("tauri-ui-theme")).toBe("light");
     }
   );
+});
+
+it("keeps Logo double-clicks out of the native window maximize handler", async () => {
+  vi.stubGlobal("matchMedia", () => ({
+    matches: false,
+    addEventListener() {},
+    removeEventListener() {},
+  }));
+  const toggle = vi.fn();
+  const user = userEvent.setup();
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <TooltipProvider>
+        <ThemeProvider defaultTheme="light">
+          <MainTitleBar onToggleNavigation={toggle} navigationExpanded />
+        </ThemeProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+  // Enable the native click path after mounting, without invoking unrelated window setup.
+  vi.mocked(isTauri).mockReturnValue(true);
+  const logo = screen.getByRole("button", { name: "Collapse navigation" });
+  await user.dblClick(logo);
+  expect(toggle).toHaveBeenCalledTimes(2);
+  expect(nativeWindow.toggleMaximize).not.toHaveBeenCalled();
+  await user.dblClick(logo.closest("[data-tauri-drag-region]")!);
+  expect(nativeWindow.toggleMaximize).toHaveBeenCalledTimes(1);
 });

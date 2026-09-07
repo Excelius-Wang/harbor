@@ -1,12 +1,17 @@
 # Filter glass variant
 
+> Historical snapshot: delivery and uncommitted-work statements below describe the
+> checkpoint when it was recorded, not the current branch. These records were included
+> in [PR #84](https://github.com/Excelius-Wang/harbor/pull/84); see the
+> [current checkpoint](../items/ui-follow-up.md) for live delivery status.
+
 ## Goal
 
 Implement one lighter, more translucent language-menu variant for the user's visual review.
 
 ## Current state
 
-- Working area: `/Users/bytedance/Documents/Work/Code/harbor`; preserve existing uncommitted work.
+- Working area: `repository root`; preserve existing uncommitted work.
 - User explicitly authorized a version after discussing the overly dark menu. Keep its compact
   layout and change the fill, transparency, border, and shadow.
 - Implemented one scoped menu variant in `src/index.css`: a foreground/background-derived

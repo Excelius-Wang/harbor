@@ -1,5 +1,10 @@
 # Window shell refinement
 
+> Historical snapshot: delivery and uncommitted-work statements below describe the
+> checkpoint when it was recorded, not the current branch. These records were included
+> in [PR #84](https://github.com/Excelius-Wang/harbor/pull/84); see the
+> [current checkpoint](../items/ui-follow-up.md) for live delivery status.
+
 ## Goal
 
 Deliver the current fixed-size window, Logo navigation toggle and restrained outer edge for user preview.

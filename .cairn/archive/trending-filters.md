@@ -1,5 +1,10 @@
 # Trending developer filters
 
+> Historical snapshot: delivery and uncommitted-work statements below describe the
+> checkpoint when it was recorded, not the current branch. These records were included
+> in [PR #84](https://github.com/Excelius-Wang/harbor/pull/84); see the
+> [current checkpoint](../items/ui-follow-up.md) for live delivery status.
+
 ## Goal
 
 Add programming-language and sponsorable-developer filters to the existing trending list,
@@ -7,7 +12,7 @@ preserving the selected period and the approved single-column layout.
 
 ## Current state
 
-- Working area: `/Users/bytedance/Documents/Work/Code/harbor`. Preserve existing uncommitted work.
+- Working area: `repository root`. Preserve existing uncommitted work.
 - User explicitly requests the filters discussed in the preceding turn: language and sponsorship.
 - GitHub accepts `/trending/developers/<language>?since=<period>&sponsorable=1`. Public samples
   are in `/private/tmp/harbor-trending-{all,filtered,empty}.html`.

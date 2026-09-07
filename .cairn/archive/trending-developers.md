@@ -1,5 +1,10 @@
 # Trending developers
 
+> Historical snapshot: delivery and uncommitted-work statements below describe the
+> checkpoint when it was recorded, not the current branch. These records were included
+> in [PR #84](https://github.com/Excelius-Wang/harbor/pull/84); see the
+> [current checkpoint](../items/ui-follow-up.md) for live delivery status.
+
 ## Goal
 
 Add official GitHub Trending Developers under Discover > Trending, preserve Harbor's current
@@ -7,7 +12,7 @@ app design, and record that design language in root AGENTS.md.
 
 ## Current state
 
-- Complete in `/Users/bytedance/Documents/Work/Code/harbor`; implementation remains uncommitted.
+- Complete in `repository root`; implementation remains uncommitted.
 - Repository/developer switching shares daily, weekly, and monthly filters. The Rust adapter
   fetches the public official ranking through a bounded, credential-free interface. Developer
   profiles reuse the existing page; popular repository links open GitHub.

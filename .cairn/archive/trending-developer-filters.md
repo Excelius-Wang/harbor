@@ -1,12 +1,17 @@
 # Trending developer controls
 
+> Historical snapshot: delivery and uncommitted-work statements below describe the
+> checkpoint when it was recorded, not the current branch. These records were included
+> in [PR #84](https://github.com/Excelius-Wang/harbor/pull/84); see the
+> [current checkpoint](../items/ui-follow-up.md) for live delivery status.
+
 ## Goal
 
 Remove the unwanted GitHub ranking shortcut and identify why developer filters are missing.
 
 ## Current state
 
-- Working area: `/Users/bytedance/Documents/Work/Code/harbor`; existing feature/layout changes are
+- Working area: `repository root`; existing feature/layout changes are
   uncommitted and must be preserved.
 - Removed the developer ranking shortcut from its toolbar and empty/error actions. Retry and
   individual repository links remain. Updated its existing interaction test and documentation;

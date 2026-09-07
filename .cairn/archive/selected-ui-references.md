@@ -1,5 +1,10 @@
 # Selected Harbor UI references
 
+> Historical snapshot: delivery and uncommitted-work statements below describe the
+> checkpoint when it was recorded, not the current branch. These records were included
+> in [PR #84](https://github.com/Excelius-Wang/harbor/pull/84); see the
+> [current checkpoint](../items/ui-follow-up.md) for live delivery status.
+
 ## Goal
 
 Record the user's selected sidebar image 4, Harbor cool blue-gray palette, LeonAnd page
@@ -7,7 +12,7 @@ reference, and shared-navigation reuse rule in the guide, AGENTS.md, and referen
 
 ## Current state
 
-- Working area: `/Users/bytedance/Documents/Work/Code/harbor`.
+- Working area: `repository root`.
 - AGENTS.md and docs/UI_DESIGN_GUIDE.md now fix reference roles: sidebar image 4 for structure,
   Harbor cool blue-gray for color, LeonAnd for whole-page surfaces, and shared navigation for
   selection and row height. Generic blue navigation selection guidance was removed.

@@ -1,5 +1,10 @@
 # Harbor UI phase-one delivery
 
+> Historical snapshot: delivery and uncommitted-work statements below describe the
+> checkpoint when it was recorded, not the current branch. These records were included
+> in [PR #84](https://github.com/Excelius-Wang/harbor/pull/84); see the
+> [current checkpoint](../items/ui-follow-up.md) for live delivery status.
+
 ## Goal
 
 Deliver the completed UI work through the Gist action module, address actual CodeRabbit findings, verify and merge PR #82. The user authorized this phase boundary; full-site/native acceptance is deferred.
