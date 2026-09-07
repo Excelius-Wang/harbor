@@ -30,6 +30,18 @@ cargo check --manifest-path src-tauri/Cargo.toml
 - Keep source comments and identifiers in English.
 - Do not commit generated build output or credentials.
 
+## Branch workflow
+
+- Use a dedicated branch for each independent change; do not develop directly on `main`.
+- After an authorized PR merge, verify GitHub reports the PR as merged and confirm the branch's
+  final changes are included in the merge result. Then sync local `main` and automatically
+  delete that PR's remote and local branches. No additional deletion confirmation is needed.
+- Preserve unrelated branches, worktrees and uncommitted changes. Do not delete a branch with
+  unmerged follow-up commits or one still needed by another worktree; report the exception.
+- For squash merges, verify the PR head and merge result instead of relying only on Git ancestry.
+- Branch creation and cleanup do not independently authorize creating or merging a PR; follow
+  the user's instructions for external writes and merges.
+
 ## App design language
 
 Harbor is a compact desktop workspace with cool blue-gray translucent glass, soft edge
@@ -102,8 +114,9 @@ equal card grids do not belong in app workflows.
 - Searchable filter menus use `harbor-filter-trigger` and `harbor-filter-menu`: 13 px regular
   text, compact 28 px rows, a quiet scrollbar, and a single down chevron. Keep the inner Command
   transparent so the shared `harbor-popover` surface stays visible; avoid stacking opaque fills.
-- Keep the shared title bar and primary navigation. The navigation expands from 58 px to
-  226 px at `workspace-wide` (80rem); the optional context rail is 52 px. Do not create a second
+- Keep the shared title bar and primary navigation. The navigation starts expanded at 226 px and can be
+  collapsed to a 58 px icon rail by clicking the title-bar product Logo; persist the user’s choice.
+  The `workspace-wide` (80rem) breakpoint still controls content layouts; the optional context rail is 52 px. Do not create a second
   page-level sidebar for filters that fit in a toolbar.
 - Current primary navigation lives in `PrimaryNavigation` within
   `src/features/workspace/harbor-workspace.tsx`. Its main destinations, More trigger, account,
@@ -123,7 +136,7 @@ equal card grids do not belong in app workflows.
   length. Do not split related identity and project content into distant proportional columns.
 - Preserve `min-w-0`, `min-h-0`, and pane-local `ScrollArea` containment. At the 900 px minimum
   app width, secondary row content stacks below the primary identity; text must not stretch the
-  window or hide controls. Use the shared adaptive window sizing instead of hardcoding a viewport.
+  window or hide controls. Use the shared 1200 × 760 logical startup size with work-area clamping; do not resize the window from feature views.
 
 ### Interaction and verification
 

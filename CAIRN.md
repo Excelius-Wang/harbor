@@ -4,4 +4,4 @@
 
 ## Current item
 
-[Harbor UI follow-up (active)](.cairn/items/ui-follow-up.md)
+[Harbor UI follow-up](.cairn/items/ui-follow-up.md)

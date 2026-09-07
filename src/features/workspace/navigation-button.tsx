@@ -1,4 +1,5 @@
 import { forwardRef, type ComponentProps } from "react";
+import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -8,12 +9,13 @@ type NavigationButtonProps = Omit<ComponentProps<"button">, "children" | "classN
   caption?: string;
   active?: boolean;
   alwaysExpanded?: boolean;
+  expanded?: boolean;
 };
 
 // Forward Radix trigger events and refs to the same native navigation control.
 export const NavigationButton = forwardRef<HTMLButtonElement, NavigationButtonProps>(
   function NavigationButton(
-    { icon: Icon, label, caption, active = false, alwaysExpanded = false, ...props },
+    { icon: Icon, label, caption, active = false, alwaysExpanded = false, expanded, ...props },
     ref
   ) {
     return (
@@ -29,11 +31,16 @@ export const NavigationButton = forwardRef<HTMLButtonElement, NavigationButtonPr
           >
             <Icon className="size-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />
             <span
-              className={
-                alwaysExpanded
-                  ? "block min-w-0 flex-1 truncate"
-                  : "workspace-wide:block hidden min-w-0 flex-1 truncate"
-              }
+              className={cn(
+                "min-w-0 flex-1 truncate",
+                expanded === undefined
+                  ? alwaysExpanded
+                    ? "block"
+                    : "workspace-wide:block hidden"
+                  : expanded
+                    ? "block"
+                    : "hidden"
+              )}
             >
               {caption ?? label}
             </span>
@@ -42,7 +49,15 @@ export const NavigationButton = forwardRef<HTMLButtonElement, NavigationButtonPr
         <TooltipContent
           side="right"
           sideOffset={8}
-          className={alwaysExpanded ? "hidden" : "workspace-wide:hidden"}
+          className={
+            expanded === undefined
+              ? alwaysExpanded
+                ? "hidden"
+                : "workspace-wide:hidden"
+              : expanded
+                ? "hidden"
+                : undefined
+          }
         >
           {label}
         </TooltipContent>

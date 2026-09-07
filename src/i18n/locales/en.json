@@ -2931,7 +2931,9 @@
       "navigation": "Navigate",
       "repository": "Repository",
       "openSelected": "Open selected repository on GitHub"
-    }
+    },
+    "collapseNavigation": "Collapse navigation",
+    "expandNavigation": "Expand navigation"
   },
   "about": {
     "title": "About",

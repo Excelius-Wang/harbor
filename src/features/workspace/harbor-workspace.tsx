@@ -49,6 +49,7 @@ import { GitHubRepositoryBrowser } from "@/features/github/github-repository-bro
 import { openExternalUrl, openSettingsWindow } from "@/lib/window";
 import { HarborRail, type RailView, type RepositoryTarget } from "./harbor-rail";
 import type { WorkspaceSection } from "./workspace-types";
+import { cn } from "@/lib/utils";
 import { NavigationButton } from "./navigation-button";
 
 const GitHubDiscovery = lazy(() =>
@@ -152,9 +153,11 @@ function WorkspaceFallback() {
 }
 
 function PrimaryNavigation({
+  expanded,
   activeSection,
   onSectionChange,
 }: {
+  expanded: boolean;
   activeSection: WorkspaceSection;
   onSectionChange: (section: WorkspaceSection) => void;
 }) {
@@ -168,13 +171,21 @@ function PrimaryNavigation({
   const SecondaryIcon = activeSecondaryItem?.icon ?? Ellipsis;
 
   return (
-    <aside className="harbor-pane harbor-primary-nav harbor-subtle-divider workspace-wide:w-[226px] flex min-h-0 w-[58px] shrink-0 flex-col border-r">
+    <aside
+      id="harbor-primary-navigation"
+      data-expanded={expanded}
+      className={cn(
+        "harbor-pane harbor-primary-nav harbor-subtle-divider flex min-h-0 shrink-0 flex-col border-r",
+        expanded ? "w-[226px]" : "w-[58px]"
+      )}
+    >
       <nav
-        className="workspace-wide:px-2.5 flex flex-col gap-1.5 px-2 py-4"
+        className={cn("flex flex-col gap-1.5 py-4", expanded ? "px-2.5" : "px-2")}
         aria-label={t("workspace.primaryNavigation")}
       >
         {primaryNavItems.map((item) => (
           <NavigationButton
+            expanded={expanded}
             key={item.id}
             icon={item.icon}
             label={t(`workspace.nav.${item.id}`)}
@@ -183,11 +194,17 @@ function PrimaryNavigation({
           />
         ))}
 
-        <Separator className="workspace-wide:mx-4 bg-border/40 mx-2 my-2 data-[orientation=horizontal]:w-auto!" />
+        <Separator
+          className={cn(
+            "bg-border/40 my-2 data-[orientation=horizontal]:w-auto!",
+            expanded ? "mx-4" : "mx-2"
+          )}
+        />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <NavigationButton
+              expanded={expanded}
               icon={SecondaryIcon}
               label={t("workspace.nav.more")}
               caption={
@@ -214,14 +231,16 @@ function PrimaryNavigation({
 
       <div className="flex-1" />
 
-      <div className="workspace-wide:px-2.5 flex flex-col gap-1.5 px-2 py-2.5 pb-4">
+      <div className={cn("flex flex-col gap-1.5 py-2.5 pb-4", expanded ? "px-2.5" : "px-2")}>
         <NavigationButton
+          expanded={expanded}
           icon={UserRound}
           label={t("workspace.account")}
           active={activeSection === "profile"}
           onClick={() => onSectionChange("profile")}
         />
         <NavigationButton
+          expanded={expanded}
           icon={Settings}
           label={t("settings.title")}
           onClick={() => void handleOpenSettings()}
@@ -233,6 +252,22 @@ function PrimaryNavigation({
 
 export function HarborWorkspace() {
   const { t } = useTranslation();
+  const [navigationExpanded, setNavigationExpanded] = useState(() => {
+    try {
+      return localStorage.getItem("harbor-navigation-expanded") !== "false";
+    } catch {
+      return true;
+    }
+  });
+  const toggleNavigation = () => {
+    const expanded = !navigationExpanded;
+    setNavigationExpanded(expanded);
+    try {
+      localStorage.setItem("harbor-navigation-expanded", String(expanded));
+    } catch {
+      /* Navigation remains usable when storage is unavailable. */
+    }
+  };
   const [activeSection, setActiveSection] = useState<WorkspaceSection>("discover");
   const [selectedDiscoveryRepository, setSelectedDiscoveryRepository] =
     useState<GitHubDiscoveryRepositoryTarget | null>(null);
@@ -293,11 +328,21 @@ export function HarborWorkspace() {
 
   return (
     <WindowFrame
-      titleBar={<MainTitleBar onOpenCommand={() => setCommandOpen(true)} />}
+      titleBar={
+        <MainTitleBar
+          navigationExpanded={navigationExpanded}
+          onToggleNavigation={toggleNavigation}
+          onOpenCommand={() => setCommandOpen(true)}
+        />
+      }
       contentClassName="harbor-workspace-shell flex min-h-0 flex-1 overflow-hidden"
     >
       <Toaster />
-      <PrimaryNavigation activeSection={activeSection} onSectionChange={setActiveSection} />
+      <PrimaryNavigation
+        expanded={navigationExpanded}
+        activeSection={activeSection}
+        onSectionChange={setActiveSection}
+      />
       {activeSection === "discover" ? (
         <Suspense fallback={<WorkspaceFallback />}>
           <GitHubDiscovery onSelectRepository={setSelectedDiscoveryRepository} />

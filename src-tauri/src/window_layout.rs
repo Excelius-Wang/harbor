@@ -1,6 +1,8 @@
 use tauri::{PhysicalPosition, PhysicalRect, PhysicalSize, Runtime, WebviewWindow};
 
-const SCREEN_USAGE: f64 = 0.85;
+const DEFAULT_WINDOW_WIDTH: f64 = 1200.0;
+const DEFAULT_WINDOW_HEIGHT: f64 = 760.0;
+const WORK_AREA_MARGIN: f64 = 16.0;
 const MIN_WINDOW_WIDTH: f64 = 900.0;
 const MIN_WINDOW_HEIGHT: f64 = 620.0;
 
@@ -15,8 +17,19 @@ fn calculate_window_geometry(
     work_area: &PhysicalRect<i32, u32>,
     scale_factor: f64,
 ) -> WindowGeometry {
-    let width = (f64::from(work_area.size.width) * SCREEN_USAGE).round() as u32;
-    let height = (f64::from(work_area.size.height) * SCREEN_USAGE).round() as u32;
+    let margin = (WORK_AREA_MARGIN * scale_factor).round() as u32;
+    let available_width = work_area
+        .size
+        .width
+        .saturating_sub(margin.saturating_mul(2))
+        .max(1);
+    let available_height = work_area
+        .size
+        .height
+        .saturating_sub(margin.saturating_mul(2))
+        .max(1);
+    let width = ((DEFAULT_WINDOW_WIDTH * scale_factor).round() as u32).min(available_width);
+    let height = ((DEFAULT_WINDOW_HEIGHT * scale_factor).round() as u32).min(available_height);
     let min_width = ((MIN_WINDOW_WIDTH * scale_factor).round() as u32).min(width);
     let min_height = ((MIN_WINDOW_HEIGHT * scale_factor).round() as u32).min(height);
 
@@ -54,7 +67,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn uses_eighty_five_percent_of_the_monitor_work_area() {
+    fn uses_fixed_logical_dimensions_on_a_retina_monitor() {
         let work_area = PhysicalRect {
             position: PhysicalPosition::new(0, 112),
             size: PhysicalSize::new(3024, 1786),
@@ -62,9 +75,9 @@ mod tests {
 
         let geometry = calculate_window_geometry(&work_area, 2.0);
 
-        assert_eq!(geometry.size, PhysicalSize::new(2570, 1518));
+        assert_eq!(geometry.size, PhysicalSize::new(2400, 1520));
         assert_eq!(geometry.min_size, PhysicalSize::new(1800, 1240));
-        assert_eq!(geometry.position, PhysicalPosition::new(227, 246));
+        assert_eq!(geometry.position, PhysicalPosition::new(312, 245));
     }
 
     #[test]
@@ -76,8 +89,33 @@ mod tests {
 
         let geometry = calculate_window_geometry(&work_area, 1.0);
 
-        assert_eq!(geometry.size, PhysicalSize::new(680, 476));
+        assert_eq!(geometry.size, PhysicalSize::new(768, 528));
         assert_eq!(geometry.min_size, geometry.size);
-        assert_eq!(geometry.position, PhysicalPosition::new(-740, 42));
+        assert_eq!(geometry.position, PhysicalPosition::new(-784, 16));
+    }
+    #[test]
+    fn keeps_default_size_on_large_and_fractionally_scaled_displays() {
+        for scale in [1.0, 1.25, 2.0] {
+            let area = PhysicalRect {
+                position: PhysicalPosition::new(-5000, 100),
+                size: PhysicalSize::new(5000, 3000),
+            };
+            let geometry = calculate_window_geometry(&area, scale);
+            assert_eq!(f64::from(geometry.size.width) / scale, DEFAULT_WINDOW_WIDTH);
+            assert_eq!(
+                f64::from(geometry.size.height) / scale,
+                DEFAULT_WINDOW_HEIGHT
+            );
+            assert!(geometry.position.x >= area.position.x);
+        }
+    }
+
+    #[test]
+    fn configuration_fallback_matches_the_default_logical_size() {
+        let config: serde_json::Value =
+            serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
+        let main = &config["app"]["windows"][0];
+        assert_eq!(main["width"].as_f64().unwrap(), DEFAULT_WINDOW_WIDTH);
+        assert_eq!(main["height"].as_f64().unwrap(), DEFAULT_WINDOW_HEIGHT);
     }
 }

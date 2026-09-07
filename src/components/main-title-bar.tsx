@@ -36,9 +36,15 @@ import { createWindow, openSettingsWindow } from "@/lib/window";
 
 type MainTitleBarProps = {
   onOpenCommand?: () => void;
+  navigationExpanded?: boolean;
+  onToggleNavigation?: () => void;
 };
 
-export function MainTitleBar({ onOpenCommand }: MainTitleBarProps) {
+export function MainTitleBar({
+  onOpenCommand,
+  navigationExpanded = true,
+  onToggleNavigation,
+}: MainTitleBarProps) {
   const { resolvedTheme, setTheme } = useTheme();
   const { t, i18n } = useTranslation();
   const [githubDialogOpen, setGithubDialogOpen] = useState(false);
@@ -93,9 +99,38 @@ export function MainTitleBar({ onOpenCommand }: MainTitleBarProps) {
         leftActions={
           <div className="relative z-10 flex h-full items-center gap-1.5">
             <div className="mr-3 flex items-center gap-2.5 pl-1">
-              <span className="border-primary/20 bg-primary/9 text-primary grid size-8 place-items-center rounded-[8px] border shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]">
-                <Waves className="size-4" strokeWidth={1.8} />
-              </span>
+              {onToggleNavigation ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="border-primary/20 bg-primary/9 text-primary hover:bg-primary/15 focus-visible:ring-ring focus-visible:ring-offset-background grid size-8 shrink-0 cursor-pointer place-items-center rounded-lg border transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                      onClick={onToggleNavigation}
+                      onDoubleClick={(event) => event.stopPropagation()}
+                      aria-expanded={navigationExpanded}
+                      aria-controls="harbor-primary-navigation"
+                      aria-label={t(
+                        navigationExpanded
+                          ? "workspace.collapseNavigation"
+                          : "workspace.expandNavigation"
+                      )}
+                    >
+                      <Waves className="size-4" strokeWidth={1.8} aria-hidden="true" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" sideOffset={7}>
+                    {t(
+                      navigationExpanded
+                        ? "workspace.collapseNavigation"
+                        : "workspace.expandNavigation"
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              ) : (
+                <span className="border-primary/20 bg-primary/9 text-primary grid size-8 place-items-center rounded-lg border">
+                  <Waves className="size-4" strokeWidth={1.8} aria-hidden="true" />
+                </span>
+              )}
               <span className="text-[15px] font-semibold tracking-[-0.025em] max-[720px]:hidden">
                 Harbor
               </span>

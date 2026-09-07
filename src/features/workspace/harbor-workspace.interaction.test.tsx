@@ -15,17 +15,36 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 vi.mock("@/components/main-title-bar", () => ({
-  MainTitleBar: () => null,
+  MainTitleBar: ({
+    navigationExpanded,
+    onToggleNavigation,
+  }: {
+    navigationExpanded: boolean;
+    onToggleNavigation: () => void;
+  }) => (
+    <button
+      aria-label="Toggle navigation"
+      aria-expanded={navigationExpanded}
+      onClick={onToggleNavigation}
+    />
+  ),
 }));
 vi.mock("@/components/ui/sonner", () => ({ Toaster: () => null }));
 vi.mock("@/components/window-frame", () => ({
   WindowFrame: ({
     children,
+    titleBar,
     contentClassName,
   }: {
     children: ReactNode;
+    titleBar: ReactNode;
     contentClassName?: string;
-  }) => <main className={contentClassName}>{children}</main>,
+  }) => (
+    <>
+      <header>{titleBar}</header>
+      <main className={contentClassName}>{children}</main>
+    </>
+  ),
 }));
 vi.mock("@/features/github/github-discovery-view", () => ({
   GitHubDiscoveryView: () => null,
@@ -64,6 +83,7 @@ vi.mock("./harbor-rail", () => ({
 import { HarborWorkspace } from "./harbor-workspace";
 
 beforeEach(() => {
+  localStorage.clear();
   vi.stubGlobal(
     "ResizeObserver",
     class {
@@ -158,4 +178,58 @@ describe("HarborWorkspace navigation", () => {
     expect(getByRole("menuitem", { name: "workspace.nav.gists" })).toBeTruthy();
     expect(getByRole("menuitem", { name: "workspace.nav.packages" })).toBeTruthy();
   });
+});
+
+it("shows labels initially and preserves the navigation choice across remounts", async () => {
+  const user = userEvent.setup();
+  const view = render(
+    <TooltipProvider>
+      <HarborWorkspace />
+    </TooltipProvider>
+  );
+  const toggle = view.getByRole("button", { name: "Toggle navigation" });
+  const navigation = view.container.querySelector(".harbor-primary-nav");
+  expect(navigation?.getAttribute("data-expanded")).toBe("true");
+  await user.click(view.getByRole("button", { name: "workspace.nav.issues" }));
+  await user.click(toggle);
+  expect(navigation?.getAttribute("data-expanded")).toBe("false");
+  expect(toggle.getAttribute("aria-expanded")).toBe("false");
+  expect(
+    view.getByRole("button", { name: "workspace.nav.issues" }).getAttribute("aria-current")
+  ).toBe("page");
+  expect(localStorage.getItem("harbor-navigation-expanded")).toBe("false");
+  view.unmount();
+  const restored = render(
+    <TooltipProvider>
+      <HarborWorkspace />
+    </TooltipProvider>
+  );
+  const restoredToggle = restored.getByRole("button", { name: "Toggle navigation" });
+  expect(restoredToggle.getAttribute("aria-expanded")).toBe("false");
+  restoredToggle.focus();
+  await user.keyboard("{Enter}");
+  expect(restoredToggle.getAttribute("aria-expanded")).toBe("true");
+});
+
+it("keeps toggling usable when preference storage is unavailable", async () => {
+  const read = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+    throw new Error("Unavailable");
+  });
+  const write = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    throw new Error("Unavailable");
+  });
+  try {
+    const view = render(
+      <TooltipProvider>
+        <HarborWorkspace />
+      </TooltipProvider>
+    );
+    const toggle = view.getByRole("button", { name: "Toggle navigation" });
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    await userEvent.setup().click(toggle);
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+  } finally {
+    read.mockRestore();
+    write.mockRestore();
+  }
 });
