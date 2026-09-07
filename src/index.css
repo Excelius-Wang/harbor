@@ -61,6 +61,7 @@
   --chart-4: var(--destructive);
   --harbor-chrome: #e5edf5;
   --harbor-canvas-edge: #d8e3ee;
+  --harbor-window-radius: 10px;
   --harbor-window-fill: rgb(233 241 249 / 82%);
   --harbor-glass-fill: rgb(239 245 252 / 48%);
   --harbor-content-fill: rgb(246 249 253 / 42%);
@@ -481,10 +482,7 @@
   position: relative;
   isolation: isolate;
   background-color: var(--harbor-window-fill);
-  box-shadow:
-    0 34px 86px var(--harbor-glass-shadow),
-    inset 0 1px 0 color-mix(in srgb, white 18%, transparent),
-    inset 0 0 0 1px color-mix(in srgb, var(--harbor-glass-edge) 62%, transparent);
+  box-shadow: none;
   backdrop-filter: saturate(104%) blur(32px);
   -webkit-backdrop-filter: saturate(104%) blur(32px);
 }

@@ -130,11 +130,7 @@ export function TitleBar({
       className={cn(
         "harbor-subtle-divider relative flex shrink-0 items-center justify-between border-b select-none",
         size === "workspace" ? "h-[52px]" : "h-8",
-        showMaximize && isMaximized
-          ? ""
-          : size === "workspace"
-            ? "rounded-t-[12px]"
-            : "rounded-t-lg",
+        showMaximize && isMaximized ? "" : "rounded-t-[var(--harbor-window-radius)]",
         className
       )}
     >

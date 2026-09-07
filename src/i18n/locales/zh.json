@@ -2924,7 +2924,9 @@
       "navigation": "导航",
       "repository": "仓库",
       "openSelected": "在 GitHub 打开当前仓库"
-    }
+    },
+    "collapseNavigation": "收起导航栏",
+    "expandNavigation": "展开导航栏"
   },
   "about": {
     "title": "关于",

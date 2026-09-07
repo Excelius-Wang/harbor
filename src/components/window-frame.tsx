@@ -36,7 +36,7 @@ export function WindowFrame({ titleBar, children, className, contentClassName }:
       <div
         className={cn(
           "harbor-window flex h-dvh w-dvw flex-col overflow-hidden",
-          isMaximized ? "" : "border-border rounded-[12px] border",
+          isMaximized ? "" : "border-border rounded-[var(--harbor-window-radius)] border",
           className
         )}
       >

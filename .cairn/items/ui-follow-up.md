@@ -6,21 +6,21 @@ Complete the remaining UI migration and visual/native acceptance recorded in `do
 
 ## Current state
 
-- Packages action/read recovery is complete locally on `fix/packages-action-states`, based on phase-one merge `39f2a9e` (PR #82). User authorized PR creation, actual CodeRabbit review/fixes, and merge once checks pass. Preparing the Packages commit; no release is requested.
+- Packages action/read recovery was merged through PR [#83](https://github.com/Excelius-Wang/harbor/pull/83) at `74c396b9f5792c9eec850bdd2e6c7b5d3329a526` on 2026-09-07. CodeRabbit reviewed head `e7c6103212e4655d08e8d96ab1a55c098a005b79` with no actionable comments and Minimal risk; all CodeQL checks passed. Its default docstring-coverage warning was recorded as non-blocking in the PR. No release was created.
 - Production fixes cover stale detail/empty inventory feedback, mutation reconciliation locks, narrow loading/error Back, scrollable loading skeletons, and long-name/pane-width layout. Stateful fixtures now use production `versionState` and reconcile guarded delete/restore writes. Details and evidence are in `docs/UI_COMPONENTS.md` and the 2026-09-07 section of `docs/UI_VERIFICATION.md`.
 - All 112 browser captures are local ignored files under `output/playwright/packages-*`. Playwright CLI headed screenshots timed out; independent headless sessions succeeded. Fixture writes remain local and never reach GitHub.
 - Remaining scope starts with Issue lifecycle/comment/candidate states, then nested Discussion replies, archived repository/Pages conditions and release/code transfer feedback. Recent repository/conversation/Project/Gist action browser acceptance and native background/transparency/accessibility acceptance remain unfinished.
-- Preserve pre-existing Cairn archive/routing changes, including the removed `.cairn/items/ui-unification.md` and its archived copy. The prior session completed authorized remote branch cleanup; its receipt/recovery SHAs remain in the separate handoff. Remote state was not re-queried in this local batch.
+- Current working branch is `feat/window-navigation-toggle` from `74c396b`, with user-approved window-shell changes being submitted for PR review: fixed 1200 × 760 startup, Logo navigation toggle, and single-border/10 px outer-edge refinement, plus branch-policy documentation. See the 2026-09-07 window/navigation section in `docs/UI_VERIFICATION.md`; the next UI migration batch has not started. The user authorized including all current Cairn archive/routing changes, including the move of `.cairn/items/ui-unification.md` into the archive. The prior session completed authorized remote branch cleanup; its receipt/recovery SHAs remain in the separate handoff. Remote state was not re-queried in this local batch.
 - `AGENTS.md` and `docs/UI_DESIGN_GUIDE.md` remain the design authority. Third-party originals stay in the local ignored reference cache.
 
 ## Next action
 
-Create the Packages PR, address actual CodeRabbit feedback, and merge after final-head review and checks pass.
+Create the window-shell PR on the existing branch, address actual CodeRabbit feedback and update its review status; do not create another branch.
 
 ## Verification
 
-`pnpm check`: 608 tests/127 files, formatting, lint, TypeScript and Vite build pass; log `/tmp/harbor-packages-final-check.log`. Existing Harbor rail hook and chunk-size warnings remain. No Rust/native changes were made.
+Latest window-shell `pnpm check`: 610 tests/127 files, formatting, lint, TypeScript and Vite build pass (`/tmp/harbor-window-edge-check.log`). Four Rust geometry tests and cargo check passed for the startup-size change. Existing rail hook and chunk-size warnings remain.
 
-Playwright CLI: success/keyboard matrix (8 combinations), mutation-state matrix (64 cases), read/layout/scroll matrix (20 cases), filter/cache return (4 cases) pass. Scripts and 112 captures are in `output/playwright/`; exact log paths and scope are in `docs/UI_VERIFICATION.md`.
+Window/navigation: 12 browser language/theme/size combinations pass; native 1200 × 760 sizing and the original toggle were verified, and final Logo behavior was browser-verified. Edge refinement: 12 before/after theme/size/background comparisons, reduced-transparency checks and native dark active/inactive self-review pass. See the latest sections of `docs/UI_VERIFICATION.md` for exact artifacts and native scope limits.
 
-Success: Packages batch implementation and controlled browser acceptance are complete. The overall UI follow-up remains open.
+Packages PR #83 is merged; its 112-capture acceptance remains recorded separately. The user approved the final window-shell preview and authorized submitting the current changes and tracking CodeRabbit review on this existing branch. The overall UI migration and broader native material acceptance remain open.

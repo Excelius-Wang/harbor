@@ -339,3 +339,36 @@ Browser acceptance used the production UI through `pnpm dev:ui --port 1423` and 
 All 112 captures are available locally; [four selected captures](verification/packages-actions/README.md) are also committed for PR review. Logs: `/tmp/harbor-packages-browser-headless.log`, `/tmp/harbor-packages-states.log`, `/tmp/harbor-packages-reading.log`, `/tmp/harbor-packages-filters.log`. Representative restore, delete/permission, long-name and loading screenshots were visually inspected. These controlled browser results do not establish live API behavior or native transparency/accessibility acceptance.
 
 Final `pnpm check` passes 608 tests across 127 files, formatting, lint and the TypeScript/Vite build (`/tmp/harbor-packages-final-check.log`). Nine new fixture/interaction regressions cover version-state routing/reconciliation, identity/write guards, recovery, pending controls, retained detail/empty inventory and loading/error return. Existing `harbor-rail.tsx` hook lint and build chunk-size warnings remain. Rust/native code was unchanged; no new native acceptance is claimed. The broader migration and recent non-Package action browser backlog remain open.
+
+
+## Fixed startup size and navigation toggle — 2026-09-07
+
+Branch `feat/window-navigation-toggle`, based on `74c396b`. Main-window geometry now uses the configured 1200 × 760 logical default instead of 85% screen sizing. Primary navigation starts expanded and follows a persisted manual choice independently of content breakpoints. `AGENTS.md` also records the user-requested per-change branch / post-merge local-and-remote cleanup workflow.
+
+Validation:
+
+- `pnpm check`: 610 tests across 127 files, formatting, lint, TypeScript and Vite build pass (`/tmp/harbor-navigation-check.log`). Existing rail hook and chunk-size warnings remain.
+- `cargo test --manifest-path src-tauri/Cargo.toml window_layout::tests --lib`: four tests pass for Retina, large/fractionally scaled displays, a small display with a negative origin, and agreement with configuration defaults (`/tmp/harbor-window-tests.log`). `cargo check` and `cargo fmt --check` pass.
+- `output/playwright/navigation-matrix.js` passes 12 English/Chinese × light/dark × 900/1200/1440 combinations. Checks initial visible labels, explicit expanded/collapsed widths, unobstructed toggle, keyboard activation, collapsed tooltips, retained selection, More menu Escape/focus return, reload persistence, resize independence and no horizontal window overflow. The first harness checked focus before Radix completed menu dismissal; waiting for close/focus recovery fixed the harness. Final result: `/tmp/harbor-navigation-browser.log`; 24 screenshots at `output/playwright/navigation-{language}-{theme}-{width}-{expanded,collapsed}.png`.
+- An isolated native preview (`com.harbor.navigation-preview`, production components with intercepted business calls) compiled and launched successfully. macOS Accessibility and CoreGraphics both reported a centered window at `(360, 140)` with size `1200 × 760`. Native Accessibility clicks collapsed and expanded the navigation while preserving window dimensions. Window-only screenshots `navigation-native-expanded.png` and `navigation-native-collapsed.png` were captured under `output/playwright/`; the expanded native and both browser widths were visually inspected.
+
+Native evidence covers this window/control behavior on the available monitor. The broader material/background/reduced-transparency acceptance remains separate. No real GitHub writes or new PR were made in this batch. Window geometry persistence is outside this change; only navigation preference is saved.
+
+
+Logo-toggle refinement: at the user's request, the existing title-bar Logo now controls navigation and the separate sidebar icon is removed. The 12-combination browser matrix was rerun successfully (`/tmp/harbor-logo-browser.log`), refreshing the 24 navigation captures. Nine focused title-bar/workspace tests and TypeScript pass (`/tmp/harbor-logo-tests.log`); the earlier 610-test full check remains the pre-refinement baseline. A native window screenshot confirms the simplified header; native accessibility automation did not expose controls during this refinement, so the prior native click evidence applies to the earlier dedicated control, while the final Logo interaction is browser-verified.
+
+
+## Outer edge refinement and self-review — 2026-09-07
+
+On the existing window-shell branch, removed the outer window's CSS shadow stack (large external shadow, top white inset and surrounding inset). WindowFrame and both TitleBar sizes share `--harbor-window-radius: 10px`, matching the existing native effect configuration. The single semantic border, native shadow, fills and blur remain. This continues the uncommitted window-shell refinement; no new PR was created.
+
+`window-edge-matrix.js` in `output/playwright/` captured 12 combinations before and after: light/dark × 900/1200 px × cool/neutral/bright backgrounds. After-capture assertions verify `box-shadow: none`, 10 px radius and 1 px border. Logs: `/tmp/harbor-edge-before.log`, `/tmp/harbor-edge-after.log`. Browser probes were temporary DOM styles and were removed after analysis. Reduced-transparency emulation passes with opaque background, no blur, no shadow and the same radius (`/tmp/harbor-edge-reduced.log`); the probe waits for computed style updates after changing media preferences.
+
+Self-review: viewed the native before/after and stable inactive captures, plus light/bright and dark/neutral browser captures. The doubled highlight and corner wedges are removed; the thin contour stays visible on bright backgrounds without the former white rim. Native dark active/inactive views show a continuous corner and no additional white band. A capture during a system window transition was discarded and replaced after checking `frontmost=false` and `AXMinimized=false`. Native light-theme and exhaustive desktop-background material validation remain outside this evidence.
+
+Artifacts: `output/playwright/window-edge-native-before-active.png`, `window-edge-native-after-active.png`, `window-edge-native-after-inactive.png`, and `window-edge-{before,after}-{theme}-{width}-{background}.png`. The native preview was returned to the foreground for the user's inspection.
+
+Final `pnpm check` passes 610 tests/127 files, formatting, lint and the TypeScript/Vite build (`/tmp/harbor-window-edge-check.log`); existing rail hook and chunk-size warnings remain. No additional tests mirror these low-impact CSS declarations; actual browser/native comparisons supply visual verification. Earlier Rust geometry checks remain applicable because native code did not change in this edge refinement.
+
+
+Window-shell PR delivery: the user approved the visual result and authorized submitting the current changes on the existing branch. [Selected screenshots](verification/window-shell/README.md) are included for remote review. Historical Cairn archives are included as snapshots; their earlier delivery-state descriptions are not assertions about the current branch.

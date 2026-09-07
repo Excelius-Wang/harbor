@@ -198,3 +198,17 @@ Packages retain detail and version queries independently after refresh failures.
 `?packages=standard|long|permission|conflict|retry` selects the package fixtures. The default preview also uses this stateful fixture. `long` adds a dense inventory and long names/descriptions; `permission` and `conflict` reject version writes with production error codes; `retry` rejects the first mutation and accepts the next. Add `writes=accept` to simulate deletion/restoration. Scoped `state=loading|error|stale|empty&commands=...` continues to take precedence.
 
 The fixture reads the production `versionState` argument, keeps active/deleted versions separate, and reconciles both lists and active version counts after accepted writes. Ecosystems and package names scope records; expected package ID, version ID/name and source state guard mutations. Returned DTOs are copied. These simulations do not modify real GitHub Packages or establish live API/native acceptance.
+
+
+## Startup window and manual navigation — 2026-09-07
+
+The main window starts at 1200 × 760 logical units, centered in the current monitor work area. `src-tauri/src/window_layout.rs` applies display scaling and only reduces dimensions when necessary to preserve a 16-unit work-area margin. The 900 × 620 minimum is lowered only when the available display is smaller. Window resizing/maximizing remains available; this change does not persist window geometry.
+
+Primary navigation starts expanded (226 px) and the title-bar Logo collapses it to the existing 58 px icon rail. `harbor-navigation-expanded` stores the user's choice; missing/unavailable storage defaults to expanded and storage failures do not block the control. Resizing never overrides the choice. Content panes retain their existing `workspace-wide` breakpoint.
+
+`NavigationButton.expanded` supplies explicit label/tooltip presentation to primary, More, account and settings rows. Callers without that prop retain the existing responsive behavior; separate Settings windows retain `alwaysExpanded`. The title-bar toggle has translated action labels, `aria-expanded`, `aria-controls`, keyboard focus and a tooltip. The toggle remains outside the controlled navigation so it is always reachable. The existing Harbor Logo is the toggle target; no separate sidebar icon is added beside the wordmark. Its shape stays unchanged across states, with localized tooltip text and subtle hover/focus feedback.
+
+
+## Outer window edge — 2026-09-07
+
+`--harbor-window-radius: 10px` now supplies WindowFrame and TitleBar corner rounding, matching the existing native effect radius. The outer window keeps its single semantic 1 px border; `.harbor-window` has no CSS shadow or inset highlight. Native window shadows remain enabled. In-page overlays keep their own material, and window fill/blur values are unchanged. Maximized windows retain their existing square, borderless treatment.
