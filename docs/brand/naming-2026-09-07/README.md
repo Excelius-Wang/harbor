@@ -32,7 +32,7 @@
 | Repotrail | 已注册 | 未查到记录 | 未查到记录 | 已有 Organization | 10 | 未查到包 |
 | Repofront | 已注册 | 未查到记录 | 未查到记录 | 未查到公开账号 | 103 | 未查到包 |
 
-仓库搜索使用 `NAME in:name`，数量包含部分匹配，不能将每项都视为正式产品。GitHub 匿名请求本轮遇到 403，之后用已认证的 `gh api` 重新查询账号与仓库。npm 只检查不带 scope 的同名包，不代表整个生态无冲突。
+仓库搜索使用 `NAME in:name`，数量包含部分匹配，不能将每项都视为正式产品。 Repofront 的补查快照仅保存并检查了 103 条结果中的 30 条，其余 73 条未检查；原始分页参数未保留，不能据此认为已完成全部仓库的重名核查。GitHub 匿名请求本轮遇到 403，之后用已认证的 `gh api` 重新查询账号与仓库。npm 只检查不带 scope 的同名包，不代表整个生态无冲突。
 
 原始最小记录：[注册局与 npm 查询](registry-checks.json)、[GitHub 账号重试](github-accounts.json)、[GitHub 仓库搜索](github-search.json)、[Repofront 补查](repofront-checks.json)。记录不含账号凭据或域名持有人信息。
 

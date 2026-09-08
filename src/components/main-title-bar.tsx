@@ -98,7 +98,10 @@ export function MainTitleBar({
         leftActions={
           <div className="relative z-10 flex h-full items-center gap-1.5">
             <div className="mr-3 flex items-center gap-3 pl-2">
-              <div className="text-foreground flex shrink-0 items-center gap-1.5">
+              <div
+                className="text-foreground flex shrink-0 items-center gap-1.5"
+                onDoubleClick={(event) => event.stopPropagation()}
+              >
                 <BrandMark className="h-[22px] w-6" />
                 <span className="text-sm font-medium tracking-[-0.015em] max-[720px]:hidden">
                   {t("app.title")}

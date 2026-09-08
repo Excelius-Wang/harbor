@@ -14,4 +14,8 @@ Eight browser scenarios cover en/zh × light/dark × 900/1440 px, including Ente
 
 Lane-specific native-window inspection and Dock/release-icon migration remain outside this acceptance. The titlebar retains inline SVG because the prior CSS mask implementation failed in native WebView.
 
+PR #85 review regression: double-clicking either the mark or wordmark now stops at the brand block, while the empty titlebar drag region retains native maximize handling. Both new cases failed before the fix and passed afterward; all five focused titlebar tests pass. These tests mock the native window call and do not establish native WebView acceptance.
+
 Local delivery gate: `pnpm check` passed all 611 tests in 127 files, formatting, lint, TypeScript and production build; `cargo check --manifest-path src-tauri/Cargo.toml` passed. The first full test run timed out once in the unrelated code-navigation suite; its isolated rerun and the complete rerun passed without code changes. Existing rail-hook and bundle-size warnings remain.
+
+Review-fix validation: `pnpm check` passed 613 tests in 127 files, formatting, lint, TypeScript and production build. Existing rail-hook and bundle-size warnings remain. No Rust/config changes were made in this fix; the prior cargo check remains applicable.

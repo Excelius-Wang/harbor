@@ -75,29 +75,39 @@ describe("title bar theme toggle", () => {
   );
 });
 
-it("keeps navigation toggle double-clicks out of the native window maximize handler", async () => {
-  vi.stubGlobal("matchMedia", () => ({
-    matches: false,
-    addEventListener() {},
-    removeEventListener() {},
-  }));
-  const toggle = vi.fn();
-  const user = userEvent.setup();
-  render(
-    <QueryClientProvider client={new QueryClient()}>
-      <TooltipProvider>
-        <ThemeProvider defaultTheme="light">
-          <MainTitleBar onToggleNavigation={toggle} navigationExpanded />
-        </ThemeProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
-  );
-  // Enable the native click path after mounting, without invoking unrelated window setup.
-  vi.mocked(isTauri).mockReturnValue(true);
-  const navigationToggle = screen.getByRole("button", { name: "Collapse navigation" });
-  await user.dblClick(navigationToggle);
-  expect(toggle).toHaveBeenCalledTimes(2);
-  expect(nativeWindow.toggleMaximize).not.toHaveBeenCalled();
-  await user.dblClick(navigationToggle.closest("[data-tauri-drag-region]")!);
-  expect(nativeWindow.toggleMaximize).toHaveBeenCalledTimes(1);
-});
+it.each(["navigation toggle", "mark", "wordmark"])(
+  "keeps %s double-clicks out of the native window maximize handler",
+  async (targetKind) => {
+    vi.stubGlobal("matchMedia", () => ({
+      matches: false,
+      addEventListener() {},
+      removeEventListener() {},
+    }));
+    const toggle = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <TooltipProvider>
+          <ThemeProvider defaultTheme="light">
+            <MainTitleBar onToggleNavigation={toggle} navigationExpanded />
+          </ThemeProvider>
+        </TooltipProvider>
+      </QueryClientProvider>
+    );
+    // Enable the native click path after mounting, without invoking unrelated window setup.
+    vi.mocked(isTauri).mockReturnValue(true);
+    const navigationToggle = screen.getByRole("button", { name: "Collapse navigation" });
+    const wordmark = screen.getByText("Repolane");
+    const target =
+      targetKind === "navigation toggle"
+        ? navigationToggle
+        : targetKind === "mark"
+          ? wordmark.parentElement!.querySelector("svg")!
+          : wordmark;
+    await user.dblClick(target);
+    expect(toggle).toHaveBeenCalledTimes(targetKind === "navigation toggle" ? 2 : 0);
+    expect(nativeWindow.toggleMaximize).not.toHaveBeenCalled();
+    await user.dblClick(navigationToggle.closest("[data-tauri-drag-region]")!);
+    expect(nativeWindow.toggleMaximize).toHaveBeenCalledTimes(1);
+  }
+);
