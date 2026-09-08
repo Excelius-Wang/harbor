@@ -4,4 +4,4 @@
 
 ## Current item
 
-[Brand naming](.cairn/items/brand-naming.md)
+[README delivery](.cairn/items/readme-delivery.md)

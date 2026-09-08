@@ -1,50 +1,59 @@
 <div align="center">
 
-# Harbor
+<img src="src/assets/brand/repolane-mark.svg" width="72" height="64" alt="Repolane Lane 标志" />
 
-**把 GitHub 上的事，放进一个清爽的桌面工作台。**
+# Repolane
 
-写给每天泡在 GitHub、又不想被浏览器标签页淹没的人。
+**把 GitHub 上的日常工作，放进一个专注的桌面工作台。**
 
-[English](README.md) · [现有功能](#现有功能) · [本地运行](#本地运行) · [参与贡献](#参与贡献)
+在同一个窗口里阅读代码、评审 PR、跟进动态和处理仓库事务。
+
+[English](README.md) · [现有功能](#现有功能) · [本地运行](#本地运行) · [开发](#开发) · [参与贡献](#参与贡献)
 
 [![Tauri 2](https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white)](https://v2.tauri.app/)
 [![Rust](https://img.shields.io/badge/Rust-000000?logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=111827)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![License](https://img.shields.io/github/license/Excelius-Wang/harbor)](https://github.com/Excelius-Wang/harbor/blob/main/LICENSE)
+[![License](https://img.shields.io/github/license/Excelius-Wang/harbor)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/Excelius-Wang/harbor?style=social)](https://github.com/Excelius-Wang/harbor)
 
 </div>
 
-![Harbor 桌面工作台，展示仓库发现和最近动态](screenshots/harbor-workspace-implemented.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="screenshots/repolane-workspace-dark.png" />
+  <source media="(prefers-color-scheme: light)" srcset="screenshots/repolane-workspace-light.png" />
+  <img alt="Repolane 仓库发现界面，展示展开的导航栏和 Lane 标志" src="screenshots/repolane-workspace-light.png" />
+</picture>
 
-> [!IMPORTANT]
-> Harbor 仍在积极开发，暂时没有可直接下载的公开安装包。现在可以从源码运行，也欢迎一起打磨产品。
+_截图来自生产组件的浏览器预览，使用本地演示数据。[查看深浅主题及验证说明](docs/verification/repolane-lane/README.md)。_
 
-## 为什么做 Harbor？
+> [!NOTE]
+> Harbor 的产品名称已改为 Repolane，仓库仍为 `Excelius-Wang/harbor`，原有 `HARBOR_*` 配置名称保持不变。
+> 项目仍在开发中，暂时没有公开安装包。目前的打包流程面向 macOS，其他平台尚未验证。
 
-GitHub 的功能很全，但日常工作散落在通知、仓库标签页、评审页面、Actions 运行记录和搜索结果里。
-Harbor 把个人开发者常用的 GitHub 工作流收进桌面应用，GitHub 仍是所有数据的最终来源。
+## 为什么做 Repolane？
 
-目标很直接：少花时间找页面，多花时间弄清楚接下来该处理什么。
+处理一条通知，往往要接着打开 Issue、拉取请求和工作流记录，浏览器标签页也越开越多。
+Repolane 把这些相关工作收进桌面应用，GitHub 仍是数据来源。
+
+界面保留紧凑的导航、深浅主题和各自独立滚动的内容区。需要更多阅读空间时，可以收起侧栏，
+应用会记住你的选择。阅读公开仓库遇到疑问，也可以打开问答侧栏。
 
 ## 现有功能
 
-- **个人收件箱**：集中查看账号下的通知、Issue、拉取请求、Project 和 Gist。
-- **完整的仓库工作区**：覆盖代码、Release、Issue、拉取请求、Discussion、Actions、安全告警和仓库设置。
-- **够用的代码评审工具**：支持源码高亮、blame、历史记录、代码 diff、暂存评审、评审线程、检查状态、合并操作和原生文件下载。
-- **少跳转的 Actions 体验**：可以触发和筛选工作流，查看 Job、Step、日志和产物，也能重跑、取消或管理工作流。
-- **仓库发现**：发现好项目，并在同一处查看仓库近期动态。
-- **桌面应用该有的细节**：命令面板、全局快捷键、系统托盘、自动更新机制、明暗主题，以及中英文界面。
-- **可选的仓库问答侧栏**：接入 DeepWiki，可回答公开仓库问题；目前不会读取私有仓库。
+| 工作区     | 可以做什么                                                                                                             |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 个人工作   | 集中查看账号下的通知、Issue、拉取请求、Project 和 Gist。                                                               |
+| 代码与评审 | 浏览仓库文件、源码高亮、blame、历史记录和 diff，处理暂存评审、评审线程、检查状态及合并。                               |
+| 仓库管理   | 查看和处理 Release、Discussion、Actions 运行记录、安全告警及仓库设置，需要时跳转 GitHub Web。                          |
+| Actions    | 触发和筛选工作流，查看 Job、Step、日志及产物，重跑、取消或管理工作流。                                                 |
+| Packages   | 查看包和版本详情，在权限及包状态允许时删除或恢复版本。                                                                 |
+| 发现       | 搜索仓库、发现开发者、查看关注动态。仓库发现列表按星标数排列指定时间内新建的公开仓库，不是 GitHub 官方 Trending 排名。 |
+| 仓库问答   | 可选的 DeepWiki 问答侧栏，用于公开仓库；不会向该服务发送私有仓库名称或相关提问。                                       |
+| 桌面操作   | 命令面板、全局快捷键、系统托盘、可折叠导航，以及中英文和深浅主题切换。                                                 |
 
-## Harbor 的取舍
-
-- **核心流程尽量原生。** 常用操作直接走 GitHub API；平台没有提供安全接口时，再回到 GitHub Web。
-- **切换页面时保留上下文。** 从列表进入 Issue、评审、工作流或文件后，返回时不用重新找位置。
-- **GitHub 始终是数据源。** Harbor 不另造一份仓库状态。
-- **模块之间只留小接口。** GitHub 客户端、凭据存储、本地缓存和 Agent Provider 各自放在小接口后面，方便替换和测试。
+实际可用的操作取决于 GitHub 权限和仓库状态，部分流程会打开 GitHub Web。
+已有功能仍有一些原生交互需要验收，进度见 [UI 迁移清单](docs/UI_MIGRATION_CHECKLIST.md)。
 
 ## 本地运行
 
@@ -53,9 +62,7 @@ Harbor 把个人开发者常用的 GitHub 工作流收进桌面应用，GitHub �
 - [Node.js](https://nodejs.org/) 和 [pnpm](https://pnpm.io/)
 - 稳定版 [Rust 工具链](https://www.rust-lang.org/tools/install)
 - 当前平台对应的 [Tauri 2 系统依赖](https://v2.tauri.app/start/prerequisites/)
-- 一个经典 [GitHub OAuth App](https://docs.github.com/zh/apps/oauth-apps/building-oauth-apps/creating-an-oauth-app)，用于登录并访问 GitHub 工作流
-
-克隆仓库并安装依赖：
+- 一个经典 [GitHub OAuth App](https://docs.github.com/zh/apps/oauth-apps/building-oauth-apps/creating-an-oauth-app)，用于登录并访问 GitHub
 
 ```bash
 git clone https://github.com/Excelius-Wang/harbor.git
@@ -63,58 +70,67 @@ cd harbor
 pnpm install
 ```
 
-创建经典 GitHub OAuth App，并填写下面的回调地址：
+将 OAuth App 的回调地址设置为：
 
 ```text
 http://127.0.0.1:49152/oauth/github/callback
 ```
 
-在仓库根目录新建 `.env.local`，写入 OAuth App 凭据：
+在仓库根目录创建 `.env.local`：
 
 ```dotenv
 HARBOR_GITHUB_CLIENT_ID=your_oauth_client_id
 HARBOR_GITHUB_CLIENT_SECRET=your_oauth_client_secret
 ```
 
-`.env.local` 已被 Git 忽略，请不要提交。然后启动桌面应用：
+保留上述 `HARBOR_*` 变量名。`.env.local` 已被 Git 忽略，请勿提交其中的凭据。然后启动桌面应用：
 
 ```bash
 pnpm tauri:dev
 ```
 
-## 开发
+### 不登录，先看界面
 
-提交改动前，先跑一遍前端完整检查：
+安装依赖后，启动开发预览：
+
+```bash
+pnpm dev:ui --port 1423
+```
+
+打开 [localhost:1423](http://localhost:1423/) 查看工作区，或打开
+[localhost:1423/ui-components](http://localhost:1423/ui-components) 查看组件库。
+预览使用本地演示数据，不需要 OAuth 凭据，也不会向 GitHub 发送业务操作；它不能验证原生窗口行为。
+更多场景见 [开发预览说明](docs/UI_COMPONENTS.md)。
+
+## 开发
 
 ```bash
 pnpm check
-```
-
-改动 `src-tauri` 下的 Rust 代码时，再单独检查后端：
-
-```bash
 cargo check --manifest-path src-tauri/Cargo.toml
 ```
 
-桌面外壳由 Tauri 2 和 Rust 驱动。界面使用 React 19、TypeScript、Vite、Tailwind CSS 和
-shadcn/ui；TanStack Query 负责同步服务端状态，i18next 提供简体中文和英文界面。
+`pnpm check` 包含格式检查、lint、测试、TypeScript 检查和前端生产构建。
+改动 Rust 后端时，再运行第二条命令。
+
+应用使用 Tauri 2、Rust、React 19、TypeScript、Vite、Tailwind CSS 和 shadcn/ui。
+TanStack Query 负责服务端状态，i18next 提供中英文界面。
+
+- [工作区约定](AGENTS.md)：分支流程和实现规范。
+- [UI 设计指南](docs/UI_DESIGN_GUIDE.md)：紧凑布局、共享控件和界面材质。
+- [组件预览说明](docs/UI_COMPONENTS.md)：生产组件及可控的测试场景。
 
 ## 参与贡献
 
-Harbor 还在成形，现在提出具体反馈最有价值。发现问题，或者有一个能明显改善使用体验的工作流，
-可以直接[提交 Issue](https://github.com/Excelius-Wang/harbor/issues)。如果改动比较大，建议先开 Issue，
-把产品行为和 GitHub API 边界聊清楚再动手。
+发现问题，或有想改善的工作流，欢迎[提交 Issue](https://github.com/Excelius-Wang/harbor/issues)。
+较大的改动建议先讨论产品行为和 GitHub API 边界。请使用独立分支，控制改动范围，并附上相关验证结果。
 
-如果你也想要这样一款 GitHub 桌面工作台，欢迎
-[给仓库点个 Star](https://github.com/Excelius-Wang/harbor)。这会让更多开发者看到 Harbor。
+如果 Repolane 对你有帮助，欢迎[给仓库点个 Star](https://github.com/Excelius-Wang/harbor)，让更多开发者看到它。
 
-## 项目基础、许可证与署名
+## 项目基础与许可证
 
-项目最初的应用外壳基于
-[kitlib/tauri-app-template](https://github.com/kitlib/tauri-app-template)。Harbor 维护自己的产品架构，
-只通过边界清晰的小接口引入外部实现。
+项目最初的应用外壳基于 [kitlib/tauri-app-template](https://github.com/kitlib/tauri-app-template)。
+GitHub 客户端、凭据存储、本地缓存和 Agent 运行时各自保留小接口，便于替换和测试。
 
-Harbor 的自有代码采用
-[AGPL-3.0-only](https://github.com/Excelius-Wang/harbor/blob/main/LICENSE)。复制或修改 Harbor 时，必须保留
-[NOTICE](https://github.com/Excelius-Wang/harbor/blob/main/NOTICE) 中的作者署名和原始仓库链接。模板的 MIT 声明及其他第三方声明见
-[THIRD_PARTY_NOTICES.md](https://github.com/Excelius-Wang/harbor/blob/main/THIRD_PARTY_NOTICES.md)。
+项目的自有代码采用 [AGPL-3.0-only](LICENSE)。复制或修改时，请保留 [NOTICE](NOTICE)
+中的作者署名和原始仓库链接。模板的 MIT 声明及其他保留的第三方声明见
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

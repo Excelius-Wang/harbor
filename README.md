@@ -1,63 +1,63 @@
 <div align="center">
 
-# Harbor
+<img src="src/assets/brand/repolane-mark.svg" width="72" height="64" alt="Repolane Lane logo" />
 
-**Your GitHub work, finally in one calm desktop workspace.**
+# Repolane
 
-Built for people who live on GitHub but do not want to live in a maze of browser tabs.
+**A focused desktop workspace for your GitHub work.**
 
-[简体中文](README.zh-CN.md) · [What works today](#what-works-today) · [Run locally](#run-locally) · [Contributing](#contributing)
+Read code, review pull requests, follow activity, and manage repository work in one place.
+
+[简体中文](README.zh-CN.md) · [Features](#features) · [Run locally](#run-locally) · [Development](#development) · [Contributing](#contributing)
 
 [![Tauri 2](https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white)](https://v2.tauri.app/)
 [![Rust](https://img.shields.io/badge/Rust-000000?logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=111827)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![License](https://img.shields.io/github/license/Excelius-Wang/harbor)](https://github.com/Excelius-Wang/harbor/blob/main/LICENSE)
+[![License](https://img.shields.io/github/license/Excelius-Wang/harbor)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/Excelius-Wang/harbor?style=social)](https://github.com/Excelius-Wang/harbor)
 
 </div>
 
-![Harbor desktop workspace showing repository discovery and activity](screenshots/harbor-workspace-implemented.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="screenshots/repolane-workspace-dark.png" />
+  <source media="(prefers-color-scheme: light)" srcset="screenshots/repolane-workspace-light.png" />
+  <img alt="Repolane discovery workspace with expanded navigation and the Lane logo" src="screenshots/repolane-workspace-light.png" />
+</picture>
 
-> [!IMPORTANT]
-> Harbor is under active development and does not have a packaged public release yet. You can build
-> it from source today, explore the code, and help shape the product.
+_Production interface in the browser preview, using local demonstration data. [View both themes and verification notes](docs/verification/repolane-lane/README.md)._
 
-## Why Harbor?
+> [!NOTE]
+> Repolane is the new product name for Harbor. The repository remains
+> `Excelius-Wang/harbor`; existing `HARBOR_*` configuration names are unchanged.
+> The app is under active development with no packaged public release yet.
+> The current packaging workflow targets macOS; other platforms are not yet verified.
 
-GitHub gives developers almost every tool they need, but the daily workflow is scattered across
-notifications, repository tabs, review pages, Actions runs, and search results. Harbor brings the
-personal GitHub workflow into a focused desktop app while keeping GitHub itself as the source of
-truth.
+## Why Repolane?
 
-The goal is simple: spend less time finding the right page and more time understanding what needs
-your attention.
+A notification leads to an Issue, a pull request, a workflow run, and another browser tab.
+Repolane keeps those related tasks in a desktop workspace, with GitHub as the source of truth.
 
-## What works today
+The interface uses compact navigation, light and dark surfaces, and separate scrolling panes.
+Collapse the sidebar when you need more room; its state is remembered. The optional agent sidebar
+is available when you want help understanding a public repository.
 
-- **A personal inbox** for notifications, Issues, pull requests, Projects, and Gists across your
-  account.
-- **A complete repository workspace** for code, Releases, Issues, pull requests, Discussions,
-  Actions, security alerts, and repository settings.
-- **Serious review tools** including syntax-highlighted source, blame and history, rich diffs,
-  pending reviews, review threads, checks, merge controls, and native file downloads.
-- **Actions without tab hopping** with workflow dispatch, filters, Jobs and Steps, logs, artifacts,
-  reruns, cancellation, and workflow administration.
-- **Repository discovery** for finding projects and opening their recent activity in context.
-- **Desktop details that matter** such as a command palette, global shortcut, system tray,
-  auto-update plumbing, dark and light themes, and English/Simplified Chinese UI.
-- **An optional repository-aware agent rail** backed by DeepWiki for questions about public
-  repositories. Private repositories are deliberately excluded from this first provider.
+## Features
 
-## Product principles
+| Workspace             | Available workflows                                                                                                                                                                                          |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Personal work         | Notifications, Issues, pull requests, Projects, and Gists across your account.                                                                                                                               |
+| Code and reviews      | Repository files, syntax highlighting, blame, history, diffs, pending reviews, review threads, checks, and merge controls.                                                                                   |
+| Repository management | Releases, Discussions, Actions runs, security alerts, and repository settings, with GitHub Web links where needed.                                                                                           |
+| Actions               | Workflow dispatch and filters; jobs, steps, logs, artifacts, reruns, cancellation, and workflow administration.                                                                                              |
+| Packages              | Package and version lists, details, deletion, and restoration where GitHub permissions and package state allow.                                                                                              |
+| Discovery             | Repository search, developer discovery, and activity from accounts you follow. The repository discovery list ranks newly created public repositories by stars; it is not GitHub's official Trending ranking. |
+| Repository questions  | Optional DeepWiki-backed questions about public repositories. Private repository names and questions are not sent to this provider.                                                                          |
+| Desktop controls      | Command palette, global shortcut, system tray, collapsible navigation, English/Simplified Chinese, and light/dark themes.                                                                                    |
 
-- **Native where it matters.** Core workflows use GitHub APIs and focused desktop interactions.
-  Harbor falls back to GitHub Web only when the platform does not expose a safe equivalent.
-- **One workspace, less context switching.** Lists preserve their state while you move into an
-  Issue, review, run, or file and back again.
-- **GitHub remains canonical.** Harbor does not invent a second copy of your repository state.
-- **Small, replaceable boundaries.** The GitHub client, credential store, local cache, and agent
-  provider stay behind narrow interfaces.
+Available actions depend on your GitHub permissions and the repository's state. Some workflows
+open GitHub Web. Feature implementation does not imply that every native interaction has finished
+acceptance testing; remaining work is tracked in the [UI migration checklist](docs/UI_MIGRATION_CHECKLIST.md).
 
 ## Run locally
 
@@ -66,10 +66,7 @@ your attention.
 - [Node.js](https://nodejs.org/) and [pnpm](https://pnpm.io/)
 - A stable [Rust toolchain](https://www.rust-lang.org/tools/install)
 - The [Tauri 2 system prerequisites](https://v2.tauri.app/start/prerequisites/) for your platform
-- A classic [GitHub OAuth App](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/creating-an-oauth-app)
-  for signed-in GitHub workflows
-
-Clone the repository and install the dependencies:
+- A classic [GitHub OAuth App](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/creating-an-oauth-app) for signed-in workflows
 
 ```bash
 git clone https://github.com/Excelius-Wang/harbor.git
@@ -77,63 +74,72 @@ cd harbor
 pnpm install
 ```
 
-Create a classic GitHub OAuth App with this callback URL:
+Set the OAuth App's callback URL to:
 
 ```text
 http://127.0.0.1:49152/oauth/github/callback
 ```
 
-Then add its credentials to `.env.local` in the repository root:
+Create `.env.local` in the repository root:
 
 ```dotenv
 HARBOR_GITHUB_CLIENT_ID=your_oauth_client_id
 HARBOR_GITHUB_CLIENT_SECRET=your_oauth_client_secret
 ```
 
-Keep this file local. It is ignored by Git and must never be committed. Start the desktop app with:
+Keep the existing `HARBOR_*` variable names. `.env.local` is ignored by Git; never commit its
+credentials. Then start the desktop app:
 
 ```bash
 pnpm tauri:dev
 ```
 
-## Development
+### Preview the interface without signing in
 
-Run the complete frontend check before submitting a change:
+After installing dependencies, start the development preview:
+
+```bash
+pnpm dev:ui --port 1423
+```
+
+Open [localhost:1423](http://localhost:1423/) for the workspace or
+[localhost:1423/ui-components](http://localhost:1423/ui-components) for the component gallery.
+This mode uses local fixtures and does not send business operations to GitHub. It does not require
+OAuth credentials and does not verify native window behavior. See [preview scenarios](docs/UI_COMPONENTS.md).
+
+## Development
 
 ```bash
 pnpm check
-```
-
-Check the Rust backend separately when working under `src-tauri`:
-
-```bash
 cargo check --manifest-path src-tauri/Cargo.toml
 ```
 
-The desktop shell uses Tauri 2 and Rust. The interface is built with React 19, TypeScript, Vite,
-Tailwind CSS, and shadcn/ui; TanStack Query owns server-state synchronization, and i18next provides
-English and Simplified Chinese.
+`pnpm check` runs formatting, lint, tests, TypeScript, and the production frontend build.
+Run the Rust check when changing the backend.
+
+The app uses Tauri 2 and Rust with React 19, TypeScript, Vite, Tailwind CSS, and shadcn/ui.
+TanStack Query manages server state; i18next supplies both interface languages.
+
+- [Workspace instructions](AGENTS.md): branch workflow and implementation conventions.
+- [UI design guide](docs/UI_DESIGN_GUIDE.md): compact layouts, shared controls, and surfaces.
+- [Component preview](docs/UI_COMPONENTS.md): production components and controlled test states.
 
 ## Contributing
 
-Harbor is still taking shape, which makes focused feedback especially useful. If you find a bug or
-have a workflow that would make the app meaningfully better,
-[open an Issue](https://github.com/Excelius-Wang/harbor/issues). For larger changes, start with an
-Issue so the product behavior and GitHub API boundary are clear before implementation begins.
+[Open an Issue](https://github.com/Excelius-Wang/harbor/issues) for a bug or a workflow you would
+like improved. For a larger change, discuss the behavior and GitHub API requirements first.
+Use a dedicated branch, keep changes focused, and include relevant verification.
 
-If Harbor is the kind of GitHub workspace you want to see exist, consider
-[starring the repository](https://github.com/Excelius-Wang/harbor). It helps more developers find
-the project.
+If you find Repolane useful, [star the repository](https://github.com/Excelius-Wang/harbor)
+to help others discover it.
 
-## Foundation, license, and attribution
+## Foundation and license
 
 The initial application shell is based on
-[kitlib/tauri-app-template](https://github.com/kitlib/tauri-app-template). Harbor owns its product
-architecture and adopts external implementations only through small, explicit interfaces.
+[kitlib/tauri-app-template](https://github.com/kitlib/tauri-app-template).
+The GitHub client, credential store, local cache, and agent runtime are kept behind small interfaces.
 
-Harbor's original code is licensed under
-[AGPL-3.0-only](https://github.com/Excelius-Wang/harbor/blob/main/LICENSE). Copies and modified
-versions must retain the author attribution and canonical source link in
-[NOTICE](https://github.com/Excelius-Wang/harbor/blob/main/NOTICE). The template's MIT notice and
-other retained third-party notices live in
-[THIRD_PARTY_NOTICES.md](https://github.com/Excelius-Wang/harbor/blob/main/THIRD_PARTY_NOTICES.md).
+The project's original code is licensed under [AGPL-3.0-only](LICENSE).
+Keep the author attribution and canonical source link in [NOTICE](NOTICE) when copying or modifying
+it. The template's MIT notice and other retained notices are in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
