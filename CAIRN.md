@@ -4,4 +4,4 @@
 
 ## Current item
 
-[Brand naming](.cairn/items/brand-naming.md)
+None — no current item
