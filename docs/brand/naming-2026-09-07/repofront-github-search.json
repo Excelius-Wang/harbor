@@ -1,0 +1,138 @@
+{
+  "query": "repofront in:name",
+  "pagination": {
+    "capturedEntries": 30,
+    "page": null,
+    "perPage": null,
+    "note": "Original request pagination parameters were not retained."
+  },
+  "coverage": {
+    "complete": false,
+    "inspectedRepositories": 30,
+    "uninspectedRepositories": 73,
+    "note": "Only the captured entries were inspected; the remaining 73 repositories were not inspected. This snapshot does not establish a complete repository-conflict check."
+  },
+  "repos": [
+    {
+      "name": "NicolasPerezUNLaSMN/repofront",
+      "url": "https://github.com/NicolasPerezUNLaSMN/repofront"
+    },
+    {
+      "name": "facundomeoniz/repofront",
+      "url": "https://github.com/facundomeoniz/repofront"
+    },
+    {
+      "name": "Grupo3C13/RepoFront",
+      "url": "https://github.com/Grupo3C13/RepoFront"
+    },
+    {
+      "name": "Laamiri-Fouzia/RepoFront",
+      "url": "https://github.com/Laamiri-Fouzia/RepoFront"
+    },
+    {
+      "name": "LeanDenayrouze/RepoFront",
+      "url": "https://github.com/LeanDenayrouze/RepoFront"
+    },
+    {
+      "name": "CarolinaPallaro/RepoFront",
+      "url": "https://github.com/CarolinaPallaro/RepoFront"
+    },
+    {
+      "name": "sracchumi/RepoFront",
+      "url": "https://github.com/sracchumi/RepoFront"
+    },
+    {
+      "name": "mstevenacero/repoFRont",
+      "url": "https://github.com/mstevenacero/repoFRont"
+    },
+    {
+      "name": "MoncadaMario/RepoFront",
+      "url": "https://github.com/MoncadaMario/RepoFront"
+    },
+    {
+      "name": "juan25258/repofront",
+      "url": "https://github.com/juan25258/repofront"
+    },
+    {
+      "name": "anishjha916/repofront",
+      "url": "https://github.com/anishjha916/repofront"
+    },
+    {
+      "name": "imgkcg/repofront",
+      "url": "https://github.com/imgkcg/repofront"
+    },
+    {
+      "name": "younesLamkaddem/repofront",
+      "url": "https://github.com/younesLamkaddem/repofront"
+    },
+    {
+      "name": "sivani97-sivu/repofront",
+      "url": "https://github.com/sivani97-sivu/repofront"
+    },
+    {
+      "name": "BBHR/RepoFront",
+      "url": "https://github.com/BBHR/RepoFront"
+    },
+    {
+      "name": "Bootcam-Devops/repofront",
+      "url": "https://github.com/Bootcam-Devops/repofront"
+    },
+    {
+      "name": "mikeclaw9-gif/repofront",
+      "url": "https://github.com/mikeclaw9-gif/repofront"
+    },
+    {
+      "name": "yassinekarkar/repofront",
+      "url": "https://github.com/yassinekarkar/repofront"
+    },
+    {
+      "name": "DiegoRebora/repoFront",
+      "url": "https://github.com/DiegoRebora/repoFront"
+    },
+    {
+      "name": "MichelleLaurian/RepoFront",
+      "url": "https://github.com/MichelleLaurian/RepoFront"
+    },
+    {
+      "name": "ImSteffiVelandiaSoto/RepoFront",
+      "url": "https://github.com/ImSteffiVelandiaSoto/RepoFront"
+    },
+    {
+      "name": "johanapaola/repoFront",
+      "url": "https://github.com/johanapaola/repoFront"
+    },
+    {
+      "name": "EmaLuna2513/RepoFrontSolutionAsistencia",
+      "url": "https://github.com/EmaLuna2513/RepoFrontSolutionAsistencia"
+    },
+    {
+      "name": "Cass5129/REPOFRONT",
+      "url": "https://github.com/Cass5129/REPOFRONT"
+    },
+    {
+      "name": "Jose-Gonzalez-Fuica/repofront",
+      "url": "https://github.com/Jose-Gonzalez-Fuica/repofront"
+    },
+    {
+      "name": "Danielatec2/repoFront",
+      "url": "https://github.com/Danielatec2/repoFront"
+    },
+    {
+      "name": "mikeclaw9-gif/repofront2",
+      "url": "https://github.com/mikeclaw9-gif/repofront2"
+    },
+    {
+      "name": "profejuanjosegallego/repofrontglobant2025",
+      "url": "https://github.com/profejuanjosegallego/repofrontglobant2025"
+    },
+    {
+      "name": "gigiricca/repofront18",
+      "url": "https://github.com/gigiricca/repofront18"
+    },
+    {
+      "name": "luchiipe/Repofrontend",
+      "url": "https://github.com/luchiipe/Repofrontend"
+    }
+  ],
+  "total": 103
+}

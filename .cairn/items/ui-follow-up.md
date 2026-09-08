@@ -10,20 +10,22 @@ Complete the remaining UI migration and visual/native acceptance recorded in `do
 - Production fixes cover stale detail/empty inventory feedback, mutation reconciliation locks, narrow loading/error Back, scrollable loading skeletons, and long-name/pane-width layout. Stateful fixtures now use production `versionState` and reconcile guarded delete/restore writes. Details and evidence are in `docs/UI_COMPONENTS.md` and the 2026-09-07 section of `docs/UI_VERIFICATION.md`.
 - All 112 browser captures are local ignored files under `output/playwright/packages-*`. Playwright CLI headed screenshots timed out; independent headless sessions succeeded. Fixture writes remain local and never reach GitHub.
 - Remaining scope starts with Issue lifecycle/comment/candidate states, then nested Discussion replies, archived repository/Pages conditions and release/code transfer feedback. Recent repository/conversation/Project/Gist action browser acceptance and native background/transparency/accessibility acceptance remain unfinished.
-- Current delivery is PR [#84](https://github.com/Excelius-Wang/harbor/pull/84) on the existing `feat/window-navigation-toggle` branch, based on `74c396b`. All window-shell changes, branch-policy documentation and previously local Cairn archives are committed and pushed. The user approved the visual result and requested PR submission/review; no additional branch should be created.
-- PR #84 contains fixed 1200 × 760 startup, the Logo navigation toggle and single-border/10 px window edges. Selected screenshots are in `docs/verification/window-shell/README.md`. GitHub PR comments/checks are authoritative for current CodeRabbit and CI results.
-- CodeRabbit review findings are addressed on this branch: Logo double-click isolation has failing-before/passing-after coverage; new archives use generic paths and explicit historical labels; final native Logo coverage is explicitly unverified. The latest review/CI outcome remains authoritative on PR #84.
-- A first Git push timed out; retry succeeded without changing remotes or creating another branch. The next Issue migration batch has not started.
+- Window-shell PR [#84](https://github.com/Excelius-Wang/harbor/pull/84) was squash-merged at `bc39129d72e733c353ac41edc81e3ecff946ec67` on 2026-09-07. CodeRabbit reviewed final head `bef67a1c0f9dd10eea8eb326602a509a796885af`: all four findings resolved, no new actionable comments, Minimal risk; all CI/CodeQL checks passed. Its default docstring warning remains non-blocking.
+- PR #84 delivers fixed 1200 × 760 startup, persistent Logo navigation control and single-border/10 px window edges. Selected screenshots are in `docs/verification/window-shell/README.md`. Final native Logo accessibility activation and broader native material acceptance remain unverified.
+- PR #84's remote and local `feat/window-navigation-toggle` branches were deleted after synchronizing `main`. The user-authorized removal of permanently disabled title-bar history arrows is included in the Repolane delivery on `feat/repolane-lane-identity`; use the selected brand checkpoint and GitHub for its current submission status. The prior `fix/remove-placeholder-history-arrows` branch remains preserved.
+- The next Issue migration batch has not started.
 - `AGENTS.md` and `docs/UI_DESIGN_GUIDE.md` remain the design authority. Third-party originals stay in the local ignored reference cache.
 
 ## Next action
 
-For PR #84, address any remaining valid review findings on the same branch; after merge authorization, recheck final-head review/CI, merge and clean up the PR branches.
+Resume Issue lifecycle/comment/candidate-state acceptance from docs/UI_MIGRATION_CHECKLIST.md; titlebar delivery is tracked by the selected brand item.
 
 ## Verification
+
+History-arrow removal: existing MainTitleBar interaction tests pass (3 tests), and targeted Prettier/ESLint checks pass. Diff review confirms only the two disabled buttons/tooltips and their unused icon imports were removed.
 
 Latest PR #84 review-fix `pnpm check`: 611 tests/127 files, formatting, lint, TypeScript and Vite build pass (`/tmp/harbor-pr84-review-check.log`). Four Rust geometry tests and cargo check passed for the startup-size change. Existing rail hook and chunk-size warnings remain.
 
 Window/navigation: 12 browser language/theme/size combinations pass; native 1200 × 760 sizing and the original toggle were verified, and final Logo behavior was browser-verified. Edge refinement: 12 before/after theme/size/background comparisons, reduced-transparency checks and native dark active/inactive self-review pass. See the latest sections of `docs/UI_VERIFICATION.md` for exact artifacts and native scope limits.
 
-Packages PR #83 is merged; its 112-capture acceptance remains recorded separately. The user-approved window-shell result and all current checkpoint/archive updates are submitted in PR #84. Review and CI conclusions are recorded on that PR. The overall UI migration and broader native material acceptance remain open.
+Packages PR #83 is merged; its 112-capture acceptance remains recorded separately. Success: PR #84 is merged, its final-head review and CI passed, and its local/remote branches are cleaned up. GitHub records the authoritative merge and review outcome. The overall UI migration and broader native material acceptance remain open.

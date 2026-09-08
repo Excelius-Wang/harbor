@@ -115,7 +115,8 @@ equal card grids do not belong in app workflows.
   text, compact 28 px rows, a quiet scrollbar, and a single down chevron. Keep the inner Command
   transparent so the shared `harbor-popover` surface stays visible; avoid stacking opaque fills.
 - Keep the shared title bar and primary navigation. The navigation starts expanded at 226 px and can be
-  collapsed to a 58 px icon rail by clicking the title-bar product Logo; persist the user’s choice.
+  collapsed to a 58 px icon rail by clicking the title-bar sidebar button beside the product
+  Logo and wordmark; persist the user’s choice. The Lane D brand mark remains visible.
   The `workspace-wide` (80rem) breakpoint still controls content layouts; the optional context rail is 52 px. Do not create a second
   page-level sidebar for filters that fit in a toolbar.
 - Current primary navigation lives in `PrimaryNavigation` within
