@@ -1,5 +1,7 @@
 # Repolane README refresh
 
+Historical snapshot of the completed editing/push task. Later PR review and merge authorization is tracked by the current delivery checkpoint and GitHub.
+
 ## Goal
 
 Update English and Simplified Chinese READMEs to reflect the accepted Repolane identity and current project behavior.
