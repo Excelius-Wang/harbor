@@ -13,11 +13,11 @@ Deliver the user-accepted Repolane name and Lane D identity through the branch a
 - Durable sources: `docs/brand/repolane-lane/README.md`, its preview, and `docs/verification/repolane-lane/README.md` with committed browser captures. Historical sources remain explicitly labeled in `docs/brand/repolane-solid/`. Naming evidence and limitations live in `docs/brand/naming-2026-09-07/`; design research lives in `docs/brand/commercial-logo-study.md`.
 - No domains or accounts were acquired. Formal trademark and registrar availability checks remain unverified; earlier registry 404s are not availability guarantees.
 - Lane-specific native-window inspection remains unperformed; the user accepted the current browser-verified result for this delivery. Preserve inline SVG: CSS masks previously rendered as a rectangle in native WebView.
-- Uncommitted changes inherited from the prior branch are preserved, including UI follow-up bookkeeping. The old `fix/remove-placeholder-history-arrows` branch remains untouched. Use GitHub and `gh pr view feat/repolane-lane-identity` as the authority for submission/review status.
+- Implementation commit `a00d5a9` is pushed and PR [#85](https://github.com/Excelius-Wang/harbor/pull/85) is open against main. It includes the inherited branding, history-arrow removal and UI follow-up bookkeeping. The old `fix/remove-placeholder-history-arrows` branch remains untouched. GitHub is authoritative for CI/review status; no merge or release has been performed.
 
 ## Next action
 
-Submit the verified branch as a PR and inspect its checks and review.
+Address actionable review findings on PR #85; keep the PR open until merge is authorized.
 
 ## Verification
 
@@ -26,4 +26,4 @@ Submit the verified branch as a PR and inspect its checks and review.
 - The first full `pnpm check` had one 5-second timeout in the unrelated code-navigation suite (610/611 passed). Its isolated rerun passed all 4 tests. The full rerun passed: 611 tests/127 files, formatting, lint, TypeScript and production build. Cargo check also passed. Logs: `/tmp/harbor-lane-check-retry.log` and `/tmp/harbor-lane-cargo-check.log`.
 - Existing rail hook and bundle-size warnings are non-blocking. Initial headed browser screenshots timed out; independent headless captures succeeded without product changes.
 
-Success: the user accepted Lane D and the current UI integration; the complete local verification gate passed; remote submission/review remains the next step.
+Success: the user accepted Lane D and the current UI integration; the complete local verification gate passed, the code is pushed and PR #85 is open for review.
