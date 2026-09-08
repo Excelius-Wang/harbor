@@ -1,0 +1,253 @@
+[
+  {
+    "name": "repolane",
+    "kind": "com",
+    "url": "https://rdap.verisign.com/com/v1/domain/repolane.com",
+    "checked_at": "2026-09-07T12:59:00.835967+00:00",
+    "http": 200,
+    "events": [
+      {
+        "eventAction": "registration",
+        "eventDate": "2026-06-03T18:29:09Z"
+      },
+      {
+        "eventAction": "expiration",
+        "eventDate": "2027-06-03T18:29:09Z"
+      }
+    ]
+  },
+  {
+    "name": "repolane",
+    "kind": "app",
+    "url": "https://pubapi.registry.google/rdap/domain/repolane.app",
+    "checked_at": "2026-09-07T12:59:00.840281+00:00",
+    "http": 404
+  },
+  {
+    "name": "repolane",
+    "kind": "dev",
+    "url": "https://pubapi.registry.google/rdap/domain/repolane.dev",
+    "checked_at": "2026-09-07T12:59:00.840390+00:00",
+    "http": 404
+  },
+  {
+    "name": "repolane",
+    "kind": "github",
+    "url": "https://api.github.com/users/repolane",
+    "checked_at": "2026-09-07T12:59:00.840488+00:00",
+    "http": 403
+  },
+  {
+    "name": "repolane",
+    "kind": "npm",
+    "url": "https://registry.npmjs.org/repolane",
+    "checked_at": "2026-09-07T12:59:00.840611+00:00",
+    "http": 404
+  },
+  {
+    "name": "repoway",
+    "kind": "com",
+    "url": "https://rdap.verisign.com/com/v1/domain/repoway.com",
+    "checked_at": "2026-09-07T12:59:00.840668+00:00",
+    "http": 200,
+    "events": [
+      {
+        "eventAction": "registration",
+        "eventDate": "2020-10-14T16:43:21Z"
+      },
+      {
+        "eventAction": "expiration",
+        "eventDate": "2027-10-14T16:43:21Z"
+      }
+    ]
+  },
+  {
+    "name": "repoway",
+    "kind": "app",
+    "url": "https://pubapi.registry.google/rdap/domain/repoway.app",
+    "checked_at": "2026-09-07T12:59:01.266530+00:00",
+    "http": 404
+  },
+  {
+    "name": "repoway",
+    "kind": "dev",
+    "url": "https://pubapi.registry.google/rdap/domain/repoway.dev",
+    "checked_at": "2026-09-07T12:59:01.531749+00:00",
+    "http": 404
+  },
+  {
+    "name": "repoway",
+    "kind": "github",
+    "url": "https://api.github.com/users/repoway",
+    "checked_at": "2026-09-07T12:59:01.745261+00:00",
+    "http": 403
+  },
+  {
+    "name": "repoway",
+    "kind": "npm",
+    "url": "https://registry.npmjs.org/repoway",
+    "checked_at": "2026-09-07T12:59:01.943776+00:00",
+    "http": 404
+  },
+  {
+    "name": "repotrail",
+    "kind": "com",
+    "url": "https://rdap.verisign.com/com/v1/domain/repotrail.com",
+    "checked_at": "2026-09-07T12:59:02.011705+00:00",
+    "http": 200,
+    "events": [
+      {
+        "eventAction": "registration",
+        "eventDate": "2026-08-27T06:34:03Z"
+      },
+      {
+        "eventAction": "expiration",
+        "eventDate": "2027-08-27T06:34:03Z"
+      }
+    ]
+  },
+  {
+    "name": "repotrail",
+    "kind": "app",
+    "url": "https://pubapi.registry.google/rdap/domain/repotrail.app",
+    "checked_at": "2026-09-07T12:59:02.048893+00:00",
+    "http": 404
+  },
+  {
+    "name": "repotrail",
+    "kind": "dev",
+    "url": "https://pubapi.registry.google/rdap/domain/repotrail.dev",
+    "checked_at": "2026-09-07T12:59:02.337570+00:00",
+    "http": 404
+  },
+  {
+    "name": "repotrail",
+    "kind": "github",
+    "url": "https://api.github.com/users/repotrail",
+    "checked_at": "2026-09-07T12:59:02.366544+00:00",
+    "http": 403
+  },
+  {
+    "name": "repotrail",
+    "kind": "npm",
+    "url": "https://registry.npmjs.org/repotrail",
+    "checked_at": "2026-09-07T12:59:02.650352+00:00",
+    "http": 404
+  },
+  {
+    "name": "reporally",
+    "kind": "com",
+    "url": "https://rdap.verisign.com/com/v1/domain/reporally.com",
+    "checked_at": "2026-09-07T12:59:02.838052+00:00",
+    "http": 404
+  },
+  {
+    "name": "reporally",
+    "kind": "app",
+    "url": "https://pubapi.registry.google/rdap/domain/reporally.app",
+    "checked_at": "2026-09-07T12:59:02.840046+00:00",
+    "http": 404
+  },
+  {
+    "name": "reporally",
+    "kind": "dev",
+    "url": "https://pubapi.registry.google/rdap/domain/reporally.dev",
+    "checked_at": "2026-09-07T12:59:03.023876+00:00",
+    "http": 404
+  },
+  {
+    "name": "reporally",
+    "kind": "github",
+    "url": "https://api.github.com/users/reporally",
+    "checked_at": "2026-09-07T12:59:03.268199+00:00",
+    "http": 403
+  },
+  {
+    "name": "reporally",
+    "kind": "npm",
+    "url": "https://registry.npmjs.org/reporally",
+    "checked_at": "2026-09-07T12:59:03.896081+00:00",
+    "http": 404
+  },
+  {
+    "name": "branchfold",
+    "kind": "com",
+    "url": "https://rdap.verisign.com/com/v1/domain/branchfold.com",
+    "checked_at": "2026-09-07T12:59:03.898663+00:00",
+    "error": "Remote end closed connection without response",
+    "retry_http": 200
+  },
+  {
+    "name": "branchfold",
+    "kind": "app",
+    "url": "https://pubapi.registry.google/rdap/domain/branchfold.app",
+    "checked_at": "2026-09-07T12:59:03.997920+00:00",
+    "http": 404
+  },
+  {
+    "name": "branchfold",
+    "kind": "dev",
+    "url": "https://pubapi.registry.google/rdap/domain/branchfold.dev",
+    "checked_at": "2026-09-07T12:59:04.247564+00:00",
+    "http": 404
+  },
+  {
+    "name": "branchfold",
+    "kind": "github",
+    "url": "https://api.github.com/users/branchfold",
+    "checked_at": "2026-09-07T12:59:04.500178+00:00",
+    "http": 403
+  },
+  {
+    "name": "branchfold",
+    "kind": "npm",
+    "url": "https://registry.npmjs.org/branchfold",
+    "checked_at": "2026-09-07T12:59:04.786657+00:00",
+    "http": 404
+  },
+  {
+    "name": "repofield",
+    "kind": "com",
+    "url": "https://rdap.verisign.com/com/v1/domain/repofield.com",
+    "checked_at": "2026-09-07T12:59:04.993210+00:00",
+    "http": 200,
+    "events": [
+      {
+        "eventAction": "registration",
+        "eventDate": "2026-09-07T04:47:33Z"
+      },
+      {
+        "eventAction": "expiration",
+        "eventDate": "2027-09-07T04:47:33Z"
+      }
+    ]
+  },
+  {
+    "name": "repofield",
+    "kind": "app",
+    "url": "https://pubapi.registry.google/rdap/domain/repofield.app",
+    "checked_at": "2026-09-07T12:59:05.079620+00:00",
+    "http": 404
+  },
+  {
+    "name": "repofield",
+    "kind": "dev",
+    "url": "https://pubapi.registry.google/rdap/domain/repofield.dev",
+    "checked_at": "2026-09-07T12:59:05.184945+00:00",
+    "http": 404
+  },
+  {
+    "name": "repofield",
+    "kind": "github",
+    "url": "https://api.github.com/users/repofield",
+    "checked_at": "2026-09-07T12:59:05.224170+00:00",
+    "http": 403
+  },
+  {
+    "name": "repofield",
+    "kind": "npm",
+    "url": "https://registry.npmjs.org/repofield",
+    "checked_at": "2026-09-07T12:59:05.527506+00:00",
+    "http": 404
+  }
+]

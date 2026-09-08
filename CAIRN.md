@@ -4,4 +4,4 @@
 
 ## Current item
 
-[Harbor UI follow-up](.cairn/items/ui-follow-up.md)
+[Brand naming](.cairn/items/brand-naming.md)

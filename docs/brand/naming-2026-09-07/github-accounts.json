@@ -1,0 +1,51 @@
+[
+  {
+    "name": "repolane",
+    "kind": "github",
+    "url": "https://api.github.com/users/repolane",
+    "http": "404",
+    "account_type": null
+  },
+  {
+    "name": "repoway",
+    "kind": "github",
+    "url": "https://api.github.com/users/repoway",
+    "http": 200,
+    "account_type": "User"
+  },
+  {
+    "name": "repotrail",
+    "kind": "github",
+    "url": "https://api.github.com/users/repotrail",
+    "http": 200,
+    "account_type": "Organization"
+  },
+  {
+    "name": "reporally",
+    "kind": "github",
+    "url": "https://api.github.com/users/reporally",
+    "http": "404",
+    "account_type": null
+  },
+  {
+    "name": "branchfold",
+    "kind": "github",
+    "url": "https://api.github.com/users/branchfold",
+    "http": 200,
+    "account_type": "Organization"
+  },
+  {
+    "name": "repofield",
+    "kind": "github",
+    "url": "https://api.github.com/users/repofield",
+    "http": "404",
+    "account_type": null
+  },
+  {
+    "name": "repofront",
+    "kind": "github",
+    "url": "https://api.github.com/users/repofront",
+    "http": "404",
+    "account_type": null
+  }
+]

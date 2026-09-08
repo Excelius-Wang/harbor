@@ -5,6 +5,7 @@ import { Github, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { BrandMark } from "@/components/brand-mark";
 import { TitleBar } from "@/components/title-bar";
 import { WindowFrame } from "@/components/window-frame";
 import { Toaster } from "@/components/ui/sonner";
@@ -61,7 +62,8 @@ export default function AboutPage() {
       <ScrollArea className="min-h-0 flex-1 [&_[data-slot=scroll-area-viewport]>div]:flex! [&_[data-slot=scroll-area-viewport]>div]:min-h-full">
         <div className="flex min-h-full w-full items-center justify-center p-5">
           <div className="flex w-full max-w-xs flex-col gap-5">
-            <div className="text-center">
+            <div className="flex flex-col items-center gap-3 text-center">
+              <BrandMark className="text-primary h-[72px] w-20" />
               <h2 className="text-2xl font-semibold">{t("about.appName")}</h2>
             </div>
 

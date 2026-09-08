@@ -1,0 +1,119 @@
+[
+  {
+    "name": "repolane",
+    "total": 0,
+    "repos": []
+  },
+  {
+    "name": "repoway",
+    "total": 0,
+    "repos": []
+  },
+  {
+    "name": "repotrail",
+    "total": 10,
+    "repos": [
+      {
+        "name": "ilackarms/repotrail",
+        "description": null,
+        "url": "https://github.com/ilackarms/repotrail"
+      },
+      {
+        "name": "ishwarkamthe2/repotrail",
+        "description": "This is trail repository",
+        "url": "https://github.com/ishwarkamthe2/repotrail"
+      },
+      {
+        "name": "jainshruti1991/repotrail",
+        "description": "MY NEW REPOSITORY1",
+        "url": "https://github.com/jainshruti1991/repotrail"
+      },
+      {
+        "name": "innastolyarova/repoTrail",
+        "description": null,
+        "url": "https://github.com/innastolyarova/repoTrail"
+      },
+      {
+        "name": "SaiCharanTej-K/repotrail",
+        "description": "repo trial",
+        "url": "https://github.com/SaiCharanTej-K/repotrail"
+      },
+      {
+        "name": "yifatdzigan/repotrail",
+        "description": null,
+        "url": "https://github.com/yifatdzigan/repotrail"
+      },
+      {
+        "name": "Ashuaks/Repotrails",
+        "description": "Learning more about repo",
+        "url": "https://github.com/Ashuaks/Repotrails"
+      },
+      {
+        "name": "Testtrail/Organisation_Repotrail",
+        "description": null,
+        "url": "https://github.com/Testtrail/Organisation_Repotrail"
+      },
+      {
+        "name": "vanajakshim/git-repotrail",
+        "description": "sample repo",
+        "url": "https://github.com/vanajakshim/git-repotrail"
+      },
+      {
+        "name": "Vinay-7974/RepoTrail2",
+        "description": null,
+        "url": "https://github.com/Vinay-7974/RepoTrail2"
+      }
+    ]
+  },
+  {
+    "name": "reporally",
+    "total": 0,
+    "repos": []
+  },
+  {
+    "name": "branchfold",
+    "total": 7,
+    "repos": [
+      {
+        "name": "Lalitha37/branchfold",
+        "description": null,
+        "url": "https://github.com/Lalitha37/branchfold"
+      },
+      {
+        "name": "Rafathanjum/branchfolder",
+        "description": null,
+        "url": "https://github.com/Rafathanjum/branchfolder"
+      },
+      {
+        "name": "hafizullah1991/branchfolder",
+        "description": null,
+        "url": "https://github.com/hafizullah1991/branchfolder"
+      },
+      {
+        "name": "maheshmadineni/branchfolder",
+        "description": null,
+        "url": "https://github.com/maheshmadineni/branchfolder"
+      },
+      {
+        "name": "Mybralaoui/MyBranchfolder",
+        "description": null,
+        "url": "https://github.com/Mybralaoui/MyBranchfolder"
+      },
+      {
+        "name": "Ianidane/BranchFolderMaker",
+        "description": "Copys a directory via FTP and makes a new one with the correct naming.",
+        "url": "https://github.com/Ianidane/BranchFolderMaker"
+      },
+      {
+        "name": "lzhdanovich/branchFoldersTest",
+        "description": null,
+        "url": "https://github.com/lzhdanovich/branchFoldersTest"
+      }
+    ]
+  },
+  {
+    "name": "repofield",
+    "total": 0,
+    "repos": []
+  }
+]

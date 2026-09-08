@@ -75,7 +75,7 @@ describe("title bar theme toggle", () => {
   );
 });
 
-it("keeps Logo double-clicks out of the native window maximize handler", async () => {
+it("keeps navigation toggle double-clicks out of the native window maximize handler", async () => {
   vi.stubGlobal("matchMedia", () => ({
     matches: false,
     addEventListener() {},
@@ -94,10 +94,10 @@ it("keeps Logo double-clicks out of the native window maximize handler", async (
   );
   // Enable the native click path after mounting, without invoking unrelated window setup.
   vi.mocked(isTauri).mockReturnValue(true);
-  const logo = screen.getByRole("button", { name: "Collapse navigation" });
-  await user.dblClick(logo);
+  const navigationToggle = screen.getByRole("button", { name: "Collapse navigation" });
+  await user.dblClick(navigationToggle);
   expect(toggle).toHaveBeenCalledTimes(2);
   expect(nativeWindow.toggleMaximize).not.toHaveBeenCalled();
-  await user.dblClick(logo.closest("[data-tauri-drag-region]")!);
+  await user.dblClick(navigationToggle.closest("[data-tauri-drag-region]")!);
   expect(nativeWindow.toggleMaximize).toHaveBeenCalledTimes(1);
 });

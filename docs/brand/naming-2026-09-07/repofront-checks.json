@@ -1,0 +1,47 @@
+[
+  {
+    "name": "repofront",
+    "kind": "com",
+    "url": "https://rdap.verisign.com/com/v1/domain/repofront.com",
+    "checked_at": "2026-09-07T13:00:23.939502+00:00",
+    "http": 200,
+    "events": [
+      {
+        "eventAction": "registration",
+        "eventDate": "2026-08-12T07:52:36Z"
+      },
+      {
+        "eventAction": "expiration",
+        "eventDate": "2027-08-12T07:52:36Z"
+      }
+    ]
+  },
+  {
+    "name": "repofront",
+    "kind": "app",
+    "url": "https://pubapi.registry.google/rdap/domain/repofront.app",
+    "checked_at": "2026-09-07T13:00:23.939882+00:00",
+    "http": 404
+  },
+  {
+    "name": "repofront",
+    "kind": "dev",
+    "url": "https://pubapi.registry.google/rdap/domain/repofront.dev",
+    "checked_at": "2026-09-07T13:00:23.939968+00:00",
+    "http": 404
+  },
+  {
+    "name": "repofront",
+    "kind": "github",
+    "url": "https://api.github.com/users/repofront",
+    "checked_at": "2026-09-07T13:00:23.940029+00:00",
+    "http": 403
+  },
+  {
+    "name": "repofront",
+    "kind": "npm",
+    "url": "https://registry.npmjs.org/repofront",
+    "checked_at": "2026-09-07T13:00:23.940077+00:00",
+    "http": 404
+  }
+]

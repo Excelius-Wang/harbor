@@ -1,21 +1,20 @@
 import { useCallback, useState } from "react";
 import { isTauri } from "@tauri-apps/api/core";
 import {
-  ArrowLeft,
-  ArrowRight,
   CheckCircle2,
   ChevronDown,
   Github,
   Info,
   Languages,
   Moon,
+  PanelLeft,
   Search,
   Settings,
   Sun,
-  Waves,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/components/theme-provider";
+import { BrandMark } from "@/components/brand-mark";
 import { TitleBar } from "@/components/title-bar";
 import {
   DropdownMenu,
@@ -98,13 +97,19 @@ export function MainTitleBar({
         className="border-transparent bg-transparent shadow-none"
         leftActions={
           <div className="relative z-10 flex h-full items-center gap-1.5">
-            <div className="mr-3 flex items-center gap-2.5 pl-1">
+            <div className="mr-3 flex items-center gap-3 pl-2">
+              <div className="text-foreground flex shrink-0 items-center gap-1.5">
+                <BrandMark className="h-[22px] w-6" />
+                <span className="text-sm font-medium tracking-[-0.015em] max-[720px]:hidden">
+                  {t("app.title")}
+                </span>
+              </div>
               {onToggleNavigation ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
                       type="button"
-                      className="border-primary/20 bg-primary/9 text-primary hover:bg-primary/15 focus-visible:ring-ring focus-visible:ring-offset-background grid size-8 shrink-0 cursor-pointer place-items-center rounded-lg border transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                      className="text-muted-foreground hover:text-foreground hover:bg-accent/70 focus-visible:ring-ring grid size-8 shrink-0 cursor-pointer place-items-center rounded-md transition-colors duration-150 outline-none focus-visible:ring-2 motion-reduce:transition-none"
                       onClick={onToggleNavigation}
                       onDoubleClick={(event) => event.stopPropagation()}
                       aria-expanded={navigationExpanded}
@@ -115,7 +120,7 @@ export function MainTitleBar({
                           : "workspace.expandNavigation"
                       )}
                     >
-                      <Waves className="size-4" strokeWidth={1.8} aria-hidden="true" />
+                      <PanelLeft className="size-[18px]" strokeWidth={1.7} aria-hidden="true" />
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" sideOffset={7}>
@@ -126,43 +131,8 @@ export function MainTitleBar({
                     )}
                   </TooltipContent>
                 </Tooltip>
-              ) : (
-                <span className="border-primary/20 bg-primary/9 text-primary grid size-8 place-items-center rounded-lg border">
-                  <Waves className="size-4" strokeWidth={1.8} aria-hidden="true" />
-                </span>
-              )}
-              <span className="text-[15px] font-semibold tracking-[-0.025em] max-[720px]:hidden">
-                Harbor
-              </span>
+              ) : null}
             </div>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  className="title-bar-btn disabled:pointer-events-none disabled:opacity-45"
-                  aria-label={t("workspace.history.back")}
-                  disabled
-                >
-                  <ArrowLeft className="size-4" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" sideOffset={7}>
-                {t("workspace.history.back")}
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  className="title-bar-btn disabled:pointer-events-none disabled:opacity-45"
-                  aria-label={t("workspace.history.forward")}
-                  disabled
-                >
-                  <ArrowRight className="size-4" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" sideOffset={7}>
-                {t("workspace.history.forward")}
-              </TooltipContent>
-            </Tooltip>
           </div>
         }
         centerContent={
