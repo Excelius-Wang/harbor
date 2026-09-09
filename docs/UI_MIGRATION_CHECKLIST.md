@@ -6,6 +6,32 @@ The historical phase-one cutoff has been delivered. The current authorized Goal 
 
 Shared main landmarks and browser reduced-media checks pass (80 scenarios); their delivery remains open. Native background/transparency, guide-value validation and overall evidence reconciliation remain open. The gates below describe full-site acceptance, not merely code implementation. Historical entry evidence remains applicable only to unchanged behavior.
 
+## Current acceptance audit — 2026-09-09
+
+Counts below describe completed scenario matrices, not the number of files returned by a broad screenshot glob. Before images and abandoned partial captures are excluded. Detailed conditions and limitations remain in [UI_VERIFICATION.md](UI_VERIFICATION.md).
+
+| Authorized batch | Applicable evidence | Delivery state | Still required |
+| --- | --- | --- | --- |
+| Rules optimization | Documentation checks and actual review/fix | #87 merged aa1ba45; content verified, branches cleaned | None for this batch |
+| Issue lifecycle/comments/candidates | 400 controlled browser scenarios; 626-test delivery check | #88 merged307eaec; content verified, branches cleaned | Shared/native overall gates only |
+| Discussion nested replies | 248 scenarios including both review-fix matrices; 641 tests | #89 merged357a9e3; final a99c96b tree verified, branches cleaned | Shared/native overall gates only |
+| Archived repository/Pages | 224 scenarios; 650-test integrated check | #90 mergedc35194c; final0fa6c77 tree verified, branches cleaned | Shared/native overall gates only |
+| Release/code transfer feedback | 264 scenarios; 658 tests; actual review covers3197c7d | #91 merged3338a49; final tree verified, branches cleaned | Native integration beyond synthetic paths is not established by browser evidence |
+| Recent repository/session/Project/Gist actions | 1056 scenarios; 659 tests, all final #92 CI passed | #92 open at8fd4e6e | Actual review, any fixes, merge/content verification/cleanup |
+| Shared UI/native | 32 landmark +48 gallery media scenarios; 659 tests; current native build succeeded | #93 open; four nested-main fixes implemented | Actual review/delivery; remaining native matrix below |
+
+| Final native requirement | Evidence available | Missing or uncertain |
+| --- | --- | --- |
+| Window sizing/navigation | Current preview: default1200×760, system maximize/restore, approximately900×620 on built-in display, collapsed navigation; historical window-layout tests | Remaining native theme/language/size combinations and exact exported capture dimensions |
+| Window/overlay continuity | Dark Chinese and light English main/Settings; light-English Command at default/minimum; native More Escape returns focus | Same-content cool, neutral and bright detailed desktop-background comparison |
+| Reduced transparency/motion | 48 current browser media scenarios; existing ThemeProvider unit/native permission checks | Actual native OS-preference change and background effect observation |
+| Screenshots | All current browser matrices copied to primary output/playwright; native observations rendered in conversation | Exportable current native files and full native matrix |
+| Guide values and final sign-off | Implemented tokens are in src/index.css; historical same-content before/after browser edges remain present (12 before,12 matching after); no new material token change | Do not promote candidate guide colors/blur/radii to measured reference values or full native acceptance |
+
+The screen has intermittently locked during this run. CUA may return cgWindowNotFound while the preview remains running. The drag interface also returns noWindowsAvailable even when accessible controls work; the macOS Window menu is the verified sizing alternative. These failures are not application passes. No real GitHub business mutation or release publication was used for acceptance.
+
+Historical code-edit/file-delete/branch/commit-comment full write-state variants remain explicitly incomplete while their inclusion in this six-batch scope is being clarified. They are neither silently accepted nor silently removed.
+
 ## Delivery gates
 
 - [x] Inspect dirty worktree and preserve existing developer-trending work and references.
