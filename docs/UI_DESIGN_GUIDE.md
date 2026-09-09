@@ -138,6 +138,7 @@ Vorssaint 图片只有深色版本，候选浅色板最初由它推导。新增�
 ### 共享导航如何复用
 
 主导航容器位于 [harbor-workspace.tsx](../src/features/workspace/harbor-workspace.tsx) 的 `PrimaryNavigation`。主入口、“更多”、账户和设置共用 [NavigationButton](../src/features/workspace/navigation-button.tsx)，由它提供 40 px 行高、图标与文字布局、收起时的提示和键盘焦点。选中与悬停样式使用 [src/index.css](../src/index.css) 的 `harbor-nav-item`。材质与选中配色仍在本次重构中验收。
+
 - 新增页面接入现有工作区，继承它的侧栏，不在页面中再画一份导航。
 - 页面提供导航数据、当前项与操作；行高、内边距、图标位置、选中态和焦点反馈由共享导航负责。
 - 其他位置确需复用导航行时，直接使用 `NavigationButton`，避免复制 JSX 和样式。40 px 是当前实现值，后续变化也必须统一发生在共享层。
@@ -176,3 +177,40 @@ Discovery 保持居中的最大内容宽度，标题、筛选与列表对齐。�
 - **降级显示：** 减少透明度时仍有完整层次；减少动态效果时仍有清楚反馈。
 
 验收通过后再把采用的色值和尺寸记录为正式 token，并同步这份指南。尚未验证的候选参数继续保留候选标记。
+
+## Implementation layout contracts
+
+- Keep the system font stack in `src/index.css` (SF Pro on macOS). Use monospace for code,
+  identifiers, and shortcuts. Do not add a display font to a feature page.
+- Use a 24 px semibold page title, 13–14 px primary row text, and 11–12 px secondary metadata.
+  Long descriptions should wrap naturally; reserve truncation for compact names and identifiers.
+- Follow the 4 px spacing rhythm: 16–24 px content padding and 12–16 px row gaps. Keep compact
+  controls at 6–8 px corners. Larger groups and overlays can use the guide's candidate radii
+  when redesigned together; respect native window clipping. Avatars remain round.
+- Searchable filter menus use `harbor-filter-trigger` and `harbor-filter-menu`: 13 px regular
+  text, compact 28 px rows, a quiet scrollbar, and a single down chevron. Keep the inner Command
+  transparent so the shared `harbor-popover` surface stays visible; avoid stacking opaque fills.
+- Keep the shared title bar and primary navigation. The navigation starts expanded at 226 px and can be
+  collapsed to a 58 px icon rail by clicking the title-bar sidebar button beside the product
+  Logo and wordmark; persist the user’s choice. The Lane D brand mark remains visible.
+  The `workspace-wide` (80rem) breakpoint still controls content layouts; the optional context rail is 52 px. Do not create a second
+  page-level sidebar for filters that fit in a toolbar.
+- Current primary navigation lives in `PrimaryNavigation` within
+  `src/features/workspace/harbor-workspace.tsx`. Its main destinations, More trigger, account,
+  and settings reuse `NavigationButton` from `src/features/workspace/navigation-button.tsx`.
+  This shared control owns the 40 px row, icon/label layout, collapsed tooltip and keyboard
+  focus. Selection and hover use `harbor-nav-item` in `src/index.css`. New pages inherit the
+  shell; do not copy rows or override row dimensions/states in consumers.
+- Reuse `WorkspacePageHeader` for list headers and `WorkspaceStaleNotice` for retained
+  results after a failed refresh. For list/detail swaps, keep `useListScroll` in the parent,
+  key it by the actual query parameters, and spread its viewport bindings onto ScrollArea.
+  This preserves pane scroll without changing query keys or persisting state globally.
+- Discovery uses a centered 1120 px maximum content width. Other workspaces may fill their pane.
+  Page header, filters, and scrollable content should share alignment.
+- Developer discovery rows keep the author, popular repository, and description in one vertical
+  group at every width. Place the account beside the name when space allows; wrap it below when
+  needed. Keep the avatar in a compact leading column and descriptions within a readable line
+  length. Do not split related identity and project content into distant proportional columns.
+- Preserve `min-w-0`, `min-h-0`, and pane-local `ScrollArea` containment. At the 900 px minimum
+  app width, secondary row content stacks below the primary identity; text must not stretch the
+  window or hide controls. Use the shared 1200 × 760 logical startup size with work-area clamping; do not resize the window from feature views.
