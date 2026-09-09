@@ -15,3 +15,5 @@ Review follow-up: discussion-level writes share the comment pending guard.
 ![Pending discussion vote preserves and disables the reply draft, Chinese dark 900 px](discussion-review-vote-zh-dark-900.png)
 
 ![Pending close confirmation, English light 1440 px](discussion-review-close-en-light-1440.png)
+
+![Rejected reply to a deleted-parent fixture retains the draft and surviving replies](discussion-second-review-deleted-parent-rejection-zh-dark-1440.png)

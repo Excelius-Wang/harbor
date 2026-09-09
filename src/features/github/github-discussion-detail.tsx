@@ -531,7 +531,7 @@ export function GitHubDiscussionDetail({
                       type="button"
                       variant="outline"
                       size="sm"
-                      disabled={reopenMutation.isPending}
+                      disabled={reopenMutation.isPending || commentWritePending}
                       onClick={() => reopenMutation.mutate()}
                     >
                       {reopenMutation.isPending ? (

@@ -54,8 +54,7 @@ describe("discussion preview isolation", () => {
     expect(read().commentCount).toBe(2);
     const survivorReply = fixture("github_create_repository_discussion_comment", {
       ...target,
-      replyToId: parentId,
-      body: "Reply to the surviving thread",
+      body: "New top-level comment after a deletion",
     }) as GitHubDiscussionComment;
     expect(survivorReply).toMatchObject({
       viewerCanUpdate: true,
@@ -108,5 +107,20 @@ describe("discussion preview isolation", () => {
       ).toThrow();
       expect(item.replies.length).toBeGreaterThan(0);
     }
+  });
+  it("models a rejected reply to a deleted parent without removing surviving replies", () => {
+    const fixture = createDiscussionActionFixtures(repositories, "nested", true);
+    const read = () =>
+      fixture("github_get_repository_discussion", target) as GitHubDiscussionDetailPage;
+    const id = read().comments[0].id;
+    fixture("github_delete_repository_discussion_comment", { ...target, commentId: id });
+    expect(() =>
+      fixture("github_create_repository_discussion_comment", {
+        ...target,
+        replyToId: id,
+        body: "Draft retained on rejection",
+      })
+    ).toThrow("Preview reply target is unavailable");
+    expect(read().comments[0].replies).toHaveLength(2);
   });
 });

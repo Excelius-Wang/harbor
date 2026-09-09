@@ -235,4 +235,48 @@ describe("Discussion-level write exclusion", () => {
       ).toBe(false);
     }
   );
+  it("blocks reopening while a discussion vote is pending", async () => {
+    const page = administrationFixture(
+      "github_get_repository_discussion",
+      target,
+      [{ ...repository, fullName: "octocat/harbor" }] as GitHubRepository[],
+      false
+    ) as GitHubDiscussionDetailPage;
+    page.discussion.state = "closed";
+    page.discussion.viewerCanUpvote = page.discussion.viewerCanReopen = true;
+    vi.mocked(invoke).mockImplementation((command) =>
+      command === "github_get_repository_discussion" ? Promise.resolve(page) : new Promise(() => {})
+    );
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <TooltipProvider>
+          <GitHubDiscussionDetail
+            repository={repository}
+            discussionNumber={1}
+            categories={[]}
+            onBack={() => {}}
+          />
+        </TooltipProvider>
+      </QueryClientProvider>
+    );
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "workspace.repositories.upvoteDiscussion" })
+    );
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("button", { name: "workspace.repositories.reopenDiscussion" })
+          .hasAttribute("disabled")
+      ).toBe(true)
+    );
+    expect(
+      vi
+        .mocked(invoke)
+        .mock.calls.some(([command]) => command === "github_update_repository_discussion_state")
+    ).toBe(false);
+  });
 });

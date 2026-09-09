@@ -182,7 +182,7 @@ export function createDiscussionActionFixtures(
       const parent = args.replyToId
         ? findComment(page.comments, args.replyToId)?.comment
         : undefined;
-      if (page.discussion.locked || (args.replyToId && !parent))
+      if (page.discussion.locked || (args.replyToId && (!parent || parent.deletedAt)))
         throw new Error("Preview reply target is unavailable");
       const comment: Data.GitHubDiscussionComment = {
         ...page.comments[0],
