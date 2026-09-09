@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { isTauri } from "@tauri-apps/api/core";
-import { Effect, EffectState, getCurrentWindow } from "@tauri-apps/api/window";
+import { invoke, isTauri } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 
 type Theme = "dark" | "light" | "system";
 
@@ -58,17 +58,12 @@ export function ThemeProvider({
 
       if (isTauri()) {
         const appWindow = getCurrentWindow();
-        const glassEffect = nextTheme === "dark" ? Effect.HudWindow : Effect.UnderWindowBackground;
 
         void appWindow
           .setTheme(nextTheme)
           .then(() => {
             if (version !== appearanceVersion) return;
-            return appWindow.setEffects({
-              effects: transparency.matches ? [] : [glassEffect],
-              state: EffectState.FollowsWindowActiveState,
-              radius: 10,
-            });
+            return invoke("sync_window_vibrancy", { enabled: !transparency.matches });
           })
           .catch((error) => {
             console.warn("Failed to synchronize the native window appearance:", error);

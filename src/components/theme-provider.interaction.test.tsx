@@ -5,17 +5,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ThemeProvider } from "./theme-provider";
 
 const nativeWindow = vi.hoisted(() => ({
-  setEffects: vi.fn().mockResolvedValue(undefined),
+  invoke: vi.fn().mockResolvedValue(undefined),
   setTheme: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("@tauri-apps/api/core", () => ({ isTauri: () => true }));
+vi.mock("@tauri-apps/api/core", () => ({ isTauri: () => true, invoke: nativeWindow.invoke }));
 vi.mock("@tauri-apps/api/window", () => ({
-  Effect: {
-    HudWindow: "hudWindow",
-    UnderWindowBackground: "underWindowBackground",
-  },
-  EffectState: { FollowsWindowActiveState: "followsWindowActiveState" },
   getCurrentWindow: () => nativeWindow,
 }));
 
@@ -39,21 +34,20 @@ afterEach(() => {
 });
 
 describe("ThemeProvider", () => {
-  it("keeps the native vibrancy appearance in sync with the app theme", async () => {
-    render(
-      <ThemeProvider defaultTheme="dark" storageKey="test-theme">
-        <span>Harbor</span>
-      </ThemeProvider>
-    );
+  it.each(["light", "dark"] as const)(
+    "uses background-responsive vibrancy for %s appearance",
+    async (theme) => {
+      render(
+        <ThemeProvider defaultTheme={theme} storageKey="test-theme">
+          <span>Harbor</span>
+        </ThemeProvider>
+      );
 
-    expect(document.documentElement.classList.contains("dark")).toBe(true);
-    await waitFor(() => expect(nativeWindow.setTheme).toHaveBeenCalledWith("dark"));
-    expect(nativeWindow.setEffects).toHaveBeenCalledWith({
-      effects: ["hudWindow"],
-      state: "followsWindowActiveState",
-      radius: 10,
-    });
-  });
+      expect(document.documentElement.classList.contains(theme)).toBe(true);
+      await waitFor(() => expect(nativeWindow.setTheme).toHaveBeenCalledWith(theme));
+      expect(nativeWindow.invoke).toHaveBeenCalledWith("sync_window_vibrancy", { enabled: true });
+    }
+  );
   it("removes and restores native vibrancy when reduced transparency changes", async () => {
     let reduced = true;
     let notify: (() => void) | undefined;
@@ -75,19 +69,15 @@ describe("ThemeProvider", () => {
       </ThemeProvider>
     );
     await waitFor(() =>
-      expect(nativeWindow.setEffects).toHaveBeenLastCalledWith({
-        effects: [],
-        state: "followsWindowActiveState",
-        radius: 10,
+      expect(nativeWindow.invoke).toHaveBeenLastCalledWith("sync_window_vibrancy", {
+        enabled: false,
       })
     );
     reduced = false;
     notify?.();
     await waitFor(() =>
-      expect(nativeWindow.setEffects).toHaveBeenLastCalledWith({
-        effects: ["hudWindow"],
-        state: "followsWindowActiveState",
-        radius: 10,
+      expect(nativeWindow.invoke).toHaveBeenLastCalledWith("sync_window_vibrancy", {
+        enabled: true,
       })
     );
   });

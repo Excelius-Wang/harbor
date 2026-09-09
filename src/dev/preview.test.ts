@@ -74,7 +74,9 @@ describe("UI preview isolation", () => {
     await expect(invoke("github_mutate_repository_issue", { number: 1 })).rejects.toMatchObject({
       code: "previewFixtureMissing",
     });
-    expect(nativeIPC).toHaveBeenCalledTimes(1);
+    await invoke("sync_window_vibrancy", { enabled: false });
+    expect(nativeIPC).toHaveBeenCalledWith("sync_window_vibrancy", { enabled: false }, undefined);
+    expect(nativeIPC).toHaveBeenCalledTimes(2);
     expect(document.documentElement.dataset.previewBackground).toBeUndefined();
   });
 });

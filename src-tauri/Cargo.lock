@@ -1940,6 +1940,7 @@ dependencies = [
  "tokio",
  "tokio-util",
  "url",
+ "window-vibrancy",
 ]
 
 [[package]]

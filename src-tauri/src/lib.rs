@@ -5,6 +5,7 @@ mod github;
 mod github_oauth;
 mod plugins;
 mod repository_context;
+mod window_appearance;
 mod window_layout;
 
 use tauri::Manager;
@@ -45,6 +46,7 @@ pub fn run() {
         .plugin(plugins::system_tray::init())
         .invoke_handler(tauri::generate_handler![
             update_tray_menu,
+            window_appearance::sync_window_vibrancy,
             commands::github_begin_login,
             commands::github_login_availability,
             commands::github_connection_status,
