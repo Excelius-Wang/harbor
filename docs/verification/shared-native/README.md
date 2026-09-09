@@ -8,3 +8,5 @@ Browser evidence: four production detail views now retain one main landmark owne
 - [Normal Sheet](shared-media-sheet-normal-en-light-1440.png)
 
 Native observations in the conversation show a real controlled Tauri main window at 1200 × 760 and Settings at 600 × 500, dark Chinese and light English, theme/language synchronization, Shortcuts and closing Settings back to the main window. These images have not been exported to files. They do not establish the desktop-background, reduced transparency/motion or full dimension matrix. At 13:19 UTC the screen locked; CUA reported cgWindowNotFound while app inventory still showed the preview running. Those remaining native gates require an unlocked visible desktop.
+
+Native access later recovered. Maximize/restore, display movement through the Window menu, minimum-size tiling on the built-in display, collapsed navigation and the command palette were observed in light English. CUA drag itself remains unavailable; the system menu is the verified alternative. Background and native reduced-preference gates remain open.
