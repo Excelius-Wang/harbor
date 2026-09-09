@@ -1,6 +1,6 @@
 # Recent action acceptance — 2026-09-09
 
-Controlled browser fixtures only. These selected captures accompany the completed repository, Project, Gist and conversation-write matrices. Conversation read/reaction and final shared/native acceptance remain open. See [UI verification](../../UI_VERIFICATION.md) for the precise scope.
+Controlled browser fixtures only. These selected captures accompany the completed repository, Project, Gist and conversation and reaction matrices (1056 scenarios). Browser acceptance is complete for this batch; external delivery and final shared/native acceptance remain open. See [UI verification](../../UI_VERIFICATION.md) for the precise scope.
 
 ![Before: a fixed long description crowds file reading](recent-gist-before-long-en-light-900.png)
 
