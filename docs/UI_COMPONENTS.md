@@ -212,3 +212,11 @@ Primary navigation starts expanded (226 px). The titlebar sidebar button beside 
 ## Outer window edge — 2026-09-07
 
 `--harbor-window-radius: 10px` now supplies WindowFrame and TitleBar corner rounding, matching the existing native effect radius. The outer window keeps its single semantic 1 px border; `.harbor-window` has no CSS shadow or inset highlight. Native window shadows remain enabled. In-page overlays keep their own material, and window fill/blur values are unchanged. Maximized windows retain their existing square, borderless treatment.
+
+## Issue action previews
+
+`?issues=standard&writes=accept` enables isolated Issue lifecycle, comment, clone, duplicate and transfer fixtures. Mutations reconcile subsequent detail reads; unknown writes and missing write opt-in remain rejected. `issues=readonly` disables authoritative lifecycle/comment permissions, and `issues=closed` seeds closed details. `issues=candidate-loading|candidate-error|candidate-duplicate` affects the original-Issue candidate numbered 2 without blocking the current Issue numbered 1. Transfer checks resolve the exact source and destination repositories from their production `input` arguments.
+
+Scope `state=loading|error|stale&commands=<command>` to a read or mutation for recovery checks. An empty assignee query now returns an empty list. These fixtures do not establish GitHub API behavior or native picker/transfer behavior. Current acceptance evidence is in [UI_VERIFICATION.md](UI_VERIFICATION.md).
+
+Issue detail cache writes use `githubQueryKeys.issueTimelineRoot`; broader `issueRoot` invalidation still refreshes related data. Do not write timeline-shaped data to the broader prefix, which also contains relationship, dependency and linked-branch records.

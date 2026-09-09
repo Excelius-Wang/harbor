@@ -16,6 +16,7 @@ import {
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { useAppTranslation } from "@/hooks/use-app-translation";
 import { parseIpcError } from "@/lib/ipc-error";
 import type { GitHubIssue, GitHubRepositoryContentContext } from "./github-data";
@@ -101,12 +102,14 @@ export function GitHubIssueMarkDuplicateAction({
   const capabilities = capabilityResult.data;
   const canMark =
     eligibleIssue &&
+    !capabilityResult.error &&
+    !capabilityResult.isFetching &&
     capabilities?.viewerCanClose === true &&
     issueStateCapabilitiesMatchIssue(capabilities, issue, issueTarget);
 
   if (!eligibleIssue) return null;
 
-  if (capabilityResult.isPending || capabilityResult.isFetching) {
+  if ((capabilityResult.isPending || capabilityResult.isFetching) && !open) {
     return (
       <Button type="button" variant="outline" size="sm" disabled>
         <Spinner data-icon="inline-start" />
@@ -115,7 +118,7 @@ export function GitHubIssueMarkDuplicateAction({
     );
   }
 
-  if (!canMark) return null;
+  if (!canMark && !open) return null;
 
   const candidateMatches =
     candidate.variables &&
@@ -127,6 +130,7 @@ export function GitHubIssueMarkDuplicateAction({
   const previewIssue = candidate.data && reviewedCanonical ? candidate.data.issue : null;
   const candidateIsDuplicate = normalizeIssueStateReason(previewIssue?.stateReason) === "duplicate";
   const candidateIssue = previewIssue && !candidateIsDuplicate ? previewIssue : null;
+  const writeError = mutation.error ? parseIpcError(mutation.error) : null;
   const candidateError = candidate.error ? parseIpcError(candidate.error) : null;
   const busy = candidate.isPending || mutation.isPending;
 
@@ -137,7 +141,15 @@ export function GitHubIssueMarkDuplicateAction({
         if (!busy) setOpen(nextOpen);
       }}
     >
-      <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => {
+          mutation.reset();
+          setOpen(true);
+        }}
+      >
         <Copy data-icon="inline-start" />
         {t("workspace.repositories.markIssueDuplicate")}
       </Button>
@@ -146,7 +158,8 @@ export function GitHubIssueMarkDuplicateAction({
           className="flex flex-col gap-6"
           onSubmit={(event) => {
             event.preventDefault();
-            if (candidateIssue && reviewedCanonical) mutation.mutate(reviewedCanonical);
+            if (candidateIssue && reviewedCanonical && canMark && !busy)
+              mutation.mutate(reviewedCanonical);
           }}
         >
           <DialogHeader>
@@ -155,6 +168,28 @@ export function GitHubIssueMarkDuplicateAction({
               {t("workspace.repositories.markIssueDuplicateDescription")}
             </DialogDescription>
           </DialogHeader>
+          {capabilityResult.error ? (
+            <WorkspaceStaleNotice
+              message={parseIpcError(capabilityResult.error).message}
+              onRetry={() => void capabilityResult.refetch()}
+              retryDisabled={busy || capabilityResult.isFetching}
+            />
+          ) : capabilityResult.isFetching ? (
+            <div role="status" className="text-muted-foreground flex items-center gap-2 text-xs">
+              <Spinner />
+              {t("workspace.repositories.loadingIssueActions")}
+            </div>
+          ) : !canMark ? (
+            <Alert>
+              <AlertTitle>{t("workspace.repositories.issueStateUnavailable")}</AlertTitle>
+            </Alert>
+          ) : null}
+          {writeError ? (
+            <Alert variant="destructive">
+              <AlertTitle>{t(markDuplicateErrorTitle(writeError.code))}</AlertTitle>
+              <AlertDescription>{writeError.message}</AlertDescription>
+            </Alert>
+          ) : null}
           <FieldGroup>
             <Field data-invalid={invalidCanonical || undefined}>
               <FieldLabel htmlFor={issueNumberId}>
@@ -239,7 +274,7 @@ export function GitHubIssueMarkDuplicateAction({
             </DialogClose>
             <Button
               type="submit"
-              disabled={!candidateIssue || !reviewedCanonical || mutation.isPending}
+              disabled={!candidateIssue || !reviewedCanonical || busy || !canMark}
             >
               {mutation.isPending ? (
                 <Spinner data-icon="inline-start" />

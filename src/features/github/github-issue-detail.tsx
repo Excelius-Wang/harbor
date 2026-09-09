@@ -16,6 +16,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAppTranslation } from "@/hooks/use-app-translation";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { parseIpcError } from "@/lib/ipc-error";
 import { openExternalUrl } from "@/lib/window";
 import type {
@@ -264,14 +265,21 @@ function GitHubIssueDetailScreen({
           <RefreshCw className="text-muted-foreground size-3 animate-spin" />
         ) : null}
       </div>
-      <ScrollArea className="min-h-0 flex-1">
+      {error && detail ? (
+        <WorkspaceStaleNotice
+          message={error.message}
+          onRetry={() => void detailResult.refetch()}
+          retryDisabled={detailResult.isFetching}
+        />
+      ) : null}
+      <ScrollArea className="min-h-0 flex-1 overflow-clip">
         {detailResult.isPending ? (
           <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-4 p-5">
             <Skeleton className="h-7 w-3/4" />
             <Skeleton className="h-32 w-full" />
             <Skeleton className="h-28 w-full" />
           </div>
-        ) : error || !detail ? (
+        ) : !detail ? (
           <Empty className="min-h-80">
             <EmptyHeader>
               <EmptyMedia variant="icon">
@@ -289,8 +297,8 @@ function GitHubIssueDetailScreen({
           </Empty>
         ) : (
           <div className="mx-auto w-full max-w-[1100px] px-4 py-5 sm:px-5">
-            <div className="mb-5 flex flex-wrap items-start gap-3">
-              <div className="min-w-0 flex-1">
+            <div className="mb-5 flex flex-col items-start gap-3">
+              <div className="w-full min-w-0">
                 <h2 className="text-foreground text-2xl leading-8 font-semibold tracking-[-0.025em]">
                   {detail.issue.title}{" "}
                   <span className="text-muted-foreground font-normal">#{detail.issue.number}</span>

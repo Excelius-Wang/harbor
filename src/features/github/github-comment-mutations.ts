@@ -61,7 +61,7 @@ export function syncUpdatedIssueComment(
   comment: GitHubIssueTimelineItem
 ) {
   queryClient.setQueriesData<GitHubIssueDetailPage>(
-    { queryKey: githubQueryKeys.issueRoot(target) },
+    { queryKey: githubQueryKeys.issueTimelineRoot(target) },
     (detail) =>
       detail
         ? {

@@ -686,10 +686,12 @@ export function workspaceFixture(
       return { labels: empty ? [] : labels };
     case "github_list_repository_issue_assignees":
       return {
-        assignees: [
-          { login: "harbor-preview", avatarUrl: "" },
-          { login: "alex-morgan", avatarUrl: "" },
-        ],
+        assignees: empty
+          ? []
+          : [
+              { login: "harbor-preview", avatarUrl: "" },
+              { login: "alex-morgan", avatarUrl: "" },
+            ],
       };
     case "github_list_repository_issue_milestones":
       return {

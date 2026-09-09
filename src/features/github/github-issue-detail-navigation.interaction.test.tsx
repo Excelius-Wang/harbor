@@ -2,9 +2,11 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render as renderBase, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { githubQueryKeys } from "./github-queries";
 import { GitHubIssueDetail } from "./github-issue-detail";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(), isTauri: () => false }));
@@ -114,7 +116,6 @@ vi.mock("./github-pull-request-detail", () => ({
 }));
 vi.mock("./github-issue-metadata", () => ({ GitHubIssueMetadata: () => null }));
 vi.mock("./github-issue-edit-dialog", () => ({ GitHubIssueEditDialog: () => null }));
-vi.mock("./github-comment-form", () => ({ GitHubCommentForm: () => null }));
 
 const repository = {
   owner: "octocat",
@@ -122,6 +123,10 @@ const repository = {
   url: "https://github.com/octocat/hello-world",
   defaultBranch: "main",
 };
+
+function render(ui: React.ReactNode) {
+  return renderBase(<TooltipProvider>{ui}</TooltipProvider>);
+}
 
 function issue(number: number, title: string, repositoryName: string) {
   return {
@@ -185,6 +190,32 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe("GitHub Issue detail relationship navigation", () => {
+  it("retains the detail and comment draft after a failed refresh", async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <GitHubIssueDetail repository={repository} issueNumber={7} onBack={vi.fn()} />
+      </QueryClientProvider>
+    );
+    await screen.findByText("Root issue detail");
+    const user = userEvent.setup();
+    const draft = screen.getByRole("textbox");
+    await user.type(draft, "Keep the unsent comment");
+    vi.mocked(invoke).mockRejectedValue(new Error("offline"));
+    await queryClient.invalidateQueries({
+      queryKey: githubQueryKeys.issueRoot({
+        owner: repository.owner,
+        repository: repository.name,
+        issueNumber: 7,
+      }),
+    });
+    expect(await screen.findByText("common.staleResults")).toBeDefined();
+    expect(screen.getByText("Root issue detail")).toBeDefined();
+    expect((screen.getByRole("textbox") as HTMLTextAreaElement).value).toBe(
+      "Keep the unsent comment"
+    );
+  });
+
   it("opens a cross-repository parent in place and unwinds before leaving the host", async () => {
     const onBack = vi.fn();
     const user = userEvent.setup();

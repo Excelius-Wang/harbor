@@ -2,7 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -114,6 +114,52 @@ describe("GitHub Issue delete action", () => {
     await user.click(screen.getByRole("button", { name: "common.cancel" }));
 
     expect(invoke).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the confirmation open while deletion is pending", async () => {
+    vi.mocked(invoke).mockImplementation((command) =>
+      command === "github_get_repository_issue_delete_status"
+        ? Promise.resolve(status)
+        : new Promise(() => undefined)
+    );
+    const user = userEvent.setup();
+    renderAction();
+    await user.click(
+      await screen.findByRole("button", { name: "workspace.repositories.deleteIssue" })
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "workspace.repositories.confirmDeleteIssue" })
+    );
+    fireEvent.keyDown(document, { key: "Escape", code: "Escape" });
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("alertdialog")).not.toBeNull();
+    expect(screen.getByRole("button", { name: "common.cancel" }).hasAttribute("disabled")).toBe(
+      true
+    );
+  });
+
+  it("retains failed deletion feedback when the permission refresh also fails", async () => {
+    vi.mocked(invoke)
+      .mockResolvedValueOnce(status)
+      .mockRejectedValueOnce({ code: "githubRateLimited", message: "slow down" })
+      .mockRejectedValue({ code: "network", message: "offline" });
+    const user = userEvent.setup();
+    renderAction();
+    await user.click(
+      await screen.findByRole("button", { name: "workspace.repositories.deleteIssue" })
+    );
+    await user.click(
+      screen.getByRole("button", { name: "workspace.repositories.confirmDeleteIssue" })
+    );
+    await waitFor(() => expect(invoke).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeNull());
+    expect(
+      screen
+        .getByRole("button", { name: "workspace.repositories.confirmDeleteIssue" })
+        .hasAttribute("disabled")
+    ).toBe(true);
+    expect(screen.getByText("slow down")).toBeDefined();
   });
 
   it("confirms and permanently deletes the exact authoritative Issue", async () => {
