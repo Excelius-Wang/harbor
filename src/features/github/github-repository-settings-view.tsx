@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Archive,
@@ -191,6 +191,7 @@ export function GitHubRepositorySettingsView({
     ]),
   ];
 
+  const archivePending = useRef(false);
   const mutation = useMutation({
     mutationFn: (update: GitHubRepositorySettingsUpdate) =>
       updatePersonalRepositorySettings(target, update),
@@ -270,11 +271,20 @@ export function GitHubRepositorySettingsView({
     mutation.mutate(draft);
   };
   const toggleArchive = () => {
-    mutation.mutate({
-      ...editableSettings(settings),
-      archived: !settings.repository.isArchived,
-      confirmArchiveChange: true,
-    });
+    if (archivePending.current || mutation.isPending) return;
+    archivePending.current = true;
+    mutation.mutate(
+      {
+        ...editableSettings(settings),
+        archived: !settings.repository.isArchived,
+        confirmArchiveChange: true,
+      },
+      {
+        onSettled: () => {
+          archivePending.current = false;
+        },
+      }
+    );
   };
 
   if (managingPages) {
@@ -556,7 +566,10 @@ export function GitHubRepositorySettingsView({
               <Button
                 variant="outline"
                 disabled={mutation.isPending}
-                onClick={() => setArchiveConfirmation(true)}
+                onClick={() => {
+                  mutation.reset();
+                  setArchiveConfirmation(true);
+                }}
               >
                 {archived ? <Undo2 /> : <Archive />}
                 {t(
@@ -609,8 +622,15 @@ export function GitHubRepositorySettingsView({
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={archiveConfirmation} onOpenChange={setArchiveConfirmation}>
-        <AlertDialogContent>
+      <AlertDialog
+        open={archiveConfirmation}
+        onOpenChange={(open) => {
+          if (archivePending.current || mutation.isPending) return;
+          setArchiveConfirmation(open);
+          if (!open) mutation.reset();
+        }}
+      >
+        <AlertDialogContent aria-busy={mutation.isPending}>
           <AlertDialogHeader>
             <AlertDialogTitle>
               {t(
@@ -628,9 +648,23 @@ export function GitHubRepositorySettingsView({
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {mutation.error ? (
+            <Alert variant="destructive">
+              <AlertDescription>{parseIpcError(mutation.error).message}</AlertDescription>
+            </Alert>
+          ) : null}
           <AlertDialogFooter>
-            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction onClick={toggleArchive}>
+            <AlertDialogCancel disabled={mutation.isPending}>
+              {t("common.cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={mutation.isPending}
+              onClick={(event) => {
+                event.preventDefault();
+                toggleArchive();
+              }}
+            >
+              {mutation.isPending ? <Spinner data-icon="inline-start" /> : null}
               {t(
                 archived
                   ? "workspace.repositories.settings.unarchive"

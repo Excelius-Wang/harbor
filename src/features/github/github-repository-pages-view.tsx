@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
@@ -269,7 +269,7 @@ function BuildTypeField({
       </FieldLegend>
       <RadioGroup
         value={value}
-        className="grid sm:grid-cols-2"
+        className="grid @min-[600px]/pages:grid-cols-2"
         onValueChange={(next) => onChange(next as GitHubPagesBuildType)}
       >
         <FieldLabel htmlFor="pages-build-type-legacy">
@@ -306,6 +306,7 @@ function PagesConfigurationCard({
   draft,
   canEnableHttps,
   pending,
+  busy,
   onDraftChange,
   onSave,
 }: {
@@ -315,11 +316,12 @@ function PagesConfigurationCard({
   draft: GitHubPagesConfiguration;
   canEnableHttps: boolean;
   pending: boolean;
+  busy: boolean;
   onDraftChange: (draft: GitHubPagesConfiguration) => void;
   onSave: () => void;
 }) {
   const { t } = useTranslation();
-  const disabled = archived || pending;
+  const disabled = archived || busy;
   const valid = draft.buildType === "workflow" || Boolean(draft.branch?.trim() && draft.sourcePath);
   return (
     <Card>
@@ -354,7 +356,7 @@ function PagesConfigurationCard({
             }
           />
           {draft.buildType === "legacy" ? (
-            <FieldGroup className="grid gap-4 sm:grid-cols-2">
+            <FieldGroup className="grid gap-4 @min-[600px]/pages:grid-cols-2">
               <Field data-disabled={disabled}>
                 <FieldLabel htmlFor="repository-pages-branch">
                   {t("workspace.repositories.settings.pages.branch")}
@@ -544,7 +546,7 @@ function DomainHealthCard({
                         : "workspace.repositories.settings.pages.alternateDomain"
                     )}
                 </p>
-                <dl className="grid gap-4 sm:grid-cols-2">
+                <dl className="grid gap-4 @min-[600px]/pages:grid-cols-2">
                   <div className="flex items-center justify-between gap-3">
                     <dt className="text-muted-foreground text-xs">
                       {t("workspace.repositories.settings.pages.dnsResolves")}
@@ -607,6 +609,7 @@ function BuildHistory({
   hasPrevious,
   hasMore,
   pending,
+  disabled,
   onPageChange,
   onRequestBuild,
 }: {
@@ -616,6 +619,7 @@ function BuildHistory({
   hasPrevious: boolean;
   hasMore: boolean;
   pending: boolean;
+  disabled: boolean;
   onPageChange: (page: number) => void;
   onRequestBuild: () => void;
 }) {
@@ -710,7 +714,7 @@ function BuildHistory({
         />
       </CardContent>
       <CardFooter className="justify-end">
-        <Button variant="outline" disabled={pending} onClick={onRequestBuild}>
+        <Button variant="outline" disabled={disabled} onClick={onRequestBuild}>
           {pending ? <Spinner data-icon="inline-start" /> : <RefreshCw data-icon="inline-start" />}
           {t("workspace.repositories.settings.pages.requestBuild")}
         </Button>
@@ -794,6 +798,7 @@ export function GitHubRepositoryPagesView({
     setDisableConfirmation("");
   }, [repository.id]);
 
+  const pendingRequest = useRef(false);
   const mutation = useMutation({
     mutationFn: (next: GitHubPagesMutation) => mutateRepositoryPages(target, next),
     onSuccess: (next, requested) => {
@@ -834,6 +839,15 @@ export function GitHubRepositoryPagesView({
         site?.certificate?.state.toLowerCase() === "approved" ||
         domainHealth?.httpsEligible === true));
   const pendingAction = mutation.variables?.action;
+  const submitMutation = (next: GitHubPagesMutation) => {
+    if (pendingRequest.current || mutation.isPending || archived || !workspace) return;
+    pendingRequest.current = true;
+    mutation.mutate(next, {
+      onSettled: () => {
+        pendingRequest.current = false;
+      },
+    });
+  };
 
   return (
     <ScrollArea className="min-h-0 flex-1" constrainContentWidth>
@@ -873,6 +887,12 @@ export function GitHubRepositoryPagesView({
           </Alert>
         ) : null}
 
+        {mutation.error && pendingAction !== "disable" ? (
+          <Alert variant="destructive">
+            <AlertDescription>{parseIpcError(mutation.error).message}</AlertDescription>
+          </Alert>
+        ) : null}
+
         {archived ? (
           <Alert>
             <AlertTriangle />
@@ -895,8 +915,9 @@ export function GitHubRepositoryPagesView({
             draft={draft}
             canEnableHttps={canEnableHttps}
             pending={mutation.isPending && pendingAction === "configure"}
+            busy={mutation.isPending}
             onDraftChange={setDraft}
-            onSave={() => mutation.mutate({ action: "configure", configuration: draft })}
+            onSave={() => submitMutation({ action: "configure", configuration: draft })}
           />
         ) : null}
 
@@ -918,8 +939,9 @@ export function GitHubRepositoryPagesView({
             hasPrevious={workspace.hasPrevious}
             hasMore={workspace.hasMore}
             pending={mutation.isPending && pendingAction === "requestBuild"}
+            disabled={archived || mutation.isPending}
             onPageChange={setPage}
-            onRequestBuild={() => mutation.mutate({ action: "requestBuild" })}
+            onRequestBuild={() => submitMutation({ action: "requestBuild" })}
           />
         ) : null}
 
@@ -950,8 +972,12 @@ export function GitHubRepositoryPagesView({
             <CardFooter className="justify-end">
               <Button
                 variant="destructive"
-                disabled={archived}
-                onClick={() => setDisableOpen(true)}
+                disabled={archived || mutation.isPending}
+                onClick={() => {
+                  mutation.reset();
+                  setDisableConfirmation("");
+                  setDisableOpen(true);
+                }}
               >
                 <Trash2 data-icon="inline-start" />
                 {t("workspace.repositories.settings.pages.disable")}
@@ -964,10 +990,10 @@ export function GitHubRepositoryPagesView({
       <AlertDialog
         open={disableOpen}
         onOpenChange={(open) => {
-          if (!mutation.isPending) setDisableOpen(open);
+          if (!pendingRequest.current && !mutation.isPending) setDisableOpen(open);
         }}
       >
-        <AlertDialogContent>
+        <AlertDialogContent aria-busy={mutation.isPending}>
           <AlertDialogHeader>
             <AlertDialogTitle>
               {t("workspace.repositories.settings.pages.disableConfirmTitle")}
@@ -992,6 +1018,11 @@ export function GitHubRepositoryPagesView({
               onChange={(event) => setDisableConfirmation(event.currentTarget.value)}
             />
           </Field>
+          {mutation.error && pendingAction === "disable" ? (
+            <Alert variant="destructive">
+              <AlertDescription>{parseIpcError(mutation.error).message}</AlertDescription>
+            </Alert>
+          ) : null}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={mutation.isPending}>
               {t("common.cancel")}
@@ -999,12 +1030,11 @@ export function GitHubRepositoryPagesView({
             <AlertDialogAction
               variant="destructive"
               disabled={
-                disableConfirmation !== repository.fullName ||
-                (mutation.isPending && pendingAction === "disable")
+                disableConfirmation !== repository.fullName || archived || mutation.isPending
               }
               onClick={(event) => {
                 event.preventDefault();
-                mutation.mutate({ action: "disable", confirmation: disableConfirmation });
+                submitMutation({ action: "disable", confirmation: disableConfirmation });
               }}
             >
               {mutation.isPending && pendingAction === "disable" ? (
