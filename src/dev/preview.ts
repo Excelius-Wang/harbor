@@ -1,3 +1,4 @@
+import { createTransferFixtures } from "./transfer-fixtures";
 import { createIssueActionFixtures } from "./issue-action-fixtures";
 import { createPagesActionFixtures } from "./pages-action-fixtures";
 import { createDiscussionActionFixtures } from "./discussion-action-fixtures";
@@ -143,6 +144,11 @@ export function installPreview() {
   const pagesActionFixtures = createPagesActionFixtures(
     repositories,
     parameters.get("pages"),
+    parameters.get("writes") === "accept"
+  );
+  const transferFixtures = createTransferFixtures(
+    repositories,
+    parameters.get("transfers"),
     parameters.get("writes") === "accept"
   );
   const notificationTargets = parameters.get("notifications") === "targets";
@@ -357,6 +363,8 @@ export function installPreview() {
       commandState === "empty"
     );
     if (repositoryActionResult !== undefined) return repositoryActionResult;
+    const transferResult = transferFixtures(command, args, commandState === "empty");
+    if (transferResult !== undefined) return transferResult;
     const issueActionResult = issueActionFixtures(command, args, commandState === "empty");
     if (issueActionResult !== undefined) return issueActionResult;
     const pagesActionResult = pagesActionFixtures(command, args, commandState === "empty");

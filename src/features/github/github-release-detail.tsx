@@ -241,8 +241,13 @@ export function GitHubReleaseDetail({
   const writeError = assetUpload.error ? parseIpcError(assetUpload.error) : null;
   const assetDeleteError = assetDelete.error ? parseIpcError(assetDelete.error) : null;
   const releaseDeleteError = releaseDelete.error ? parseIpcError(releaseDelete.error) : null;
+  const downloadAsset = (asset: GitHubReleaseAsset) => {
+    archiveDownload.reset();
+    assetDownload.mutate({ ...target, assetId: asset.id, assetName: asset.name });
+  };
   const downloadArchive = (archiveFormat: GitHubReleaseArchiveFormat) => {
     if (!release) return;
+    assetDownload.reset();
     archiveDownload.mutate({
       ...target,
       tagName: release.tagName,
@@ -267,7 +272,7 @@ export function GitHubReleaseDetail({
           onRetry={() => void result.refetch()}
         />
       ) : null}
-      <ScrollArea className="min-h-0 flex-1">
+      <ScrollArea className="min-h-0 flex-1" constrainContentWidth>
         {result.isPending ? (
           <div className="mx-auto flex w-full max-w-[960px] flex-col gap-4 p-5">
             <Skeleton className="h-8 w-2/3" />
@@ -455,13 +460,7 @@ export function GitHubReleaseDetail({
                         }
                         deleting={assetDelete.isPending && assetDelete.variables?.id === asset.id}
                         canDelete={!release.immutable}
-                        onDownload={() =>
-                          assetDownload.mutate({
-                            ...target,
-                            assetId: asset.id,
-                            assetName: asset.name,
-                          })
-                        }
+                        onDownload={() => downloadAsset(asset)}
                         onDelete={() => setAssetToDelete(asset)}
                       />
                     ))}
