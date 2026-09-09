@@ -1,173 +1,145 @@
-# AGENTS.md - Harbor
+# AGENTS.md - Repolane (Harbor repository)
 
 ## Project identity
 
-Harbor is a focused GitHub desktop workspace. It combines native GitHub workflows, selected
-web fallbacks, discovery, and an optional agent sidebar.
+Repolane is a focused GitHub desktop workspace with native GitHub workflows, selected
+web fallbacks, discovery, and an optional agent sidebar. The repository name, paths,
+and stable technical identifiers remain Harbor; do not rename them as part of UI branding.
 
-## Stack
-
-- Tauri 2 and Rust
-- React and TypeScript
-- Vite, Tailwind CSS, and shadcn/ui
-- English and Simplified Chinese through i18next
+Stack: Tauri 2 / Rust, React / TypeScript, Vite, Tailwind CSS, shadcn/ui, and i18next
+for English and Simplified Chinese.
 
 ## Commands
 
 ```bash
 pnpm install
 pnpm tauri:dev
+pnpm dev:ui --port 1423
 pnpm check
 cargo check --manifest-path src-tauri/Cargo.toml
 ```
 
 ## Working principles
 
-- Keep product Modules behind small Interfaces: GitHub client, credential store, local cache,
-  and agent runtime.
-- Prefer the smallest correct implementation and verify it with focused tests.
-- Do not copy GPL code into this repository.
-- Keep source comments and identifiers in English.
-- Do not commit generated build output or credentials.
+- Keep GitHub client, credential store, local cache, and agent runtime behind small interfaces.
+- Prefer the smallest correct implementation. Preserve user capabilities and intended workflows;
+  fix faulty behavior and improve interaction when relevant to the task, with regression evidence.
+- Keep source comments and identifiers in English. Add English and Simplified Chinese UI strings
+  together through i18next; use plain functional copy without implementation details.
+- Do not copy GPL code, commit generated build output, or commit credentials.
+- Preserve unrelated branches, worktrees, and uncommitted changes.
 
-## Branch workflow
+## Execution and branch workflow
 
-- Use a dedicated branch for each independent change; do not develop directly on `main`.
-- After an authorized PR merge, verify GitHub reports the PR as merged and confirm the branch's
-  final changes are included in the merge result. Then sync local `main` and automatically
-  delete that PR's remote and local branches. No additional deletion confirmation is needed.
-- Preserve unrelated branches, worktrees and uncommitted changes. Do not delete a branch with
-  unmerged follow-up commits or one still needed by another worktree; report the exception.
-- For squash merges, verify the PR head and merge result instead of relying only on Git ancestry.
-- Branch creation and cleanup do not independently authorize creating or merging a PR; follow
-  the user's instructions for external writes and merges.
+- Within an authorized multi-batch task or active Goal, finish one batch and continue to the next
+  without asking whether to proceed. Make routine implementation choices independently.
+  This rule does not start a Goal or authorize unrelated work.
+- Define a batch as an independently reviewable and verifiable outcome. Use a dedicated branch
+  for each independent batch; do not develop directly on `main`. Keep its implementation,
+  tests, and review fixes on that branch rather than creating a branch per small fix.
+- Include directly related defects needed to complete the outcome. Record unrelated features
+  and aesthetic exploration as follow-up suggestions rather than expanding the task.
+- Follow the current session's authorization for commits, pushes, PRs, reviews, merges, and
+  releases. Do not request authorization already provided. Branch creation and cleanup do not
+  independently authorize external writes or merges.
+- When a tool or verification path fails, inspect the failure and try a justified alternative.
+  Record unresolved blockers and continue independent work. Do not repeat an unchanged failed
+  route without new evidence, or claim completion while required verification is blocked.
+- After an authorized PR merge, verify GitHub reports MERGED and the final PR changes are included
+  in the merge result. For squash merges, check the PR head and merge result rather than Git
+  ancestry alone. Then sync local `main` and delete that PR's remote and local branches without
+  another confirmation. Preserve branches with unmerged follow-up commits or needed by another
+  worktree, and report those exceptions.
 
-## App design language
+## UI authority and entry points
 
-Harbor is a compact desktop workspace with cool blue-gray translucent glass, soft edge
-highlights, restrained color, and readable controls. Preserve its task density and navigation
-when applying design skills. Oversized heroes, decorative gradients, animated showcases, and
-equal card grids do not belong in app workflows.
+- Read [the UI design guide](docs/UI_DESIGN_GUIDE.md) for UI work, including its implementation
+  layout contracts. It owns detailed typography, spacing, dimensions, and page layout rules.
+  [The component guide](docs/UI_COMPONENTS.md) documents production primitives and preview usage.
+- On the first visual task in a session, and when revisiting visual direction, open the relevant
+  selected images from [the reference directory](docs/design/references/README.md).
+  [The reference board](docs/design/reference-board.html) is a companion. If local originals are
+  missing, report that limitation and continue work that does not depend on them; do not invent
+  reference observations or substitute a different design direction.
+- Reference roles remain fixed: sidebar image 4 for navigation structure, Harbor cool blue-gray
+  for color, LeonAnd for whole-page surface hierarchy, and Vorssaint for glass/color reference.
+  Do not import black, purple, or warm accent palettes or mix other sidebar examples.
+- Guide palette, opacity, blur, and radius candidates require validation; they are not measured
+  reference values or automatically shipped tokens. The light palette was extrapolated from
+  dark Vorssaint images; LeonAnd adds surface hierarchy, not exact color values.
+- Read `src/index.css` for implemented tokens and `harbor-*` classes, and
+  `src/features/workspace/harbor-workspace.tsx`, `github-discovery-view.tsx`, and relevant feature
+  code for behavior. `docs/UI_SPEC.md`, `docs/UI_REFERENCE_RESEARCH.md`, and old screenshots are
+  historical context; the design guide takes precedence for visual direction.
+- Keep progress and acceptance evidence in `docs/UI_MIGRATION_CHECKLIST.md`,
+  `docs/UI_VERIFICATION.md`, and the selected Cairn checkpoint, not in these standing rules.
 
-### Source of truth
+## UI invariants
 
-- For UI work, read [the UI design guide](docs/UI_DESIGN_GUIDE.md) and open the relevant selected
-  images in [the reference directory](docs/design/references/README.md). The
-  [reference and color board](docs/design/reference-board.html) provides a visual companion.
-- The selected reference roles are fixed: [sidebar image 4](docs/design/references/sidebar-04.webp)
-  for navigation structure, Harbor's cool blue-gray for color, and
-  [LeonAnd](docs/design/references/leonand-workspace.webp) for whole-page surface hierarchy.
-  Vorssaint remains a glass/color reference. Do not mix other sidebar examples into the design
-  or import a reference image's black, purple, or warm accent palette.
-- The guide defines the user-selected visual direction. Its numerical palettes, opacity,
-  blur, and radius values are candidates for validation, not shipped tokens or measured
-  reference values. The light palette was extrapolated from Vorssaint's dark images;
-  LeonAnd adds a light surface reference without establishing exact color values.
-- Read `src/index.css` for implemented tokens and shared `harbor-*` classes. Use
-  `src/features/workspace/harbor-workspace.tsx`, `github-discovery-view.tsx`, and nearby feature
-  views for existing layout and behavior. Preserve that behavior while changing appearance.
-- `docs/UI_SPEC.md`, `docs/UI_REFERENCE_RESEARCH.md`, and older screenshots provide historical
-  context. The new guide takes precedence for visual direction; current code establishes
-  implemented behavior. Do not treat a current flat or dark surface as the target merely
-  because it already exists.
-- The development-only gallery at `/ui-components` renders production components. Use
-  `pnpm dev:ui --port 1423` for controlled discovery fixtures; see `docs/UI_COMPONENTS.md`.
-  Shared primitives supply Harbor controls and overlay material by default. Do not add opaque
-  feature fills to menus/dialogs or bypass the preview's business-call interception for QA.
-- Reuse the local shadcn/ui components in `src/components/ui`, Radix behavior, and Lucide icons.
-  Keep one component system and icon family. Do not replace global primitives for a local feature.
+- Preserve the compact desktop workspace: cool blue-gray translucent glass, soft edge highlights,
+  restrained color, readable controls, and task density. No oversized heroes, decorative
+  gradients, perpetual animation, or equal card grids in app workflows.
+- Reuse local shadcn/ui components, Radix behavior, and Lucide icons. Do not replace global
+  primitives for a local feature. Use semantic tokens rather than per-page colors. Reserve
+  success, destructive, merged, and attention for real GitHub states; language colors come
+  from data. Keep primary blue localized to links and actions.
+- Keep one continuous material family across window and overlays. In `harbor-workspace-shell`,
+  use transparent panes and subtle group fills without repeated blur, opaque layers, or heavy
+  shadows. Reading and code surfaces may use stable fills for legibility. Background variation
+  should contribute to glass while text remains stable; uniform dark gray plus blur is insufficient.
+- Reuse `harbor-subtle-divider`, `harbor-result-row`, `harbor-popover`, `harbor-command`, and
+  `harbor-sheet`. Searchable filters use `harbor-filter-trigger` and `harbor-filter-menu`, with a
+  transparent inner Command so the shared popover supplies the material.
+- Preserve shared title bar and navigation. `PrimaryNavigation` and `NavigationButton` own
+  navigation rows, collapsed behavior, tooltips, and focus; `harbor-nav-item` owns selection
+  and hover. Change shared navigation consistently, never through per-feature overrides.
+  Secondary tabs retain their line structure. Keep hover, selection, and focus distinguishable.
+- Use the existing system font stack. Preserve `min-w-0`, `min-h-0`, pane-local ScrollArea,
+  and the shared window sizing policy. Feature views must not resize the window.
+- Reuse `WorkspacePageHeader`, `WorkspaceStaleNotice`, and parent-owned `useListScroll` keyed
+  by actual query parameters, with its viewport bindings on ScrollArea. Retain filters, cached
+  results, and relevant scroll on detail return; keep tabs' query keys independent.
+- Use native buttons/links and Radix interaction patterns. Icon-only actions need accessible
+  names and tooltips; avatars need fallbacks. Provide matching skeletons, useful empty states,
+  retryable errors, visibly stale retained results, and appropriate GitHub Web links. Source
+  labels must describe actual data, never a search approximation as an official ranking.
+- Limit motion to short feedback (roughly 120–180 ms); honor reduced motion and transparency.
+- Use `/ui-components` with controlled fixtures for browser QA. Preserve business-call
+  interception; preview writes must not reach real GitHub data. Keep third-party reference
+  images in documentation/local reference caches, outside shipped assets.
 
-### Color and surfaces
+## Verification by impact
 
-- Use semantic tokens (`background`, `foreground`, `card-foreground`, `muted-foreground`,
-  `primary`, `border`, `ring`) instead of choosing colors per page. The target palette uses
-  cool charcoal with a blue undertone in dark mode and cool white/blue-gray in light mode.
-  Keep bright blue accents localized. Validate candidate colors in context before adopting
-  them as shared tokens; do not paste guide hex values into individual feature components.
-- Reserve `success`, `destructive`, `merged`, and `attention` for real GitHub states. Repository
-  language colors come from data. Primary blue identifies links and actions.
-- Let background color and broad light variation contribute to glass while keeping text
-  stable and readable. A uniformly dark gray panel with blur applied is insufficient.
-- Keep one continuous material family across the window and overlays. Inside
-  `harbor-workspace-shell`, use transparent panes and optional subtle group fills; groups
-  normally need no additional blur. Do not turn every row into a glass card or stack opaque
-  fills, heavy shadows, and multiple blur layers. Reading and code surfaces may use a more
-  stable fill when necessary for legibility.
-- Reuse `harbor-subtle-divider` and `harbor-result-row` for separators and hover behavior.
-  Use `harbor-popover`, `harbor-command`, and `harbor-sheet` for elevated surfaces.
-- Navigation selection, row height, spacing, and collapsed presentation belong to shared
-  workspace navigation. New pages reuse that navigation; do not override selected fills or
-  row height per feature. Sidebar image 4 guides the structure, not its exact color values.
-  Blue selected fills in the candidate palette are for explicitly accented controls and are
-  not the default for all navigation. Secondary tabs retain their line structure. Keep hover,
-  selection, and keyboard focus distinguishable.
-
-### Type, spacing, and layout
-
-- Keep the system font stack in `src/index.css` (SF Pro on macOS). Use monospace for code,
-  identifiers, and shortcuts. Do not add a display font to a feature page.
-- Use a 24 px semibold page title, 13–14 px primary row text, and 11–12 px secondary metadata.
-  Long descriptions should wrap naturally; reserve truncation for compact names and identifiers.
-- Follow the 4 px spacing rhythm: 16–24 px content padding and 12–16 px row gaps. Keep compact
-  controls at 6–8 px corners. Larger groups and overlays can use the guide's candidate radii
-  when redesigned together; respect native window clipping. Avatars remain round.
-- Searchable filter menus use `harbor-filter-trigger` and `harbor-filter-menu`: 13 px regular
-  text, compact 28 px rows, a quiet scrollbar, and a single down chevron. Keep the inner Command
-  transparent so the shared `harbor-popover` surface stays visible; avoid stacking opaque fills.
-- Keep the shared title bar and primary navigation. The navigation starts expanded at 226 px and can be
-  collapsed to a 58 px icon rail by clicking the title-bar sidebar button beside the product
-  Logo and wordmark; persist the user’s choice. The Lane D brand mark remains visible.
-  The `workspace-wide` (80rem) breakpoint still controls content layouts; the optional context rail is 52 px. Do not create a second
-  page-level sidebar for filters that fit in a toolbar.
-- Current primary navigation lives in `PrimaryNavigation` within
-  `src/features/workspace/harbor-workspace.tsx`. Its main destinations, More trigger, account,
-  and settings reuse `NavigationButton` from `src/features/workspace/navigation-button.tsx`.
-  This shared control owns the 40 px row, icon/label layout, collapsed tooltip and keyboard
-  focus. Selection and hover use `harbor-nav-item` in `src/index.css`. New pages inherit the
-  shell; do not copy rows or override row dimensions/states in consumers.
-- Reuse `WorkspacePageHeader` for list headers and `WorkspaceStaleNotice` for retained
-  results after a failed refresh. For list/detail swaps, keep `useListScroll` in the parent,
-  key it by the actual query parameters, and spread its viewport bindings onto ScrollArea.
-  This preserves pane scroll without changing query keys or persisting state globally.
-- Discovery uses a centered 1120 px maximum content width. Other workspaces may fill their pane.
-  Page header, filters, and scrollable content should share alignment.
-- Developer discovery rows keep the author, popular repository, and description in one vertical
-  group at every width. Place the account beside the name when space allows; wrap it below when
-  needed. Keep the avatar in a compact leading column and descriptions within a readable line
-  length. Do not split related identity and project content into distant proportional columns.
-- Preserve `min-w-0`, `min-h-0`, and pane-local `ScrollArea` containment. At the 900 px minimum
-  app width, secondary row content stacks below the primary identity; text must not stretch the
-  window or hide controls. Use the shared 1200 × 760 logical startup size with work-area clamping; do not resize the window from feature views.
-
-### Interaction and verification
-
-- Keep related content behind tabs with independent query keys. Returning from a detail view
-  should retain the relevant filters and cached results. Source labels must describe the actual
-  data; never present a search approximation as an official ranking.
-- Keep actions keyboard accessible. Use native buttons/links and Radix tab, select, and overlay
-  behavior. Icon-only actions need an accessible name and tooltip; avatars need a fallback.
-- Provide layout-matching skeletons, useful empty states, retryable errors, and explicit GitHub
-  Web links where appropriate. A failed refresh must visibly mark retained results as stale.
-- Keep motion short and limited to feedback (roughly 120–180 ms). Honor reduced motion and
-  reduced transparency; avoid perpetual decorative animation.
-- Add English and Simplified Chinese strings together through i18next. Use plain functional
-  copy; keep implementation details out of normal product flows.
-- Verify new UI in both themes at the minimum app width and a wide desktop size. Exercise
-  keyboard navigation, loading/error states, and list-to-detail return behavior.
-- For material or palette changes, compare before/after views over cool, neutral, and bright
-  detailed backgrounds. Check text, status colors, selected controls, and overlay continuity.
-  Browser previews verify page layout and in-page layers; desktop-background translucency
-  also requires observing the Tauri window. Check reduced-transparency fallbacks. Keep
-  third-party reference images in documentation, outside shipped application assets.
+- During development, run focused checks for affected behavior. At each code delivery boundary,
+  run `pnpm check`; when Rust/native code changes, run cargo check and relevant native tests.
+  Documentation-only edits need link/content and applicable formatting checks, not app builds.
+- For local UI changes, inspect affected views in both themes, English/Chinese, at 900 px and
+  a wide desktop size. Exercise applicable keyboard, loading, empty, error, stale, pending,
+  disabled, selected, and list/detail-return states, including long text and dense content.
+- For shared controls/layout changes, extend coverage to representative consumers and overlays.
+  Reuse prior evidence only for unchanged, unaffected behavior; name its scope explicitly.
+- For material/palette changes, compare same-content before/after views over cool, neutral,
+  and bright detailed backgrounds. Check text, status colors, selected controls, overlay
+  continuity, and reduced-transparency fallbacks. Observe the Tauri window for desktop-background
+  translucency; browser previews establish only page layout and in-page layers.
+- A final full-site acceptance claim requires all applicable migration gates. Distinguish
+  implemented, verified, and blocked states; tests or source inspection do not establish visual
+  acceptance, and historical screenshots do not verify newly changed states.
+- Once relevant checks pass, repeat or broaden them only for new changes, failures, or unresolved
+  concerns. Record concrete evidence and any existing non-blocking warnings without treating
+  unrelated warnings as new failures.
 
 <!-- cairn:begin -->
 
 ## Cairn
 
 When root `CAIRN.md` exists, follow the `cairn` skill when available; otherwise follow this
-block. Read the root before task work. When it declares workspace mode, read only the item
-named under `Current item`; do not load other items or `.cairn/archive/` unless the request
-explicitly requires them.
+block. Read the root before task work. For a generic resume in workspace mode, read only the
+item named under `Current item`. When the user explicitly names different work, match stable
+filenames and authoritative records, read only the relevant item, verify it, and select it
+when edits are authorized. An empty current pointer does not prevent selecting that work.
+Inspect `.cairn/archive/` only for an explicit historical/completed-work request. Do not scan
+unrelated items or archives for routine startup.
 
 Verify the selected checkpoint against its working area and authoritative records before
 acting. In Git-backed work, inspect the relevant working tree. A checkpoint stored beside a
