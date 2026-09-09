@@ -585,7 +585,7 @@ export function GitHubProfileView({
               }
               onShowConnections={setConnectionKind}
             />
-            <main className="flex min-w-0 flex-col gap-5">
+            <div className="flex min-w-0 flex-col gap-5">
               {contributions.data && contributions.error ? (
                 <WorkspaceStaleNotice
                   message={parseIpcError(contributions.error).message}
@@ -673,7 +673,7 @@ export function GitHubProfileView({
                   </Button>
                 ) : null}
               </section>
-            </main>
+            </div>
           </div>
         )}
       </ScrollArea>

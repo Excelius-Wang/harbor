@@ -315,7 +315,7 @@ export function GitHubGists() {
           </ScrollArea>
         </aside>
 
-        <main
+        <div
           className={cn(
             "workspace-wide:flex min-h-0 min-w-0 flex-1",
             selectedId === null ? "hidden" : "flex"
@@ -343,7 +343,7 @@ export function GitHubGists() {
               </EmptyHeader>
             </Empty>
           )}
-        </main>
+        </div>
       </div>
 
       <GitHubGistEditorDialog

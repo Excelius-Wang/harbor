@@ -419,7 +419,7 @@ export function GitHubProjects() {
           </ScrollArea>
         </aside>
 
-        <main
+        <div
           className={cn(
             "workspace-wide:flex min-h-0 min-w-0 flex-1",
             selectedNumber === null ? "hidden" : "flex"
@@ -443,7 +443,7 @@ export function GitHubProjects() {
               onDeleted={() => setSelectedNumber(null)}
             />
           )}
-        </main>
+        </div>
       </div>
 
       <CreateProjectDialog

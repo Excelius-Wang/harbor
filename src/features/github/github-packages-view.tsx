@@ -927,7 +927,7 @@ export function GitHubPackagesView() {
           ) : null}
         </aside>
 
-        <main
+        <div
           className={cn(
             "workspace-wide:flex min-h-0 min-w-0 flex-1",
             selectedName === null ? "hidden" : "flex"
@@ -951,7 +951,7 @@ export function GitHubPackagesView() {
               </EmptyHeader>
             </Empty>
           )}
-        </main>
+        </div>
       </div>
     </section>
   );
