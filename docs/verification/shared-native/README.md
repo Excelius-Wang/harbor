@@ -1,12 +1,21 @@
 # Shared/native acceptance — 2026-09-09
 
-Browser evidence: four production detail views now retain one main landmark owned by WindowFrame; 32 theme/language/size scenarios pass. Gallery Dialog, Sheet and Command normal/reduced-media checks add 48 scenarios. Reduced transparency removes backdrop blur; reduced motion uses the existing short-duration fallback. No shared material tokens changed.
+Four production detail views retain one main landmark owned by WindowFrame (32 browser scenarios). Dialog, Sheet and Command add 48 normal/reduced-media scenarios across both themes, languages and sizes. Final pnpm check passes 660 tests; three native appearance regressions, four window-layout tests, cargo check and the isolated native build pass.
 
+The native correction removes accumulated macOS vibrancy layers before applying one background-responsive layer. Reduced transparency removes every layer. Existing CSS palette and geometry are unchanged.
+
+Final native coverage: 24 main captures (both themes/languages/sizes, three backgrounds), 12 Command captures (dark English/light Chinese, both sizes, three backgrounds), and 12 reduced-transparency captures (both themes/sizes, English, three backgrounds). Backgrounds come from a temporary native QA window behind the preview, not browser layers. Raw images and dimension/restoration manifests are in output/playwright/native-final. Before/candidate captures are excluded. Native motion observation reuses this session's unchanged motion behavior plus the browser duration checks.
+
+- [Dark before: accumulated layers](before-hud-native-main-en-dark-900-cool.png)
+- [Dark corrected: cool background](native-final-main-en-dark-900-cool.png)
+- [Dark corrected: bright background](native-final-main-en-dark-900-bright.png)
+- [Light Chinese wide](native-final-main-zh-light-1440-cool.png)
+- [Light Chinese Command at 900 px](native-final-command-zh-light-900-bright.png)
+- [Dark English Command wide](native-final-command-en-dark-1440-neutral.png)
+- [Reduced transparency](native-reduced-main-en-light-900-bright.png)
 - [Gist at 900 px](shared-landmark-Gists-zh-dark-900.png)
 - [Project at 1440 px](shared-landmark-Projects-en-light-1440.png)
 - [Reduced-media Command](shared-media-command-reduced-zh-dark-900.png)
 - [Normal Sheet](shared-media-sheet-normal-en-light-1440.png)
 
-Native observations in the conversation show a real controlled Tauri main window at 1200 × 760 and Settings at 600 × 500, dark Chinese and light English, theme/language synchronization, Shortcuts and closing Settings back to the main window. These images have not been exported to files. They do not establish the desktop-background, reduced transparency/motion or full dimension matrix. At 13:19 UTC the screen locked; CUA reported cgWindowNotFound while app inventory still showed the preview running. Those remaining native gates require an unlocked visible desktop.
-
-Native access later recovered. Maximize/restore, display movement through the Window menu, minimum-size tiling on the built-in display, collapsed navigation and the command palette were observed in light English. CUA drag itself remains unavailable; the system menu is the verified alternative. Background and native reduced-preference gates remain open.
+Settings synchronization/return, maximize/restore, navigation and native reduced preferences were observed. Original wallpaper and accessibility values are restored after QA. Business operations remain controlled fixtures; this evidence does not establish live GitHub writes or native transfer IO. Actual review and final delivery are tracked in the migration checklist.

@@ -211,6 +211,7 @@ export function installPreview() {
     const args = (payload ?? {}) as Record<string, unknown>;
     previewCalls.push(command);
     if (
+      command === "sync_window_vibrancy" ||
       command.startsWith("plugin:window|") ||
       command.startsWith("plugin:webview|") ||
       (native && command.startsWith("plugin:event|"))
