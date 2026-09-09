@@ -1,6 +1,6 @@
 # Harbor UI verification record
 
-This record separates rendered evidence from source migration. The project-wide completion gate remains open in [UI_MIGRATION_CHECKLIST.md](UI_MIGRATION_CHECKLIST.md).
+This record separates rendered evidence from source migration. Current six-batch acceptance and delivery references are in [UI_MIGRATION_CHECKLIST.md](UI_MIGRATION_CHECKLIST.md). Earlier dated entries retain their historical limits; they are not current delivery status.
 
 ## Repository, Issue and PR batch
 
@@ -518,4 +518,4 @@ Native Settings theme/language synchronization, Shortcuts and close-to-main retu
 
 Final checks: pnpm check passes 660 tests in 135 files, formatting, lint, TypeScript and production build (/tmp/harbor-shared-native-final-check.log). Three Rust appearance regressions cover replacement order, reduced-transparency removal and clear failure; four window-layout tests pass. Cargo check and the isolated native build pass (/tmp/harbor-native-material-{tests,layout-tests,check,build}.log). Existing hook/chunk warnings remain non-blocking.
 
-Raw final files and capture manifests are in output/playwright/native-final/native-final-_ and native-reduced-main-_. Before and unsuccessful material-only candidate captures are excluded from the 48 final captures. Selected portable evidence is in [shared/native screenshots](verification/shared-native/README.md). No live GitHub business mutation, native transfer IO or release publication is claimed. Historical code-edit, file-delete, branch and commit-comment write-state extensions remain follow-up work outside this six-batch closeout. PR #93 still requires actual review, final-head CI and verified merge/cleanup before overall completion.
+Raw final files and capture manifests are in output/playwright/native-final/native-final-_ and native-reduced-main-_. Before and unsuccessful material-only candidate captures are excluded from the 48 final captures. Selected portable evidence is in [shared/native screenshots](verification/shared-native/README.md). No live GitHub business mutation, native transfer IO or release publication is claimed. Historical code-edit, file-delete, branch and commit-comment write-state extensions remain follow-up work outside this six-batch closeout. [PR #93](https://github.com/Excelius-Wang/harbor/pull/93) records actual review, final checks and merge disposition; the selected Cairn record records local cleanup. These authoritative records determine delivery completion, independently of the historical entries above.

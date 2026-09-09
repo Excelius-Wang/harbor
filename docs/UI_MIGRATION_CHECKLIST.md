@@ -4,21 +4,21 @@
 
 The historical phase-one cutoff has been delivered. The current authorized Goal covers the six remaining frontend batches and requires actual review, verified merge and branch cleanup for every delivery. Rules #87, Issue #88, Discussion #89 and Pages #90 are merged with those checks complete. Release/code transfer #91 is merged at `3338a49` after actual review and all final checks; its entire tree equals reviewed `3197c7d` and branch cleanup is complete. Recent repository, Project, Gist and conversation/reaction actions have 1056 passing browser scenarios and 659 passing tests; #92 is merged with final content verified.
 
-Shared/native verification now covers 80 browser scenarios, 48 final native captures and the native layer-accumulation fix. PR #93 still requires actual review, final-head CI, merge verification and cleanup. The six-batch closeout preserves the agreed design. Candidate guide colors, blur and radii remain candidates; no CSS palette tokens were changed or promoted as measured reference values.
+Shared/native verification now covers 80 browser scenarios, 48 final native captures and the native layer-accumulation fix. The technical acceptance evidence is complete. [PR #93](https://github.com/Excelius-Wang/harbor/pull/93) is the authoritative record for actual review, final checks and merge; the selected Cairn record tracks local cleanup. The six-batch closeout preserves the agreed design. Candidate guide colors, blur and radii remain candidates; no CSS palette tokens were changed or promoted as measured reference values.
 
 ## Current acceptance audit — 2026-09-09
 
 Counts describe completed matrices, excluding before images and abandoned runs. Detailed conditions and limitations are in [UI_VERIFICATION.md](UI_VERIFICATION.md).
 
-| Authorized batch                       | Applicable evidence                                                                           | Delivery state                                                       |
-| -------------------------------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| Rules optimization                     | Documentation checks and actual review/fix                                                    | #87 merged aa1ba45; content verified, branches cleaned               |
-| Issue lifecycle/comments/candidates    | 400 controlled scenarios; 626-test delivery check                                             | #88 merged 307eaec; content verified, branches cleaned               |
-| Discussion nested replies              | 248 scenarios; 641 tests                                                                      | #89 merged 357a9e3; final a99c96b tree verified, branches cleaned    |
-| Archived repository/Pages              | 224 scenarios; 650 tests                                                                      | #90 merged c35194c; final 0fa6c77 tree verified, branches cleaned    |
-| Release/code transfer feedback         | 264 scenarios; 658 tests                                                                      | #91 merged 3338a49; reviewed 3197c7d tree verified, branches cleaned |
-| Recent repository/session/Project/Gist | 1056 scenarios; 659 tests                                                                     | #92 merged 5218495; final 9bcae00 tree verified, branches cleaned    |
-| Shared UI/native                       | 80 browser scenarios; 48 native captures; 660 tests; 7 relevant Rust tests, cargo check/build | #93 open; actual review and final delivery pending                   |
+| Authorized batch                       | Applicable evidence                                                                           | Delivery state                                                                                            |
+| -------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Rules optimization                     | Documentation checks and actual review/fix                                                    | #87 merged aa1ba45; content verified, branches cleaned                                                    |
+| Issue lifecycle/comments/candidates    | 400 controlled scenarios; 626-test delivery check                                             | #88 merged 307eaec; content verified, branches cleaned                                                    |
+| Discussion nested replies              | 248 scenarios; 641 tests                                                                      | #89 merged 357a9e3; final a99c96b tree verified, branches cleaned                                         |
+| Archived repository/Pages              | 224 scenarios; 650 tests                                                                      | #90 merged c35194c; final 0fa6c77 tree verified, branches cleaned                                         |
+| Release/code transfer feedback         | 264 scenarios; 658 tests                                                                      | #91 merged 3338a49; reviewed 3197c7d tree verified, branches cleaned                                      |
+| Recent repository/session/Project/Gist | 1056 scenarios; 659 tests                                                                     | #92 merged 5218495; final 9bcae00 tree verified, branches cleaned                                         |
+| Shared UI/native                       | 80 browser scenarios; 48 native captures; 660 tests; 7 relevant Rust tests, cargo check/build | [PR #93 delivery record](https://github.com/Excelius-Wang/harbor/pull/93); local cleanup tracked by Cairn |
 
 | Final native requirement    | Applicable evidence                                                                                                                                                   |
 | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
