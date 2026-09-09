@@ -45,7 +45,7 @@ Status: in progress. A source inventory is not visual acceptance. Every row belo
 | Actions | Workflows/runs/jobs/artifacts/logs/check suites and controls | List/detail/log/dispatch/disable and returns verified; run/suite metadata, jobs/logs/artifacts and rerun/cancel/delete/download UI matrices verified with controlled responses |
 | Security | Alert lists/details and actions | Three alert kinds/detail, close form, filters/return and core states verified |
 | Insights | Charts, summaries, loading/empty/error | Overview/contributors/traffic, named keyboard charts/tooltips and both-theme states verified |
-| Repository settings | General/access/topics/taxonomy/pages/invitations and forms | Forms, Pages, taxonomy, invitations, visibility and return/state matrices verified; archived/deployment variants pending |
+| Repository settings | General/access/topics/taxonomy/pages/invitations and forms | Forms, Pages, taxonomy, invitations, visibility and return/state matrices verified; archived/Pages conditions, mutation feedback, retry and metadata-return behavior verified on 2026-09-09; external delivery pending |
 | Projects | Lists/detail fields/items and dialogs | Prior core matrix verified; new pending/draft/permission/empty-choice fixes and stateful fixtures pass code checks, visual action matrix pending |
 | Gists | Lists/detail/editor and files/comments | Prior core matrix verified; editor/comment draft retention, pending guards and scoped failure recovery implemented with stateful action fixtures; new visual states pending |
 | Packages | Lists/details and actions | Delete/restore success, pending, permission/conflict/retry, read states and filter/scroll return verified on 2026-09-07; native acceptance remains |
@@ -289,3 +289,7 @@ Issue lifecycle/comment/candidate implementation and the 400-capture browser mat
 ## Resumed delivery — Discussion replies (2026-09-09)
 
 Issue PR #88 is merged, its final content is verified and its branches are cleaned up. The independent Discussion branch now has nested reply success/pending/error, deleted-parent preservation, minimization, permission/closed/read states and keyboard focus evidence. The repository header and Discussion viewport width defects found at 900 px are fixed. See UI_VERIFICATION.md for the 200-capture scope and final checks. External delivery and the later archived/Pages, transfer, recent-action and shared/native gates remain open.
+
+## Resumed delivery — archived repositories and Pages (2026-09-09)
+
+Archived Pages controls, competing writes, archive confirmation feedback, container-width health layout and metadata-preserving navigation are fixed. Final browser matrices cover 224 scenarios; local checks and selected captures are recorded in UI_VERIFICATION.md. Actual CodeRabbit review, merge verification and cleanup remain required. The next implementation batch is Release/code transfer feedback; later recent-action and shared/native gates remain open.

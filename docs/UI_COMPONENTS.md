@@ -226,3 +226,10 @@ Issue detail cache writes use `githubQueryKeys.issueTimelineRoot`; broader `issu
 Use `?discussions=nested|more|closed|readonly&writes=accept` for stateful nested replies. `more` exposes the existing GitHub fallback for incomplete replies; `closed` closes and locks discussions (select All states to open one); `readonly` removes edit/moderation/vote permissions. Combine `state` and `commands` with named Discussion commands for pending/error/stale reads or writes. Reads return isolated snapshots; unknown writes never fall through to GitHub.
 
 Comment writes share `discussionCommentWriteKey(target)` so a parent cannot be deleted while a nested editor is saving. Keep this key scoped to the actual repository and discussion. The Discussion ScrollArea uses `constrainContentWidth`; repository header actions stack based on detail-pane width.
+
+
+## Archived repository and Pages preview
+
+Use `?pages=standard|archived|disabled|workflow|certificate-pending|health-pending|health-invalid|build-active|build-error`. Add `writes=accept` for isolated archive/unarchive, Pages configuration, queued branch builds and disable. Lists and details return independent snapshots; exact target and disable-confirmation guards remain in place. Scoped `state`/`commands` parameters cover failures, stale data and pending requests.
+
+Pages write controls share a pending guard and the authoritative workspace archive flag. The source/configuration/health grids respond to `@container/pages`. Repository metadata updates retain the selected secondary tab; selecting another repository still opens Code.

@@ -1,4 +1,5 @@
 import { createIssueActionFixtures } from "./issue-action-fixtures";
+import { createPagesActionFixtures } from "./pages-action-fixtures";
 import { createDiscussionActionFixtures } from "./discussion-action-fixtures";
 import { createPackageFixtures } from "./package-fixtures";
 import { createWorkflowFixtures } from "./workflow-fixtures";
@@ -119,6 +120,7 @@ export function installPreview() {
   const externalRepository = repositoryActions && repositoryActions !== "owned";
   const repositories = repositoryFixtures.map((repository, index) => ({
     ...repository,
+    ...(index === 0 && parameters.get("pages") === "archived" ? { isArchived: true } : {}),
     ...(index === 0 && parameters.get("repo") === "private" ? { isPrivate: true } : {}),
     ...(index === 0 && externalRepository
       ? {
@@ -136,6 +138,11 @@ export function installPreview() {
   const discussionActionFixtures = createDiscussionActionFixtures(
     repositories,
     parameters.get("discussions"),
+    parameters.get("writes") === "accept"
+  );
+  const pagesActionFixtures = createPagesActionFixtures(
+    repositories,
+    parameters.get("pages"),
     parameters.get("writes") === "accept"
   );
   const notificationTargets = parameters.get("notifications") === "targets";
@@ -352,6 +359,8 @@ export function installPreview() {
     if (repositoryActionResult !== undefined) return repositoryActionResult;
     const issueActionResult = issueActionFixtures(command, args, commandState === "empty");
     if (issueActionResult !== undefined) return issueActionResult;
+    const pagesActionResult = pagesActionFixtures(command, args, commandState === "empty");
+    if (pagesActionResult !== undefined) return pagesActionResult;
     const discussionActionResult = discussionActionFixtures(
       command,
       args,

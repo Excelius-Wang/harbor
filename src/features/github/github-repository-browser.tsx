@@ -282,8 +282,11 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
 
   useEffect(() => {
     onSelectRepository(selectedRepository);
-    setTab("code");
   }, [onSelectRepository, selectedRepository]);
+
+  useEffect(() => {
+    setTab("code");
+  }, [selectedRepository?.id]);
 
   const filteredRepositories = useMemo(() => {
     const query = repositoryQuery.trim().toLocaleLowerCase();
