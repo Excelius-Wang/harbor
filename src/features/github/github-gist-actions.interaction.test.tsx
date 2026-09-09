@@ -289,3 +289,18 @@ it("keeps Gist deletion confirmation open while pending and resets a failure on 
     (within(screen.getByRole("alertdialog")).getByRole("textbox") as HTMLInputElement).value
   ).toBe("");
 });
+
+it("names the Gist file picker and switches the selected file", async () => {
+  native.invoke.mockResolvedValueOnce({
+    ...gist,
+    files: [
+      ...gist.files,
+      { filename: "other.md", content: "Other file content", truncated: false, size: 18 },
+    ],
+  });
+  await mountDetail();
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("combobox", { name: "workspace.gists.files" }));
+  await user.click(screen.getByRole("option", { name: "other.md" }));
+  expect(await screen.findByText("Other file content")).toBeTruthy();
+});

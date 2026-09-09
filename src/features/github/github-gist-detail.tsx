@@ -664,9 +664,20 @@ export function GitHubGistDetail({
             </Avatar>
             <div className="min-w-0">
               <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                <h2 className="max-w-[64ch] text-2xl leading-7 font-semibold tracking-tight">
-                  {gist.description ?? gist.files[0]?.filename ?? gist.id}
-                </h2>
+                <ScrollArea
+                  className="max-w-full min-w-0 [&>[data-slot=scroll-area-viewport]]:max-h-28"
+                  constrainContentWidth
+                  type="auto"
+                  role="region"
+                  aria-label={t("workspace.gists.description")}
+                  viewportRef={(viewport) => {
+                    if (viewport) viewport.tabIndex = 0;
+                  }}
+                >
+                  <h2 className="max-w-[64ch] text-2xl leading-7 font-semibold tracking-tight wrap-anywhere">
+                    {gist.description ?? gist.files[0]?.filename ?? gist.id}
+                  </h2>
+                </ScrollArea>
                 <Badge variant="outline" className="gap-1 font-normal">
                   {gist.public ? <Users className="size-3" /> : <LockKeyhole className="size-3" />}
                   {t(gist.public ? "workspace.gists.public" : "workspace.gists.secret")}
@@ -794,7 +805,10 @@ export function GitHubGistDetail({
               ) : null}
               {files.length > 1 ? (
                 <Select value={selectedFile?.filename} onValueChange={setSelectedFileName}>
-                  <SelectTrigger className="w-full max-w-sm">
+                  <SelectTrigger
+                    className="w-full max-w-sm"
+                    aria-label={t("workspace.gists.files")}
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
