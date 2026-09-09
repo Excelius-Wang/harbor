@@ -20,7 +20,7 @@ None — complete
 
 ## Verification
 
-- `pnpm exec prettier --check AGENTS.md docs/UI_DESIGN_GUIDE.md` passes.
+- `pnpm exec prettier --check AGENTS.md docs/UI_DESIGN_GUIDE.md .cairn/archive/agent-workflow-clarity.md` passes.
 - `git diff --check` passes.
 - Local Markdown links resolve; whitespace-normalized comparison confirms all moved layout
   contracts are preserved. Content review confirms branch cleanup and external-write boundaries.
