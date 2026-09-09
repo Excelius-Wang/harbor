@@ -293,3 +293,8 @@ Issue PR #88 is merged, its final content is verified and its branches are clean
 ## Resumed delivery — archived repositories and Pages (2026-09-09)
 
 Archived Pages controls, competing writes, archive confirmation feedback, container-width health layout and metadata-preserving navigation are fixed. Final browser matrices cover 224 scenarios; local checks and selected captures are recorded in UI_VERIFICATION.md. Actual CodeRabbit review, merge verification and cleanup remain required. The next implementation batch is Release/code transfer feedback; later recent-action and shared/native gates remain open.
+
+
+### Release/code transfer acceptance update — 2026-09-09
+
+Release asset/source upload/download and code-file feedback now have 264 controlled browser scenario captures across both languages, themes and window sizes. Cross-transfer stale errors and Release detail width overflow are fixed. Tag archive keyboard behavior and recorded Web URLs, cold read/retry/empty/stale states and list return are verified. See UI_VERIFICATION.md for exact scope and native file-picker/filesystem limitations. External delivery and recent-action/shared/native acceptance remain open.

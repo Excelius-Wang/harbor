@@ -469,3 +469,22 @@ The opt-in fixtures simulate the UI contracts, including archive/unarchive, conf
 - Integrated check after rebasing onto Discussion `2ebad00` and merged Issue main `307eaec`: `pnpm check` passes 643 tests / 133 files (`/tmp/harbor-pages-integrated-check.log`). Pages production components and fixtures are unchanged from the browser-verified `90b3b95`; preview dispatch retains all three fixture families.
 
 - After rebasing onto merged Discussion main `357a9e3`, `VITEST_MAX_WORKERS=2 pnpm check` passes 650 tests / 133 files (`/tmp/harbor-pages-after-discussion-check.log`). Pages production components, shared repository-browser changes and Pages fixtures are unchanged from browser-verified `e5678a7`. The initial default-concurrency run had three timeouts in two pre-existing test files; their 10 focused cases passed at two workers (`/tmp/harbor-pages-timeout-focused.log`) and the full lower-concurrency run passed without changing test timeouts or assertions.
+
+
+### Release and code transfer acceptance — 2026-09-09
+
+Release asset and source-archive mutations previously retained each other's old failure. After one failed, a successful or cancelled transfer of the other kind could still display that error. Starting either transfer now resets the other mutation's stale error. Three interaction regressions reproduced both directions and cancellation and now pass. Browser inspection also found the Release ScrollArea expanded beyond its 380 px viewport to 462 px in a 900 px window; the existing `constrainContentWidth` option now keeps reading surfaces, asset rows and source controls within the pane. No palette or navigation changes were made.
+
+Controlled browser evidence passed in English and Simplified Chinese, light and dark, at 900 × 620 and 1440 × 900:
+
+- `transfer-write-matrix.js`: 128 captures, asset/ZIP/tar.gz/upload × pending/error/success/cancellation. Pending downloads disable the competing download controls; cancelled operations do not claim success. Accepted uploads add a fixture asset; failures remain visible.
+- `transfer-extra-matrix.js`: 56 captures, both cross-transfer error recovery directions, cancellation after failure, long mixed-language filenames, unavailable assets/archives, immutable releases and permission denial.
+- `transfer-file-matrix.js`: 40 captures, repository file pending/error/success/cancellation/permission feedback.
+- `transfer-tags-matrix.js`: 8 captures, Escape restores menu-trigger focus, Enter reopens, and ZIP/tar.gz selections record the correct tag URLs. These remain GitHub Web fallbacks.
+- `transfer-read-matrix.js`: 32 captures, cold loading/error/empty-assets and stale retained detail, Retry dispatch and list return. The list deliberately primes detail data on open, so cold-read fixtures reset the mounted detail query before asserting request states. A persistent failure fixture verifies a retry request, not successful recovery.
+
+All matrices assert applicable pane width or action state; screenshots are under `output/playwright/transfer-*`, with six selected current/before images in `docs/verification/release-transfers/`. The total is 264 final scenario captures plus the before-overflow image. Browser fixtures return synthetic paths and do not exercise a native picker, filesystem write, real upload or GitHub business mutation. Native transfer integration is outside this browser evidence.
+
+Final `pnpm check` passed 651 tests/135 files, formatting, lint, TypeScript and production build (`/tmp/harbor-transfer-final-check.log`). Five fixture tests cover opt-in, target rejection, snapshot isolation, cancellation, unavailable resources and immutable writes; three transfer regressions cover stale failure recovery. Existing hook and chunk-size warnings remain non-blocking. No Rust/native source changed. This batch is locally verified; external review/merge, recent-action browser acceptance and final shared/native gates remain open.
+
+- Parent integration onto Pages `c83f00a` and merged Discussion main `357a9e3` leaves all Transfer production files, tests and fixtures unchanged from `55d32f8`. Final `VITEST_MAX_WORKERS=1 pnpm check` passes 658 tests / 135 files (`/tmp/harbor-transfer-after-discussion-check.log`). An earlier two-worker run had one 5-second timeout in a pre-existing Gist pending-editor test with 657 passing cases (`/tmp/harbor-transfer-integrated-timeout.log`); the complete one-worker run passed without changing assertions or timeouts.

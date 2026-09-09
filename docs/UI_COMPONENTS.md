@@ -233,3 +233,8 @@ Comment writes share `discussionCommentWriteKey(target)` so a parent cannot be d
 Use `?pages=standard|archived|disabled|workflow|certificate-pending|health-pending|health-invalid|build-active|build-error`. Add `writes=accept` for isolated archive/unarchive, Pages configuration, queued branch builds and disable. Lists and details return independent snapshots; exact target and disable-confirmation guards remain in place. Scoped `state`/`commands` parameters cover failures, stale data and pending requests.
 
 Pages write controls share a pending guard and the authoritative workspace archive flag. The source/configuration/health grids respond to `@container/pages`. Repository metadata updates retain the selected secondary tab; selecting another repository still opens Code.
+
+
+### Controlled Release and file transfers
+
+`?transfers=standard&writes=accept` provides stateful Release uploads and synthetic saved-file responses for release assets, source archives and repository files. Alternatives: `cancelled`, `permission`, `unavailable`, `immutable`, and `long`. `state=loading|error&commands=<transfer command>` scopes pending/error behavior. Use `links=record` to inspect tag archive URLs without opening GitHub. Saved paths are fixture DTOs; preview does not open native pickers or write files. Read snapshots are cloned and target identities checked; business-call interception remains mandatory.
