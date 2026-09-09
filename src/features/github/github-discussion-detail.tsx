@@ -126,7 +126,9 @@ function DiscussionDeleteDialog({
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const busy = useIsMutating({ mutationKey: discussionCommentWriteKey(target) }) > 0;
   const mutation = useMutation({
+    mutationKey: discussionCommentWriteKey(target),
     mutationFn: () => deleteRepositoryDiscussion(target),
     onSuccess: (deletion) => {
       syncDeletedDiscussion(queryClient, target, deletion);
@@ -138,14 +140,14 @@ function DiscussionDeleteDialog({
   });
   const error = mutation.error ? parseIpcError(mutation.error) : null;
   const setOpen = (nextOpen: boolean) => {
-    if (mutation.isPending) return;
+    if (queryClient.isMutating({ mutationKey: discussionCommentWriteKey(target) })) return;
     if (!nextOpen) mutation.reset();
     onOpenChange(nextOpen);
   };
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogContent aria-busy={mutation.isPending}>
+      <AlertDialogContent aria-busy={busy}>
         <AlertDialogHeader>
           <AlertDialogTitle>{t("workspace.repositories.deleteDiscussionTitle")}</AlertDialogTitle>
           <AlertDialogDescription>
@@ -166,15 +168,16 @@ function DiscussionDeleteDialog({
           </Alert>
         ) : null}
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={mutation.isPending}>
+          <AlertDialogCancel disabled={busy}>
             {t("workspace.repositories.cancel")}
           </AlertDialogCancel>
           <AlertDialogAction
             variant="destructive"
-            disabled={mutation.isPending}
+            disabled={busy}
             onClick={(event) => {
               event.preventDefault();
-              mutation.mutate();
+              if (!queryClient.isMutating({ mutationKey: discussionCommentWriteKey(target) }))
+                mutation.mutate();
             }}
           >
             {mutation.isPending ? (
@@ -207,8 +210,10 @@ function DiscussionStateDialog({
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const busy = useIsMutating({ mutationKey: discussionCommentWriteKey(target) }) > 0;
   const [reason, setReason] = useState<GitHubDiscussionCloseReason>("resolved");
   const mutation = useMutation({
+    mutationKey: discussionCommentWriteKey(target),
     mutationFn: () => updateRepositoryDiscussionState(target, "closed", reason),
     onSuccess: (updatedDiscussion) => {
       syncUpdatedDiscussion(queryClient, target, updatedDiscussion);
@@ -219,7 +224,7 @@ function DiscussionStateDialog({
   });
   const error = mutation.error ? parseIpcError(mutation.error) : null;
   const setOpen = (nextOpen: boolean) => {
-    if (mutation.isPending) return;
+    if (queryClient.isMutating({ mutationKey: discussionCommentWriteKey(target) })) return;
     if (!nextOpen) mutation.reset();
     onOpenChange(nextOpen);
   };
@@ -235,13 +240,13 @@ function DiscussionStateDialog({
             })}
           </DialogDescription>
         </DialogHeader>
-        <Field data-disabled={mutation.isPending}>
+        <Field data-disabled={busy}>
           <FieldLabel htmlFor="discussion-close-reason">
             {t("workspace.repositories.discussionCloseReason")}
           </FieldLabel>
           <Select
             value={reason}
-            disabled={mutation.isPending}
+            disabled={busy}
             onValueChange={(value) => {
               setReason(value as GitHubDiscussionCloseReason);
               if (mutation.isError) mutation.reset();
@@ -277,15 +282,17 @@ function DiscussionStateDialog({
           </Alert>
         ) : null}
         <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={mutation.isPending}
-            onClick={() => setOpen(false)}
-          >
+          <Button type="button" variant="outline" disabled={busy} onClick={() => setOpen(false)}>
             {t("workspace.repositories.cancel")}
           </Button>
-          <Button type="button" disabled={mutation.isPending} onClick={() => mutation.mutate()}>
+          <Button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              if (!queryClient.isMutating({ mutationKey: discussionCommentWriteKey(target) }))
+                mutation.mutate();
+            }}
+          >
             {mutation.isPending ? (
               <Spinner data-icon="inline-start" />
             ) : (
@@ -360,6 +367,7 @@ export function GitHubDiscussionDetail({
         ? { source: "categories" as const, error: parseIpcError(categoriesResult.error) }
         : null;
   const voteMutation = useMutation({
+    mutationKey: discussionCommentWriteKey(target),
     mutationFn: () =>
       updateRepositoryDiscussionUpvote(discussion?.id ?? "", !discussion?.viewerHasUpvoted),
     onSuccess: (vote) => syncDiscussionVote(queryClient, target, vote),
@@ -374,6 +382,7 @@ export function GitHubDiscussionDetail({
     },
   });
   const reopenMutation = useMutation({
+    mutationKey: discussionCommentWriteKey(target),
     mutationFn: () => updateRepositoryDiscussionState(target, "open"),
     onSuccess: (updatedDiscussion) => {
       syncUpdatedDiscussion(queryClient, target, updatedDiscussion);

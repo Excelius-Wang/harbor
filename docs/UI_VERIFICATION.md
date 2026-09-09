@@ -427,3 +427,14 @@ Browser screenshots establish controlled UI behavior only. Native material accep
 - Selected current-layout screenshots: [Discussion reply acceptance](verification/discussion-replies/README.md). All 200 scenario captures and their scripts are retained under the primary workspace's ignored `output/playwright/discussion-*`; the isolated implementation area is `/tmp/harbor-discussion-acceptance-20260909`.
 
 - After rebasing onto merged Issue main `307eaec`, `pnpm check` passes 634 tests / 130 files (`/tmp/harbor-discussion-rebased-check.log`). The Discussion production components and shared header layout are unchanged from the browser-verified `25be600`; both fixture families and both evidence sections are retained.
+
+
+### Discussion CodeRabbit follow-up — 2026-09-09
+
+Actual review `5152578449` covered `2ebad0017a06222aa211a1ab78e6b5a3725a557f` and found missing discussion-level participation in the shared comment mutation guard. Vote, close, delete and reopen now register with that key; open confirmation dialogs disable submission while any scoped write is pending and synchronously check the mutation cache before submitting. Four new interaction cases reproduced competing replies and now pass with drafts retained.
+
+Both seeded and preserved deleted-comment fixtures now clear vote state and capabilities and reject deleted-comment votes. New replies to a surviving thread retain their own capabilities. The fixture regression and existing reply preservation tests pass. The checkpoint comment's assertion of “no substantive findings” conflicts with this actual review; the checkpoint records these findings and their resolution instead.
+
+`discussion-review-matrix.js` passed 32 scenarios: four pending discussion-level actions across English/Chinese, light/dark, 900 × 620 and 1440 × 900. Vote, close and delete preserve and disable the existing nested reply draft; pending close/delete dialogs resist Escape. Reopen reaches its pending state from the closed list filter. Screenshots are in `output/playwright/discussion-review-*`; two selected captures are in `docs/verification/discussion-replies/`. Existing 200 captures cover unchanged reply success/error, minimization, reading and layout behavior.
+
+Final `pnpm check` passed 639 tests/130 files, lint, formatting, TypeScript and production build (`/tmp/harbor-discussion-review-check.log`). Existing hook and chunk-size warnings remain non-blocking. Browser supplemental checks used isolated Vite cache at port 1427 and suppressed only `@vite/client` reconnect reload calls after repeated development-server interruptions; production application modules and preview business-call interception remain intact. Native rendering is still outside this evidence.

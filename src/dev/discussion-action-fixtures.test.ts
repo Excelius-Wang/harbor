@@ -52,6 +52,17 @@ describe("discussion preview isolation", () => {
     expect(read().comments[0]).toMatchObject({ body: "", deletedAt: expect.any(String) });
     expect(read().comments[0].replies).toHaveLength(3);
     expect(read().commentCount).toBe(2);
+    const survivorReply = fixture("github_create_repository_discussion_comment", {
+      ...target,
+      replyToId: parentId,
+      body: "Reply to the surviving thread",
+    }) as GitHubDiscussionComment;
+    expect(survivorReply).toMatchObject({
+      viewerCanUpdate: true,
+      viewerCanDelete: true,
+      viewerCanUpvote: true,
+      deletedAt: undefined,
+    });
   });
   it("rejects a comment ID from a different discussion", () => {
     const fixture = createDiscussionActionFixtures(repositories, "nested", true);
@@ -76,5 +87,26 @@ describe("discussion preview isolation", () => {
     ).toMatchObject({ preserved: false, replyToId: read().comments[0].id });
     expect(read().comments[0].replies).toHaveLength(1);
     expect(read().commentCount).toBe(2);
+  });
+  it("removes voting and editing capabilities from both seeded and deleted parent tombstones", () => {
+    const fixture = createDiscussionActionFixtures(repositories, "nested", true);
+    const read = () =>
+      fixture("github_get_repository_discussion", target) as GitHubDiscussionDetailPage;
+    const parentId = read().comments[0].id;
+    fixture("github_delete_repository_discussion_comment", { ...target, commentId: parentId });
+    for (const item of read().comments) {
+      expect(item).toMatchObject({
+        viewerCanUpvote: false,
+        viewerCanUpdate: false,
+        viewerCanDelete: false,
+        viewerCanMarkAsAnswer: false,
+        viewerHasUpvoted: false,
+        upvoteCount: 0,
+      });
+      expect(() =>
+        fixture("github_update_repository_discussion_upvote", { subjectId: item.id, upvoted: true })
+      ).toThrow();
+      expect(item.replies.length).toBeGreaterThan(0);
+    }
   });
 });

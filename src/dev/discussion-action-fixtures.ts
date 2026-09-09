@@ -10,6 +10,23 @@ export function createDiscussionActionFixtures(
   const pages = new Map<string, Data.GitHubDiscussionDetailPage>();
   let sequence = 0;
   const timestamp = "2026-09-09T08:00:00Z";
+  const tombstone = {
+    body: "",
+    author: undefined,
+    isAnswer: false,
+    isMinimized: false,
+    minimizedReason: undefined,
+    upvoteCount: 0,
+    viewerHasUpvoted: false,
+    viewerCanDelete: false,
+    viewerCanUpdate: false,
+    viewerCanUpvote: false,
+    viewerCanMarkAsAnswer: false,
+    viewerCanUnmarkAsAnswer: false,
+    viewerCanMinimize: false,
+    viewerCanUnminimize: false,
+  };
+
   function pageFor(args: Record<string, unknown>) {
     const repository = repositories.find(
       (item) => item.owner === args.owner && item.name === args.repository
@@ -38,7 +55,7 @@ export function createDiscussionActionFixtures(
           "root",
           "Parent comment: preserve this thread and its nested replies when editing. 父评论与回复应保持连续。"
         ),
-        { ...comment("removed", ""), deletedAt: timestamp, author: undefined },
+        { ...comment("removed", ""), ...tombstone, deletedAt: timestamp },
       ];
       page.comments[0].replies = [
         comment(
@@ -183,6 +200,14 @@ export function createDiscussionActionFixtures(
         isAnswer: false,
         upvoteCount: 0,
         viewerHasUpvoted: false,
+        viewerCanDelete: true,
+        viewerCanUpdate: true,
+        viewerCanUpvote: true,
+        viewerCanMarkAsAnswer: true,
+        viewerCanUnmarkAsAnswer: false,
+        viewerCanMinimize: true,
+        viewerCanUnminimize: false,
+        viewerDidAuthor: true,
       };
       (parent?.replies ?? page.comments).push(comment);
       if (!parent) page.discussion.commentCount = ++page.commentCount;
@@ -190,7 +215,8 @@ export function createDiscussionActionFixtures(
     }
     if (command === "github_update_repository_discussion_upvote") {
       const subject = page.discussion.id === id ? page.discussion : found?.comment;
-      if (!subject) throw new Error("Unknown preview vote target");
+      if (!subject || !subject.viewerCanUpvote || found?.comment.deletedAt)
+        throw new Error("Unknown preview vote target");
       const upvoted = args.upvoted === true;
       subject.upvoteCount += Number(upvoted) - Number(subject.viewerHasUpvoted);
       subject.viewerHasUpvoted = upvoted;
@@ -234,11 +260,8 @@ export function createDiscussionActionFixtures(
     const preserved = comment.replies.length > 0 || comment.repliesHaveMore;
     if (preserved)
       Object.assign(comment, {
-        body: "",
-        author: undefined,
+        ...tombstone,
         deletedAt: timestamp,
-        isAnswer: false,
-        isMinimized: false,
       });
     else {
       siblings.splice(siblings.indexOf(comment), 1);

@@ -6,6 +6,9 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { GitHubDiscussionComment } from "./github-data";
+import { administrationFixture } from "@/dev/administration-fixtures";
+import { GitHubDiscussionDetail } from "./github-discussion-detail";
+import type { GitHubDiscussionDetailPage, GitHubRepository } from "./github-data";
 import { GitHubDiscussionCommentCard } from "./github-discussion-comment";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(), isTauri: () => false }));
@@ -15,6 +18,9 @@ vi.mock("react-i18next", () => ({
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("./github-readme", () => ({
   default: ({ content }: { content: string }) => <p>{content}</p>,
+}));
+vi.mock("./github-reactions-provider", () => ({
+  GitHubReactionsProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 vi.mock("./github-reaction-bar", () => ({ GitHubReactionBar: () => null }));
 const repository = {
@@ -143,4 +149,90 @@ describe("Discussion reply operations", () => {
         .hasAttribute("disabled")
     ).toBe(true);
   });
+});
+
+describe("Discussion-level write exclusion", () => {
+  it.each(["vote", "close", "delete", "reopen"])(
+    "blocks an existing reply during a pending %s",
+    async (action) => {
+      const page = administrationFixture(
+        "github_get_repository_discussion",
+        target,
+        [{ ...repository, fullName: "octocat/harbor" }] as GitHubRepository[],
+        false
+      ) as GitHubDiscussionDetailPage;
+      page.discussion.state = action === "reopen" ? "closed" : "open";
+      page.discussion.viewerCanUpvote =
+        page.discussion.viewerCanClose =
+        page.discussion.viewerCanDelete =
+        page.discussion.viewerCanReopen =
+          true;
+      vi.mocked(invoke).mockImplementation((command) =>
+        command === "github_get_repository_discussion"
+          ? Promise.resolve(page)
+          : new Promise(() => {})
+      );
+      const client = new QueryClient({
+        defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+      });
+      render(
+        <QueryClientProvider client={client}>
+          <TooltipProvider>
+            <GitHubDiscussionDetail
+              repository={repository}
+              discussionNumber={1}
+              categories={[]}
+              onBack={() => {}}
+            />
+            <GitHubDiscussionCommentCard
+              repository={repository}
+              target={target}
+              comment={comment}
+              canReply
+            />
+          </TooltipProvider>
+        </QueryClientProvider>
+      );
+      const user = userEvent.setup();
+      await user.click(
+        screen.getAllByRole("button", { name: "workspace.repositories.reply" }).slice(-1)[0]
+      );
+      await user.type(screen.getByRole("textbox"), "Keep this reply draft");
+      const names = {
+        vote: "upvoteDiscussion",
+        close: "closeDiscussion",
+        delete: "deleteDiscussion",
+        reopen: "reopenDiscussion",
+      };
+      await user.click(
+        await screen.findByRole("button", {
+          name: `workspace.repositories.${names[action as keyof typeof names]}`,
+        })
+      );
+      if (action === "close" || action === "delete")
+        await user.click(
+          screen.getByRole("button", {
+            name: `workspace.repositories.${names[action]}`,
+          })
+        );
+      await waitFor(() =>
+        expect(
+          screen
+            .getByRole("button", {
+              name: "workspace.repositories.postDiscussionComment",
+              hidden: true,
+            })
+            .hasAttribute("disabled")
+        ).toBe(true)
+      );
+      expect((screen.getByRole("textbox", { hidden: true }) as HTMLTextAreaElement).value).toBe(
+        "Keep this reply draft"
+      );
+      expect(
+        vi
+          .mocked(invoke)
+          .mock.calls.some(([command]) => command === "github_create_repository_discussion_comment")
+      ).toBe(false);
+    }
+  );
 });
