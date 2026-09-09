@@ -24,6 +24,16 @@ export type GitHubDiscussionMutationTarget = GitHubDiscussionRepositoryTarget & 
   discussionNumber: number;
 };
 
+export function discussionCommentWriteKey(target: GitHubDiscussionMutationTarget) {
+  return [
+    "github",
+    "discussion-comment-write",
+    target.owner,
+    target.repository,
+    target.discussionNumber,
+  ] as const;
+}
+
 export type GitHubDiscussionContent = {
   categoryId: string;
   title: string;

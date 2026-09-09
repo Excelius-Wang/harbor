@@ -1,5 +1,11 @@
 import { lazy, Suspense, useMemo, useState } from "react";
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useIsMutating,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -75,6 +81,7 @@ import { GitHubDiscussionFormDialog } from "./github-discussion-form-dialog";
 import { GitHubDiscussionPollCard } from "./github-discussion-poll";
 import {
   deleteRepositoryDiscussion,
+  discussionCommentWriteKey,
   invalidateRepositoryDiscussion,
   invalidateRepositoryDiscussions,
   syncDeletedDiscussion,
@@ -320,6 +327,7 @@ export function GitHubDiscussionDetail({
     repository: repository.name,
     discussionNumber,
   };
+  const commentWritePending = useIsMutating({ mutationKey: discussionCommentWriteKey(target) }) > 0;
   const categoriesResult = useQuery({
     ...discussionCategoriesQueryOptions({
       owner: repository.owner,
@@ -405,7 +413,7 @@ export function GitHubDiscussionDetail({
           }
         />
       ) : null}
-      <ScrollArea className="min-h-0 flex-1">
+      <ScrollArea className="min-h-0 flex-1" constrainContentWidth>
         {result.isPending ? (
           <div className="mx-auto flex w-full max-w-[1050px] flex-col gap-4 p-5">
             <Skeleton className="h-7 w-3/4" />
@@ -474,7 +482,9 @@ export function GitHubDiscussionDetail({
                     aria-pressed={discussion.viewerHasUpvoted}
                     aria-label={t("workspace.repositories.upvoteDiscussion")}
                     title={t("workspace.repositories.upvoteDiscussion")}
-                    disabled={!discussion.viewerCanUpvote || voteMutation.isPending}
+                    disabled={
+                      !discussion.viewerCanUpvote || voteMutation.isPending || commentWritePending
+                    }
                     onClick={() => voteMutation.mutate()}
                   >
                     {voteMutation.isPending ? (
@@ -489,7 +499,7 @@ export function GitHubDiscussionDetail({
                       type="button"
                       variant="outline"
                       size="sm"
-                      disabled={!availableCategories.length}
+                      disabled={!availableCategories.length || commentWritePending}
                       onClick={() => setEditing(true)}
                     >
                       <Pencil data-icon="inline-start" />
@@ -501,6 +511,7 @@ export function GitHubDiscussionDetail({
                       type="button"
                       variant="outline"
                       size="sm"
+                      disabled={commentWritePending}
                       onClick={() => setCloseOpen(true)}
                     >
                       <CheckCircle2 data-icon="inline-start" />
@@ -527,6 +538,7 @@ export function GitHubDiscussionDetail({
                       type="button"
                       variant="destructive"
                       size="sm"
+                      disabled={commentWritePending}
                       onClick={() => setDeleteOpen(true)}
                     >
                       <Trash2 data-icon="inline-start" />
@@ -581,7 +593,17 @@ export function GitHubDiscussionDetail({
                   })}
                 </h3>
                 {canComment ? (
-                  <Button type="button" size="sm" onClick={() => setCommenting((value) => !value)}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={commentWritePending}
+                    onClick={() => {
+                      if (
+                        !queryClient.isMutating({ mutationKey: discussionCommentWriteKey(target) })
+                      )
+                        setCommenting((value) => !value);
+                    }}
+                  >
                     <MessageSquarePlus data-icon="inline-start" />
                     {t("workspace.repositories.addDiscussionComment")}
                   </Button>

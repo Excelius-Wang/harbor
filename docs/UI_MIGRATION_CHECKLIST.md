@@ -41,7 +41,7 @@ Status: in progress. A source inventory is not visual acceptance. Every row belo
 | Code | Tree, file/preview/blame, history/commits/comments, branches/tags/search and edit dialogs | Core/read/action/state matrices, focus and list/detail return verified; broader mutation audit remains |
 | Wiki | Page list, reading/editing/history and dialogs | Page/read/editor plus complete history/comparison/restore, raw/truncated and offline/permission matrices verified with controlled responses |
 | Releases | Lists/details/create/edit and assets | List/detail/create/edit/delete/asset-delete and return/state matrix verified; artifact transfer states pending |
-| Discussions | Lists/details, comments/reactions/polls and forms | List/detail/forms/poll, comment dialogs and return/state matrices verified; nested replies and mutation variants pending |
+| Discussions | Lists/details, comments/reactions/polls and forms | List/detail/forms/poll, comment dialogs and return/state matrices verified; nested reply lifecycle, guarded pending/error writes and final-width read states verified on 2026-09-09; PR review/merge pending |
 | Actions | Workflows/runs/jobs/artifacts/logs/check suites and controls | List/detail/log/dispatch/disable and returns verified; run/suite metadata, jobs/logs/artifacts and rerun/cancel/delete/download UI matrices verified with controlled responses |
 | Security | Alert lists/details and actions | Three alert kinds/detail, close form, filters/return and core states verified |
 | Insights | Charts, summaries, loading/empty/error | Overview/contributors/traffic, named keyboard charts/tooltips and both-theme states verified |
@@ -285,3 +285,7 @@ Wiki history/comparison/restore and offline/permission variants now have248 curr
 ## Resumed Issue acceptance — 2026-09-09
 
 Issue lifecycle/comment/candidate implementation and the 400-capture browser matrix pass. Browser reproduction found and fixed broad Issue cache writes corrupting relation caches, failed-refresh draft loss, deletion dismissal/recovery gaps and wide title crowding. The final 626-test check and scoped matrices are recorded in the latest UI_VERIFICATION.md section. The six requested frontend phases and final native/delivery gates remain open; PR #87 has merged the workflow documentation at `aa1ba45`; its branches are cleaned up.
+
+## Resumed delivery — Discussion replies (2026-09-09)
+
+Issue PR #88 is merged, its final content is verified and its branches are cleaned up. The independent Discussion branch now has nested reply success/pending/error, deleted-parent preservation, minimization, permission/closed/read states and keyboard focus evidence. The repository header and Discussion viewport width defects found at 900 px are fixed. See UI_VERIFICATION.md for the 200-capture scope and final checks. External delivery and the later archived/Pages, transfer, recent-action and shared/native gates remain open.
