@@ -34,7 +34,7 @@ Status: in progress. A source inventory is not visual acceptance. Every row belo
 | --- | --- | --- |
 | Workspace | Window/title bar, primary navigation, More menu, command palette, context rail and Agent sheet | Window/context matrices, keyboard/focus, pending/error/private and long-answer states verified; native material gate remains |
 | Notifications | Inbox, filters, retained results, target detail | Inbox/stale/dialog matrix, nine additional destination routes, highlighted invitation and returns verified |
-| Issues | Inbox/repository lists, details, timeline, metadata, relationships, all actions/forms | Inbox/detail/edit/preview and return checks done; advanced actions still pending |
+| Issues | Inbox/repository lists, details, timeline, metadata, relationships, all actions/forms | Lifecycle/comment/candidate matrix (400 captures) verified on 2026-09-09; external delivery and native/final gates remain |
 | Pull requests | Inbox/repository lists, details, commits, files/diff, reviews, checks, merge/lifecycle forms | Inbox/detail/commits/files, lifecycle dialogs, creation drafts and review variants verified; native/final delivery gates remain |
 | Repositories | Owned/starred lists, create/access/invitations, repository shell and tabs | Core browser, code and create-form capture done; other tabs/actions pending |
 | Discovery | Trending repositories/developers, developer feed, search and result/detail returns | Core/state/filter and eight nonzero return paths verified in both themes/languages/sizes |
@@ -280,3 +280,8 @@ The advanced Actions and notification route batch is verified with 504 current c
 ## Wiki history and shared notice wrapping
 
 Wiki history/comparison/restore and offline/permission variants now have248 current captures and seven additional regression/fixture cases. The shared stale notice stacks Retry in a narrow rail and remains inline in wider PR checks. Final full check530 tests/117 files and separate tsc pass. Evidence and remaining boundaries are in [UI_VERIFICATION.md](UI_VERIFICATION.md).
+
+
+## Resumed Issue acceptance — 2026-09-09
+
+Issue lifecycle/comment/candidate implementation and the 400-capture browser matrix pass. Browser reproduction found and fixed broad Issue cache writes corrupting relation caches, failed-refresh draft loss, deletion dismissal/recovery gaps and wide title crowding. The final 626-test check and scoped matrices are recorded in the latest UI_VERIFICATION.md section. The six requested frontend phases and final native/delivery gates remain open; PR #87 has merged the workflow documentation at `aa1ba45`; its branches are cleaned up.

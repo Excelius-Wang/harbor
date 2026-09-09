@@ -1,3 +1,4 @@
+import { createIssueActionFixtures } from "./issue-action-fixtures";
 import { createPackageFixtures } from "./package-fixtures";
 import { createWorkflowFixtures } from "./workflow-fixtures";
 import { createWikiFixtures } from "./wiki-fixtures";
@@ -143,6 +144,11 @@ export function installPreview() {
   const projectFixtures = createProjectFixtures(
     repositories,
     parameters.get("projects"),
+    parameters.get("writes") === "accept"
+  );
+  const issueActionFixtures = createIssueActionFixtures(
+    repositories,
+    parameters.get("issues"),
     parameters.get("writes") === "accept"
   );
   const conversationActionFixtures = createConversationActionFixtures(repositories, {
@@ -338,6 +344,8 @@ export function installPreview() {
       commandState === "empty"
     );
     if (repositoryActionResult !== undefined) return repositoryActionResult;
+    const issueActionResult = issueActionFixtures(command, args, commandState === "empty");
+    if (issueActionResult !== undefined) return issueActionResult;
     const conversationActionResult = conversationActionFixtures(
       command,
       args,

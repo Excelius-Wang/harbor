@@ -7,6 +7,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
 import type { GitHubIssue, GitHubIssueDetailPage } from "./github-data";
+import { githubIssueStateQueryKeys } from "./github-issue-state-queries";
 import { GitHubIssueMarkDuplicateAction } from "./github-issue-mark-duplicate-action";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(), isTauri: () => false }));
@@ -259,6 +260,41 @@ describe("GitHub Issue mark duplicate action", () => {
           name: "workspace.repositories.markIssueDuplicateConfirm",
         }) as HTMLButtonElement
       ).disabled
+    ).toBe(true);
+  });
+
+  it("retains the reviewed target but blocks marking after capability refresh failure", async () => {
+    let failed = false;
+    vi.mocked(invoke).mockImplementation((command) => {
+      if (command === "github_get_repository_issue_state_capabilities")
+        return failed ? Promise.reject(new Error("offline")) : Promise.resolve(capabilities(true));
+      if (command === "github_get_repository_issue") return Promise.resolve(candidate);
+      return Promise.resolve();
+    });
+    const user = userEvent.setup();
+    const client = renderAction();
+    await user.click(
+      await screen.findByRole("button", { name: "workspace.repositories.markIssueDuplicate" })
+    );
+    await user.type(screen.getByLabelText("workspace.repositories.canonicalIssueReference"), "9");
+    await user.click(
+      screen.getByRole("button", { name: "workspace.repositories.reviewDuplicateTarget" })
+    );
+    await screen.findByText("Canonical Issue");
+    failed = true;
+    await client.invalidateQueries({
+      queryKey: githubIssueStateQueryKeys.capabilitiesRoot({
+        owner: repository.owner,
+        repository: repository.name,
+        issueNumber: issue.number,
+      }),
+    });
+    expect(await screen.findByText("common.staleResults")).toBeDefined();
+    expect(screen.getByText("Canonical Issue")).toBeDefined();
+    expect(
+      screen
+        .getByRole("button", { name: "workspace.repositories.markIssueDuplicateConfirm" })
+        .hasAttribute("disabled")
     ).toBe(true);
   });
 

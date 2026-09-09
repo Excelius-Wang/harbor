@@ -22,6 +22,7 @@ import {
   updateRepositoryIssueMetadata,
   updateRepositoryIssueState,
 } from "./github-issue-mutations";
+import { syncUpdatedIssueComment } from "./github-comment-mutations";
 import { githubQueryKeys } from "./github-queries";
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -906,4 +907,33 @@ describe("GitHub Issue mutations", () => {
       expect(queryClient.getQueryState(key)?.isInvalidated, JSON.stringify(key)).toBe(false);
     }
   });
+});
+
+describe("Issue timeline cache boundaries", () => {
+  it.each(["create-comment", "update-comment", "update-issue", "lock"])(
+    "keeps relation caches intact during %s",
+    (action) => {
+      const client = new QueryClient();
+      const detailKey = githubQueryKeys.issueDetail({ ...target, timelinePage: 1 });
+      const relatedKey = [...githubQueryKeys.issueRoot(target), "relationships"];
+      const related = { parent: null, subIssues: [] };
+      client.setQueryData(detailKey, {
+        issue,
+        timeline: [comment],
+        timelinePage: 1,
+        timelineHasPrevious: false,
+        timelineHasMore: false,
+      });
+      client.setQueryData(relatedKey, related);
+      if (action === "create-comment")
+        syncCreatedIssueComment(client, target, { ...comment, id: "new" });
+      if (action === "update-comment")
+        syncUpdatedIssueComment(client, target, { ...comment, body: "Edited" });
+      if (action === "update-issue")
+        syncUpdatedIssue(client, target, { ...issue, state: "closed" });
+      if (action === "lock") syncIssueLockedState(client, target, true);
+      expect(client.getQueryData(relatedKey)).toEqual(related);
+      expect(client.getQueryData<GitHubIssueDetailPage>(detailKey)?.timeline).toBeDefined();
+    }
+  );
 });

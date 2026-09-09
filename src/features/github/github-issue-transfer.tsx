@@ -117,6 +117,7 @@ export function GitHubIssueTransferAction({
       : null;
   const canTransfer = Boolean(reviewedTarget && candidate.data?.viewerCanTransfer);
   const busy = candidate.isPending || mutation.isPending;
+  const writeError = mutation.error ? parseIpcError(mutation.error) : null;
   const candidateError = candidate.error ? parseIpcError(candidate.error) : null;
 
   return (
@@ -126,7 +127,15 @@ export function GitHubIssueTransferAction({
         if (!busy) setOpen(nextOpen);
       }}
     >
-      <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => {
+          mutation.reset();
+          setOpen(true);
+        }}
+      >
         <ArrowRightLeft data-icon="inline-start" />
         {t("workspace.repositories.transferIssue")}
       </Button>
@@ -162,6 +171,7 @@ export function GitHubIssueTransferAction({
                   onChange={(event) => {
                     setValue(event.target.value);
                     candidate.reset();
+                    mutation.reset();
                   }}
                 />
                 <Button
@@ -190,6 +200,13 @@ export function GitHubIssueTransferAction({
                   : t("workspace.repositories.targetRepositoryDescription")}
               </FieldDescription>
             </Field>
+            {writeError ? (
+              <Alert variant="destructive">
+                <CircleAlert />
+                <AlertTitle>{t(transferErrorTitle(writeError.code))}</AlertTitle>
+                <AlertDescription>{writeError.message}</AlertDescription>
+              </Alert>
+            ) : null}
             {candidateError ? (
               <Alert variant="destructive">
                 <CircleAlert />

@@ -730,6 +730,12 @@ export const githubQueryKeys = {
       "timeline",
       timelinePage,
     ] as const,
+  issueTimelineRoot: ({
+    owner,
+    repository,
+    issueNumber,
+  }: Omit<GitHubIssueDetailTarget, "timelinePage">) =>
+    ["github", "repository", owner, repository, "issue", issueNumber, "timeline"] as const,
   issueRoot: ({ owner, repository, issueNumber }: Omit<GitHubIssueDetailTarget, "timelinePage">) =>
     ["github", "repository", owner, repository, "issue", issueNumber] as const,
   conversationControls: ({

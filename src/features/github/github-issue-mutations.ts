@@ -164,7 +164,7 @@ export function syncCreatedIssueComment(
   comment: GitHubIssueTimelineItem
 ) {
   queryClient.setQueriesData<GitHubIssueDetailPage>(
-    { queryKey: githubQueryKeys.issueRoot(target) },
+    { queryKey: githubQueryKeys.issueTimelineRoot(target) },
     (detail) => {
       if (!detail) return detail;
       const alreadyIncluded = detail.timeline.some((item) => item.id === comment.id);
@@ -224,7 +224,7 @@ export function syncUpdatedIssue(
   issue: GitHubIssue
 ) {
   queryClient.setQueriesData<GitHubIssueDetailPage>(
-    { queryKey: githubQueryKeys.issueRoot(target) },
+    { queryKey: githubQueryKeys.issueTimelineRoot(target) },
     (detail) => (detail ? { ...detail, issue } : detail)
   );
   updateRepositoryIssuePages(queryClient, target, issue);
@@ -237,7 +237,7 @@ export function syncIssueLockedState(
   locked: boolean
 ) {
   queryClient.setQueriesData<GitHubIssueDetailPage>(
-    { queryKey: githubQueryKeys.issueRoot(target) },
+    { queryKey: githubQueryKeys.issueTimelineRoot(target) },
     (detail) => (detail ? { ...detail, issue: { ...detail.issue, locked } } : detail)
   );
   queryClient.setQueriesData<GitHubIssuePage>(

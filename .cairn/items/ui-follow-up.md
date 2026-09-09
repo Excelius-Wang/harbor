@@ -2,30 +2,29 @@
 
 ## Goal
 
-Complete the remaining UI migration and visual/native acceptance recorded in `docs/UI_MIGRATION_CHECKLIST.md`.
+Complete the remaining frontend migration and acceptance in docs/UI_MIGRATION_CHECKLIST.md, with each delivery reviewed, merged, verified and cleaned up.
 
 ## Current state
 
-- Packages action/read recovery was merged through PR [#83](https://github.com/Excelius-Wang/harbor/pull/83) at `74c396b9f5792c9eec850bdd2e6c7b5d3329a526` on 2026-09-07. CodeRabbit reviewed head `e7c6103212e4655d08e8d96ab1a55c098a005b79` with no actionable comments and Minimal risk; all CodeQL checks passed. Its default docstring-coverage warning was recorded as non-blocking in the PR. No release was created.
-- Production fixes cover stale detail/empty inventory feedback, mutation reconciliation locks, narrow loading/error Back, scrollable loading skeletons, and long-name/pane-width layout. Stateful fixtures now use production `versionState` and reconcile guarded delete/restore writes. Details and evidence are in `docs/UI_COMPONENTS.md` and the 2026-09-07 section of `docs/UI_VERIFICATION.md`.
-- All 112 browser captures are local ignored files under `output/playwright/packages-*`. Playwright CLI headed screenshots timed out; independent headless sessions succeeded. Fixture writes remain local and never reach GitHub.
-- Remaining scope starts with Issue lifecycle/comment/candidate states, then nested Discussion replies, archived repository/Pages conditions and release/code transfer feedback. Recent repository/conversation/Project/Gist action browser acceptance and native background/transparency/accessibility acceptance remain unfinished.
-- Window-shell PR [#84](https://github.com/Excelius-Wang/harbor/pull/84) was squash-merged at `bc39129d72e733c353ac41edc81e3ecff946ec67` on 2026-09-07. CodeRabbit reviewed final head `bef67a1c0f9dd10eea8eb326602a509a796885af`: all four findings resolved, no new actionable comments, Minimal risk; all CI/CodeQL checks passed. Its default docstring warning remains non-blocking.
-- PR #84 delivers fixed 1200 × 760 startup, persistent Logo navigation control and single-border/10 px window edges. Selected screenshots are in `docs/verification/window-shell/README.md`. Final native Logo accessibility activation and broader native material acceptance remain unverified.
-- PR #84's remote and local `feat/window-navigation-toggle` branches were deleted after synchronizing `main`. The user-authorized removal of permanently disabled title-bar history arrows is included in the Repolane delivery on `feat/repolane-lane-identity`; use the selected brand checkpoint and GitHub for its current submission status. The prior `fix/remove-placeholder-history-arrows` branch remains preserved.
-- The next Issue migration batch has not started.
-- `AGENTS.md` and `docs/UI_DESIGN_GUIDE.md` remain the design authority. Third-party originals stay in the local ignored reference cache.
+- Workspace: Harbor repository. Main is synchronized at `aa1ba45` after rules PR #87. GitHub reports MERGED, and all three final PR files exactly match merge result `aa1ba45e27c9987775bdb46ac3e81fb5e5944a14`.
+- #87 received an actual CodeRabbit review on `88729bb`, one formatting-coverage finding, and an explicit bot confirmation of its only follow-up change `44239f2`; the thread is resolved. All final CodeQL checks pass. A full repeat review was rate-limited and is not counted as a pass. Rule branches and the temporary review worktree were removed.
+- #83 Packages, #84 window shell, #85 Repolane branding and #86 READMEs are already merged. Do not redo their delivered work. Native acceptance must use the current separate sidebar button, not the historical clickable Logo.
+- Active branch: `fix/issue-lifecycle-acceptance`, rebased onto main `aa1ba45`, with the Issue recovery implementation, fixtures, tests and evidence committed together.
+- Issue fixes cover pending deletion/dismissal and failed permission recovery; retained detail/comment drafts; timeline-only cache updates; wide title/action layout; stale duplicate permissions; inline transfer failure; and local ScrollArea clipping after comment collapse. Evidence and remaining scope are in the 2026-09-09 UI_VERIFICATION.md section.
+- Browser preview is working at port 1423 (Vite session), Playwright CLI session `issue-acceptance`. Matrix scripts/captures are under ignored `output/playwright/issue-*`. Final comment scroll assertions and `pnpm check` pass (626 tests/128 files); evidence: `/tmp/harbor-issue-comment-final.log` and `/tmp/harbor-issue-final-delivery-check.log` The batch is locally verified.
+- Unrelated pre-existing changes remain: deletion of `.cairn/items/readme-delivery.md` and untracked `.cairn/archive/readme-delivery-pr86.md`. Do not stage them with UI work. Root CAIRN selection is part of this UI task.
+- The user explicitly authorized local commits, branch pushes, PR descriptions, CodeRabbit requests/replies, and automatic merges after actual review, resolved findings and passing final checks. Verify merge results, sync main and clean each merged branch. No releases and no real GitHub business-data writes.
+- CodeRabbit reported its free review quota exhausted around 07:42 UTC, next included review in 51 minutes (approximately 08:33 UTC on 2026-09-09). Do not treat a green rate-limit status as an actual review. Continue independent implementation while waiting if a new PR is limited.
+- Remaining sequence after Issue acceptance: nested Discussion replies; archived repository/Pages conditions; Release/code transfers; repository/conversation/Project/Gist action browser acceptance; shared/native final acceptance. The overall Goal remains active.
 
 ## Next action
 
-Resume Issue lifecycle/comment/candidate-state acceptance from docs/UI_MIGRATION_CHECKLIST.md; titlebar delivery is tracked by the selected brand item.
+Create the verified Issue PR, request actual CodeRabbit review and handle findings; continue independent frontend work if review availability blocks delivery.
 
 ## Verification
 
-History-arrow removal: existing MainTitleBar interaction tests pass (3 tests), and targeted Prettier/ESLint checks pass. Diff review confirms only the two disabled buttons/tooltips and their unused icon imports were removed.
+- #87 final head `44239f219c35836e37964f811ba85765cbe13212`: all three changed Markdown files pass Prettier, local links resolve, diff check passes, CodeQL passes; actual finding-resolution reply is https://github.com/Excelius-Wang/harbor/pull/87#discussion_r3965872791.
+- Issue valid regression logs: `/tmp/harbor-issue-delete-red.log`, `harbor-issue-detail-red.log`, `harbor-issue-cache-red.log`, `harbor-issue-duplicate-red.log`, `harbor-issue-transfer-red.log`. Fixture tests pass. Latest pre-clipping full check passes 626 tests/128 files (`/tmp/harbor-issue-complete-check.log`).
+- Browser matrices already pass lifecycle, write states, candidates, read states, metadata candidates, extra lifecycle and comment actions. Final affected captures are refreshed; 400 captures cover the documented matrix. Scope and exact logs belong in docs/UI_VERIFICATION.md.
 
-Latest PR #84 review-fix `pnpm check`: 611 tests/127 files, formatting, lint, TypeScript and Vite build pass (`/tmp/harbor-pr84-review-check.log`). Four Rust geometry tests and cargo check passed for the startup-size change. Existing rail hook and chunk-size warnings remain.
-
-Window/navigation: 12 browser language/theme/size combinations pass; native 1200 × 760 sizing and the original toggle were verified, and final Logo behavior was browser-verified. Edge refinement: 12 before/after theme/size/background comparisons, reduced-transparency checks and native dark active/inactive self-review pass. See the latest sections of `docs/UI_VERIFICATION.md` for exact artifacts and native scope limits.
-
-Packages PR #83 is merged; its 112-capture acceptance remains recorded separately. Success: PR #84 is merged, its final-head review and CI passed, and its local/remote branches are cleaned up. GitHub records the authoritative merge and review outcome. The overall UI migration and broader native material acceptance remain open.
+Success: workflow PR #87 is merged and cleaned up; Issue delivery and overall visual/native acceptance remain in progress.

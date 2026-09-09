@@ -381,3 +381,27 @@ CodeRabbit's full review of `5a3fd4e` reported four bounded findings. The Logo d
 Newly committed Cairn archives now identify themselves as historical snapshots and link to current delivery state. Machine-specific repository paths were replaced with a generic repository-root label. The window-navigation archive explicitly marks the final Logo native accessibility path as unverified; earlier standalone-toggle evidence does not establish that coverage.
 
 Final `pnpm check` passes 611 tests/127 files, formatting, lint and the TypeScript/Vite build (`/tmp/harbor-pr84-review-check.log`). Local `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets` exited 0 with warnings in unchanged modules (`/tmp/harbor-window-shell-clippy.log`). CodeRabbit's Clippy timed out, but its retried full code review completed separately. Its default docstring coverage warning is not a Harbor project requirement.
+
+
+## Issue lifecycle and comment recovery — 2026-09-09
+
+Recovery verified that #85 (Repolane identity) and #86 (README delivery) are merged and included in local history. Their titlebar work is not repeated. Rules optimization is merged through PR #87 at `aa1ba45`; the Issue batch is on `fix/issue-lifecycle-acceptance`.
+
+Production fixes retain Issue detail and unsent comment text after a failed refresh, keep deletion confirmations mounted after failed permission refreshes, block pending dismissal including immediate Escape, and separate the title from the action row at wide widths. Browser acceptance also reproduced comment submission succeeding remotely in the fixture but reporting a local failure: the broad Issue cache prefix included relation objects without a timeline. Timeline writes now use their own prefix; relation invalidation retains its original scope. Duplicate marking retains its reviewed target but blocks submission after a failed capability refresh, and transfer errors remain inline. Comment collapse exposed outer-shell scroll leakage (49 px); clipping the local Issue ScrollArea keeps only its content viewport scrollable.
+
+Passing browser tours use production components and local intercepted fixtures at 900 × 620 and 1440 × 900 in both languages and themes:
+
+- `output/playwright/issue-lifecycle-matrix.js`: eight combinations, 40 captures. Close/reopen preserve the draft; comment creation clears it only on success; editing and pinning reconcile reads; deletion returns to an inbox without the deleted Issue. Final header captures were refreshed after the layout fix (`/tmp/harbor-issue-lifecycle-final.log`).
+- `issue-write-matrix.js`: 64 captures cover deletion, comment creation/editing and closing in pending/error states. Pending modal footers lock and reject Escape; failed comment drafts remain (`/tmp/harbor-issue-write-matrix.log`).
+- `issue-candidate-matrix.js`: 48 captures cover original-Issue and transfer-target checks in populated/loading/error states. Unchecked, changed, pending or failed targets cannot submit (`/tmp/harbor-issue-candidate-matrix.log`).
+- `issue-read-matrix.js`: 40 captures cover detail loading/error, empty comment timelines, retained stale details and read-only lifecycle permissions. Eight extra stale-draft captures complement the refreshed top-of-detail stale notices (`/tmp/harbor-issue-read-matrix.log`, `/tmp/harbor-issue-stale-final.log`).
+- `issue-extra-matrix.js`: 32 captures cover clone/transfer navigation, duplicate marking and unmarking. The initial tour and final clone/transfer refresh pass after correcting fixture comment-copy and node-identity semantics (`/tmp/harbor-issue-extra-final.log`).
+
+- `issue-extra-write-matrix.js`: 48 captures cover clone, duplicate-mark and transfer pending/error states, retained titles/targets and modal dismissal guards (`/tmp/harbor-issue-extra-write-matrix.log`).
+- `issue-metadata-matrix.js`: 96 captures cover assignee/label/milestone candidate loading, empty, failure/retry controls and search-with-no-match. The assignee fixture now honors the requested empty result (`/tmp/harbor-issue-metadata-matrix.log`).
+- `issue-comment-matrix.js`: 16 captures cover pin/unpin, minimize/restore and comment deletion. All eight final combinations assert both document and outer workspace scroll remain zero (`/tmp/harbor-issue-comment-final.log`).
+- `issue-duplicate-stale.js`: eight captures preserve the reviewed target and disable marking after capability refresh failure (`/tmp/harbor-issue-duplicate-stale.log`).
+
+There are 400 local captures across these tours, with [selected screenshots](verification/issue-actions/README.md) included for remote review. Representative narrow/wide, English/Chinese, light/dark dialog, error, candidate, stale and minimized-comment captures were visually inspected. Existing unchanged relationship/form presentation uses the explicitly scoped historical evidence above; these tours do not claim new live API or native verification.
+
+Eight new production regressions and the strengthened transfer-error case cover the reproduced behaviors. Five fixture tests cover write opt-in, repository identity, lifecycle/comment/clone/duplicate reconciliation and snapshot independence. Final `pnpm check` passes 626 tests in 128 files, formatting, lint, TypeScript and build (`/tmp/harbor-issue-final-delivery-check.log`). The existing rail hook and build chunk-size warnings remain. Rust/native code is unchanged. External review/merge and the remaining frontend/native phases remain open.

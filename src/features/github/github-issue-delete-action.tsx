@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CircleAlert, RefreshCw, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -14,6 +14,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { parseIpcError } from "@/lib/ipc-error";
@@ -51,6 +53,7 @@ export function GitHubIssueDeleteAction({
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const pendingRequest = useRef(false);
   const target: GitHubIssueDeleteTarget = {
     owner: repository.owner,
     repository: repository.name,
@@ -71,6 +74,9 @@ export function GitHubIssueDeleteAction({
       onDeleted();
       void refreshIssueDeletionCaches(queryClient, target);
     },
+    onSettled: () => {
+      pendingRequest.current = false;
+    },
     onError: (error) => {
       const parsed = parseIpcError(error);
       toast.error(t(deleteErrorTitle(parsed.code)), { description: parsed.message });
@@ -79,7 +85,14 @@ export function GitHubIssueDeleteAction({
     },
   });
 
-  if (status.isPending) {
+  const statusUnavailable = Boolean(
+    status.error || !status.data || !issueDeleteIdentityMatches(status.data, target)
+  );
+  const canDelete = !statusUnavailable && Boolean(status.data?.viewerCanDelete);
+  const busy = mutation.isPending || status.isFetching;
+  const mutationError = mutation.error ? parseIpcError(mutation.error) : null;
+
+  if (status.isPending && !open) {
     return (
       <Button type="button" variant="outline" size="sm" disabled>
         <Spinner data-icon="inline-start" aria-hidden="true" />
@@ -88,7 +101,7 @@ export function GitHubIssueDeleteAction({
     );
   }
 
-  if (status.error || !status.data || !issueDeleteIdentityMatches(status.data, target)) {
+  if (statusUnavailable && !open) {
     return (
       <Button
         type="button"
@@ -109,12 +122,19 @@ export function GitHubIssueDeleteAction({
     );
   }
 
-  if (!status.data.viewerCanDelete) return null;
+  if (!canDelete && !open) return null;
 
   return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
+    <AlertDialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (pendingRequest.current || mutation.isPending) return;
+        if (nextOpen) mutation.reset();
+        setOpen(nextOpen);
+      }}
+    >
       <AlertDialogTrigger asChild>
-        <Button type="button" variant="destructive" size="sm">
+        <Button type="button" variant="destructive" size="sm" disabled={!canDelete || busy}>
           <Trash2 data-icon="inline-start" />
           {t("workspace.repositories.deleteIssue")}
         </Button>
@@ -128,14 +148,36 @@ export function GitHubIssueDeleteAction({
             {t("workspace.repositories.deleteIssueWarning")}
           </AlertDialogDescription>
         </AlertDialogHeader>
+        {statusUnavailable ? (
+          <WorkspaceStaleNotice
+            message={t("workspace.repositories.deleteIssueStatusUnavailable")}
+            onRetry={() => void status.refetch()}
+            retryDisabled={busy}
+          />
+        ) : !canDelete ? (
+          <Alert variant="destructive">
+            <CircleAlert />
+            <AlertTitle>{t("workspace.repositories.issueDeletePermissionDenied")}</AlertTitle>
+          </Alert>
+        ) : null}
+        {mutationError ? (
+          <Alert variant="destructive">
+            <CircleAlert />
+            <AlertTitle>{t(deleteErrorTitle(mutationError.code))}</AlertTitle>
+            <AlertDescription>{mutationError.message}</AlertDescription>
+          </Alert>
+        ) : null}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={mutation.isPending}>{t("common.cancel")}</AlertDialogCancel>
           <AlertDialogAction
             variant="destructive"
-            disabled={mutation.isPending}
+            disabled={!canDelete || busy}
             onClick={(event) => {
               event.preventDefault();
-              mutation.mutate();
+              if (canDelete && !busy && !pendingRequest.current) {
+                pendingRequest.current = true;
+                mutation.mutate();
+              }
             }}
           >
             {mutation.isPending ? (

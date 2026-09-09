@@ -203,6 +203,8 @@ describe("GitHub Issue transfer action", () => {
       )
     );
     await waitFor(() => expect(invoke).toHaveBeenCalledTimes(3));
+    expect(await screen.findByText("write access required")).toBeDefined();
+    expect((screen.getByRole("textbox") as HTMLInputElement).value).toBe("octocat/destination");
   });
 
   it("refreshes source and target caches when transfer outcome is ambiguous", async () => {
