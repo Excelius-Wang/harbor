@@ -513,12 +513,12 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
           </ScrollArea>
         </aside>
 
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden max-[680px]:hidden">
+        <div className="@container/repository-pane flex min-w-0 flex-1 flex-col overflow-hidden max-[680px]:hidden">
           {selectedRepository ? (
             <>
-              <div className="harbor-subtle-divider flex min-h-[76px] items-center justify-between gap-4 border-b px-4 py-3">
-                <div className="min-w-0">
-                  <div className="flex min-w-0 items-center gap-2">
+              <div className="harbor-subtle-divider flex min-h-[76px] shrink-0 flex-col items-stretch gap-3 border-b px-4 py-3 @min-[640px]/repository-pane:flex-row @min-[640px]/repository-pane:items-center">
+                <div className="min-w-0 flex-1">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
                     <h2 className="truncate text-sm font-semibold tracking-[-0.01em]">
                       {selectedRepository.fullName}
                     </h2>

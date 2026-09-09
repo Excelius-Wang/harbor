@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useIsMutating, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Eye, EyeOff } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -28,6 +28,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { parseIpcError } from "@/lib/ipc-error";
 import type { GitHubCommentMinimizeClassifier, GitHubDiscussionComment } from "./github-data";
 import {
+  discussionCommentWriteKey,
   invalidateRepositoryDiscussion,
   mutateRepositoryDiscussionComment,
   type GitHubDiscussionCommentMutation,
@@ -53,12 +54,14 @@ export function GitHubDiscussionCommentMinimizeAction({
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const commentWritePending = useIsMutating({ mutationKey: discussionCommentWriteKey(target) }) > 0;
   const [minimizeOpen, setMinimizeOpen] = useState(false);
   const [classifier, setClassifier] = useState<GitHubCommentMinimizeClassifier>("offTopic");
   const mutation = useMutation({
+    mutationKey: discussionCommentWriteKey(target),
     mutationFn: (value: GitHubDiscussionCommentMutation) =>
       mutateRepositoryDiscussionComment(target, value),
-    onSuccess: (_, value) => {
+    onSuccess: async (_, value) => {
       toast.success(
         t(
           value.action === "minimize"
@@ -67,8 +70,7 @@ export function GitHubDiscussionCommentMinimizeAction({
         )
       );
       setMinimizeOpen(false);
-      mutation.reset();
-      void invalidateRepositoryDiscussion(queryClient, target);
+      await invalidateRepositoryDiscussion(queryClient, target);
     },
     onError: (error) => {
       const code = parseIpcError(error).code;
@@ -119,7 +121,7 @@ export function GitHubDiscussionCommentMinimizeAction({
             : "workspace.repositories.minimizeComment"
         )}
         aria-busy={mutation.isPending}
-        disabled={mutation.isPending}
+        disabled={commentWritePending}
         onClick={() => {
           mutation.reset();
           if (comment.isMinimized) mutation.mutate(unminimizeMutation);
@@ -149,7 +151,7 @@ export function GitHubDiscussionCommentMinimizeAction({
       <AlertDialog
         open={minimizeOpen}
         onOpenChange={(open) => {
-          if (mutation.isPending) return;
+          if (queryClient.isMutating({ mutationKey: discussionCommentWriteKey(target) })) return;
           setMinimizeOpen(open);
           if (!open) mutation.reset();
         }}
@@ -161,14 +163,14 @@ export function GitHubDiscussionCommentMinimizeAction({
               {t("workspace.repositories.minimizeCommentDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <Field data-disabled={mutation.isPending}>
+          <Field data-disabled={commentWritePending}>
             <FieldLabel htmlFor={`github-discussion-comment-${comment.id}-classifier`}>
               {t("workspace.repositories.minimizeCommentReason")}
             </FieldLabel>
             <Select
               value={classifier}
               onValueChange={(value) => setClassifier(value as GitHubCommentMinimizeClassifier)}
-              disabled={mutation.isPending}
+              disabled={commentWritePending}
             >
               <SelectTrigger id={`github-discussion-comment-${comment.id}-classifier`}>
                 <SelectValue />
@@ -190,11 +192,11 @@ export function GitHubDiscussionCommentMinimizeAction({
             </Alert>
           ) : null}
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={mutation.isPending}>
+            <AlertDialogCancel disabled={commentWritePending}>
               {t("common.cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
-              disabled={mutation.isPending}
+              disabled={commentWritePending}
               onClick={(event) => {
                 event.preventDefault();
                 mutation.mutate(minimizeMutation);

@@ -220,3 +220,9 @@ Primary navigation starts expanded (226 px). The titlebar sidebar button beside 
 Scope `state=loading|error|stale&commands=<command>` to a read or mutation for recovery checks. An empty assignee query now returns an empty list. These fixtures do not establish GitHub API behavior or native picker/transfer behavior. Current acceptance evidence is in [UI_VERIFICATION.md](UI_VERIFICATION.md).
 
 Issue detail cache writes use `githubQueryKeys.issueTimelineRoot`; broader `issueRoot` invalidation still refreshes related data. Do not write timeline-shaped data to the broader prefix, which also contains relationship, dependency and linked-branch records.
+
+## Nested Discussion preview
+
+Use `?discussions=nested|more|closed|readonly&writes=accept` for stateful nested replies. `more` exposes the existing GitHub fallback for incomplete replies; `closed` closes and locks discussions (select All states to open one); `readonly` removes edit/moderation/vote permissions. Combine `state` and `commands` with named Discussion commands for pending/error/stale reads or writes. Reads return isolated snapshots; unknown writes never fall through to GitHub.
+
+Comment writes share `discussionCommentWriteKey(target)` so a parent cannot be deleted while a nested editor is saving. Keep this key scoped to the actual repository and discussion. The Discussion ScrollArea uses `constrainContentWidth`; repository header actions stack based on detail-pane width.
