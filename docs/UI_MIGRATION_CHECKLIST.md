@@ -1,12 +1,10 @@
 # Harbor UI migration evidence
 
-## Phase-one delivery boundary — 2026-09-06
+## Current delivery boundary — 2026-09-09
 
-The user requested a phase-one cutoff after the Gist action module, followed by one PR, actual CodeRabbit review/fixes and merge. This supersedes the original requirement to finish every visual variant before delivering a PR. Preserve the remaining items below for the next session; phase-one delivery does not establish full-site acceptance.
+The historical phase-one cutoff has been delivered. The current authorized Goal covers the six remaining frontend batches and requires actual review, verified merge and branch cleanup for every delivery. Rules #87, Issue #88, Discussion #89 and Pages #90 are merged with those checks complete. Release/code transfer #91 is awaiting actual review; its 264 browser scenarios pass. Recent repository, Project, Gist and conversation/reaction actions have 1056 passing browser scenarios and 659 passing tests; delivery remains open.
 
-The Packages restore/mutation batch was completed on 2026-09-07 (see UI_VERIFICATION.md). Deferred work now starts with remaining Issue lifecycle/comment/candidate states, nested Discussion replies, archived repository/Pages conditions and release/code transfer feedback. Recent repository/conversation/Project/Gist action changes still need browser acceptance. Native background/transparency/accessibility verification and final validation of guide values also remain open. [Selected historical browser captures](verification/ui-phase-one/README.md) are available for remote review.
-
-Status: in progress. A source inventory is not visual acceptance. Every row below remains pending until its production UI and applicable states have been inspected.
+Final shared accessibility, native background/transparency, guide-value validation and overall evidence reconciliation remain open. The gates below describe full-site acceptance, not merely code implementation. Historical entry evidence remains applicable only to unchanged behavior.
 
 ## Delivery gates
 
@@ -34,20 +32,20 @@ Status: in progress. A source inventory is not visual acceptance. Every row belo
 | --- | --- | --- |
 | Workspace | Window/title bar, primary navigation, More menu, command palette, context rail and Agent sheet | Window/context matrices, keyboard/focus, pending/error/private and long-answer states verified; native material gate remains |
 | Notifications | Inbox, filters, retained results, target detail | Inbox/stale/dialog matrix, nine additional destination routes, highlighted invitation and returns verified |
-| Issues | Inbox/repository lists, details, timeline, metadata, relationships, all actions/forms | Lifecycle/comment/candidate matrix (400 captures) verified on 2026-09-09; external delivery and native/final gates remain |
+| Issues | Inbox/repository lists, details, timeline, metadata, relationships, all actions/forms | Lifecycle/comment/candidate matrix (400 captures) verified on 2026-09-09; PR #88 merged and cleaned; native/final gates remain |
 | Pull requests | Inbox/repository lists, details, commits, files/diff, reviews, checks, merge/lifecycle forms | Inbox/detail/commits/files, lifecycle dialogs, creation drafts and review variants verified; native/final delivery gates remain |
-| Repositories | Owned/starred lists, create/access/invitations, repository shell and tabs | Core browser, code and create-form capture done; other tabs/actions pending |
+| Repositories | Owned/starred lists, create/access/invitations, repository shell and tabs | Core browser and code verified; 176 recent repository action captures cover create/fork/relationships/options/switch return; delivery pending |
 | Discovery | Trending repositories/developers, developer feed, search and result/detail returns | Core/state/filter and eight nonzero return paths verified in both themes/languages/sizes |
 | Code | Tree, file/preview/blame, history/commits/comments, branches/tags/search and edit dialogs | Core/read/action/state matrices, focus and list/detail return verified; broader mutation audit remains |
 | Wiki | Page list, reading/editing/history and dialogs | Page/read/editor plus complete history/comparison/restore, raw/truncated and offline/permission matrices verified with controlled responses |
-| Releases | Lists/details/create/edit and assets | List/detail/create/edit/delete/asset-delete and return/state matrix verified; artifact transfer states pending |
-| Discussions | Lists/details, comments/reactions/polls and forms | List/detail/forms/poll, comment dialogs and return/state matrices verified; nested reply lifecycle, guarded pending/error writes and final-width read states verified on 2026-09-09; PR review/merge pending |
+| Releases | Lists/details/create/edit and assets | List/detail/create/edit/delete/asset-delete and return/state matrix verified; 264 artifact/code transfer scenarios verified; PR #91 delivery pending |
+| Discussions | Lists/details, comments/reactions/polls and forms | List/detail/forms/poll, comment dialogs and return/state matrices verified; nested reply lifecycle, guarded pending/error writes and final-width read states verified on 2026-09-09; PR #89 merged and cleaned |
 | Actions | Workflows/runs/jobs/artifacts/logs/check suites and controls | List/detail/log/dispatch/disable and returns verified; run/suite metadata, jobs/logs/artifacts and rerun/cancel/delete/download UI matrices verified with controlled responses |
 | Security | Alert lists/details and actions | Three alert kinds/detail, close form, filters/return and core states verified |
 | Insights | Charts, summaries, loading/empty/error | Overview/contributors/traffic, named keyboard charts/tooltips and both-theme states verified |
-| Repository settings | General/access/topics/taxonomy/pages/invitations and forms | Forms, Pages, taxonomy, invitations, visibility and return/state matrices verified; archived/Pages conditions, mutation feedback, retry and metadata-return behavior verified on 2026-09-09; external delivery pending |
-| Projects | Lists/detail fields/items and dialogs | Prior core matrix verified; new pending/draft/permission/empty-choice fixes and stateful fixtures pass code checks, visual action matrix pending |
-| Gists | Lists/detail/editor and files/comments | Prior core matrix verified; editor/comment draft retention, pending guards and scoped failure recovery implemented with stateful action fixtures; new visual states pending |
+| Repository settings | General/access/topics/taxonomy/pages/invitations and forms | Forms, Pages, taxonomy, invitations, visibility and return/state matrices verified; archived/Pages conditions, mutation feedback, retry and metadata-return behavior verified on 2026-09-09; PR #90 merged and cleaned |
+| Projects | Lists/detail fields/items and dialogs | Core and 240 action captures verify pending/draft/permission/empty-choice, field/settings/item recovery; delivery pending |
+| Gists | Lists/detail/editor and files/comments | Core and 224 action/read captures verified; named file chooser and bounded long description fixed; delivery pending |
 | Packages | Lists/details and actions | Delete/restore success, pending, permission/conflict/retry, read states and filter/scroll return verified on 2026-09-07; native acceptance remains |
 | Profile/account | Profile data/edit, connection/authentication dialogs | Profile/read/edit and auth availability/login/disconnect/follow pending/error matrices verified |
 | Settings window | Theme/language/shortcut controls | Native-size/common-size browser matrices, keyboard, OS theme and failure/pending states verified |
