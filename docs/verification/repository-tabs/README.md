@@ -11,3 +11,5 @@ Native images come from the isolated `com.harbor.acceptance.preview` app with th
 Run [the regression](regression.js) through `playwright-cli run-code --filename docs/verification/repository-tabs/regression.js` against `pnpm dev:ui --port 1423`. The original component fails with a 36 px client height and 40 px scroll height; the fixed viewport is 40/40 and the last keyboard-selected tab remains visible. This browser-level check exercises CSS geometry, which jsdom cannot establish.
 
 Complete scripts, 54 final browser captures and result manifests are under `output/playwright/repository-tabs/`. See [UI verification](../../UI_VERIFICATION.md) for checks, scope and failed-run explanations.
+
+Four automated interaction tests in `src/features/github/github-repository-tabs.interaction.test.tsx` run as part of `pnpm check`. They cover arrow boundaries, independent scrolling, keyboard reveal and resizing with supplied jsdom dimensions. They complement the browser regression; mocked dimensions do not establish CSS layout correctness.
