@@ -238,3 +238,7 @@ Pages write controls share a pending guard and the authoritative workspace archi
 ### Controlled Release and file transfers
 
 `?transfers=standard&writes=accept` provides stateful Release uploads and synthetic saved-file responses for release assets, source archives and repository files. Alternatives: `cancelled`, `permission`, `unavailable`, `immutable`, and `long`. `state=loading|error&commands=<transfer command>` scopes pending/error behavior. Use `links=record` to inspect tag archive URLs without opening GitHub. Saved paths are fixture DTOs; preview does not open native pickers or write files. Read snapshots are cloned and target identities checked; business-call interception remains mandatory.
+
+## Repository summary layout preview
+
+`?repositoryLayout=long` supplies a very long mixed-language first-repository description and a missing second-repository description. Remaining rows include a long repository name. Combine it with the existing theme/language controls, `state`/`commands` and `repoActions` fixtures. Business interception is unchanged. The repository selector shows name, owner and at most two description lines; a name tooltip exposes the full identifier. Details retain the full description in a three-line preview with a bounded, keyboard-scrollable expanded region.

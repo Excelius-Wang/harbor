@@ -318,3 +318,7 @@ Archived Pages controls, competing writes, archive confirmation feedback, contai
 ### Release/code transfer acceptance update — 2026-09-09
 
 Release asset/source upload/download and code-file feedback now have 264 controlled browser scenario captures across both languages, themes and window sizes. Cross-transfer stale errors and Release detail width overflow are fixed. Tag archive keyboard behavior and recorded Web URLs, cold read/retry/empty/stale states and list return are verified. See UI_VERIFICATION.md for exact scope and native file-picker/filesystem limitations. External delivery and recent-action/shared/native acceptance remain open.
+
+## Repository summary layout — 2026-09-10
+
+User-approved repository-page refinement: name/owner hierarchy, top-aligned neutral icon, two-line list descriptions and a thin selected fill. The detail description spans the pane, supports bounded expansion, and no longer competes with relationship actions for width. Narrow filters omit decorative icons; the narrow GitHub action keeps its accessible name and tooltip. Shared navigation, material tokens and business behavior are unchanged. Current verification and scope are recorded in [UI_VERIFICATION.md](UI_VERIFICATION.md).

@@ -2840,7 +2840,10 @@
       "backToCodeSearch": "Back to search results",
       "diffView": "Diff layout",
       "codeReference": "Branch or tag",
-      "commitFileChanges": "Commit changes"
+      "commitFileChanges": "Commit changes",
+      "descriptionLabel": "Repository description",
+      "expandDescription": "Expand description",
+      "collapseDescription": "Collapse description"
     },
     "filters": {
       "period": "Time range",

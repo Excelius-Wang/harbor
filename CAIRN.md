@@ -4,4 +4,4 @@
 
 ## Current item
 
-[Harbor UI follow-up](.cairn/items/ui-follow-up.md)
+[Repository summary layout](.cairn/items/repository-summary-layout.md)
