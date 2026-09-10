@@ -242,3 +242,7 @@ Pages write controls share a pending guard and the authoritative workspace archi
 ## Repository summary layout preview
 
 `?repositoryLayout=long` supplies a very long mixed-language first-repository description and a missing second-repository description. Remaining rows include a long repository name. Combine it with the existing theme/language controls, `state`/`commands` and `repoActions` fixtures. Business interception is unchanged. The repository selector shows name, owner and at most two description lines; a name tooltip exposes the full identifier. Details retain the full description in a three-line preview with a bounded, keyboard-scrollable expanded region.
+
+## Repository tab strip
+
+`github-repository-tabs.tsx` composes the existing Radix Tabs and Button/Tooltip primitives for repository sections. The 40 px strip keeps its selection underline and keyboard focus inside the viewport, hides its native scrollbar, and exposes translated arrow controls only when content exceeds the full available strip width. Arrow visibility is measured before subtracting arrow space, avoiding a self-sustaining overflow state after widening the pane. Resize and selection changes reveal the active tab; manual arrow or wheel scrolling remains independent of selection. Tab spacing responds to the repository pane rather than the app window. Shared Tabs styles and other consumers are unchanged.

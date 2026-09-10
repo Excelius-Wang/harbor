@@ -2843,7 +2843,10 @@
       "commitFileChanges": "Commit changes",
       "descriptionLabel": "Repository description",
       "expandDescription": "Expand description",
-      "collapseDescription": "Collapse description"
+      "collapseDescription": "Collapse description",
+      "scrollTabsLeft": "Scroll tabs left",
+      "scrollTabsRight": "Scroll tabs right",
+      "tabsLabel": "Repository sections"
     },
     "filters": {
       "period": "Time range",

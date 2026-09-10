@@ -4,4 +4,4 @@
 
 ## Current item
 
-[Repository summary layout](.cairn/items/repository-summary-layout.md)
+[Repository tab overflow](.cairn/items/repository-tab-overflow.md)
