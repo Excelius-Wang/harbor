@@ -2833,7 +2833,10 @@
       "backToCodeSearch": "返回搜索结果",
       "diffView": "差异布局",
       "codeReference": "分支或标签",
-      "commitFileChanges": "提交改动"
+      "commitFileChanges": "提交改动",
+      "descriptionLabel": "仓库描述",
+      "expandDescription": "展开描述",
+      "collapseDescription": "收起描述"
     },
     "filters": {
       "period": "时间范围",

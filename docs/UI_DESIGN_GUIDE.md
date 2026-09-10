@@ -121,7 +121,7 @@ Vorssaint 图片只有深色版本，候选浅色板最初由它推导。新增�
 
 继续使用系统字体和 Lucide 图标。页面标题约 24 px，列表主文字 13–14 px，辅助信息 11–12 px。正文与菜单选项以常规字重为主；标题、分组标题和必要的当前项才适度加重。小号说明不能因追求朦胧感而难以阅读。
 
-保持 4 px 的间距节奏，内容边距通常为 16–24 px，行内间距按信息关系安排。长描述自然换行，紧凑名称和标识才使用截断。蓝色选中态应同时具备位置、底色或勾选标记，不能只靠文字变蓝；键盘焦点也应与 Hover 有区别。
+保持 4 px 的间距节奏，内容边距通常为 16–24 px，行内间距按信息关系安排。长描述自然换行；仓库选择列表展示最多两行摘要，详情保留全文。紧凑名称和标识可截断，并提供完整名称提示。蓝色选中态应同时具备位置、底色或勾选标记，不能只靠文字变蓝；键盘焦点也应与 Hover 有区别。
 
 **导航选中态和行高由共享导航组件统一提供。** 蓝色选中底不再作为整套导航的默认设计方向。任何状态、圆角或行高调整都在共享导航中完成，新增页面不得覆盖这些样式。二级内容标签继续复用线形结构。
 
@@ -183,7 +183,7 @@ Discovery 保持居中的最大内容宽度，标题、筛选与列表对齐。�
 - Keep the system font stack in `src/index.css` (SF Pro on macOS). Use monospace for code,
   identifiers, and shortcuts. Do not add a display font to a feature page.
 - Use a 24 px semibold page title, 13–14 px primary row text, and 11–12 px secondary metadata.
-  Long descriptions should wrap naturally; reserve truncation for compact names and identifiers.
+  Long descriptions should wrap naturally. Repository selector rows are a summary exception: show at most two description lines and retain the full text in details; compact names and identifiers may truncate with a full-name tooltip.
 - Follow the 4 px spacing rhythm: 16–24 px content padding and 12–16 px row gaps. Keep compact
   controls at 6–8 px corners. Larger groups and overlays can use the guide's candidate radii
   when redesigned together; respect native window clipping. Avatars remain round.
@@ -214,3 +214,9 @@ Discovery 保持居中的最大内容宽度，标题、筛选与列表对齐。�
 - Preserve `min-w-0`, `min-h-0`, and pane-local `ScrollArea` containment. At the 900 px minimum
   app width, secondary row content stacks below the primary identity; text must not stretch the
   window or hide controls. Use the shared 1200 × 760 logical startup size with work-area clamping; do not resize the window from feature views.
+
+### 仓库选择列表与详情头部 — 2026-09-10
+
+用户已确认紧凑摘要列表方案。仓库名为主文字，所有者另起一行弱化显示；中性仓库图标与名称顶部对齐。列表描述最多两行，无描述时留空，不使用 URL 替代。普通行以 96 px 最小高度和 12 px 纵向内边距试排，星标日期等真实状态可增加高度。选中项沿用共享选中填充，不叠加卡片边框；键盘焦点继续由 Button 提供。
+
+详情名称允许换行，描述使用整个详情区宽度，操作区独立排列并按可用宽度换行。描述默认最多三行，溢出时显示“展开描述”；展开区在窄详情区最高 96 px、宽详情区最高 112 px，支持键盘滚动和收起。切换仓库后恢复收起状态。完整内容始终保留，筛选与选中逻辑不随布局调整改变。

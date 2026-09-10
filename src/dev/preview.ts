@@ -121,6 +121,18 @@ export function installPreview() {
   const externalRepository = repositoryActions && repositoryActions !== "owned";
   const repositories = repositoryFixtures.map((repository, index) => ({
     ...repository,
+    ...(parameters.get("repositoryLayout") === "long"
+      ? {
+          description:
+            index === 0
+              ? "Use PEFT or Full-parameter to CPT/SFT/DPO/GRPO 600+ LLMs (Qwen3.6, DeepSeek-V4, GLM-5.1, InternLM3, Llama4, ...) and 300+ MLLMs (Qwen3-VL, Qwen3-Omni, InternVL3.5, Ovis2.5, GLM4.5v, Gemma4, Llava, Phi4, ...) (AAAI 2025). 长描述保留全文，列表展示摘要，详情展开后可滚动阅读。".repeat(
+                  3
+                )
+              : index === 1
+                ? undefined
+                : repository.description,
+        }
+      : {}),
     ...(index === 0 && parameters.get("pages") === "archived" ? { isArchived: true } : {}),
     ...(index === 0 && parameters.get("repo") === "private" ? { isPrivate: true } : {}),
     ...(index === 0 && externalRepository

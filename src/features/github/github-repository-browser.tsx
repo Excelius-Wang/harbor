@@ -1,5 +1,5 @@
 import { WorkspacePageHeader } from "@/features/workspace/workspace-page-header";
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { isTauri } from "@tauri-apps/api/core";
 import {
@@ -7,6 +7,8 @@ import {
   BarChart3,
   BookMarked,
   BookOpen,
+  ChevronDown,
+  ChevronUp,
   CircleDot,
   Code2,
   ExternalLink,
@@ -19,6 +21,7 @@ import {
   PlayCircle,
   Plus,
   RefreshCw,
+  Book,
   Rocket,
   Search,
   ShieldAlert,
@@ -47,6 +50,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { parseIpcError, type IpcError } from "@/lib/ipc-error";
@@ -117,11 +121,12 @@ function RepositorySkeletons() {
   return (
     <div className="flex flex-col gap-1 p-2">
       {Array.from({ length: 7 }, (_, index) => (
-        <div key={index} className="flex items-center gap-3 rounded-md p-2.5">
-          <Skeleton className="size-8 shrink-0" />
+        <div key={index} className="flex items-start gap-3 rounded-md px-3 py-3">
+          <Skeleton className="size-4 shrink-0" />
           <div className="flex min-w-0 flex-1 flex-col gap-2">
             <Skeleton className="h-3 w-3/5" />
-            <Skeleton className="h-2.5 w-4/5" />
+            <Skeleton className="h-2.5 w-2/5" />
+            <Skeleton className="h-8 w-full" />
           </div>
         </div>
       ))}
@@ -144,37 +149,112 @@ function RepositoryRow({
 }) {
   const { t } = useTranslation();
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      onClick={onSelect}
-      aria-current={selected ? "true" : undefined}
-      className={cn(
-        "harbor-result-row h-auto w-full justify-start gap-3 rounded-md px-2.5 py-2.5 text-left whitespace-normal",
-        selected && "harbor-row-selected"
-      )}
-    >
-      <span className="border-primary/25 bg-primary/8 text-primary grid size-8 shrink-0 place-items-center rounded-md border text-xs font-semibold uppercase">
-        {repository.name.charAt(0)}
-      </span>
-      <span className="flex min-w-0 flex-1 flex-col gap-1">
-        <span className="flex min-w-0 items-center gap-1.5">
-          <span className="truncate text-[13px] font-medium">{repository.fullName}</span>
-          {repository.isPrivate ? <LockKeyhole className="text-muted-foreground" /> : null}
-        </span>
-        <span className="text-muted-foreground text-[11px] leading-4 font-normal">
-          {repository.description ?? repository.url}
-        </span>
-        {starredAt ? (
-          <span className="text-muted-foreground/80 flex items-center gap-1 text-[11px] font-normal">
-            <Star className="text-attention size-3 fill-current" />
-            {t("workspace.repositories.starredAt", {
-              date: formatIssueDate(starredAt, locale),
-            })}
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={onSelect}
+          aria-label={repository.fullName}
+          aria-current={selected ? "true" : undefined}
+          className={cn(
+            "harbor-result-row h-auto min-h-24 w-full items-start justify-start gap-3 rounded-md px-3 py-3 text-left whitespace-normal",
+            selected && "bg-[var(--harbor-selected-fill)] hover:bg-[var(--harbor-selected-fill)]"
+          )}
+        >
+          <Book className="text-muted-foreground mt-0.5 shrink-0" />
+          <span className="flex min-w-0 flex-1 flex-col gap-1">
+            <span className="flex min-w-0 items-center gap-1.5">
+              <span className="truncate text-[13px] font-medium">{repository.name}</span>
+              {repository.isPrivate ? <LockKeyhole className="text-muted-foreground" /> : null}
+            </span>
+            <span className="text-muted-foreground truncate text-[11px] leading-4 font-normal">
+              {repository.owner}
+            </span>
+            {repository.description ? (
+              <span className="text-muted-foreground line-clamp-2 text-[11px] leading-4 font-normal [overflow-wrap:anywhere]">
+                {repository.description}
+              </span>
+            ) : null}
+            {starredAt ? (
+              <span className="text-muted-foreground/80 flex items-center gap-1 text-[11px] font-normal">
+                <Star className="text-attention size-3 fill-current" />
+                {t("workspace.repositories.starredAt", {
+                  date: formatIssueDate(starredAt, locale),
+                })}
+              </span>
+            ) : null}
           </span>
-        ) : null}
-      </span>
-    </Button>
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="right" className="max-w-80 [overflow-wrap:anywhere]">
+        {repository.fullName}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+function RepositoryDescription({ description }: { description?: string }) {
+  const { t } = useTranslation();
+  const contentId = useId();
+  const textRef = useRef<HTMLParagraphElement>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [canExpand, setCanExpand] = useState(false);
+
+  useEffect(() => {
+    const element = textRef.current;
+    if (!element) return;
+    const measure = () => {
+      const lineHeight = Number.parseFloat(getComputedStyle(element).lineHeight);
+      setCanExpand(element.scrollHeight > lineHeight * 3 + 1);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [description, expanded]);
+
+  return (
+    <div className="min-w-0">
+      <ScrollArea
+        id={contentId}
+        type="auto"
+        role="region"
+        viewportRef={(viewport) => {
+          if (viewport) viewport.tabIndex = expanded ? 0 : -1;
+        }}
+        constrainContentWidth
+        className="min-w-0 [&>[data-slot=scroll-area-viewport]]:max-h-24 @min-[480px]/repository-pane:[&>[data-slot=scroll-area-viewport]]:max-h-28"
+        aria-label={t("workspace.repositories.descriptionLabel")}
+      >
+        <p
+          ref={textRef}
+          className={cn(
+            "text-muted-foreground pr-2 text-xs leading-5 [overflow-wrap:anywhere]",
+            !expanded && "line-clamp-3"
+          )}
+        >
+          {description || t("workspace.repositories.noDescription")}
+        </p>
+      </ScrollArea>
+      {canExpand || expanded ? (
+        <Button
+          variant="ghost"
+          size="xs"
+          aria-expanded={expanded}
+          aria-controls={contentId}
+          onClick={() => setExpanded((value) => !value)}
+          className="mt-1"
+        >
+          {expanded ? <ChevronUp /> : <ChevronDown />}
+          {t(
+            expanded
+              ? "workspace.repositories.collapseDescription"
+              : "workspace.repositories.expandDescription"
+          )}
+        </Button>
+      ) : null}
+    </div>
   );
 }
 
@@ -388,7 +468,7 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  "harbor-choice h-8 text-[13px]",
+                  "harbor-choice h-8 text-[13px] max-xl:[&_svg]:hidden",
                   repositorySource === "mine" && "harbor-row-selected"
                 )}
                 aria-pressed={repositorySource === "mine"}
@@ -402,7 +482,7 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  "harbor-choice h-8 text-[13px]",
+                  "harbor-choice h-8 text-[13px] max-xl:[&_svg]:hidden",
                   repositorySource === "starred" && "harbor-row-selected"
                 )}
                 aria-pressed={repositorySource === "starred"}
@@ -519,11 +599,14 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
         <div className="@container/repository-pane flex min-w-0 flex-1 flex-col overflow-hidden max-[680px]:hidden">
           {selectedRepository ? (
             <>
-              <div className="harbor-subtle-divider flex min-h-[76px] shrink-0 flex-col items-stretch gap-3 border-b px-4 py-3 @min-[640px]/repository-pane:flex-row @min-[640px]/repository-pane:items-center">
+              <div className="harbor-subtle-divider flex shrink-0 flex-col gap-2 border-b px-4 py-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <h2 className="truncate text-sm font-semibold tracking-[-0.01em]">
-                      {selectedRepository.fullName}
+                    <h2 className="min-w-0 text-sm font-semibold tracking-[-0.01em] [overflow-wrap:anywhere]">
+                      <span className="text-muted-foreground font-normal">
+                        {selectedRepository.owner}/
+                      </span>
+                      {selectedRepository.name}
                     </h2>
                     {selectedRepository.isPrivate ? (
                       <Badge variant="secondary">
@@ -543,10 +626,13 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
                       </Badge>
                     ) : null}
                   </div>
-                  <p className="text-muted-foreground mt-1 text-[11px]">
-                    {selectedRepository.description ?? t("workspace.repositories.noDescription")}
-                  </p>
-                  <div className="text-muted-foreground mt-1.5 flex items-center gap-3 text-[11px]">
+                </div>
+                <RepositoryDescription
+                  key={selectedRepository.id}
+                  description={selectedRepository.description}
+                />
+                <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+                  <div className="text-muted-foreground flex flex-wrap items-center gap-3 text-[11px]">
                     {selectedRepository.language ? (
                       <span>{selectedRepository.language}</span>
                     ) : null}
@@ -557,17 +643,25 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
                       })}
                     </span>
                   </div>
-                </div>
-                <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                  <GitHubRepositoryRelationshipActions repository={selectedRepository} />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => void openExternalUrl(selectedRepository.url)}
-                  >
-                    <ExternalLink />
-                    <span className="max-[980px]:sr-only">{t("workspace.openOnGitHub")}</span>
-                  </Button>
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <GitHubRepositoryRelationshipActions repository={selectedRepository} />
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          aria-label={t("workspace.openOnGitHub")}
+                          onClick={() => void openExternalUrl(selectedRepository.url)}
+                        >
+                          <ExternalLink />
+                          <span className="@max-[480px]/repository-pane:sr-only">
+                            {t("workspace.openOnGitHub")}
+                          </span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{t("workspace.openOnGitHub")}</TooltipContent>
+                    </Tooltip>
+                  </div>
                 </div>
               </div>
 
