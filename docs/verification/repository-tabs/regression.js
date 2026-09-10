@@ -2,7 +2,7 @@ async page => {
  await page.setViewportSize({width:900,height:620});
  await page.goto('http://localhost:1423/');
  await page.getByRole('button',{name:/^(Repositories|仓库)$/}).click();
- const list=page.getByRole('tablist').first();await list.waitFor();
+ const list=page.locator('[data-slot="repository-tab-strip"]').getByRole('tablist');await list.waitFor();
  await list.getByRole('tab',{name:/^(Settings|设置)$/}).waitFor();
  const size=await list.evaluate(el=>{const box=el.parentElement;return {height:box.clientHeight,scrollHeight:box.scrollHeight}});
  if(size.scrollHeight>size.height)throw Error('Vertical tab overflow: '+JSON.stringify(size));
