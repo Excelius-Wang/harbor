@@ -322,3 +322,7 @@ Release asset/source upload/download and code-file feedback now have 264 control
 ## Repository summary layout — 2026-09-10
 
 User-approved repository-page refinement: name/owner hierarchy, top-aligned neutral icon, two-line list descriptions and a thin selected fill. The detail description spans the pane, supports bounded expansion, and no longer competes with relationship actions for width. Narrow filters omit decorative icons; the narrow GitHub action keeps its accessible name and tooltip. Shared navigation, material tokens and business behavior are unchanged. Current verification and scope are recorded in [UI_VERIFICATION.md](UI_VERIFICATION.md).
+
+## Repository tab overflow — 2026-09-10
+
+Following reviewed/merged PR #94, the native repository tab-strip defect is fixed locally on `fix/repository-tab-overflow`. The local 40 px strip contains its active underline, hides native scrollbars and supplies bounded, accessible arrow navigation with active-tab reveal. Browser geometry and keyboard/pointer/resize checks, native before/after observations and final pnpm check pass; see [UI_VERIFICATION.md](UI_VERIFICATION.md). Other shared Tabs consumers are unchanged. The user subsequently authorized this second batch for PR review and merge.

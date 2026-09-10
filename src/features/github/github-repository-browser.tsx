@@ -52,7 +52,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Spinner } from "@/components/ui/spinner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { parseIpcError, type IpcError } from "@/lib/ipc-error";
 import { cn } from "@/lib/utils";
 import { openExternalUrl } from "@/lib/window";
@@ -66,6 +66,7 @@ import {
   repositoryRelationshipQueryOptions,
   starredRepositoriesQueryOptions,
 } from "./github-queries";
+import { RepositoryTabStrip, RepositoryTabTrigger } from "./github-repository-tabs";
 import { GitHubRepositoryCreateDialog } from "./github-repository-create-dialog";
 import { GitHubRepositoryRelationshipActions } from "./github-repository-relationship-actions";
 
@@ -670,42 +671,40 @@ export function GitHubRepositoryBrowser({ onSelectRepository }: GitHubRepository
                 onValueChange={(value) => setTab(value as RepositoryTab)}
                 className="min-h-0 min-w-0 flex-1 gap-0"
               >
-                <div className="harbor-subtle-divider overflow-x-auto border-b px-4">
-                  <TabsList variant="line" className="h-10 min-w-max gap-2 p-0 xl:gap-4">
-                    <TabsTrigger value="code" className="px-1.5 text-xs">
-                      <Code2 /> {t("workspace.repositories.tabs.code")}
-                    </TabsTrigger>
-                    <TabsTrigger value="wiki" className="px-1.5 text-xs">
-                      <BookOpen /> {t("workspace.repositories.tabs.wiki")}
-                    </TabsTrigger>
-                    <TabsTrigger value="releases" className="px-1.5 text-xs">
-                      <Rocket /> {t("workspace.repositories.tabs.releases")}
-                    </TabsTrigger>
-                    <TabsTrigger value="issues" className="px-1.5 text-xs">
-                      <CircleDot /> {t("workspace.repositories.tabs.issues")}
-                    </TabsTrigger>
-                    <TabsTrigger value="pullRequests" className="px-1.5 text-xs">
-                      <GitPullRequest /> {t("workspace.repositories.tabs.pullRequests")}
-                    </TabsTrigger>
-                    <TabsTrigger value="discussions" className="px-1.5 text-xs">
-                      <MessageCircle /> {t("workspace.repositories.tabs.discussions")}
-                    </TabsTrigger>
-                    <TabsTrigger value="actions" className="px-1.5 text-xs">
-                      <PlayCircle /> {t("workspace.repositories.tabs.actions")}
-                    </TabsTrigger>
-                    <TabsTrigger value="security" className="px-1.5 text-xs">
-                      <ShieldAlert /> {t("workspace.repositories.tabs.security")}
-                    </TabsTrigger>
-                    <TabsTrigger value="insights" className="px-1.5 text-xs">
-                      <BarChart3 /> {t("workspace.repositories.tabs.insights")}
-                    </TabsTrigger>
-                    {selectedRelationshipResult.data?.viewerOwnsRepository ? (
-                      <TabsTrigger value="settings" className="px-1.5 text-xs">
-                        <Settings2 /> {t("workspace.repositories.tabs.settings")}
-                      </TabsTrigger>
-                    ) : null}
-                  </TabsList>
-                </div>
+                <RepositoryTabStrip activeTab={tab}>
+                  <RepositoryTabTrigger value="code" className="px-1.5 text-xs">
+                    <Code2 /> {t("workspace.repositories.tabs.code")}
+                  </RepositoryTabTrigger>
+                  <RepositoryTabTrigger value="wiki" className="px-1.5 text-xs">
+                    <BookOpen /> {t("workspace.repositories.tabs.wiki")}
+                  </RepositoryTabTrigger>
+                  <RepositoryTabTrigger value="releases" className="px-1.5 text-xs">
+                    <Rocket /> {t("workspace.repositories.tabs.releases")}
+                  </RepositoryTabTrigger>
+                  <RepositoryTabTrigger value="issues" className="px-1.5 text-xs">
+                    <CircleDot /> {t("workspace.repositories.tabs.issues")}
+                  </RepositoryTabTrigger>
+                  <RepositoryTabTrigger value="pullRequests" className="px-1.5 text-xs">
+                    <GitPullRequest /> {t("workspace.repositories.tabs.pullRequests")}
+                  </RepositoryTabTrigger>
+                  <RepositoryTabTrigger value="discussions" className="px-1.5 text-xs">
+                    <MessageCircle /> {t("workspace.repositories.tabs.discussions")}
+                  </RepositoryTabTrigger>
+                  <RepositoryTabTrigger value="actions" className="px-1.5 text-xs">
+                    <PlayCircle /> {t("workspace.repositories.tabs.actions")}
+                  </RepositoryTabTrigger>
+                  <RepositoryTabTrigger value="security" className="px-1.5 text-xs">
+                    <ShieldAlert /> {t("workspace.repositories.tabs.security")}
+                  </RepositoryTabTrigger>
+                  <RepositoryTabTrigger value="insights" className="px-1.5 text-xs">
+                    <BarChart3 /> {t("workspace.repositories.tabs.insights")}
+                  </RepositoryTabTrigger>
+                  {selectedRelationshipResult.data?.viewerOwnsRepository ? (
+                    <RepositoryTabTrigger value="settings" className="px-1.5 text-xs">
+                      <Settings2 /> {t("workspace.repositories.tabs.settings")}
+                    </RepositoryTabTrigger>
+                  ) : null}
+                </RepositoryTabStrip>
                 <TabsContent value="code" className="flex min-h-0 min-w-0 flex-col overflow-hidden">
                   <Suspense fallback={<RepositoryTabSkeleton />}>
                     <GitHubCodeView key={selectedRepository.id} repository={selectedRepository} />
