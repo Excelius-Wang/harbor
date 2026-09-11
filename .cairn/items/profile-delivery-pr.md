@@ -4,7 +4,7 @@
 Commit the approved Profile work, address Copilot review, merge only after acceptable review/checks, verify the merge and delete this PR's branches.
 
 ## Current state
-PR https://github.com/Excelius-Wang/harbor/pull/96 is open from feat/profile-readme-layout. Initial head 5db7045 received Copilot review 5179537633 (two posted findings plus five supplementary notes) and CodeRabbit review 5179512598 (five posted findings). All confirmed findings are addressed in the pending review-fix commit: real closed+merged PR mapping, English action casing, empty-repository README 409, static reduced-motion encounters, separate selected/focused rings, bounded entrance animation, verification origin/locale setup and normalized preview branch names. Unrelated four Cairn item/archive moves remain unstaged and preserved. User authorizes conditional merge and branch cleanup; no merge performed yet.
+PR https://github.com/Excelius-Wang/harbor/pull/96 is open from feat/profile-readme-layout. Initial head 5db7045 received Copilot review 5179537633 (two posted findings plus five supplementary notes) and CodeRabbit review 5179512598 (five posted findings). All confirmed findings are addressed in pushed commit 44ab648: real closed+merged PR mapping, English action casing, empty-repository README 409, static reduced-motion encounters, separate selected/focused rings, bounded entrance animation, verification origin/locale setup and normalized preview branch names. Unrelated four Cairn item/archive moves remain unstaged and preserved. User authorizes conditional merge and branch cleanup; no merge performed yet.
 
 ## Next action
 Push review fixes and obtain Copilot re-review plus successful remote checks, then merge and verify branch cleanup.
