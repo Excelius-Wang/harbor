@@ -1,4 +1,5 @@
 async page => {
+ await page.goto('http://localhost:1423/');
  const results=[];
  await page.addInitScript(()=>{window.__calendarAnimations=[];document.addEventListener('animationstart',e=>{if(e.animationName.startsWith('harbor-contribution'))window.__calendarAnimations.push(e.animationName)},true)});
  const settle=async()=>{await page.waitForFunction(()=>{const el=document.querySelector('.harbor-contribution-calendar');return el&&el.dataset.entered==='true'&&!el.getAnimations({subtree:true}).some(a=>a.playState==='running')});};

@@ -1,4 +1,5 @@
 async page => {
+ await page.goto('http://localhost:1423/');
  const results=[];const errors=[];page.on('pageerror',e=>errors.push(e.message));
  for(const lang of ['en','zh'])for(const theme of ['light','dark'])for(const width of [900,1440]){
   await page.setViewportSize({width,height:1000});await page.emulateMedia({reducedMotion:'no-preference'});
@@ -35,6 +36,13 @@ async page => {
   await page.keyboard.press('Escape');
   await page.emulateMedia({reducedMotion:'reduce'});
   if(await page.locator('.harbor-companion-hero').evaluate(e=>getComputedStyle(e).animationName)!=='none')throw Error('reduced');
+  if(await page.locator('.harbor-calendar-companion').getAttribute('data-phase')!=='encounter')throw Error('reduced encounter hidden');
+  if(await page.locator('.harbor-companion-object').evaluate(e=>getComputedStyle(e).opacity)!=='1')throw Error('static chest hidden');
+  const selected=page.locator('[data-contribution-day][aria-pressed="true"]');
+  await page.keyboard.press('Tab');await selected.focus();
+  const focus=await selected.evaluate(e=>({visible:e.matches(':focus-visible'),shadow:getComputedStyle(e).boxShadow,ring:getComputedStyle(e).getPropertyValue('--ring')}));
+  if(!focus.visible||!focus.shadow.includes('4px'))throw Error('selected focus ring');
+  await page.waitForFunction(()=>document.querySelector('.harbor-contribution-calendar').dataset.arriving==='false');
   results.push({lang,theme,width,facing,clearance,hover:true,keyboard:true,menu:true,reduced:true});
  }
  if(errors.length)throw Error(errors.join('\n'));

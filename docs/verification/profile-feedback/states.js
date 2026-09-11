@@ -1,4 +1,6 @@
 async page => {
+ await page.goto('http://localhost:1423/');
+ await page.evaluate(()=>localStorage.setItem('i18nextLng','zh'));
  const results=[];
  await page.emulateMedia({reducedMotion:'no-preference'});
  await page.setViewportSize({width:900,height:620});

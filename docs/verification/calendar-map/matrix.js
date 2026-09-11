@@ -1,4 +1,5 @@
 async page => {
+ await page.goto('http://localhost:1423/');
  const results=[];const errors=[];page.on('pageerror',e=>errors.push(e.message));
  const c=()=>page.locator('.harbor-calendar-companion');
  const controls=()=>page.locator('.harbor-companion-controls');

@@ -1,4 +1,6 @@
 async page => {
+ await page.goto('http://localhost:1423/');
+ await page.evaluate(()=>localStorage.setItem('i18nextLng','zh'));
  const results=[];
  for(const state of ['loading','error','empty','stale']){
   await page.goto(`http://localhost:1423/?state=${state}&commands=github_list_profile_connections`);

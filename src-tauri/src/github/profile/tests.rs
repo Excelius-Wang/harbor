@@ -169,3 +169,23 @@ fn profile_readme_only_accepts_nonempty_root_markdown() {
         );
     }
 }
+
+#[test]
+fn activity_mapping_distinguishes_merged_pull_requests_from_closed_events() {
+    for (event_type, action, merged, expected) in [
+        ("PullRequestEvent", "closed", Some(true), "merged"),
+        ("PullRequestEvent", "closed", Some(false), "closed"),
+        ("PullRequestEvent", "closed", None, "closed"),
+        ("PullRequestEvent", "opened", Some(true), "opened"),
+        ("IssuesEvent", "closed", Some(true), "closed"),
+    ] {
+        let raw: RawActivityEvent = serde_json::from_value(serde_json::json!({
+            "id": "merged-event", "type": event_type, "repo": {"name": "octocat/hello"},
+            "created_at": "2026-09-11T00:00:00Z",
+            "payload": {"action": action, "pull_request": {"number": 96, "title": "Profile", "merged": merged}}
+        })).unwrap();
+        let mapped = profile_activity_from_raw(raw);
+        assert_eq!(mapped.action.as_deref(), Some(expected));
+        assert_eq!(mapped.resource_number, Some(96));
+    }
+}

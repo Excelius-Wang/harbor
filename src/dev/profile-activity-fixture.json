@@ -121,6 +121,6 @@
     "eventType": "PushEvent",
     "repository": "Excelius-Wang/harbor",
     "createdAt": "2026-09-08T07:36:21Z",
-    "reference": "refs/heads/feat/repolane-lane-identity"
+    "reference": "feat/repolane-lane-identity"
   }
 ]

@@ -468,7 +468,7 @@ impl GitHubProfileClient for OctocrabGitHubClient {
         {
             Ok(content) => content,
             Err(octocrab::Error::GitHub { source, .. })
-                if source.status_code == StatusCode::NOT_FOUND =>
+                if [StatusCode::NOT_FOUND, StatusCode::CONFLICT].contains(&source.status_code) =>
             {
                 return Ok(None)
             }
@@ -492,7 +492,7 @@ impl GitHubProfileClient for OctocrabGitHubClient {
         {
             Ok(contents) => contents,
             Err(octocrab::Error::GitHub { source, .. })
-                if source.status_code == StatusCode::NOT_FOUND =>
+                if [StatusCode::NOT_FOUND, StatusCode::CONFLICT].contains(&source.status_code) =>
             {
                 return Ok(None)
             }
@@ -846,15 +846,29 @@ fn profile_activity_from_raw(raw: RawActivityEvent) -> GitHubProfileActivity {
         .and_then(serde_json::Value::as_u64)
         .and_then(|count| u32::try_from(count).ok());
 
+    let raw_action = raw
+        .payload
+        .get("action")
+        .and_then(serde_json::Value::as_str);
+    let action = if raw.event_type == "PullRequestEvent"
+        && raw_action == Some("closed")
+        && raw
+            .payload
+            .pointer("/pull_request/merged")
+            .and_then(serde_json::Value::as_bool)
+            == Some(true)
+    {
+        Some("merged")
+    } else {
+        raw_action
+    }
+    .map(ToOwned::to_owned);
+
     GitHubProfileActivity {
         id: raw.id,
         event_type: raw.event_type,
         repository: raw.repo.name,
-        action: raw
-            .payload
-            .get("action")
-            .and_then(serde_json::Value::as_str)
-            .map(ToOwned::to_owned),
+        action,
         reference,
         resource_number: resource
             .and_then(|resource| resource.get("number"))

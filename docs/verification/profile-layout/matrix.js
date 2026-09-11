@@ -1,4 +1,5 @@
 async page => {
+ await page.goto('http://localhost:1423/');
  const results=[];
  for (const lang of ['en','zh']) for (const theme of ['light','dark']) for (const width of [900,1440]) {
   const key=`${lang}-${theme}-${width}`;

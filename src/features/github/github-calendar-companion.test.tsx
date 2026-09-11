@@ -129,11 +129,11 @@ it("pauses for document visibility and manual pause", () => {
 it("keeps reduced-motion feedback static and readable", () => {
   reduced = true;
   render(<CalendarCompanion {...props} visit={visit} />);
-  expect(phase()).toBe("idle");
+  expect(phase()).toBe("encounter");
   expect(screen.getByRole("status").textContent).toContain("12");
   expect(document.querySelector('[data-active="false"]')).toBeTruthy();
   tick(5000);
-  expect(phase()).toBe("idle");
+  expect(phase()).toBe("encounter");
 });
 it("preserves state on refresh and celebrates only a real level increase", () => {
   const view = render(<CalendarCompanion {...props} visit={visit} />);

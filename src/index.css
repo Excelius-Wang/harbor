@@ -824,7 +824,7 @@ button {
 .harbor-contribution-period[data-month="true"] [data-level="4"] {
   color: var(--contribution-strong-text);
 }
-.harbor-contribution-calendar[data-entered="true"] .harbor-contribution-cell {
+.harbor-contribution-calendar[data-arriving="true"] .harbor-contribution-cell {
   animation: harbor-contribution-arrive 160ms ease-out backwards;
   animation-delay: var(--day-delay, 0ms);
 }
@@ -1081,4 +1081,12 @@ button {
   left: 5px;
   z-index: 1;
   pointer-events: none;
+}
+
+.harbor-contribution-cell[aria-pressed="true"]:focus-visible {
+  box-shadow:
+    0 0 0 1px var(--background),
+    0 0 0 2px var(--contribution-3),
+    0 0 0 3px var(--background),
+    0 0 0 4px var(--ring);
 }

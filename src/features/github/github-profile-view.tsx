@@ -131,9 +131,12 @@ export function ActivityRow({
       (activity.eventType.includes("Comment") || activity.eventType.includes("Discussion")
         ? MessageSquareText
         : FileCode2));
-  const action = activity.action
+  const translatedAction = activity.action
     ? t(`workspace.profile.actions.${activity.action}`, { defaultValue: activity.action })
     : "";
+  const action = locale.startsWith("en")
+    ? translatedAction.charAt(0).toLowerCase() + translatedAction.slice(1)
+    : translatedAction;
   const summaryType =
     activity.eventType === "CreateEvent" && !activity.reference
       ? "repositoryCreated"

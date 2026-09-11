@@ -176,7 +176,7 @@ export function CalendarCompanion({
     },
     key
   );
-  const displayPhase = reduced ? "idle" : phase;
+  const displayPhase = reduced ? (visit ? "encounter" : "idle") : phase;
   const label = visit
     ? t("workspace.profile.contributionDay", {
         date: new Intl.DateTimeFormat(i18n.language, {

@@ -32,6 +32,7 @@ export function ContributionCalendar({ summary }: { summary: GitHubContributionS
   const { t, i18n } = useTranslation();
   const root = useRef<HTMLElement>(null);
   const [entered, setEntered] = useState(false);
+  const [arriving, setArriving] = useState(false);
   const [visible, setVisible] = useState(true);
   const [visit, setVisit] = useState<CalendarVisit | null>(null);
   const [map, setMap] = useState<HTMLDivElement | null>(null);
@@ -100,6 +101,13 @@ export function ContributionCalendar({ summary }: { summary: GitHubContributionS
     observer.observe(root.current);
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    if (!entered) return;
+    setArriving(true);
+    const timeout = window.setTimeout(() => setArriving(false), 350);
+    return () => window.clearTimeout(timeout);
+  }, [entered]);
 
   const navigateDays = (event: KeyboardEvent<HTMLDivElement>) => {
     const steps: Record<string, number> = selectedMonth
@@ -201,6 +209,7 @@ export function ContributionCalendar({ summary }: { summary: GitHubContributionS
       ref={root}
       className="harbor-contribution-calendar flex min-w-0 flex-col gap-3 border-b pb-5"
       data-entered={entered}
+      data-arriving={arriving}
       onKeyDown={(event) => {
         if (event.key === "Escape") {
           setVisit(null);

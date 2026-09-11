@@ -1,4 +1,6 @@
 async page => {
+ await page.goto('http://localhost:1423/');
+ await page.evaluate(()=>localStorage.setItem('i18nextLng','zh'));
  await page.setViewportSize({width:900,height:620});
  await page.goto('http://localhost:1423/?profile=long');
  await page.getByRole('button',{name:'账户',exact:true}).click();

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ContributionCalendar, contributionMonths } from "./github-contribution-calendar";
@@ -125,4 +125,25 @@ it("lets a hovered date replace selected-date details and restores selection on 
   expect(screen.getByRole("tooltip").textContent).toContain(cells[30].getAttribute("aria-label"));
   fireEvent.blur(cells[30]);
   expect(screen.getByRole("tooltip").textContent).toContain(selected);
+});
+
+it("ends the entrance window before refreshed cells are mounted", () => {
+  vi.useFakeTimers();
+  try {
+    const view = mount();
+    const calendar = document.querySelector(".harbor-contribution-calendar")!;
+    expect(calendar.getAttribute("data-arriving")).toBe("true");
+    act(() => vi.advanceTimersByTime(350));
+    expect(calendar.getAttribute("data-arriving")).toBe("false");
+    view.rerender(
+      <TooltipProvider>
+        <ContributionCalendar
+          summary={{ ...summary, weeks: [{ firstDay: days[1].date, days: days.slice(1) }] }}
+        />
+      </TooltipProvider>
+    );
+    expect(calendar.getAttribute("data-arriving")).toBe("false");
+  } finally {
+    vi.useRealTimers();
+  }
 });
