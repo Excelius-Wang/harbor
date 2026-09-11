@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useTranslation } from "react-i18next";
@@ -72,6 +72,7 @@ export function CalendarCompanion({
   onMenuOpenChange?: (open: boolean) => void;
 }) {
   const { t, i18n } = useTranslation();
+  const levelDescriptionId = useId();
   const positionRef = useRef<HTMLDivElement>(null);
   const [enabled, setEnabled] = useState(true);
   const [documentVisible, setDocumentVisible] = useState(
@@ -210,9 +211,12 @@ export function CalendarCompanion({
               variant="ghost"
               size="sm"
               aria-label={t("workspace.profile.companion.settings")}
+              aria-describedby={levelDescriptionId}
             >
               <span className="harbor-companion-badge" aria-hidden="true" />
-              {t("workspace.profile.companion.level", { level })}
+              <span id={levelDescriptionId}>
+                {t("workspace.profile.companion.level", { level })}
+              </span>
             </Button>
           </PopoverTrigger>
           <PopoverContent align="end" className="flex flex-col gap-3" data-companion-menu="true">

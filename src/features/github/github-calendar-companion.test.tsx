@@ -70,6 +70,12 @@ it("appears immediately, finishes arrival, and bases levels solely on contributi
   render(<CalendarCompanion {...props} />);
   expect(phase()).toBe("welcome");
   expect(screen.getByText("Lv. 5")).toBeTruthy();
+  expect(
+    screen.getByRole("button", {
+      name: "workspace.profile.companion.settings",
+      description: "Lv. 5",
+    })
+  ).toBeTruthy();
   tick(650);
   expect(phase()).toBe("idle");
   expect(companionProgress(474)).toEqual({ level: 5, progress: 74 });
@@ -143,6 +149,12 @@ it("preserves state on refresh and celebrates only a real level increase", () =>
   view.rerender(<CalendarCompanion {...props} total={500} visit={visit} />);
   expect(phase()).toBe("reward");
   expect(screen.getByText("Lv. 6")).toBeTruthy();
+  expect(
+    screen.getByRole("button", {
+      name: "workspace.profile.companion.settings",
+      description: "Lv. 6",
+    })
+  ).toBeTruthy();
   tick(600);
   expect(phase()).toBe("idle");
 });

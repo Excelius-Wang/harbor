@@ -83,4 +83,5 @@ it("uses sentence-case actions after the repository in English", async () => {
   const { container } = mount({ ...base, action: "opened" });
   expect(container.querySelector("p")?.textContent).toBe("harbor opened pull request #95");
   expect(i18n.t("workspace.profile.actions.opened")).toBe("Opened");
+  expect(i18n.t("workspace.profile.actions.merged")).toBe("Merged");
 });

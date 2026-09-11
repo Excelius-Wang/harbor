@@ -207,7 +207,7 @@
         "added": "Added",
         "edited": "Edited",
         "submitted": "Submitted",
-        "merged": "merged"
+        "merged": "Merged"
       },
       "activityTypes": {
         "PushEvent": "Pushed {{count}} commits to {{repository}}",
