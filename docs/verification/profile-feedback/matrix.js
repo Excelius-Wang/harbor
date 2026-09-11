@@ -1,0 +1,53 @@
+async page => {
+ const results=[];
+ await page.addInitScript(()=>{window.__calendarAnimations=[];document.addEventListener('animationstart',e=>{if(e.animationName.startsWith('harbor-contribution'))window.__calendarAnimations.push(e.animationName)},true)});
+ const settle=async()=>{await page.waitForFunction(()=>{const el=document.querySelector('.harbor-contribution-calendar');return el&&el.dataset.entered==='true'&&!el.getAnimations({subtree:true}).some(a=>a.playState==='running')});};
+ for(const lang of ['en','zh'])for(const theme of ['light','dark'])for(const width of [900,1440]){
+  const key=`${lang}-${theme}-${width}`;
+  await page.emulateMedia({reducedMotion:'no-preference'});
+  await page.setViewportSize({width,height:width===900?760:1000});
+  await page.evaluate(({lang,theme})=>{localStorage.setItem('i18nextLng',lang);localStorage.setItem('tauri-ui-theme',theme)},{lang,theme});
+  await page.goto('http://localhost:1423/?calendar=real&profile=no-readme');
+  await page.getByRole('button',{name:lang==='en'?'Account':'账户',exact:true}).click();
+  const root=page.locator('.harbor-contribution-calendar');await root.waitFor();
+  await root.scrollIntoViewIfNeeded();await settle();
+  const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth);
+  if(overflow)throw Error(key+' document overflow');
+  const entered=await page.evaluate(()=>window.__calendarAnimations.filter(n=>n==='harbor-contribution-arrive').length);
+  if(!entered)throw Error(key+' no entrance');
+  await page.screenshot({path:`output/playwright/profile-feedback/${key}-year.png`});
+  const first=root.locator('[data-contribution-day]').first();await first.hover();
+  await page.waitForFunction(()=>{const cell=document.querySelector('[data-contribution-day]:hover');return cell&&getComputedStyle(cell).transform!=='none'});
+  await page.getByRole('tooltip').waitFor();
+  await first.focus();await page.keyboard.press('ArrowRight');
+  const focused=await page.evaluate(()=>document.activeElement?.getAttribute('data-contribution-day'));
+  if(!focused)throw Error('keyboard focus lost');
+  await page.keyboard.press('Escape');
+  await page.mouse.move(10,10);
+  await page.evaluate(()=>window.__calendarAnimations=[]);
+  await page.getByRole('button',{name:lang==='en'?'Refresh':'刷新',exact:true}).click();
+  await page.waitForFunction(()=>!document.querySelector('[data-slot=spinner]'));
+  await settle();
+  if(await page.evaluate(()=>window.__calendarAnimations.includes('harbor-contribution-arrive')))throw Error('refresh replayed entrance');
+  await page.getByRole('button',{name:lang==='en'?'Month':'月份',exact:true}).click();await settle();
+  const next=page.getByRole('button',{name:lang==='en'?'Next month':'下个月',exact:true});
+  if(!await next.isDisabled())throw Error('future month enabled');
+  await page.getByRole('button',{name:lang==='en'?'Previous month':'上个月',exact:true}).click();await settle();
+  if(await root.locator('[data-contribution-day]').count()!==31)throw Error('August days missing');
+  await page.screenshot({path:`output/playwright/profile-feedback/${key}-month.png`});
+  const cell=root.locator('[data-contribution-day]').first();await cell.focus();await page.keyboard.press('ArrowDown');
+  if(await page.evaluate(()=>document.activeElement?.getAttribute('data-contribution-day'))!=='2026-08-08')throw Error('month key navigation');
+  await page.keyboard.press('Escape');
+  await page.getByRole('heading',{name:lang==='en'?'Public activity':'公开动态',exact:true}).scrollIntoViewIfNeeded();
+  await page.screenshot({path:`output/playwright/profile-feedback/${key}-activity.png`});
+  results.push({key,entranceCells:entered,refreshReplay:false,monthDays:31,keyboard:true,overflow:false});
+ }
+ await page.emulateMedia({reducedMotion:'reduce'});
+ await page.getByRole('button',{name:'全年',exact:true}).click();
+ await page.locator('.harbor-contribution-calendar').scrollIntoViewIfNeeded();
+ const cell=page.locator('[data-contribution-day]').first();await cell.hover();
+ const reduced=await cell.evaluate(el=>({animation:getComputedStyle(el).animationName,transform:getComputedStyle(el).transform}));
+ if(reduced.animation!=='none'||reduced.transform!=='none')throw Error(JSON.stringify(reduced));
+ await page.screenshot({path:'output/playwright/profile-feedback/reduced-motion.png'});
+ return {results,reduced};
+}

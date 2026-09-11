@@ -1234,7 +1234,7 @@ fn code_search_result_from_github(item: CodeSearchItem) -> GitHubCodeSearchResul
     }
 }
 
-fn readme_from_octocrab(
+pub(super) fn readme_from_octocrab(
     content: octocrab::models::repos::Content,
 ) -> Result<GitHubReadme, AppError> {
     let encoded = content

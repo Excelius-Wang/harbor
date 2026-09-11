@@ -408,7 +408,7 @@ Controlled `discussions=nested|more|closed|readonly` fixtures supply nested repl
 
 - Regression evidence: `/tmp/harbor-discussion-replies-red.log`. The initial harness also had a cleanup timeout because a `beforeEach` callback returned a mock; that harness failure is not counted as an application defect. The corrected three-file focused run passes 14 tests (`/tmp/harbor-discussion-replies-green.log`). Four additional fixture isolation tests pass.
 - Final complete check: `/tmp/harbor-discussion-final-check.log`, 621 tests / 129 files, format, lint, TypeScript and production build pass. This initial independent check was based on main after rules PR #87 and did not include Issue PR #88's 13 additional tests. Existing context-rail hook and chunk-size warnings remain non-blocking.
-- `output/playwright/discussion-nested-matrix.js`: all eight English/Chinese × light/dark × 900×620/1440×900 combinations pass. Captures cover reply drafts, edited/answered/upvoted replies, parent-delete confirmation and preserved replies. Browser assertions check no document or parent-main scrolling. Log: `/tmp/harbor-discussion-nested-matrix.log`.
+- `output/playwright/discussion-nested-matrix.js`: all eight English/Chinese × light/dark × 900×620/1440× 900 combinations pass. Captures cover reply drafts, edited/answered/upvoted replies, parent-delete confirmation and preserved replies. Browser assertions check no document or parent-main scrolling. Log: `/tmp/harbor-discussion-nested-matrix.log`.
 
 Browser screenshots establish controlled UI behavior only. Native material acceptance, the remaining migration batches, and this batch's actual CodeRabbit review/merge remain separate gates.
 
@@ -448,7 +448,7 @@ Visual inspection found health labels overlapping at 900 px even though the view
 
 - Regression logs: `/tmp/harbor-pages-archive-red.log` (four failures) and `/tmp/harbor-pages-tab-red.log` (selected-tab loss). Focused archive/Pages/stale tests pass 13 cases; the final tab/Pages/fixture run passes nine (`/tmp/harbor-pages-tab-green.log`). The tab test waits for the updated metadata and checks the current tab node after switching repositories.
 - Local check before integration with Issue: `pnpm check` passes 630 tests / 132 files (`/tmp/harbor-pages-final-check.log`), including format, lint, TypeScript and production build. Existing context-rail hook and bundle-size warnings remain non-blocking. No Rust code changed.
-- `pages-condition-matrix.js`: 64 final archived/disabled/workflow/certificate-pending/health-pending/health-invalid/build-active/build-error cases pass across English/Chinese, light/dark, 900×620 and 1440×900. Archived writes and premature HTTPS enable are disabled; Actions publishing has no branch-build action, and Open Actions selects the Actions tab. Final log: `/tmp/harbor-pages-condition-final.log`.
+- `pages-condition-matrix.js`: 64 final archived/disabled/workflow/certificate-pending/health-pending/health-invalid/build-active/build-error cases pass across English/Chinese, light/dark, 900×620 and 1440× 900. Archived writes and premature HTTPS enable are disabled; Actions publishing has no branch-build action, and Open Actions selects the Actions tab. Final log: `/tmp/harbor-pages-condition-final.log`.
 - `pages-write-matrix.js`: 72 configure/request-build/disable × pending/error/accepted cases pass across all eight display combinations. Drafts and confirmations survive failures; competing controls are disabled; pending disable resists Escape; accepted build requests show Queued; accepted disable removes the site and restores Enable. No ancestor window/main scrolling occurs. Log: `/tmp/harbor-pages-write-matrix.log`.
 - `pages-archive-matrix.js`: 48 archive/unarchive × pending/error/accepted cases pass with independent repository snapshots after the tab fix. Escape returns focus to the trigger, Enter reopens it, pending confirmation stays open, and success reconciles the Pages readonly state without losing Settings. Final log: `/tmp/harbor-pages-archive-final.log`.
 - `pages-read-matrix.js`: 40 initial-loading/error, retained-data failure, health-error and health-stale cases pass. Retry dispatch is verified after waiting for its query to settle; configured error fixtures continue failing by design. The unpublished domain survives stale refresh and retry. Log: `/tmp/harbor-pages-read-matrix.log`.
@@ -558,3 +558,70 @@ Copilot review follow-up for PR #95: review `5163105308` on `0fdb8de` requested 
 The review follow-up passes `VITEST_MAX_WORKERS=1 pnpm check`: 664 tests / 136 files, formatting, lint, TypeScript and build (`/tmp/harbor-tabs-copilot-final-check.log`). Existing hook/bundle warnings remain unchanged.
 
 Copilot re-review `5163239552` on `a84f0d3` recommends approval; its non-blocking checkpoint-total nit is corrected to distinguish the earlier 660/135 run from the final 664/136 check. The automatically resumed CodeRabbit review (`5163238771`, run `58a0c3a7-ad81-4a7e-9c5c-0c3be003df3a`) suggested scoping the portable regression to `[data-slot="repository-tab-strip"]`. The script now uses that scope and passes with an unrelated tablist deliberately prepended to the page (`/tmp/harbor-tabs-scoped-regression.log`). Node syntax and diff checks pass. These final changes affect only documentation and the browser regression locator; the application/test-suite tree remains exactly the one covered by the 664-test check and Copilot's approval recommendation.
+
+### Profile layout and README — 2026-09-10
+
+The approved profile layout is implemented on `feat/profile-readme-layout`. The README is
+fully expanded and shares the page scroll; absent content is omitted. Counts open a connections
+dialog, retaining existing list/query behavior. Added an authenticated, user-scoped root README
+read path and reused the sanitized Markdown renderer. Calendar labels/legend and arrow-key
+inspection are available; the merged activity action has an English/Chinese translation.
+
+Eight browser layout combinations (EN/ZH × light/dark × 900/1440) passed overflow, dialog keyboard
+and focus-return checks. Six README states passed, including long display names/full long content,
+loading, null, error/retry and stale retention. See [captures and scripts](verification/profile-layout/README.md).
+Native checks verify compilation and profile logic, not desktop translucency or live API reads.
+
+### Calendar feedback and activity readability — 2026-09-10
+
+Implemented on the existing profile delivery branch: one-shot visible entrance, month transitions,
+hover/focus scale and tooltip, reduced-motion fallback, data-bounded year/month views, recent-date
+initial scroll and fixed weekday labels. Activity keeps full title/reference on a separate line,
+removes only the viewed user's redundant owner and distinguishes repository creation.
+
+Final fresh-browser matrix passed eight EN/ZH/light/dark/900/1440 combinations using real
+contribution/public-event snapshots. Measured 369 entering cells and zero replay on refresh;
+reduced-motion animation and transform are both none. Loading/empty/error/stale states passed,
+and both themes were inspected over cool/neutral/bright in-page backgrounds. Zero-level cells
+use a stable semantic fill after correcting a neutral-background contrast inversion.
+See [screenshots, scripts and scope](verification/profile-feedback/README.md). Identity metadata in
+the real-data preview remains synthetic. No new live-write or native-translucency acceptance.
+
+Final delivery check passed: 676 tests / 139 files, format/lint/build. Existing hook and bundle
+warnings remain nonblocking. Rust code is unchanged by this follow-up; previous profile native
+verification applies to that unchanged scope. Temporary preview server/browser sessions were closed.
+
+### Green calendar and resident explorer — 2026-09-11
+
+The profile calendar now precedes the fully expanded README and uses dedicated teal-green data
+levels. Stable date-digit contrasts exceed 4.5:1 in both themes. An original generated sprite
+strip supplies the default seated/standing explorer, Bug and chest; the character remains in a
+reserved lane below data cells. Encounters replace prior targets and do not change experience;
+annual contribution totals determine the displayed level and real level-up feedback.
+
+683 tests in 140 files, format/lint/TypeScript/build passed. Eight EN/ZH × light/dark × 900/1440
+browser combinations passed order, interaction, keyboard, refresh and unchanged-click-XP checks.
+Additional probes verified Bug, actual stationary travel pause, offscreen/document pause, outside
+click dismissal and reduced motion; both themes were inspected over cool/neutral/bright in-page
+backgrounds. Existing hook/chunk warnings remain. See [screenshots and asset provenance](verification/profile-companion/README.md).
+No new Rust code, native-translucency acceptance or live GitHub write test is claimed.
+
+
+## Calendar map companion — 2026-09-11
+
+The resident explorer is now a grid-anchored, pointer-transparent sprite portal with the approved
+B design/C motion, replacing the independent lane. `pnpm check` passed 684 tests in 140 files,
+formatting, lint, TypeScript and production build. Eight theme/language/width browser combinations
+passed with zero measured x/y target error; additional scrolling, resize, replacement, chest/Bug,
+manual/background/offscreen pause and reduced-motion checks passed. A development reload
+interrupted an earlier browser run; the final stable run passed. This iteration introduces no
+Rust/dependency changes and makes no new native-translucency or full-site acceptance claim.
+See [calendar map evidence](verification/calendar-map/README.md).
+
+
+### Calendar review corrections — 2026-09-11
+
+Fixed same-width rolling-year positioning, repeated-observer facing, selected-date tooltip
+ownership and Sunday/month-label overlap. Three new failing regressions now pass; full check
+passes 687 tests and the eight-case browser review passes. No Rust or shared-primitives changed.
+[Review findings and evidence](verification/calendar-review/README.md).

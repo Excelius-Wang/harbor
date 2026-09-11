@@ -6322,3 +6322,14 @@ mod tests {
         assert!(validate_code_search_query("render\nrepo:other/project".to_string()).is_err());
     }
 }
+
+#[tauri::command]
+pub async fn github_get_profile_readme(
+    username: String,
+    state: State<'_, AppState>,
+) -> Result<Option<crate::github::profile::GitHubProfileReadme>, AppError> {
+    state
+        .github
+        .profile_readme(&crate::github::profile::normalize_user_login(&username)?)
+        .await
+}

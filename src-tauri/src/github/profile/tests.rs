@@ -144,3 +144,28 @@ fn contribution_mapping_keeps_calendar_counts_and_private_summary() {
     assert_eq!(summary.months.len(), 1);
     assert_eq!(summary.weeks[0].days[0].contribution_count, 4);
 }
+
+#[test]
+fn profile_readme_only_accepts_nonempty_root_markdown() {
+    let make = |path: &str, content: &str| super::super::code::GitHubReadme {
+        name: path.rsplit('/').next().unwrap().to_string(),
+        path: path.to_string(),
+        content: content.to_string(),
+        url: "https://github.com/octocat/octocat/blob/main/README.md".to_string(),
+    };
+    assert!(profile_readme_from_content(make("README.md", "# Hello"), "main".into()).is_some());
+    assert!(
+        profile_readme_from_content(make("readme.MD", "# Hello"), "custom/branch".into()).is_some()
+    );
+    for (path, text) in [
+        ("docs/README.md", "hello"),
+        (".github/README.md", "hello"),
+        ("README.rst", "hello"),
+        ("README.md", " \n"),
+    ] {
+        assert!(
+            profile_readme_from_content(make(path, text), "main".into()).is_none(),
+            "{path}"
+        );
+    }
+}
