@@ -1,6 +1,6 @@
 async page => {
- await page.goto('http://localhost:1423/');
  const results=[];const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('http://localhost:1423/');
  for(const lang of ['en','zh'])for(const theme of ['light','dark'])for(const width of [900,1440]){
   await page.setViewportSize({width,height:1000});await page.emulateMedia({reducedMotion:'no-preference'});
   await page.evaluate(({lang,theme})=>{localStorage.setItem('i18nextLng',lang);localStorage.setItem('tauri-ui-theme',theme)},{lang,theme});

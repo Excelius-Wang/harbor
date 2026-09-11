@@ -1,6 +1,6 @@
 async page => {
- await page.goto('http://localhost:1423/');
  const results=[];const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('http://localhost:1423/');
  const c=()=>page.locator('.harbor-calendar-companion');
  const controls=()=>page.locator('.harbor-companion-controls');
  const phase=async value=>page.waitForFunction(v=>document.querySelector('.harbor-calendar-companion')?.dataset.phase===v,value);
