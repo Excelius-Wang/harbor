@@ -1,6 +1,6 @@
 import { WorkspacePageHeader } from "@/features/workspace/workspace-page-header";
 import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { isTauri } from "@tauri-apps/api/core";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -13,6 +13,7 @@ import {
   FileCode2,
   GitCommitHorizontal,
   GitFork,
+  GitMerge,
   GitPullRequest,
   Link2,
   MapPin,
@@ -36,15 +37,24 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { ContributionCalendar } from "./github-contribution-calendar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { openExternalUrl } from "@/lib/window";
+import { GitHubProfileReadmeSection } from "./github-profile-readme-section";
+import { useListScroll } from "@/hooks/use-list-scroll";
 import { parseIpcError } from "@/lib/ipc-error";
 import { cn } from "@/lib/utils";
 import type {
-  GitHubContributionDay,
-  GitHubContributionSummary,
   GitHubProfileActivity,
   GitHubProfileConnectionKind,
   GitHubUserProfile,
@@ -59,6 +69,7 @@ import {
   updateUserFollow,
 } from "./github-profile-mutations";
 import {
+  githubQueryKeys,
   profileActivityQueryOptions,
   profileConnectionsQueryOptions,
   userContributionsQueryOptions,
@@ -67,17 +78,18 @@ import {
 
 function ProfileSkeleton() {
   return (
-    <div className="grid gap-6 p-5 min-[1180px]:grid-cols-[260px_minmax(0,1fr)]">
-      <div className="flex flex-col gap-4">
-        <Skeleton className="size-28 rounded-full" />
-        <Skeleton className="h-5 w-40" />
-        <Skeleton className="h-3 w-28" />
-        <Skeleton className="h-16 w-full" />
+    <div className="mx-auto flex w-full max-w-[1160px] flex-col gap-5 p-5">
+      <div className="flex items-start gap-4">
+        <Skeleton className="size-18 shrink-0 rounded-full" />
+        <div className="flex min-w-0 flex-1 flex-col gap-3">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-3 w-28" />
+          <Skeleton className="h-12 w-full" />
+        </div>
       </div>
-      <div className="flex flex-col gap-5">
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-56 w-full" />
-      </div>
+      <Skeleton className="h-44 w-full" />
+      <Skeleton className="h-40 w-full" />
+      <Skeleton className="h-12 w-full" />
     </div>
   );
 }
@@ -91,77 +103,6 @@ function initials(profile: Pick<GitHubUserProfile, "name" | "login">) {
     .toUpperCase();
 }
 
-function ContributionCalendar({ summary }: { summary: GitHubContributionSummary }) {
-  const { t, i18n } = useTranslation();
-  const dayFormatter = useMemo(
-    () => new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium" }),
-    [i18n.language]
-  );
-  const levelClass: Record<GitHubContributionDay["contributionLevel"], string> = {
-    NONE: "bg-muted/35",
-    FIRST_QUARTILE: "bg-primary/20",
-    SECOND_QUARTILE: "bg-primary/40",
-    THIRD_QUARTILE: "bg-primary/65",
-    FOURTH_QUARTILE: "bg-primary",
-  };
-
-  return (
-    <section className="flex flex-col gap-3 border-b pb-5">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-sm font-semibold">
-          {t("workspace.profile.contributions", { count: summary.totalContributions })}
-        </h2>
-        {summary.hasRestrictedContributions ? (
-          <span className="text-muted-foreground text-[11px]">
-            {t("workspace.profile.privateContributions", {
-              count: summary.restrictedContributions,
-            })}
-          </span>
-        ) : null}
-      </div>
-      <ScrollArea className="w-full pb-2">
-        <div
-          role="img"
-          aria-label={t("workspace.profile.contributionCalendarLabel")}
-          className="flex w-max gap-1 pr-3"
-        >
-          {summary.weeks.map((week, weekIndex) => (
-            <div key={`${week.firstDay}-${weekIndex}`} className="grid grid-rows-7 gap-1">
-              {week.days.map((day) => (
-                <span
-                  key={day.date}
-                  title={t("workspace.profile.contributionDay", {
-                    count: day.contributionCount,
-                    date: dayFormatter.format(new Date(`${day.date}T00:00:00`)),
-                  })}
-                  className={cn("size-2.5 rounded-[2px]", levelClass[day.contributionLevel])}
-                />
-              ))}
-            </div>
-          ))}
-        </div>
-        <ScrollBar orientation="horizontal" />
-      </ScrollArea>
-      <dl className="grid grid-cols-2 gap-1 overflow-hidden rounded-md border min-[700px]:grid-cols-5">
-        {[
-          ["total", summary.totalContributions],
-          ["commits", summary.commits],
-          ["pullRequests", summary.pullRequests],
-          ["reviews", summary.pullRequestReviews],
-          ["issues", summary.issues],
-        ].map(([label, value]) => (
-          <div key={label} className="bg-muted/15 px-3 py-2">
-            <dt className="text-muted-foreground text-[11px]">
-              {t(`workspace.profile.metrics.${label}`)}
-            </dt>
-            <dd className="font-mono text-sm font-medium tabular-nums">{value}</dd>
-          </div>
-        ))}
-      </dl>
-    </section>
-  );
-}
-
 const activityIcons: Record<string, typeof FileCode2> = {
   PushEvent: GitCommitHorizontal,
   PullRequestEvent: GitPullRequest,
@@ -173,40 +114,65 @@ const activityIcons: Record<string, typeof FileCode2> = {
   DeleteEvent: Tag,
 };
 
-function ActivityRow({ activity, locale }: { activity: GitHubProfileActivity; locale: string }) {
+export function ActivityRow({
+  activity,
+  locale,
+  profileLogin,
+}: {
+  activity: GitHubProfileActivity;
+  locale: string;
+  profileLogin: string;
+}) {
   const { t } = useTranslation();
-  const Icon =
-    activityIcons[activity.eventType] ??
-    (activity.eventType.includes("Comment") || activity.eventType.includes("Discussion")
-      ? MessageSquareText
-      : FileCode2);
-  const action = activity.action
+  const merged = activity.eventType === "PullRequestEvent" && activity.action === "merged";
+  const Icon = merged
+    ? GitMerge
+    : (activityIcons[activity.eventType] ??
+      (activity.eventType.includes("Comment") || activity.eventType.includes("Discussion")
+        ? MessageSquareText
+        : FileCode2));
+  const translatedAction = activity.action
     ? t(`workspace.profile.actions.${activity.action}`, { defaultValue: activity.action })
-    : undefined;
-  const labelKey = `workspace.profile.activityTypes.${activity.eventType}`;
+    : "";
+  const action = locale.startsWith("en")
+    ? translatedAction.charAt(0).toLowerCase() + translatedAction.slice(1)
+    : translatedAction;
+  const summaryType =
+    activity.eventType === "CreateEvent" && !activity.reference
+      ? "repositoryCreated"
+      : activity.eventType;
+  const repository = activity.repository.toLowerCase().startsWith(`${profileLogin.toLowerCase()}/`)
+    ? activity.repository.slice(profileLogin.length + 1)
+    : activity.repository;
+  const detail = [activity.resourceTitle, activity.reference]
+    .filter((value, index, values) => value && values.indexOf(value) === index)
+    .join(" · ");
   return (
     <article className="grid grid-cols-[28px_minmax(0,1fr)_auto] gap-3 py-3">
       <span className="bg-muted text-muted-foreground grid size-7 place-items-center rounded-md">
-        <Icon className="size-3.5" />
+        <Icon className={cn("size-3.5", merged && "text-merged")} />
       </span>
       <div className="min-w-0">
-        <p className="text-xs leading-5">
-          {t(labelKey, {
-            defaultValue: t("workspace.profile.activityTypes.fallback"),
+        <p className="text-sm leading-5 wrap-anywhere">
+          <strong className="font-semibold" title={activity.repository}>
+            {repository}
+          </strong>{" "}
+          {t(`workspace.profile.activitySummary.${summaryType}`, {
+            defaultValue: t("workspace.profile.activitySummary.fallback", {
+              type: activity.eventType,
+            }),
             action,
             count: activity.commitCount ?? 0,
-            number: activity.resourceNumber,
-            reference: activity.reference,
-            repository: activity.repository,
-            title: activity.resourceTitle,
+            number: activity.resourceNumber ? `#${activity.resourceNumber}` : "",
             type: activity.eventType,
           })}
         </p>
-        {activity.resourceTitle ? (
-          <p className="text-muted-foreground truncate text-[11px]">{activity.resourceTitle}</p>
-        ) : null}
+        {detail ? <p className="mt-1 text-xs leading-5 wrap-anywhere">{detail}</p> : null}
       </div>
-      <time className="text-muted-foreground pt-0.5 text-[11px] whitespace-nowrap">
+      <time
+        dateTime={activity.createdAt}
+        className="text-muted-foreground pt-0.5 text-xs whitespace-nowrap"
+      >
         {new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" }).format(
           new Date(activity.createdAt)
         )}
@@ -243,89 +209,103 @@ function ProfileIdentity({
   ].filter(Boolean) as Array<[typeof Building2, string]>;
 
   return (
-    <aside className="flex min-w-0 flex-col gap-4 min-[1180px]:border-r min-[1180px]:pr-5">
-      <Avatar className="size-28 border">
-        <AvatarImage src={profile.avatarUrl} alt={`@${profile.login}`} />
-        <AvatarFallback>{initials(profile)}</AvatarFallback>
-      </Avatar>
-      <div className="min-w-0">
-        <h2 className="text-2xl font-semibold tracking-[-0.03em]">
-          {profile.name ?? profile.login}
-        </h2>
-        <p className="text-muted-foreground truncate text-sm">{profile.login}</p>
-      </div>
-      {profile.bio ? <p className="text-xs leading-5">{profile.bio}</p> : null}
-      {profile.viewerOwnsProfile ? (
-        <Button variant="outline" size="sm" onClick={onEdit}>
-          <Pencil data-icon="inline-start" />
-          {t("workspace.profile.edit")}
-        </Button>
-      ) : (
-        <Button
-          variant={profile.viewerFollows ? "outline" : "default"}
-          size="sm"
-          disabled={followPending}
-          onClick={onFollow}
-        >
-          {followPending ? (
-            <Spinner data-icon="inline-start" />
-          ) : (
-            <UserCheck data-icon="inline-start" />
-          )}
-          {profile.viewerFollows ? t("workspace.profile.unfollow") : t("workspace.profile.follow")}
-        </Button>
-      )}
-      {!profile.viewerOwnsProfile && profile.followsViewer ? (
-        <span className="text-muted-foreground text-[11px]">
-          {t("workspace.profile.followsYou")}
-        </span>
-      ) : null}
-      <div className="flex flex-wrap gap-3 text-xs">
-        <button
-          type="button"
-          className="hover:text-primary"
-          onClick={() => onShowConnections("followers")}
-        >
-          <strong className="font-mono tabular-nums">{profile.followers}</strong>{" "}
-          <span className="text-muted-foreground">{t("workspace.profile.followers")}</span>
-        </button>
-        <button
-          type="button"
-          className="hover:text-primary"
-          onClick={() => onShowConnections("following")}
-        >
-          <strong className="font-mono tabular-nums">{profile.following}</strong>{" "}
-          <span className="text-muted-foreground">{t("workspace.profile.following")}</span>
-        </button>
-      </div>
-      {details.length ? (
-        <ul className="flex flex-col gap-2">
-          {details.map(([Icon, text]) => (
-            <li
-              key={text}
-              className="text-muted-foreground flex min-w-0 items-center gap-2 text-xs"
-            >
-              <Icon className="size-3.5 shrink-0" />
-              <span className="truncate">{text}</span>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      <p className="text-muted-foreground text-[11px]">
-        {t("workspace.profile.joined", { date: joined })}
-      </p>
-      <dl className="grid grid-cols-2 gap-1 overflow-hidden rounded-md border">
-        <div className="bg-muted/15 px-3 py-2">
-          <dt className="text-muted-foreground text-[11px]">
-            {t("workspace.profile.repositories")}
-          </dt>
-          <dd className="font-mono text-sm tabular-nums">{profile.publicRepositories}</dd>
+    <aside className="@container/profile flex min-w-0 flex-col gap-4">
+      <div className="flex items-start gap-4">
+        <Avatar className="size-18 shrink-0 border">
+          <AvatarImage src={profile.avatarUrl} alt={`@${profile.login}`} />
+          <AvatarFallback>{initials(profile)}</AvatarFallback>
+        </Avatar>
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-xl font-semibold tracking-[-0.03em] wrap-anywhere">
+                {profile.name ?? profile.login}
+              </h2>
+              <p className="text-muted-foreground text-xs wrap-anywhere">@{profile.login}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {profile.viewerOwnsProfile ? (
+                <Button variant="outline" size="sm" onClick={onEdit}>
+                  <Pencil data-icon="inline-start" />
+                  {t("workspace.profile.edit")}
+                </Button>
+              ) : (
+                <Button
+                  variant={profile.viewerFollows ? "outline" : "default"}
+                  size="sm"
+                  disabled={followPending}
+                  onClick={onFollow}
+                >
+                  {followPending ? (
+                    <Spinner data-icon="inline-start" />
+                  ) : (
+                    <UserCheck data-icon="inline-start" />
+                  )}
+                  {profile.viewerFollows
+                    ? t("workspace.profile.unfollow")
+                    : t("workspace.profile.follow")}
+                </Button>
+              )}
+              <Button variant="outline" size="sm" onClick={() => void openExternalUrl(profile.url)}>
+                <ExternalLink data-icon="inline-start" />
+                {t("workspace.repositories.openOnGitHub")}
+              </Button>
+            </div>
+          </div>
+          {profile.bio ? (
+            <p className="text-xs leading-5 wrap-anywhere whitespace-pre-wrap">{profile.bio}</p>
+          ) : null}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+            <span>
+              <strong className="font-mono tabular-nums">{profile.publicRepositories}</strong>{" "}
+              <span className="text-muted-foreground">{t("workspace.profile.repositories")}</span>
+            </span>
+            <span>
+              <strong className="font-mono tabular-nums">{profile.publicGists}</strong>{" "}
+              <span className="text-muted-foreground">{t("workspace.nav.gists")}</span>
+            </span>
+            <div className="flex flex-wrap gap-3 text-xs">
+              <button
+                type="button"
+                className="hover:text-primary focus-visible:ring-ring rounded-sm outline-none focus-visible:ring-2"
+                onClick={() => onShowConnections("followers")}
+              >
+                <strong className="font-mono tabular-nums">{profile.followers}</strong>{" "}
+                <span className="text-muted-foreground">{t("workspace.profile.followers")}</span>
+              </button>
+              <button
+                type="button"
+                className="hover:text-primary focus-visible:ring-ring rounded-sm outline-none focus-visible:ring-2"
+                onClick={() => onShowConnections("following")}
+              >
+                <strong className="font-mono tabular-nums">{profile.following}</strong>{" "}
+                <span className="text-muted-foreground">{t("workspace.profile.following")}</span>
+              </button>
+            </div>
+          </div>
+          {details.length ? (
+            <ul className="flex flex-wrap gap-x-4 gap-y-2">
+              {details.map(([Icon, text]) => (
+                <li
+                  key={text}
+                  className="text-muted-foreground flex min-w-0 items-start gap-1.5 text-xs"
+                >
+                  <Icon className="mt-0.5 size-3.5 shrink-0" />
+                  <span className="wrap-anywhere">{text}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <p className="text-muted-foreground text-[11px]">
+            {t("workspace.profile.joined", { date: joined })}
+          </p>
+          {!profile.viewerOwnsProfile && profile.followsViewer ? (
+            <span className="text-muted-foreground text-[11px]">
+              {t("workspace.profile.followsYou")}
+            </span>
+          ) : null}
         </div>
-        <div className="bg-muted/15 px-3 py-2">
-          <dt className="text-muted-foreground text-[11px]">{t("workspace.nav.gists")}</dt>
-          <dd className="font-mono text-sm tabular-nums">{profile.publicGists}</dd>
-        </div>
-      </dl>
+      </div>
     </aside>
   );
 }
@@ -431,7 +411,9 @@ export function GitHubProfileView({
   const queryClient = useQueryClient();
   const desktopRuntime = isTauri();
   const [selectedUsername, setSelectedUsername] = useState<string | null>(initialUsername);
+  const profileScroll = useListScroll(JSON.stringify({ username: selectedUsername }));
   const [connectionKind, setConnectionKind] = useState<GitHubProfileConnectionKind>("followers");
+  const [connectionsOpen, setConnectionsOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const profileResult = useQuery({
     ...userProfileQueryOptions({ username: selectedUsername }),
@@ -488,6 +470,7 @@ export function GitHubProfileView({
 
   useEffect(() => {
     setConnectionKind("followers");
+    setConnectionsOpen(false);
   }, [profile?.login]);
 
   useEffect(() => {
@@ -527,7 +510,9 @@ export function GitHubProfileView({
           variant="outline"
           size="sm"
           disabled={!desktopRuntime || profileResult.isFetching}
-          onClick={() => void profileResult.refetch()}
+          onClick={() =>
+            void queryClient.invalidateQueries({ queryKey: githubQueryKeys.profilesRoot })
+          }
         >
           {profileResult.isFetching ? (
             <Spinner data-icon="inline-start" />
@@ -544,7 +529,7 @@ export function GitHubProfileView({
         />
       ) : null}
 
-      <ScrollArea className="min-h-0 flex-1" constrainContentWidth>
+      <ScrollArea className="min-h-0 flex-1" constrainContentWidth {...profileScroll}>
         {runtimeError ? (
           <Empty className="min-h-[420px]">
             <EmptyHeader>
@@ -568,7 +553,7 @@ export function GitHubProfileView({
         ) : !profile ? (
           <ProfileSkeleton />
         ) : (
-          <div className="mx-auto grid w-full max-w-[1160px] gap-5 p-5 min-[1180px]:grid-cols-[260px_minmax(0,1fr)]">
+          <div className="mx-auto flex w-full max-w-[1160px] flex-col gap-5 p-5">
             <ProfileIdentity
               profile={profile}
               followPending={followMutation.isPending}
@@ -583,7 +568,10 @@ export function GitHubProfileView({
                   previousFollowed: profile.viewerFollows,
                 })
               }
-              onShowConnections={setConnectionKind}
+              onShowConnections={(kind) => {
+                setConnectionKind(kind);
+                setConnectionsOpen(true);
+              }}
             />
             <div className="flex min-w-0 flex-col gap-5">
               {contributions.data && contributions.error ? (
@@ -610,18 +598,16 @@ export function GitHubProfileView({
                   </div>
                 </Alert>
               ) : contributions.data ? (
-                <ContributionCalendar summary={contributions.data} />
+                <ContributionCalendar
+                  key={`calendar:${profile.login}`}
+                  summary={contributions.data}
+                />
               ) : null}
 
-              <ConnectionList
-                profile={profile}
-                kind={connectionKind}
-                onKindChange={setConnectionKind}
-                onSelect={setSelectedUsername}
-              />
+              <GitHubProfileReadmeSection key={`readme:${profile.login}`} profile={profile} />
 
               <section className="flex flex-col gap-2">
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
                   <h2 className="text-sm font-semibold">{t("workspace.profile.publicActivity")}</h2>
                   <span className="text-muted-foreground text-[11px]">
                     {t("workspace.profile.activityWindow")}
@@ -657,7 +643,12 @@ export function GitHubProfileView({
                 ) : (
                   <div className="divide-y">
                     {activities.map((item) => (
-                      <ActivityRow key={item.id} activity={item} locale={i18n.language} />
+                      <ActivityRow
+                        key={item.id}
+                        activity={item}
+                        locale={i18n.language}
+                        profileLogin={profile.login}
+                      />
                     ))}
                   </div>
                 )}
@@ -678,6 +669,25 @@ export function GitHubProfileView({
         )}
       </ScrollArea>
 
+      {profile ? (
+        <Dialog open={connectionsOpen} onOpenChange={setConnectionsOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t(`workspace.profile.${connectionKind}`)}</DialogTitle>
+              <DialogDescription>@{profile.login}</DialogDescription>
+            </DialogHeader>
+            <ConnectionList
+              profile={profile}
+              kind={connectionKind}
+              onKindChange={setConnectionKind}
+              onSelect={(username) => {
+                setConnectionsOpen(false);
+                setSelectedUsername(username);
+              }}
+            />
+          </DialogContent>
+        </Dialog>
+      ) : null}
       {profile?.viewerOwnsProfile ? (
         <GitHubProfileEditorDialog
           open={editOpen}

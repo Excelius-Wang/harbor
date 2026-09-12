@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type {
   GitHubBlame,
   GitHubCodeOverview,
+  GitHubProfileReadme,
   GitHubCodeSearchPage,
   GitHubCommitDetailPage,
   GitHubCommitCommentPage,
@@ -491,6 +492,8 @@ export const githubQueryKeys = {
   profile: ({ username }: GitHubProfileTarget) =>
     ["github", "profile", username ?? "viewer"] as const,
   profilesRoot: ["github", "profile"] as const,
+  profileReadme: ({ username }: GitHubProfileActivityTarget) =>
+    ["github", "profile", username, "readme"] as const,
   profileContributions: ({ username }: GitHubProfileActivityTarget) =>
     ["github", "profile", username, "contributions"] as const,
   profileConnections: ({ username, kind }: GitHubProfileConnectionTarget) =>
@@ -2274,5 +2277,13 @@ export function workflowJobLogQueryOptions(target: GitHubWorkflowJobLogTarget) {
         jobId: target.jobId,
       }),
     staleTime: Number.POSITIVE_INFINITY,
+  });
+}
+
+export function profileReadmeQueryOptions(target: GitHubProfileActivityTarget) {
+  return queryOptions({
+    queryKey: githubQueryKeys.profileReadme(target),
+    queryFn: () => invoke<GitHubProfileReadme | null>("github_get_profile_readme", target),
+    staleTime: GITHUB_QUERY_STALE_TIME,
   });
 }

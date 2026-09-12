@@ -2835,3 +2835,5 @@ export type GitHubProjectItemUpdate =
   | { kind: "iteration"; fieldId: string; iterationId: string };
 
 export type GitHubProjectItemAction = "archive" | "unarchive" | "delete";
+
+export type GitHubProfileReadme = { readme: GitHubReadme; reference: string };

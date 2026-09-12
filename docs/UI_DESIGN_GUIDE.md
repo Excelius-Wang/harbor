@@ -224,3 +224,39 @@ Discovery 保持居中的最大内容宽度，标题、筛选与列表对齐。�
 ### 仓库栏目标签的溢出处理 — 2026-09-10
 
 仓库页的二级标签栏保持 40 px 高度，选中线与键盘焦点留在栏内，禁止纵向滚动。横向空间不足时显示带名称提示的左右按钮，滚到边界后禁用对应方向；原生滚动条隐藏，触控板横向滚动仍可用。标签间距按详情区宽度调整，选择标签或改变窗口宽度后，当前标签应完整进入视野。所有栏目保留原有 Radix 键盘行为，窗口变宽、全部标签能放下时不显示左右按钮。此规则由仓库页局部组合实现，不修改共享 Tabs 默认样式。
+
+### Personal profile — 2026-09-10
+
+Use a compact horizontal identity group with a 72 px round avatar, wrapping identity/metadata
+and secondary edit/follow/Web actions. Connections open from the counts instead of taking a
+permanent content column. Show a public same-name repository's nonempty root README first,
+fully expanded by default in the existing reading material; use the page scroll with no height
+cap or expansion control. Omit absent READMEs. Contributions and public activity follow in order.
+Keep calendar month/weekday labels, a color legend and keyboard inspection; show the total once.
+
+### Profile calendar feedback — 2026-09-10
+
+The user approved a brief staggered entrance on first visibility, a smooth month change and
+slight hover/focus enlargement with date/count details. Use 160 ms feedback; the initial stagger
+adds at most 160 ms. Do not replay entry on a data refresh. Honor reduced motion with static
+focus/tooltip feedback. Preserve the overall cool blue-gray palette; improve calendar-specific
+level distinction using semantic colors. Provide year/month controls and date navigation with
+actual data bounds. No README image zoom is wanted.
+
+Activity rows prioritize repository/action/number, with a separate readable title/reference
+line. Omit only the viewed user's redundant owner prefix; keep other repository owners.
+
+### Resident calendar companion — 2026-09-11
+
+The user approved teal-green contribution data against the cool blue-gray shell and moved the
+calendar above the fully expanded Profile README. `--contribution-*` tokens belong to calendar
+intensity, not GitHub success states. Preserve separate day-digit foregrounds for stable contrast.
+
+The approved B traveler design with C movement appears directly on date tiles; there is no
+separate companion lane. Year mode uses a compact sprite; month mode provides room for full poses.
+A header badge opens level and pause controls. Brief arrival, directional travel, peaceful rest,
+Bug and treasure encounters are approved exceptions
+to the ordinary short-feedback guideline. Travel/encounter/feedback phases stay bounded; idle
+movement is occasional and subtle. Pause activity offscreen, in background and on request;
+reduced motion remains static. Do not obscure data or add sound, image zoom, currencies or shops.
+Level/progress derive only from real past-year contribution totals; clicks cannot farm experience.

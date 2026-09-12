@@ -206,7 +206,8 @@
         "started": "开始了",
         "added": "添加了",
         "edited": "编辑了",
-        "submitted": "提交了"
+        "submitted": "提交了",
+        "merged": "合并了"
       },
       "activityTypes": {
         "PushEvent": "向 {{repository}} 推送了 {{count}} 个提交",
@@ -230,7 +231,52 @@
         "following": "这个用户还没有关注任何人。",
         "activity": "近 30 天没有可显示的公开动态。"
       },
-      "followFailed": "关注状态更新失败"
+      "followFailed": "关注状态更新失败",
+      "readme": "个人介绍",
+      "readmeFailed": "暂时无法读取个人介绍",
+      "contributionLess": "少",
+      "contributionMore": "多",
+      "calendarView": "日历视图",
+      "yearView": "全年",
+      "monthView": "月份",
+      "previousMonth": "上个月",
+      "nextMonth": "下个月",
+      "monthContributions": "{{from}}至{{to}} · {{count}} 次贡献",
+      "activitySummary": {
+        "PushEvent": "推送了 {{count}} 个提交",
+        "PullRequestEvent": "{{action}}拉取请求 {{number}}",
+        "PullRequestReviewEvent": "{{action}}拉取请求评审",
+        "IssuesEvent": "{{action}} Issue {{number}}",
+        "IssueCommentEvent": "{{action}} Issue {{number}} 的评论",
+        "PullRequestReviewCommentEvent": "发表了评审评论",
+        "DiscussionEvent": "{{action}}讨论",
+        "DiscussionCommentEvent": "评论了讨论",
+        "ForkEvent": "复刻了仓库",
+        "WatchEvent": "加了星标",
+        "CreateEvent": "创建了分支或标签",
+        "DeleteEvent": "删除了分支或标签",
+        "ReleaseEvent": "{{action}}版本发布",
+        "PublicEvent": "将仓库设为公开",
+        "fallback": "{{type}}",
+        "repositoryCreated": "创建了仓库"
+      },
+      "yearMetrics": "过去一年统计",
+      "companion": {
+        "name": "日历探险者",
+        "hint": "点击日期，让伙伴探索你的贡献足迹。",
+        "level": "Lv. {{level}} · 探索者",
+        "progress": "年度探索等级进度",
+        "pause": "暂停伙伴",
+        "resume": "继续探索",
+        "rest": "在这里休息一下",
+        "explore": "留下新的探索足迹",
+        "bug": "发现一只小 Bug",
+        "chest": "发现了一个宝箱",
+        "levelUp": "升至 Lv. {{level}}",
+        "settings": "像素伙伴设置",
+        "levelRule": "过去一年 {{count}} 次贡献，每 100 次提升一级。探索日期不会增加经验。",
+        "clearDate": "取消日期选择"
+      }
     },
     "notifications": {
       "eyebrow": "GitHub 收件箱",

@@ -6,6 +6,13 @@ use crate::error::AppError;
 
 use super::{authenticated_client, github_error, GitHubService, OctocrabGitHubClient};
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitHubProfileReadme {
+    pub readme: super::code::GitHubReadme,
+    pub reference: String,
+}
+
 const PROFILE_CONNECTION_PAGE_SIZE: u8 = 30;
 const PROFILE_ACTIVITY_PAGE_SIZE: u8 = 30;
 
@@ -188,6 +195,12 @@ pub struct GitHubProfileActivityPage {
 
 #[async_trait]
 pub(crate) trait GitHubProfileClient: Send + Sync {
+    async fn profile_readme(
+        &self,
+        token: &str,
+        username: &str,
+    ) -> Result<Option<GitHubProfileReadme>, AppError>;
+
     async fn user_profile(
         &self,
         token: &str,
@@ -230,6 +243,14 @@ pub(crate) trait GitHubProfileClient: Send + Sync {
 }
 
 impl GitHubService {
+    pub async fn profile_readme(
+        &self,
+        username: &str,
+    ) -> Result<Option<GitHubProfileReadme>, AppError> {
+        let token = self.load_access_token().await?;
+        self.client.profile_readme(&token, username).await
+    }
+
     pub async fn user_profile(
         &self,
         username: Option<&str>,
@@ -416,6 +437,74 @@ struct RawActivityRepository {
 
 #[async_trait]
 impl GitHubProfileClient for OctocrabGitHubClient {
+    async fn profile_readme(
+        &self,
+        token: &str,
+        username: &str,
+    ) -> Result<Option<GitHubProfileReadme>, AppError> {
+        let client = authenticated_client(token)?;
+        let repository = match client.repos(username, username).get().await {
+            Ok(repository) => repository,
+            Err(octocrab::Error::GitHub { source, .. })
+                if source.status_code == StatusCode::NOT_FOUND =>
+            {
+                return Ok(None)
+            }
+            Err(error) => return Err(github_error(error)),
+        };
+        // A private same-name repository is not a public Profile README.
+        if repository.private != Some(false) {
+            return Ok(None);
+        }
+        let Some(reference) = repository.default_branch else {
+            return Ok(None);
+        };
+        let contents = match client
+            .repos(username, username)
+            .get_content()
+            .r#ref(&reference)
+            .send()
+            .await
+        {
+            Ok(content) => content,
+            Err(octocrab::Error::GitHub { source, .. })
+                if [StatusCode::NOT_FOUND, StatusCode::CONFLICT].contains(&source.status_code) =>
+            {
+                return Ok(None)
+            }
+            Err(error) => return Err(github_error(error)),
+        };
+        // Resolve the root file explicitly: /readme may prefer .github/README.md.
+        let Some(entry) = contents
+            .items
+            .into_iter()
+            .find(|entry| entry.r#type == "file" && entry.path.eq_ignore_ascii_case("README.md"))
+        else {
+            return Ok(None);
+        };
+        let contents = match client
+            .repos(username, username)
+            .get_content()
+            .path(&entry.path)
+            .r#ref(&reference)
+            .send()
+            .await
+        {
+            Ok(contents) => contents,
+            Err(octocrab::Error::GitHub { source, .. })
+                if [StatusCode::NOT_FOUND, StatusCode::CONFLICT].contains(&source.status_code) =>
+            {
+                return Ok(None)
+            }
+            Err(error) => return Err(github_error(error)),
+        };
+        let content = contents.items.into_iter().next().ok_or_else(|| {
+            AppError::GitHub("GitHub did not return Profile README content".into())
+        })?;
+        let readme = super::code::readme_from_octocrab(content)?;
+        Ok(profile_readme_from_content(readme, reference))
+    }
+
     async fn user_profile(
         &self,
         token: &str,
@@ -757,15 +846,29 @@ fn profile_activity_from_raw(raw: RawActivityEvent) -> GitHubProfileActivity {
         .and_then(serde_json::Value::as_u64)
         .and_then(|count| u32::try_from(count).ok());
 
+    let raw_action = raw
+        .payload
+        .get("action")
+        .and_then(serde_json::Value::as_str);
+    let action = if raw.event_type == "PullRequestEvent"
+        && raw_action == Some("closed")
+        && raw
+            .payload
+            .pointer("/pull_request/merged")
+            .and_then(serde_json::Value::as_bool)
+            == Some(true)
+    {
+        Some("merged")
+    } else {
+        raw_action
+    }
+    .map(ToOwned::to_owned);
+
     GitHubProfileActivity {
         id: raw.id,
         event_type: raw.event_type,
         repository: raw.repo.name,
-        action: raw
-            .payload
-            .get("action")
-            .and_then(serde_json::Value::as_str)
-            .map(ToOwned::to_owned),
+        action,
         reference,
         resource_number: resource
             .and_then(|resource| resource.get("number"))
@@ -828,6 +931,15 @@ mod tests;
 #[cfg(test)]
 #[async_trait]
 impl GitHubProfileClient for super::tests::FakeGitHubClient {
+    async fn profile_readme(
+        &self,
+        token: &str,
+        _username: &str,
+    ) -> Result<Option<GitHubProfileReadme>, AppError> {
+        assert_eq!(token, "github-user-access-token");
+        Ok(None)
+    }
+
     async fn user_profile(
         &self,
         token: &str,
@@ -942,4 +1054,18 @@ fn fake_profile(login: &str) -> GitHubUserProfile {
         viewer_follows: false,
         follows_viewer: false,
     }
+}
+
+fn profile_readme_from_content(
+    readme: super::code::GitHubReadme,
+    reference: String,
+) -> Option<GitHubProfileReadme> {
+    // The repository README endpoint can also resolve docs/ or .github/ files.
+    if readme.path.contains('/')
+        || !readme.name.eq_ignore_ascii_case("README.md")
+        || readme.content.trim().is_empty()
+    {
+        return None;
+    }
+    Some(GitHubProfileReadme { readme, reference })
 }

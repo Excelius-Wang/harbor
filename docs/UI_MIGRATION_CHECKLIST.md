@@ -326,3 +326,45 @@ User-approved repository-page refinement: name/owner hierarchy, top-aligned neut
 ## Repository tab overflow — 2026-09-10
 
 Following reviewed/merged PR #94, the native repository tab-strip defect is fixed locally on `fix/repository-tab-overflow`. The local 40 px strip contains its active underline, hides native scrollbars and supplies bounded, accessible arrow navigation with active-tab reveal. Browser geometry and keyboard/pointer/resize checks, native before/after observations and final pnpm check pass; see [UI_VERIFICATION.md](UI_VERIFICATION.md). Other shared Tabs consumers are unchanged. The user subsequently authorized this second batch for PR review and merge.
+
+### Profile layout and README — 2026-09-10
+
+- [x] Compact horizontal identity, count-triggered connections dialog, GitHub Web action.
+- [x] Optional public root Profile README, default-branch links/images, fully expanded content.
+- [x] Calendar months/weekdays/legend and keyboard day inspection; remove duplicate total.
+- [x] English/Chinese, light/dark, 900/wide browser layout and README state verification.
+- [x] Frontend regression tests and native profile tests; see [evidence](verification/profile-layout/README.md).
+- No new native material or live GitHub acceptance claim; global material remains unchanged.
+
+### Profile calendar feedback — 2026-09-10
+
+- [x] First-visible stagger, month transitions, hover/focus detail and reduced-motion fallback.
+- [x] Data-bounded month navigation; larger date cells, UTC placement and retained refresh state.
+- [x] Readable activity identity/action/detail hierarchy; no image zoom or README collapse.
+- [x] Eight real-contribution snapshot browser combinations and focused regression tests.
+- Evidence and remaining verification scope: [calendar feedback](verification/profile-feedback/README.md).
+
+### Green calendar and resident explorer — 2026-09-11
+
+- [x] Calendar precedes fully expanded README; green data palette is distinct from the shell.
+- [x] Default original pixel companion, cancellable click/keyboard encounters and real-data level.
+- [x] Pause/resume in flight, offscreen/background pause, reduced-motion static feedback.
+- [x] 683 tests and build checks; eight browser combinations plus visibility/color/interaction probes.
+- Evidence and native/live-data limits: [companion verification](verification/profile-companion/README.md).
+
+
+### Calendar map companion — 2026-09-11
+
+- [x] Approved B traveler/C motion placed directly on date tiles; separate stage removed.
+- [x] Compact badge menu, pointer-transparent decoration, readable month numbers and tooltips.
+- [x] Frame-based walking/swing, chest/rest, deterministic encounters and real-only levels.
+- [x] 684 tests/build and eight browser combinations, plus scroll/resize/pause/replacement.
+- [x] [Evidence and generated-asset provenance](verification/calendar-map/README.md) recorded.
+
+
+### Calendar review corrections — 2026-09-11
+
+Fixed same-width rolling-year positioning, repeated-observer facing, selected-date tooltip
+ownership and Sunday/month-label overlap. Three new failing regressions now pass; full check
+passes 687 tests and the eight-case browser review passes. No Rust or shared-primitives changed.
+[Review findings and evidence](verification/calendar-review/README.md).

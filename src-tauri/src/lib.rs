@@ -55,6 +55,7 @@ pub fn run() {
             commands::github_list_trending_developers,
             commands::github_list_developer_feed,
             commands::github_get_user_profile,
+            commands::github_get_profile_readme,
             commands::github_update_personal_profile,
             commands::github_get_user_contributions,
             commands::github_list_profile_connections,

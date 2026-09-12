@@ -144,3 +144,48 @@ fn contribution_mapping_keeps_calendar_counts_and_private_summary() {
     assert_eq!(summary.months.len(), 1);
     assert_eq!(summary.weeks[0].days[0].contribution_count, 4);
 }
+
+#[test]
+fn profile_readme_only_accepts_nonempty_root_markdown() {
+    let make = |path: &str, content: &str| super::super::code::GitHubReadme {
+        name: path.rsplit('/').next().unwrap().to_string(),
+        path: path.to_string(),
+        content: content.to_string(),
+        url: "https://github.com/octocat/octocat/blob/main/README.md".to_string(),
+    };
+    assert!(profile_readme_from_content(make("README.md", "# Hello"), "main".into()).is_some());
+    assert!(
+        profile_readme_from_content(make("readme.MD", "# Hello"), "custom/branch".into()).is_some()
+    );
+    for (path, text) in [
+        ("docs/README.md", "hello"),
+        (".github/README.md", "hello"),
+        ("README.rst", "hello"),
+        ("README.md", " \n"),
+    ] {
+        assert!(
+            profile_readme_from_content(make(path, text), "main".into()).is_none(),
+            "{path}"
+        );
+    }
+}
+
+#[test]
+fn activity_mapping_distinguishes_merged_pull_requests_from_closed_events() {
+    for (event_type, action, merged, expected) in [
+        ("PullRequestEvent", "closed", Some(true), "merged"),
+        ("PullRequestEvent", "closed", Some(false), "closed"),
+        ("PullRequestEvent", "closed", None, "closed"),
+        ("PullRequestEvent", "opened", Some(true), "opened"),
+        ("IssuesEvent", "closed", Some(true), "closed"),
+    ] {
+        let raw: RawActivityEvent = serde_json::from_value(serde_json::json!({
+            "id": "merged-event", "type": event_type, "repo": {"name": "octocat/hello"},
+            "created_at": "2026-09-11T00:00:00Z",
+            "payload": {"action": action, "pull_request": {"number": 96, "title": "Profile", "merged": merged}}
+        })).unwrap();
+        let mapped = profile_activity_from_raw(raw);
+        assert_eq!(mapped.action.as_deref(), Some(expected));
+        assert_eq!(mapped.resource_number, Some(96));
+    }
+}

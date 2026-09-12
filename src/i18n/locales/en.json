@@ -206,7 +206,8 @@
         "started": "Started",
         "added": "Added",
         "edited": "Edited",
-        "submitted": "Submitted"
+        "submitted": "Submitted",
+        "merged": "Merged"
       },
       "activityTypes": {
         "PushEvent": "Pushed {{count}} commits to {{repository}}",
@@ -230,7 +231,52 @@
         "following": "This user is not following anyone yet.",
         "activity": "No public activity is available for the last 30 days."
       },
-      "followFailed": "Repolane could not update the follow status"
+      "followFailed": "Repolane could not update the follow status",
+      "readme": "Profile README",
+      "readmeFailed": "Could not load the Profile README",
+      "contributionLess": "Less",
+      "contributionMore": "More",
+      "calendarView": "Calendar view",
+      "yearView": "Year",
+      "monthView": "Month",
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month",
+      "monthContributions": "{{from}} – {{to}} · {{count}} contributions",
+      "activitySummary": {
+        "PushEvent": "Pushed {{count}} commits",
+        "PullRequestEvent": "{{action}} pull request {{number}}",
+        "PullRequestReviewEvent": "{{action}} a pull request review",
+        "IssuesEvent": "{{action}} issue {{number}}",
+        "IssueCommentEvent": "{{action}} a comment on Issue {{number}}",
+        "PullRequestReviewCommentEvent": "Commented on a pull request review",
+        "DiscussionEvent": "{{action}} a discussion",
+        "DiscussionCommentEvent": "Commented on a discussion",
+        "ForkEvent": "Forked repository",
+        "WatchEvent": "Starred repository",
+        "CreateEvent": "Created a branch or tag",
+        "DeleteEvent": "Deleted a branch or tag",
+        "ReleaseEvent": "{{action}} a release",
+        "PublicEvent": "Made repository public",
+        "fallback": "{{type}}",
+        "repositoryCreated": "Created repository"
+      },
+      "yearMetrics": "Past year totals",
+      "companion": {
+        "name": "Calendar explorer",
+        "hint": "Choose a date to explore your contributions.",
+        "level": "Lv. {{level}} · Explorer",
+        "progress": "Progress toward the next annual explorer level",
+        "pause": "Pause companion",
+        "resume": "Resume companion",
+        "rest": "A quiet place to rest",
+        "explore": "A new footprint on the map",
+        "bug": "Found a little Bug",
+        "chest": "Discovered a treasure chest",
+        "levelUp": "Reached Lv. {{level}}",
+        "settings": "Pixel companion settings",
+        "levelRule": "{{count}} contributions this year · one level per 100 contributions. Exploring dates does not add experience.",
+        "clearDate": "Clear selected date"
+      }
     },
     "notifications": {
       "eyebrow": "GitHub inbox",

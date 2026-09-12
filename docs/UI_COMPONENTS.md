@@ -246,3 +246,49 @@ Pages write controls share a pending guard and the authoritative workspace archi
 ## Repository tab strip
 
 `github-repository-tabs.tsx` composes the existing Radix Tabs and Button/Tooltip primitives for repository sections. The 40 px strip keeps its selection underline and keyboard focus inside the viewport, hides its native scrollbar, and exposes translated arrow controls only when content exceeds the full available strip width. Arrow visibility is measured before subtracting arrow space, avoiding a self-sustaining overflow state after widening the pane. Resize and selection changes reveal the active tab; manual arrow or wheel scrolling remains independent of selection. Tab spacing responds to the repository pane rather than the app window. Shared Tabs styles and other consumers are unchanged.
+
+## Profile README and connections
+
+`GitHubProfileReadmeSection` uses an independent profile query and the shared sanitized
+Markdown reader, with full content displayed in the page scroll. A known null response is
+omitted; failed refreshes retain content or absence with a retry notice. The profile header's
+counts open a controlled Dialog containing the existing connection list; the shared overlay
+focus-return behavior restores its opener. The calendar uses a single roving Tab stop with
+arrow/Home/End navigation and focus tooltips.
+
+`?profile=long` supplies long identity and README content; `?profile=no-readme` supplies null.
+Scope `state=loading|error|stale|empty&commands=github_get_profile_readme` or
+`github_list_profile_connections` for isolated recovery checks. These reads remain intercepted.
+
+## Contribution calendar feedback
+
+`ContributionCalendar` owns year/month view state, month bounds derived from daily records,
+one-shot viewport entry and date keyboard navigation. Year cells are 12 px; month cells are
+48 px tall with visible date numbers in the upper-left corner. Monthly range totals use the available days; category
+metrics retain a visible past-year label. Local CSS handles entrance, period and hover feedback
+with a reduced-motion fallback. No new chart package or global control change is introduced.
+
+`?calendar=real` supplies Excelius-Wang's contribution/public-event snapshots from 2026-09-10;
+profile identity metadata is still synthetic. See [feedback verification](verification/profile-feedback/README.md).
+
+## Resident calendar companion
+
+`CalendarCompanion` portals a pointer-transparent sprite layer into the actual date grid. Its
+position uses unscaled cell offsets and tracks grid resize and week-layout revisions; scrolling moves cells and companion
+together. A header Popover contains real annual levels, progress, pause/resume and clear-date
+controls. Date details use the existing Radix Tooltip with explicit pointer/focus ownership plus an immediate live summary; tooltips
+are suppressed while the companion menu is open. Date digits stay above decorative sprites.
+
+The generated B traveler/C movement atlas supplies four walking frames, standing, greeting,
+rest, crouching and two tool-swing poses, plus Bug and chest objects. Sprite boxes are 32 px in
+year mode and 48 px in month mode. The cancellable step timer retains remaining time during
+manual, grid-offscreen and document-background pause. Reduced motion is static. New clicks
+replace destinations; refresh preserves the selected date and only real contributions raise
+levels. No new dependency, native code or business write is introduced.
+See [calendar map verification](verification/calendar-map/README.md) and
+[previous companion evidence](verification/profile-companion/README.md).
+
+
+Calendar review corrections reserve 32 px above annual day rows to separate sprites from month
+labels. Identical ResizeObserver measurements preserve facing, and data-layout revisions move
+the sprite without restarting encounters. See [review evidence](verification/calendar-review/README.md).

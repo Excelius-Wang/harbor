@@ -1,3 +1,5 @@
+import realActivity from "./profile-activity-fixture.json";
+import realContributions from "./profile-contribution-fixture.json";
 import type * as Data from "@/features/github/github-data";
 
 const timestamp = "2026-09-01T10:00:00Z";
@@ -99,13 +101,40 @@ export function moreFixture(
   const login = typeof args.username === "string" ? args.username : "harbor-preview";
   const gist = gists.find((item) => item.id === args.gistId) ?? gists[0];
   switch (command) {
+    case "github_get_profile_readme": {
+      const variant = new URLSearchParams(window.location.search).get("profile");
+      if (empty || variant === "no-readme") return null;
+      const content = `# Hi, I'm ${login}\n\nBuilding a focused GitHub desktop workspace.\n\n## 最近在做 · Recent work\n\n- 开发 Repolane，让 GitHub 工作更专注。\n- Explore open-source tools and document what I learn.\n\n[View source](./README.md)\n`;
+      return {
+        reference: "main",
+        readme: {
+          name: "README.md",
+          path: "README.md",
+          url: `https://github.com/${login}/${login}/blob/main/README.md`,
+          content:
+            variant === "long"
+              ? content +
+                Array.from(
+                  { length: 12 },
+                  (_, i) =>
+                    `\n## Section ${i + 1}\n\nLong profile content remains fully expanded. 个人介绍完整显示。\n`
+                ).join("")
+              : content,
+        },
+      } satisfies Data.GitHubProfileReadme;
+    }
     case "github_get_user_profile":
       return {
         id: 1,
         login,
         avatarUrl: "",
         url: `https://github.com/${login}`,
-        name: login === "harbor-preview" ? "Harbor Preview" : "Alex Morgan",
+        name:
+          new URLSearchParams(window.location.search).get("profile") === "long"
+            ? "Long profile name 个人主页长名称 ".repeat(5)
+            : login === "harbor-preview"
+              ? "Harbor Preview"
+              : "Alex Morgan",
         bio: "Building a focused GitHub desktop workspace. Keeping navigation, reviews and the small details clear.",
         company: "Harbor",
         location: "Shanghai",
@@ -124,6 +153,8 @@ export function moreFixture(
         followsViewer: true,
       } satisfies Data.GitHubUserProfile;
     case "github_get_user_contributions":
+      if (!empty && new URLSearchParams(window.location.search).get("calendar") === "real")
+        return structuredClone(realContributions) as Data.GitHubContributionSummary;
       return {
         login,
         startedAt: "2026-01-01",
@@ -168,6 +199,11 @@ export function moreFixture(
             })),
       } satisfies Data.GitHubUserPage;
     case "github_list_profile_activity":
+      if (!empty && new URLSearchParams(window.location.search).get("calendar") === "real")
+        return {
+          ...page,
+          activities: structuredClone(realActivity),
+        } satisfies Data.GitHubProfileActivityPage;
       return {
         ...page,
         activities: empty

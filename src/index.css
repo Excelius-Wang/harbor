@@ -50,6 +50,12 @@
   --destructive-solid: #b73345;
   --destructive-foreground: #ffffff;
   --success: #1d6e3f;
+  --contribution-1: #b9dfcf;
+  --contribution-2: #73bda1;
+  --contribution-3: #2d8066;
+  --contribution-4: #17654f;
+  --contribution-strong-text: #ffffff;
+  --contribution-mid-text: var(--foreground);
   --merged: #7847a8;
   --attention: #865b0e;
   --border: rgb(50 73 101 / 18%);
@@ -101,6 +107,12 @@
   --destructive-solid: #ac3446;
   --destructive-foreground: #ffffff;
   --success: #78d398;
+  --contribution-1: #287963;
+  --contribution-2: #329b7c;
+  --contribution-3: #51be97;
+  --contribution-4: #81dab3;
+  --contribution-strong-text: #132b24;
+  --contribution-mid-text: #0e211b;
   --merged: #c3a3f0;
   --attention: #eac17d;
   --border: rgb(213 229 251 / 15%);
@@ -765,4 +777,316 @@ button {
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
+}
+
+/* Profile contribution feedback stays local to the calendar. */
+.harbor-contribution-cell,
+.harbor-contribution-swatch {
+  background: color-mix(in oklch, var(--muted-foreground) 18%, var(--background));
+  border-radius: 3px;
+  width: 12px;
+  height: 12px;
+}
+.harbor-contribution-calendar [data-level="1"] {
+  background: var(--contribution-1);
+}
+.harbor-contribution-calendar [data-level="2"] {
+  background: var(--contribution-2);
+}
+.harbor-contribution-calendar [data-level="3"] {
+  background: var(--contribution-3);
+}
+.harbor-contribution-calendar [data-level="4"] {
+  background: var(--contribution-4);
+}
+.harbor-contribution-cell {
+  position: relative;
+  outline: none;
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    background-color 160ms ease;
+}
+.harbor-contribution-cell:hover,
+.harbor-contribution-cell:focus-visible {
+  transform: scale(1.18);
+  box-shadow:
+    0 0 0 2px var(--background),
+    0 0 0 3px var(--ring);
+}
+.harbor-contribution-period[data-month="true"] .harbor-contribution-cell {
+  width: 100%;
+  height: 48px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.harbor-contribution-period[data-month="true"] [data-level="3"],
+.harbor-contribution-period[data-month="true"] [data-level="4"] {
+  color: var(--contribution-strong-text);
+}
+.harbor-contribution-calendar[data-arriving="true"] .harbor-contribution-cell {
+  animation: harbor-contribution-arrive 160ms ease-out backwards;
+  animation-delay: var(--day-delay, 0ms);
+}
+.harbor-contribution-period {
+  animation: harbor-contribution-period 160ms ease-out;
+}
+@keyframes harbor-contribution-arrive {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes harbor-contribution-period {
+  from {
+    opacity: 0.5;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .harbor-contribution-calendar .harbor-contribution-cell,
+  .harbor-contribution-calendar .harbor-contribution-period {
+    animation: none !important;
+    transition: none !important;
+  }
+  .harbor-contribution-cell:hover,
+  .harbor-contribution-cell:focus-visible {
+    transform: none;
+  }
+}
+
+.harbor-contribution-cell[aria-pressed="true"] {
+  box-shadow:
+    0 0 0 2px var(--background),
+    0 0 0 3px var(--contribution-3);
+}
+/* Atlas: 1448x1086, four 362px columns. Authored pose rows start at y=25,394,758;
+   offset each row explicitly to avoid sampling a neighboring pose at tile boundaries. */
+/* The sprite portal shares the date grid's coordinate system and never intercepts input. */
+.harbor-calendar-companion {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  --companion-size: 32px;
+}
+.harbor-calendar-companion[data-month="true"] {
+  --companion-size: 48px;
+}
+.harbor-companion-position {
+  position: absolute;
+  width: var(--companion-size);
+  height: var(--companion-size);
+  margin-left: calc(var(--companion-size) / -2);
+  margin-top: calc(var(--companion-size) * -0.98);
+  transition:
+    left 650ms ease-in-out,
+    top 650ms ease-in-out;
+}
+.harbor-companion-facing {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.harbor-companion-sprite,
+.harbor-companion-badge {
+  display: block;
+  width: var(--companion-size);
+  height: var(--companion-size);
+  background-image: var(--companion-sprites);
+  background-size: 400% 300%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+.harbor-companion-badge {
+  --companion-size: 28px;
+  background-position: 0% calc(var(--companion-size) * -1.0884);
+}
+.harbor-companion-hero {
+  background-position: 0% calc(var(--companion-size) * -1.0884);
+  transform-origin: 50% 88%;
+}
+.harbor-companion-object {
+  position: absolute;
+  left: 65%;
+  top: 19%;
+  opacity: 0;
+}
+.harbor-companion-bug {
+  background-position: 66.666667% calc(var(--companion-size) * -2.0939);
+}
+.harbor-companion-chest {
+  background-image: none;
+}
+.harbor-companion-chest::before,
+.harbor-companion-chest::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--companion-sprites);
+  background-size: 400% 300%;
+  background-position: 100% calc(var(--companion-size) * -2.0939);
+  background-repeat: no-repeat;
+}
+.harbor-companion-chest::before {
+  clip-path: inset(60% 0 0 0);
+}
+.harbor-companion-chest::after {
+  clip-path: inset(0 0 40% 0);
+  transform-origin: 20% 60%;
+}
+.harbor-calendar-companion[data-phase="welcome"] .harbor-companion-hero {
+  background-position: 33.333333% calc(var(--companion-size) * -1.0884);
+  animation: harbor-companion-greet 650ms ease-out;
+}
+.harbor-calendar-companion[data-phase="walking"] .harbor-companion-hero {
+  animation:
+    harbor-companion-steps 520ms steps(1) infinite,
+    harbor-companion-hop 260ms ease-in-out infinite;
+}
+.harbor-calendar-companion[data-phase="encounter"][data-encounter="bug"] .harbor-companion-hero {
+  animation: harbor-companion-swing 450ms steps(1) 2;
+}
+.harbor-calendar-companion[data-phase="encounter"][data-encounter="chest"] .harbor-companion-hero {
+  background-position: 100% calc(var(--companion-size) * -1.0884);
+}
+.harbor-calendar-companion[data-phase="idle"][data-encounter="rest"] .harbor-companion-hero,
+.harbor-calendar-companion[data-phase="encounter"][data-encounter="rest"] .harbor-companion-hero {
+  background-position: 66.666667% calc(var(--companion-size) * -1.0884);
+}
+.harbor-calendar-companion[data-phase="encounter"] .harbor-companion-object,
+.harbor-calendar-companion[data-phase="reward"] .harbor-companion-object {
+  opacity: 1;
+}
+.harbor-calendar-companion[data-phase="reward"] .harbor-companion-bug {
+  animation: harbor-companion-found 600ms ease-out forwards;
+}
+.harbor-calendar-companion[data-phase="reward"] .harbor-companion-chest::after {
+  animation: harbor-companion-lid 600ms ease-out forwards;
+}
+.harbor-companion-spark,
+.harbor-companion-rest {
+  position: absolute;
+  left: 70%;
+  top: 10%;
+  opacity: 0;
+  color: var(--contribution-4);
+  font-size: 12px;
+}
+.harbor-companion-rest {
+  color: var(--foreground);
+}
+.harbor-calendar-companion[data-phase="reward"] .harbor-companion-spark,
+.harbor-calendar-companion[data-phase="encounter"][data-encounter="rest"] .harbor-companion-rest {
+  animation: harbor-companion-found 600ms ease-out;
+}
+.harbor-companion-progress {
+  width: 100%;
+  height: 4px;
+  border: 0;
+  border-radius: 2px;
+  overflow: hidden;
+  background: var(--muted);
+  color: var(--contribution-3);
+  appearance: none;
+}
+.harbor-companion-progress::-webkit-progress-bar {
+  background: var(--muted);
+}
+.harbor-companion-progress::-webkit-progress-value {
+  background: var(--contribution-3);
+}
+.harbor-companion-progress::-moz-progress-bar {
+  background: var(--contribution-3);
+}
+.harbor-calendar-companion[data-active="false"] *,
+.harbor-calendar-companion[data-active="false"] *::before,
+.harbor-calendar-companion[data-active="false"] *::after {
+  animation-play-state: paused !important;
+}
+@keyframes harbor-companion-steps {
+  0%,
+  100% {
+    background-position: 0% calc(var(--companion-size) * -0.0691);
+  }
+  25% {
+    background-position: 33.333333% calc(var(--companion-size) * -0.0691);
+  }
+  50% {
+    background-position: 66.666667% calc(var(--companion-size) * -0.0691);
+  }
+  75% {
+    background-position: 100% calc(var(--companion-size) * -0.0691);
+  }
+}
+@keyframes harbor-companion-swing {
+  0%,
+  100% {
+    background-position: 0% calc(var(--companion-size) * -2.0939);
+  }
+  50% {
+    background-position: 33.333333% calc(var(--companion-size) * -2.0939);
+  }
+}
+@keyframes harbor-companion-hop {
+  50% {
+    transform: translateY(-2px);
+  }
+}
+@keyframes harbor-companion-greet {
+  35% {
+    transform: translateY(-2px) rotate(-4deg);
+  }
+}
+@keyframes harbor-companion-lid {
+  to {
+    transform: translateY(-2px) rotate(-22deg);
+  }
+}
+@keyframes harbor-companion-found {
+  20% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(-4px);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-7px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .harbor-calendar-companion *,
+  .harbor-calendar-companion *::before,
+  .harbor-calendar-companion *::after {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
+.harbor-contribution-period[data-month="true"] [data-level="2"] {
+  color: var(--contribution-mid-text);
+}
+
+.harbor-contribution-number {
+  position: absolute;
+  top: 3px;
+  left: 5px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.harbor-contribution-cell[aria-pressed="true"]:focus-visible {
+  box-shadow:
+    0 0 0 1px var(--background),
+    0 0 0 2px var(--contribution-3),
+    0 0 0 3px var(--background),
+    0 0 0 4px var(--ring);
 }

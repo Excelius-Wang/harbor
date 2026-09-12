@@ -1,0 +1,58 @@
+async page => {
+ const results=[];const errors=[];page.on('pageerror',error=>errors.push(error.message));
+ await page.goto('http://localhost:1423/');
+ for(const lang of ['en','zh'])for(const theme of ['light','dark'])for(const width of [900,1440]){
+  const key=`${lang}-${theme}-${width}`;
+  await page.emulateMedia({reducedMotion:'no-preference'});
+  await page.setViewportSize({width,height:width===900?760:1000});
+  await page.evaluate(({lang,theme})=>{localStorage.setItem('i18nextLng',lang);localStorage.setItem('tauri-ui-theme',theme)},{lang,theme});
+  await page.goto('http://localhost:1423/?calendar=real');
+  await page.getByRole('button',{name:lang==='en'?'Account':'账户',exact:true}).click();
+  const companion=page.locator('.harbor-calendar-companion');await companion.waitFor();
+  await companion.scrollIntoViewIfNeeded();
+  await page.waitForFunction(()=>document.querySelector('.harbor-calendar-companion')?.dataset.phase==='idle');
+  const order=await page.evaluate(()=>Boolean(document.querySelector('.harbor-contribution-calendar').compareDocumentPosition(document.querySelector('.harbor-markdown'))&Node.DOCUMENT_POSITION_FOLLOWING));
+  if(!order)throw Error('README order');
+  if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error(key+' overflow');
+  const sprite=await companion.evaluate(el=>getComputedStyle(el).getPropertyValue('--companion-sprites'));
+  if(!sprite.includes('calendar-companion.png'))throw Error('missing sprite');
+  const level=await companion.locator('progress').getAttribute('value');
+  await page.screenshot({path:`output/playwright/profile-companion/${key}-idle.png`});
+  await page.locator('[data-contribution-day][data-level="4"]').last().click();
+  if(!await companion.getByRole('status').textContent())throw Error('missing immediate date');
+  await page.waitForFunction(()=>document.querySelector('.harbor-calendar-companion').dataset.phase==='encounter');
+  if(await companion.getAttribute('data-encounter')!=='chest')throw Error('missing treasure');
+  await companion.getByRole('button',{name:lang==='en'?'Pause companion':'暂停伙伴',exact:true}).click();
+  await page.waitForTimeout(1100);
+  if(await companion.getAttribute('data-phase')!=='encounter')throw Error('pause failed');
+  await page.screenshot({path:`output/playwright/profile-companion/${key}-chest.png`});
+  await companion.getByRole('button',{name:lang==='en'?'Resume companion':'继续探索',exact:true}).click();
+  const latestDate=await page.locator('[data-contribution-day][data-level="0"]').last().getAttribute('data-contribution-day');
+  await page.locator(`[data-contribution-day="${latestDate}"]`).click();
+  await page.waitForFunction(()=>document.querySelector('.harbor-calendar-companion').dataset.phase==='encounter');
+  if(await companion.getAttribute('data-encounter')!=='rest')throw Error('rest failed');
+  if(await companion.locator('progress').getAttribute('value')!==level)throw Error('click farmed XP');
+  await page.keyboard.press('Escape');
+  if(await page.locator('[data-contribution-day][aria-pressed="true"]').count())throw Error('escape did not clear');
+  await page.getByRole('button',{name:lang==='en'?'Month':'月份',exact:true}).click();
+  await page.getByRole('button',{name:lang==='en'?'Previous month':'上个月',exact:true}).click();
+  const date=page.locator('[data-contribution-day]').first();await date.focus();await page.keyboard.press('Enter');
+  if(await date.getAttribute('aria-pressed')!=='true')throw Error('keyboard selection');
+  await page.getByRole('button',{name:lang==='en'?'Refresh':'刷新',exact:true}).focus();await page.keyboard.press('Enter');
+  await page.waitForFunction(()=>!document.querySelector('svg.animate-spin')&&Array.from(document.querySelectorAll('.harbor-contribution-cell')).every(el=>!el.getAnimations().some(a=>a.playState==='running')));
+  if(await date.getAttribute('aria-pressed')!=='true')throw Error('refresh lost selection');
+  await companion.scrollIntoViewIfNeeded();
+  await page.waitForFunction(()=>document.querySelector('.harbor-calendar-companion').dataset.phase==='idle');
+  await page.screenshot({path:`output/playwright/profile-companion/${key}-month.png`});
+  results.push({key,order,encounters:true,keyboard:true,refreshSelection:true,clickExperienceUnchanged:true});
+ }
+ await page.emulateMedia({reducedMotion:'reduce'});
+ const c=page.locator('.harbor-calendar-companion');
+ await c.scrollIntoViewIfNeeded();
+ await page.waitForFunction(()=>document.querySelector('.harbor-calendar-companion').dataset.active==='false');
+ const reduced=await page.locator('.harbor-companion-hero').evaluate(el=>({animation:getComputedStyle(el).animationName,transform:getComputedStyle(el).transform}));
+ if(reduced.animation!=='none'||reduced.transform!=='none')throw Error('reduced motion failed');
+ await page.screenshot({path:'output/playwright/profile-companion/reduced.png'});
+ if(errors.length)throw Error(errors.join('\n'));
+ return {results,reduced,errors};
+}
