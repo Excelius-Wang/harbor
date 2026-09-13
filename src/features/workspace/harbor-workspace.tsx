@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { isTauri } from "@tauri-apps/api/core";
 import {
   Bell,
+  ScanSearch,
   CircleDot,
   Compass,
   Ellipsis,
@@ -52,6 +53,12 @@ import type { WorkspaceSection } from "./workspace-types";
 import { cn } from "@/lib/utils";
 import { NavigationButton } from "./navigation-button";
 
+const OpportunityView = lazy(() =>
+  import("@/features/opportunities/opportunity-view").then((module) => ({
+    default: module.OpportunityView,
+  }))
+);
+
 const GitHubDiscovery = lazy(() =>
   import("@/features/github/github-discovery-view").then((module) => ({
     default: module.GitHubDiscoveryView,
@@ -93,6 +100,7 @@ const primaryNavItems: NavigationItem[] = [
   { id: "pullRequests", icon: GitPullRequest },
   { id: "repositories", icon: Library },
   { id: "discover", icon: Compass },
+  { id: "opportunities", icon: ScanSearch },
 ];
 
 const secondaryNavItems: NavigationItem[] = [
@@ -250,7 +258,9 @@ function PrimaryNavigation({
   );
 }
 
-export function HarborWorkspace() {
+export function HarborWorkspace({
+  initialSection = "discover",
+}: { initialSection?: WorkspaceSection } = {}) {
   const { t } = useTranslation();
   const [navigationExpanded, setNavigationExpanded] = useState(() => {
     try {
@@ -268,7 +278,7 @@ export function HarborWorkspace() {
       /* Navigation remains usable when storage is unavailable. */
     }
   };
-  const [activeSection, setActiveSection] = useState<WorkspaceSection>("discover");
+  const [activeSection, setActiveSection] = useState<WorkspaceSection>(initialSection);
   const [selectedDiscoveryRepository, setSelectedDiscoveryRepository] =
     useState<GitHubDiscoveryRepositoryTarget | null>(null);
   const [selectedGitHubRepository, setSelectedGitHubRepository] = useState<GitHubRepository | null>(
@@ -343,7 +353,11 @@ export function HarborWorkspace() {
         activeSection={activeSection}
         onSectionChange={setActiveSection}
       />
-      {activeSection === "discover" ? (
+      {activeSection === "opportunities" ? (
+        <Suspense fallback={<WorkspaceFallback />}>
+          <OpportunityView />
+        </Suspense>
+      ) : activeSection === "discover" ? (
         <Suspense fallback={<WorkspaceFallback />}>
           <GitHubDiscovery onSelectRepository={setSelectedDiscoveryRepository} />
         </Suspense>

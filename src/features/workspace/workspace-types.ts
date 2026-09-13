@@ -7,4 +7,5 @@ export type WorkspaceSection =
   | "packages"
   | "profile"
   | "repositories"
-  | "discover";
+  | "discover"
+  | "opportunities";

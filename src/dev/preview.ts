@@ -1,3 +1,4 @@
+import { createOpportunityFixtures } from "./opportunity-fixtures";
 import { createTransferFixtures } from "./transfer-fixtures";
 import { createIssueActionFixtures } from "./issue-action-fixtures";
 import { createPagesActionFixtures } from "./pages-action-fixtures";
@@ -117,6 +118,10 @@ export function installPreview() {
   const openedUrls: string[] = [];
   Object.assign(window, { __harborPreviewOpenedUrls: openedUrls });
   const state = parameters.get("state") ?? "populated";
+  const opportunityFixtures = createOpportunityFixtures(
+    parameters.get("opportunities"),
+    parameters.get("writes") === "accept"
+  );
   const repositoryActions = parameters.get("repoActions");
   const externalRepository = repositoryActions && repositoryActions !== "owned";
   const repositories = repositoryFixtures.map((repository, index) => ({
@@ -297,7 +302,11 @@ export function installPreview() {
     }
     if (command === "github_connection_status")
       return { connected: true, identity: { login: "harbor-preview" } };
-    if (command.startsWith("github_") || command === "repository_context_ask") {
+    if (
+      command.startsWith("github_") ||
+      command.startsWith("opportunity_") ||
+      command === "repository_context_ask"
+    ) {
       if (commandState === "loading") return new Promise(() => {});
       await new Promise((resolve) => setTimeout(resolve, 120));
       const requestKey = JSON.stringify([command, args]);
@@ -309,6 +318,8 @@ export function installPreview() {
           message: "Preview request failed. Retry to check error feedback.",
         };
     }
+    const opportunityResult = opportunityFixtures(command, args, commandState === "empty");
+    if (opportunityResult !== undefined) return opportunityResult;
     if (command === "github_begin_login")
       return { authorizationUrl: "https://example.invalid/harbor-preview-auth" };
     if (command === "github_disconnect") return { connected: false };

@@ -292,3 +292,16 @@ See [calendar map verification](verification/calendar-map/README.md) and
 Calendar review corrections reserve 32 px above annual day rows to separate sprites from month
 labels. Identical ResizeObserver measurements preserve facing, and data-layout revisions move
 the sprite without restarting encounters. See [review evidence](verification/calendar-review/README.md).
+
+## Contribution opportunities
+
+`OpportunityView` reuses `WorkspacePageHeader`, `WorkspaceStaleNotice`, shared navigation,
+`harbor-result-row` and parent-owned `useListScroll`. It uses the existing wide breakpoint for
+list/detail layout. `OpportunitySettings` confines its ScrollArea viewport inside a bounded
+Dialog form so scrollable fields cannot intercept the fixed Save footer.
+
+`/ui-components?view=opportunities` opens the complete workspace with controlled monitor
+fixtures. `opportunities=setup|empty|pending|stale|long|dense|failure` selects data states;
+`state=loading|error|stale&commands=opportunity_snapshot` scopes read behavior. Configuration
+and start/pause/check simulation require `writes=accept`; all opportunity commands stay
+intercepted and unknown commands fail locally. See [App evidence](verification/opportunity-app/README.md).

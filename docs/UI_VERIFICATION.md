@@ -625,3 +625,13 @@ Fixed same-width rolling-year positioning, repeated-observer facing, selected-da
 ownership and Sunday/month-label overlap. Three new failing regressions now pass; full check
 passes 687 tests and the eight-case browser review passes. No Rust or shared-primitives changed.
 [Review findings and evidence](verification/calendar-review/README.md).
+
+## Contribution opportunities App integration — 2026-09-13
+
+The approved second concept is implemented with existing navigation, header, row, scroll and overlay primitives. Eight baseline theme/language/width combinations, 48 additional state combinations and eight short-dialog save cases were exercised. A short-window scroll/footer overlap was corrected and the revised viewport was visually inspected. Frontend checks pass 713 tests/142 files; 12 native monitor tests and cargo check pass. See [scoped evidence and screenshots](verification/opportunity-app/README.md).
+
+Browser fixtures intercept all opportunity reads and writes; claim drafts are never posted. Global palette/window material is unchanged. Native keychain and live provider/GitHub end-to-end behavior still require configured credentials and repository targets; prior visual evidence is reused only for unchanged shared primitive behavior outside this feature.
+
+The subsequent settings-scrollbar refinement reserves a measured 10 px field-to-track gap and renders a 3 px thumb over the existing drag target. Eight focused EN/ZH × theme × width cases verified actual dragging and saving; the updated `pnpm check` passes. See the [scrollbar capture and regression](verification/opportunity-app/README.md#settings-scrollbar-refinement--2026-09-13).
+
+Shared scrollbar rollout: the approved 3 px treatment now covers both Radix axes and native overflow controls, including filter lists. Eight gallery/isolated production-component combinations and eight settings drag/save combinations pass; dark/light captures inspected. Native WebView/OS auto-hide behavior was not newly verified. [Evidence](verification/opportunity-app/README.md#shared-scrollbar-rollout--2026-09-13).
