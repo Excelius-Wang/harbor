@@ -4,4 +4,4 @@
 
 ## Current item
 
-[Profile delivery PR](.cairn/items/profile-delivery-pr.md)
+[Repository contribution agent](.cairn/items/repository-contribution-agent.md)

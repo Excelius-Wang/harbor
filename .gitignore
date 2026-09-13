@@ -38,3 +38,6 @@ output/playwright/
 /docs/design/references/leonand-workspace.webp
 /docs/design/references/vorssaint-volume.jpg
 /docs/design/references/vorssaint-system.jpg
+
+# Local opportunity monitor configuration and database
+/monitor.local/

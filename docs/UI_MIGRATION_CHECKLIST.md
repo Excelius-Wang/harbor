@@ -368,3 +368,13 @@ Fixed same-width rolling-year positioning, repeated-observer facing, selected-da
 ownership and Sunday/month-label overlap. Three new failing regressions now pass; full check
 passes 687 tests and the eight-case browser review passes. No Rust or shared-primitives changed.
 [Review findings and evidence](verification/calendar-review/README.md).
+
+## Contribution opportunities — 2026-09-13
+
+- Implemented the approved second concept as a local feature: shared navigation, compact list/detail page, configuration Dialog and native monitoring controls.
+- Verified EN/ZH and light/dark at 900/1440 px; short-window form saving, dense detail return, keyboard filters and controlled state recovery pass. Native monitor tests and compilation pass.
+- Evidence and limits: [App integration](verification/opportunity-app/README.md). Live model quality, native keychain interaction and real GitHub end-to-end configuration remain unverified. No full-site or new native translucency acceptance is claimed.
+
+- Follow-up: settings field/scrollbar clearance and a locally scoped 3 px thumb are implemented and verified in eight focused cases; full `pnpm check` still passes.
+
+- Shared scrollbar follow-up: 3 px vertical/horizontal Radix thumbs and native overflow styling implemented; representative eight-case shared-control coverage and eight settings regressions pass, with `pnpm check` passing. [Scope and evidence](verification/opportunity-app/README.md#shared-scrollbar-rollout--2026-09-13).

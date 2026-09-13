@@ -1,0 +1,98 @@
+[
+  {
+    "lang": "zh",
+    "theme": "dark",
+    "width": 900,
+    "gallery": true,
+    "verticalDrag": true,
+    "horizontalDrag": true,
+    "nativeScroll": true,
+    "track": "9px",
+    "border": "3px",
+    "clip": "padding-box"
+  },
+  {
+    "lang": "zh",
+    "theme": "dark",
+    "width": 1440,
+    "gallery": true,
+    "verticalDrag": true,
+    "horizontalDrag": true,
+    "nativeScroll": true,
+    "track": "9px",
+    "border": "3px",
+    "clip": "padding-box"
+  },
+  {
+    "lang": "zh",
+    "theme": "light",
+    "width": 900,
+    "gallery": true,
+    "verticalDrag": true,
+    "horizontalDrag": true,
+    "nativeScroll": true,
+    "track": "9px",
+    "border": "3px",
+    "clip": "padding-box"
+  },
+  {
+    "lang": "zh",
+    "theme": "light",
+    "width": 1440,
+    "gallery": true,
+    "verticalDrag": true,
+    "horizontalDrag": true,
+    "nativeScroll": true,
+    "track": "9px",
+    "border": "3px",
+    "clip": "padding-box"
+  },
+  {
+    "lang": "en",
+    "theme": "dark",
+    "width": 900,
+    "gallery": true,
+    "verticalDrag": true,
+    "horizontalDrag": true,
+    "nativeScroll": true,
+    "track": "9px",
+    "border": "3px",
+    "clip": "padding-box"
+  },
+  {
+    "lang": "en",
+    "theme": "dark",
+    "width": 1440,
+    "gallery": true,
+    "verticalDrag": true,
+    "horizontalDrag": true,
+    "nativeScroll": true,
+    "track": "9px",
+    "border": "3px",
+    "clip": "padding-box"
+  },
+  {
+    "lang": "en",
+    "theme": "light",
+    "width": 900,
+    "gallery": true,
+    "verticalDrag": true,
+    "horizontalDrag": true,
+    "nativeScroll": true,
+    "track": "9px",
+    "border": "3px",
+    "clip": "padding-box"
+  },
+  {
+    "lang": "en",
+    "theme": "light",
+    "width": 1440,
+    "gallery": true,
+    "verticalDrag": true,
+    "horizontalDrag": true,
+    "nativeScroll": true,
+    "track": "9px",
+    "border": "3px",
+    "clip": "padding-box"
+  }
+]

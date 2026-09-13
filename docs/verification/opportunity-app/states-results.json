@@ -1,0 +1,296 @@
+{
+  "passed": 48,
+  "cases": [
+    {
+      "lang": "zh",
+      "theme": "dark",
+      "width": 900,
+      "scenario": "setup"
+    },
+    {
+      "lang": "zh",
+      "theme": "dark",
+      "width": 900,
+      "scenario": "empty"
+    },
+    {
+      "lang": "zh",
+      "theme": "dark",
+      "width": 900,
+      "scenario": "pending"
+    },
+    {
+      "lang": "zh",
+      "theme": "dark",
+      "width": 900,
+      "scenario": "stale"
+    },
+    {
+      "lang": "zh",
+      "theme": "dark",
+      "width": 900,
+      "scenario": "long"
+    },
+    {
+      "lang": "zh",
+      "theme": "dark",
+      "width": 900,
+      "scenario": "failure"
+    },
+    {
+      "lang": "zh",
+      "theme": "dark",
+      "width": 1440,
+      "scenario": "setup"
+    },
+    {
+      "lang": "zh",
+      "theme": "dark",
+      "width": 1440,
+      "scenario": "empty"
+    },
+    {
+      "lang": "zh",
+      "theme": "dark",
+      "width": 1440,
+      "scenario": "pending"
+    },
+    {
+      "lang": "zh",
+      "theme": "dark",
+      "width": 1440,
+      "scenario": "stale"
+    },
+    {
+      "lang": "zh",
+      "theme": "dark",
+      "width": 1440,
+      "scenario": "long"
+    },
+    {
+      "lang": "zh",
+      "theme": "dark",
+      "width": 1440,
+      "scenario": "failure"
+    },
+    {
+      "lang": "zh",
+      "theme": "light",
+      "width": 900,
+      "scenario": "setup"
+    },
+    {
+      "lang": "zh",
+      "theme": "light",
+      "width": 900,
+      "scenario": "empty"
+    },
+    {
+      "lang": "zh",
+      "theme": "light",
+      "width": 900,
+      "scenario": "pending"
+    },
+    {
+      "lang": "zh",
+      "theme": "light",
+      "width": 900,
+      "scenario": "stale"
+    },
+    {
+      "lang": "zh",
+      "theme": "light",
+      "width": 900,
+      "scenario": "long"
+    },
+    {
+      "lang": "zh",
+      "theme": "light",
+      "width": 900,
+      "scenario": "failure"
+    },
+    {
+      "lang": "zh",
+      "theme": "light",
+      "width": 1440,
+      "scenario": "setup"
+    },
+    {
+      "lang": "zh",
+      "theme": "light",
+      "width": 1440,
+      "scenario": "empty"
+    },
+    {
+      "lang": "zh",
+      "theme": "light",
+      "width": 1440,
+      "scenario": "pending"
+    },
+    {
+      "lang": "zh",
+      "theme": "light",
+      "width": 1440,
+      "scenario": "stale"
+    },
+    {
+      "lang": "zh",
+      "theme": "light",
+      "width": 1440,
+      "scenario": "long"
+    },
+    {
+      "lang": "zh",
+      "theme": "light",
+      "width": 1440,
+      "scenario": "failure"
+    },
+    {
+      "lang": "en",
+      "theme": "dark",
+      "width": 900,
+      "scenario": "setup"
+    },
+    {
+      "lang": "en",
+      "theme": "dark",
+      "width": 900,
+      "scenario": "empty"
+    },
+    {
+      "lang": "en",
+      "theme": "dark",
+      "width": 900,
+      "scenario": "pending"
+    },
+    {
+      "lang": "en",
+      "theme": "dark",
+      "width": 900,
+      "scenario": "stale"
+    },
+    {
+      "lang": "en",
+      "theme": "dark",
+      "width": 900,
+      "scenario": "long"
+    },
+    {
+      "lang": "en",
+      "theme": "dark",
+      "width": 900,
+      "scenario": "failure"
+    },
+    {
+      "lang": "en",
+      "theme": "dark",
+      "width": 1440,
+      "scenario": "setup"
+    },
+    {
+      "lang": "en",
+      "theme": "dark",
+      "width": 1440,
+      "scenario": "empty"
+    },
+    {
+      "lang": "en",
+      "theme": "dark",
+      "width": 1440,
+      "scenario": "pending"
+    },
+    {
+      "lang": "en",
+      "theme": "dark",
+      "width": 1440,
+      "scenario": "stale"
+    },
+    {
+      "lang": "en",
+      "theme": "dark",
+      "width": 1440,
+      "scenario": "long"
+    },
+    {
+      "lang": "en",
+      "theme": "dark",
+      "width": 1440,
+      "scenario": "failure"
+    },
+    {
+      "lang": "en",
+      "theme": "light",
+      "width": 900,
+      "scenario": "setup"
+    },
+    {
+      "lang": "en",
+      "theme": "light",
+      "width": 900,
+      "scenario": "empty"
+    },
+    {
+      "lang": "en",
+      "theme": "light",
+      "width": 900,
+      "scenario": "pending"
+    },
+    {
+      "lang": "en",
+      "theme": "light",
+      "width": 900,
+      "scenario": "stale"
+    },
+    {
+      "lang": "en",
+      "theme": "light",
+      "width": 900,
+      "scenario": "long"
+    },
+    {
+      "lang": "en",
+      "theme": "light",
+      "width": 900,
+      "scenario": "failure"
+    },
+    {
+      "lang": "en",
+      "theme": "light",
+      "width": 1440,
+      "scenario": "setup"
+    },
+    {
+      "lang": "en",
+      "theme": "light",
+      "width": 1440,
+      "scenario": "empty"
+    },
+    {
+      "lang": "en",
+      "theme": "light",
+      "width": 1440,
+      "scenario": "pending"
+    },
+    {
+      "lang": "en",
+      "theme": "light",
+      "width": 1440,
+      "scenario": "stale"
+    },
+    {
+      "lang": "en",
+      "theme": "light",
+      "width": 1440,
+      "scenario": "long"
+    },
+    {
+      "lang": "en",
+      "theme": "light",
+      "width": 1440,
+      "scenario": "failure"
+    }
+  ],
+  "settingsSaved": true,
+  "keyboardFilter": true,
+  "externalLinkIntercepted": ["https://github.com/harbor-labs/ui-kit/issues/128"]
+}
