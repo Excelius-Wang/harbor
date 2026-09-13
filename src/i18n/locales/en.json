@@ -3174,7 +3174,8 @@
   },
   "opportunities": {
     "title": "Contribution opportunities",
-    "subtitle": "{{count}} monitored repositories · Last check {{time}}",
+    "subtitle_one": "{{count}} monitored repository · Last check {{time}}",
+    "subtitle_other": "{{count}} monitored repositories · Last check {{time}}",
     "settings": "Monitor settings",
     "settingsDescription": "Choose repositories and a model for issue screening.",
     "repositories": "Repositories",
@@ -3208,7 +3209,8 @@
     "allDecisions": "All suggestions",
     "recommend": "Recommended",
     "clarify": "Needs clarification",
-    "count": "{{count}} opportunities",
+    "count_one": "{{count}} opportunity",
+    "count_other": "{{count}} opportunities",
     "pendingCount": "{{count}} awaiting analysis",
     "updating": "Updating analysis",
     "empty": "No opportunities yet",
@@ -3233,6 +3235,7 @@
     "scope": "AI analysis uses the issue and comments. Source code, linked PRs and contribution rules still require manual checks.",
     "select": "Select an opportunity to read its brief",
     "errors": {
+      "stateRecovered": "Some monitor data could not be read. Monitoring is paused; recoverable settings were kept and the original data was backed up. Review settings before restarting.",
       "network": "The request failed. Check your connection and retry.",
       "response": "The service returned an unexpected response. Check its API compatibility.",
       "repositories": "Enter 1–20 repositories in owner/name format.",

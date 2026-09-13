@@ -45,7 +45,9 @@ impl Monitor {
         }
         let this = self.clone();
         tokio::task::spawn_blocking(move || {
-            let saved = storage::load(&this.path)?;
+            let mut saved = storage::load(&this.path)?;
+            prune(&mut saved, chrono::Utc::now());
+            storage::save(&this.path, &saved)?;
             let mut state = this.inner.lock().map_err(|_| "storage")?;
             state.saved = saved;
             state.loaded = true;
@@ -57,7 +59,8 @@ impl Monitor {
     async fn persist(&self) -> Result<(), String> {
         let this = self.clone();
         tokio::task::spawn_blocking(move || {
-            let state = this.inner.lock().map_err(|_| "storage")?;
+            let mut state = this.inner.lock().map_err(|_| "storage")?;
+            prune(&mut state.saved, chrono::Utc::now());
             storage::save(&this.path, &state.saved)
         })
         .await
@@ -389,6 +392,49 @@ impl Monitor {
         errors.into_iter().next().map_or(Ok(()), Err)
     }
 }
+// A compact digest preserves same-second change detection without retaining issue bodies.
+fn fingerprint(issue: &serde_json::Value) -> String {
+    git2::Oid::hash_object(git2::ObjectType::Blob, issue.to_string().as_bytes())
+        .map(|oid| oid.to_string())
+        .unwrap_or_default()
+}
+const MAX_RECORDS: usize = 10_000;
+fn prune(saved: &mut Saved, now: chrono::DateTime<chrono::Utc>) {
+    let cutoff = now - chrono::Duration::days(90);
+    saved
+        .cursors
+        .retain(|repo, _| saved.config.repositories.contains(repo));
+    saved.items.retain(|_, item| {
+        saved.config.repositories.contains(&item.repository)
+            && chrono::DateTime::parse_from_rfc3339(&item.updated_at)
+                .is_ok_and(|updated| updated >= cutoff)
+    });
+    for item in saved.items.values_mut() {
+        if item.fingerprint.is_empty() && !item.issue.is_null() {
+            item.fingerprint = fingerprint(&item.issue);
+        }
+        // Pending work fetches fresh issue data; completed work only needs the brief and digest.
+        item.issue = serde_json::Value::Null;
+        if item
+            .analysis
+            .as_ref()
+            .is_some_and(|analysis| analysis.decision == "skip")
+        {
+            item.analysis = None;
+        }
+    }
+    if saved.items.len() > MAX_RECORDS {
+        let mut oldest: Vec<_> = saved
+            .items
+            .values()
+            .map(|item| (item.updated_at.clone(), item.id.clone()))
+            .collect();
+        oldest.sort();
+        for (_, id) in oldest.into_iter().take(saved.items.len() - MAX_RECORDS) {
+            saved.items.remove(&id);
+        }
+    }
+}
 fn observe(
     saved: &mut Saved,
     repo: &str,
@@ -412,7 +458,7 @@ fn observe(
         if saved
             .items
             .get(&id)
-            .is_some_and(|i| i.updated_at == updated && i.issue == issue)
+            .is_some_and(|i| i.updated_at == updated && i.fingerprint == fingerprint(&issue))
         {
             continue;
         }
@@ -420,6 +466,7 @@ fn observe(
         saved.items.insert(
             id.clone(),
             Opportunity {
+                fingerprint: fingerprint(&issue),
                 id,
                 repository: repo.into(),
                 number,

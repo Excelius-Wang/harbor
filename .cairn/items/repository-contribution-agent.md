@@ -7,7 +7,7 @@ Validate the first monitor-to-recommendation workflow inside Repolane, with a pa
 ## Current state
 
 - The user approved the minimal discovery/recommendation stage, then the second page concept, and authorized App integration. Claim posting, automated coding and PR submission are not part of this stage.
-- Working area: Harbor repository, branch `feat/opportunity-app`, rebased onto `origin/main`, excluding the separate open archive PR #97. The user authorized committing, pushing and opening a PR, including review-tool feedback fixes. Implementation and account-isolation review fixes are verified and ready for PR publication.
+- Working area: Harbor repository, branch `feat/opportunity-app`, rebased onto `origin/main`, excluding the separate open archive PR #97. The user authorized committing, pushing and opening a PR, including review-tool feedback fixes. PR #98 is open at https://github.com/Excelius-Wang/harbor/pull/98; implementation and account-isolation fixes are pushed. CodeRabbit returned four findings on `483e23e`, now fixed with regression coverage; original-head CodeQL passed. The four findings and a follow-up locale correction are addressed by the same-branch review-fix commit; final verification passed using `VITEST_MAX_WORKERS=2 pnpm check` after unrelated default-concurrency UI timeouts.
 - Implemented the Contribution opportunities navigation entry, compact list/detail page, EN/ZH configuration Dialog, native start/pause/check actions, historical screening, filters and copyable claim drafts. Narrow detail return retains scroll, filters and focus. Short-window settings now have a bounded scroll viewport and a reachable Save footer.
 - `src-tauri/src/opportunity/` owns background polling, cancellation, saved cursors, rules/model analysis, SQLite persistence and endpoint-scoped system keyring access. It reuses App GitHub OAuth. Logout pauses monitoring; hiding the window does not stop the process, quitting does. Enabled monitoring resumes on next launch.
 - `pnpm monitor` remains available as an independent CLI. Its database is separate; there is no CLI history migration. App users do not need Node. No GitHub write operation is implemented by either monitor.
@@ -16,9 +16,11 @@ Validate the first monitor-to-recommendation workflow inside Repolane, with a pa
 
 ## Next action
 
-Publish the contribution-monitor PR and address CodeRabbit/Copilot feedback on its latest commit.
+Check PR #98 automatic re-review and final-head checks; address any new finding, without merging unless authorized.
 
 ## Verification
+
+- CodeRabbit findings: CLI label normalization, English pluralization, bounded payload-minimized retention, and backed-up state recovery are fixed. Follow-up review also caught and corrected the recovery locale namespace. Final logs `/tmp/harbor-pr98-delivery-check.log` (717 tests/142 files) and `/tmp/harbor-pr98-native-final.log` (19 native tests and cargo check); full disposition in `docs/verification/opportunity-app/PR_REVIEW.md`.
 
 - PR preparation: 714 frontend/CLI tests and 13 native monitor tests pass; TypeScript, lint, formatting, production build and cargo check pass. Local two-axis review found one account-isolation bug, fixed with regressions. See `docs/verification/opportunity-app/PR_REVIEW.md`.
 

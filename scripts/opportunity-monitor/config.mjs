@@ -34,9 +34,13 @@ export function validateConfig(input) {
     throw new Error("preferences must be text of at most 8000 characters.");
   function labels(key) {
     const value = input[key] ?? [];
-    if (!Array.isArray(value) || value.some((s) => typeof s !== "string" || !s.trim()))
+    if (
+      !Array.isArray(value) ||
+      value.length > 50 ||
+      value.some((s) => typeof s !== "string" || !s.trim() || s.trim().length > 100)
+    )
       throw new Error(`${key} must be a list of labels.`);
-    return value.map((s) => s.toLowerCase());
+    return value.map((s) => s.trim().toLowerCase());
   }
   function integer(key, fallback, min, max) {
     const n = input[key] ?? fallback;

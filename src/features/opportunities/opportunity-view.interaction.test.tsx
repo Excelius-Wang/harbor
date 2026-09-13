@@ -7,6 +7,7 @@ import { createInstance } from "i18next";
 import { I18nextProvider } from "react-i18next";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import en from "@/i18n/locales/en.json";
+import zh from "@/i18n/locales/zh.json";
 import { createOpportunityFixtures } from "@/dev/opportunity-fixtures";
 import { resetGitHubQueryCache } from "@/features/github/github-queries";
 import { OpportunityView } from "./opportunity-view";
@@ -137,4 +138,19 @@ it("clears saved opportunity queries when the GitHub account changes", async () 
   client.setQueryData(monitorKey, { items: [{ title: "Private account A issue" }] });
   await resetGitHubQueryCache(client);
   expect(client.getQueryData(monitorKey)).toBeUndefined();
+});
+
+it("uses singular English opportunity counts", async () => {
+  const i18n = createInstance();
+  await i18n.init({ lng: "en", resources: { en: { translation: en } }, showSupportNotice: false });
+  expect(i18n.t("opportunities.count", { count: 1 })).toBe("1 opportunity");
+  expect(i18n.t("opportunities.count", { count: 2 })).toBe("2 opportunities");
+  expect(i18n.t("opportunities.subtitle", { count: 1, time: "now" })).toBe(
+    "1 monitored repository · Last check now"
+  );
+});
+
+it("provides monitor recovery instructions in both languages", () => {
+  expect(en.opportunities.errors.stateRecovered).toContain("Monitoring is paused");
+  expect(zh.opportunities.errors.stateRecovered).toContain("监控已暂停");
 });

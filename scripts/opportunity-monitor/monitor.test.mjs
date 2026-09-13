@@ -361,3 +361,13 @@ it("runs the real CLI with mocked HTTP, persists a brief and does not repeat the
   expect(JSON.parse(second.stdout).changed).toEqual([]);
   expect(readFileSync(modelCalls, "utf8")).toBe("call\n");
 });
+
+it("normalizes label whitespace and bounds label rules", () => {
+  expect(
+    validateConfig({ repositories: ["acme/widget"], includeLabels: [" Help Wanted "] })
+      .includeLabels
+  ).toEqual(["help wanted"]);
+  for (const includeLabels of [[" "], ["x".repeat(101)], Array(51).fill("bug")]) {
+    expect(() => validateConfig({ repositories: ["acme/widget"], includeLabels })).toThrow();
+  }
+});

@@ -206,3 +206,53 @@ async fn snapshots_hide_another_accounts_recommendations_without_running_a_cycle
         1
     );
 }
+
+#[test]
+fn retention_bounds_records_and_compacts_payloads_without_breaking_deduplication() {
+    let mut saved = Saved {
+        config: config(),
+        ..Default::default()
+    };
+    let original = issue(1, BASE, NEXT);
+    observe(&mut saved, "acme/widget", vec![original.clone()], BASE).unwrap();
+    saved.items.get_mut("acme/widget#1").unwrap().pending = false;
+    let now = chrono::DateTime::parse_from_rfc3339(NEXT).unwrap().to_utc();
+    prune(&mut saved, now);
+    assert!(saved.items["acme/widget#1"].issue.is_null());
+    observe(&mut saved, "acme/widget", vec![original], BASE).unwrap();
+    assert!(!saved.items["acme/widget#1"].pending);
+    let template = saved.items["acme/widget#1"].clone();
+    for number in 2..=MAX_RECORDS + 2 {
+        let mut item = template.clone();
+        item.id = format!("acme/widget#{number}");
+        item.number = number as u64;
+        saved.items.insert(item.id.clone(), item);
+    }
+    prune(&mut saved, now);
+    assert_eq!(saved.items.len(), MAX_RECORDS);
+    prune(&mut saved, now + chrono::Duration::days(91));
+    assert!(saved.items.is_empty());
+}
+
+#[test]
+fn retention_removes_unconfigured_repositories_and_their_cursors() {
+    let mut saved = Saved {
+        config: config(),
+        ..Default::default()
+    };
+    observe(&mut saved, "acme/widget", vec![issue(1, BASE, NEXT)], BASE).unwrap();
+    saved.cursors.insert(
+        "acme/widget".into(),
+        Cursor {
+            baseline: BASE.into(),
+            since: NEXT.into(),
+        },
+    );
+    saved.config.repositories = vec!["acme/other".into()];
+    prune(
+        &mut saved,
+        chrono::DateTime::parse_from_rfc3339(NEXT).unwrap().to_utc(),
+    );
+    assert!(saved.items.is_empty());
+    assert!(saved.cursors.is_empty());
+}

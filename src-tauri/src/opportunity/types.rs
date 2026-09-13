@@ -116,6 +116,8 @@ impl Analysis {
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Opportunity {
+    #[serde(default)]
+    pub fingerprint: String,
     pub id: String,
     pub repository: String,
     pub number: u64,
