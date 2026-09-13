@@ -85,6 +85,7 @@ impl Monitor {
                 .then_with(|| a.id.cmp(&b.id))
         });
         Ok(Snapshot {
+            owner: s.owner.clone(),
             config: s.config.clone(),
             has_api_key: s.has_api_key,
             enabled: s.enabled,
@@ -458,25 +459,50 @@ pub fn background(app: tauri::AppHandle) {
         }
     });
 }
+fn scope_snapshot(mut snapshot: Snapshot, owner: Option<&str>) -> Snapshot {
+    if owner.is_none() || snapshot.owner.as_deref() != owner {
+        snapshot.items.clear();
+        snapshot.pending_count = 0;
+        snapshot.last_checked_at = None;
+    }
+    snapshot
+}
+async fn visible_snapshot(app: &tauri::AppHandle, state: &Monitor) -> Result<Snapshot, String> {
+    let connection = app
+        .state::<crate::app_state::AppState>()
+        .github
+        .status()
+        .await
+        .map_err(|_| "notConnected")?;
+    let owner = connection.identity.map(|identity| identity.login);
+    Ok(scope_snapshot(state.snapshot()?, owner.as_deref()))
+}
 #[tauri::command]
-pub async fn opportunity_snapshot(state: tauri::State<'_, Monitor>) -> Result<Snapshot, String> {
+pub async fn opportunity_snapshot(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, Monitor>,
+) -> Result<Snapshot, String> {
     state.initialize().await?;
-    state.snapshot()
+    visible_snapshot(&app, &state).await
 }
 #[tauri::command]
 pub async fn opportunity_save_config(
+    app: tauri::AppHandle,
     state: tauri::State<'_, Monitor>,
     config: Config,
     api_key: Option<String>,
 ) -> Result<Snapshot, String> {
-    state.save_config(config, api_key).await
+    state.save_config(config, api_key).await?;
+    visible_snapshot(&app, &state).await
 }
 #[tauri::command]
 pub async fn opportunity_set_enabled(
+    app: tauri::AppHandle,
     state: tauri::State<'_, Monitor>,
     enabled: bool,
 ) -> Result<Snapshot, String> {
-    state.enabled(enabled).await
+    state.enabled(enabled).await?;
+    visible_snapshot(&app, &state).await
 }
 #[tauri::command]
 pub async fn opportunity_check(
@@ -484,5 +510,6 @@ pub async fn opportunity_check(
     state: tauri::State<'_, Monitor>,
     history_days: Option<u32>,
 ) -> Result<Snapshot, String> {
-    state.launch(app, history_days.unwrap_or(0)).await
+    state.launch(app.clone(), history_days.unwrap_or(0)).await?;
+    visible_snapshot(&app, &state).await
 }

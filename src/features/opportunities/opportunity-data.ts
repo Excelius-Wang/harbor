@@ -39,7 +39,7 @@ export type MonitorSnapshot = {
   items: Opportunity[];
   pendingCount: number;
 };
-export const monitorKey = ["opportunity-monitor"] as const;
+export const monitorKey = ["github", "opportunity-monitor"] as const;
 export const readMonitor = () => invoke<MonitorSnapshot>("opportunity_snapshot");
 export const saveMonitor = (config: MonitorConfig, apiKey?: string) =>
   invoke<MonitorSnapshot>("opportunity_save_config", { config, apiKey: apiKey || null });

@@ -8,6 +8,7 @@ import { I18nextProvider } from "react-i18next";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import en from "@/i18n/locales/en.json";
 import { createOpportunityFixtures } from "@/dev/opportunity-fixtures";
+import { resetGitHubQueryCache } from "@/features/github/github-queries";
 import { OpportunityView } from "./opportunity-view";
 import { filterOpportunities, monitorKey, type MonitorSnapshot } from "./opportunity-data";
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
@@ -128,4 +129,12 @@ it("keeps preview writes intercepted and fixtures isolated", () => {
   expect(
     filterOpportunities(snapshot.items, "#128", "harbor-labs/ui-kit", "recommend")
   ).toHaveLength(1);
+});
+
+it("clears saved opportunity queries when the GitHub account changes", async () => {
+  const client = new QueryClient();
+  clients.push(client);
+  client.setQueryData(monitorKey, { items: [{ title: "Private account A issue" }] });
+  await resetGitHubQueryCache(client);
+  expect(client.getQueryData(monitorKey)).toBeUndefined();
 });

@@ -164,3 +164,45 @@ fn assignment_change_in_the_same_second_invalidates_recommendation() {
     assert!(s.items["acme/widget#1"].analysis.is_none());
     assert!(!s.items["acme/widget#1"].pending);
 }
+
+#[tokio::test]
+async fn snapshots_hide_another_accounts_recommendations_without_running_a_cycle() {
+    let dir = tempfile::tempdir().unwrap();
+    let monitor = Monitor::new(dir.path().join("monitor.sqlite"));
+    monitor.initialize().await.unwrap();
+    {
+        let mut state = monitor.inner.lock().unwrap();
+        state.saved.owner = Some("alice".into());
+        state.saved.config = config();
+        observe(
+            &mut state.saved,
+            "acme/widget",
+            vec![issue(1, BASE, NEXT)],
+            BASE,
+        )
+        .unwrap();
+        state.saved.items.get_mut("acme/widget#1").unwrap().analysis = Some(Analysis {
+            decision: "recommend".into(),
+            ..Default::default()
+        });
+        state.saved.last_checked_at = Some(NEXT.into());
+    }
+    assert_eq!(
+        scope_snapshot(monitor.snapshot().unwrap(), Some("alice"))
+            .items
+            .len(),
+        1
+    );
+    for owner in [None, Some("bob")] {
+        let snapshot = scope_snapshot(monitor.snapshot().unwrap(), owner);
+        assert!(snapshot.items.is_empty());
+        assert_eq!(snapshot.pending_count, 0);
+        assert!(snapshot.last_checked_at.is_none());
+    }
+    assert_eq!(
+        scope_snapshot(monitor.snapshot().unwrap(), Some("alice"))
+            .items
+            .len(),
+        1
+    );
+}

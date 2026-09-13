@@ -7,7 +7,7 @@ Validate the first monitor-to-recommendation workflow inside Repolane, with a pa
 ## Current state
 
 - The user approved the minimal discovery/recommendation stage, then the second page concept, and authorized App integration. Claim posting, automated coding and PR submission are not part of this stage.
-- Working area: Harbor repository, branch `feat/opportunity-app`, based on the earlier archive branch for PR #97. The earlier CLI, requirement records and current App integration are all local and uncommitted. No feature push or PR was made.
+- Working area: Harbor repository, branch `feat/opportunity-app`, rebased onto `origin/main`, excluding the separate open archive PR #97. The user authorized committing, pushing and opening a PR, including review-tool feedback fixes. Implementation and account-isolation review fixes are verified and ready for PR publication.
 - Implemented the Contribution opportunities navigation entry, compact list/detail page, EN/ZH configuration Dialog, native start/pause/check actions, historical screening, filters and copyable claim drafts. Narrow detail return retains scroll, filters and focus. Short-window settings now have a bounded scroll viewport and a reachable Save footer.
 - `src-tauri/src/opportunity/` owns background polling, cancellation, saved cursors, rules/model analysis, SQLite persistence and endpoint-scoped system keyring access. It reuses App GitHub OAuth. Logout pauses monitoring; hiding the window does not stop the process, quitting does. Enabled monitoring resumes on next launch.
 - `pnpm monitor` remains available as an independent CLI. Its database is separate; there is no CLI history migration. App users do not need Node. No GitHub write operation is implemented by either monitor.
@@ -16,9 +16,11 @@ Validate the first monitor-to-recommendation workflow inside Repolane, with a pa
 
 ## Next action
 
-Configure the first repositories and model in the App, then run a bounded historical screening with the user to evaluate recommendation quality.
+Publish the contribution-monitor PR and address CodeRabbit/Copilot feedback on its latest commit.
 
 ## Verification
+
+- PR preparation: 714 frontend/CLI tests and 13 native monitor tests pass; TypeScript, lint, formatting, production build and cargo check pass. Local two-axis review found one account-isolation bug, fixed with regressions. See `docs/verification/opportunity-app/PR_REVIEW.md`.
 
 - User-approved global scrollbar rollout is complete: shared Radix vertical/horizontal 3 px thumbs retain pointer targets; native overflow uses a 9 px transparent track and 3 px visual thumb. Filter overrides removed and settings clearance preserved. Eight shared-control cases plus eight settings cases pass. `pnpm check` passes 713 tests/142 files; log `/tmp/harbor-shared-scrollbar-check.log`. Representative browser coverage and OS auto-hide limits are recorded in the App evidence README.
 

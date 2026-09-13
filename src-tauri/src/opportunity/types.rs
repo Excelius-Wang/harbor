@@ -149,6 +149,8 @@ pub struct Saved {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Snapshot {
+    #[serde(skip)]
+    pub owner: Option<String>,
     pub config: Config,
     pub has_api_key: bool,
     pub enabled: bool,
