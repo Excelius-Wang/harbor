@@ -4,4 +4,4 @@
 
 ## Current item
 
-[Profile delivery PR](.cairn/items/profile-delivery-pr.md)
+None — no current item
