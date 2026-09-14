@@ -635,3 +635,8 @@ Browser fixtures intercept all opportunity reads and writes; claim drafts are ne
 The subsequent settings-scrollbar refinement reserves a measured 10 px field-to-track gap and renders a 3 px thumb over the existing drag target. Eight focused EN/ZH × theme × width cases verified actual dragging and saving; the updated `pnpm check` passes. See the [scrollbar capture and regression](verification/opportunity-app/README.md#settings-scrollbar-refinement--2026-09-13).
 
 Shared scrollbar rollout: the approved 3 px treatment now covers both Radix axes and native overflow controls, including filter lists. Eight gallery/isolated production-component combinations and eight settings drag/save combinations pass; dark/light captures inspected. Native WebView/OS auto-hide behavior was not newly verified. [Evidence](verification/opportunity-app/README.md#shared-scrollbar-rollout--2026-09-13).
+
+
+## Opportunity refresh correctness — 2026-09-14
+
+Local fixes for #99/#101 retain stale briefs and successful check times, preserve retry fairness, and avoid reanalysis for interval-only changes. Native tests (26), pnpm check (718 tests) and eight controlled browser combinations pass. Scope, captures, limitations and reproducible checks: [verification](verification/opportunity-refresh/README.md). No material/layout changes or full-site acceptance claim.

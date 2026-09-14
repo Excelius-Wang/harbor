@@ -1,0 +1,70 @@
+{
+  "passed": 8,
+  "cases": [
+    {
+      "lang": "en",
+      "theme": "light",
+      "width": 900,
+      "staleRetained": true,
+      "retry": true,
+      "selectionRetained": true
+    },
+    {
+      "lang": "en",
+      "theme": "light",
+      "width": 1440,
+      "staleRetained": true,
+      "retry": true,
+      "selectionRetained": true
+    },
+    {
+      "lang": "en",
+      "theme": "dark",
+      "width": 900,
+      "staleRetained": true,
+      "retry": true,
+      "selectionRetained": true
+    },
+    {
+      "lang": "en",
+      "theme": "dark",
+      "width": 1440,
+      "staleRetained": true,
+      "retry": true,
+      "selectionRetained": true
+    },
+    {
+      "lang": "zh",
+      "theme": "light",
+      "width": 900,
+      "staleRetained": true,
+      "retry": true,
+      "selectionRetained": true
+    },
+    {
+      "lang": "zh",
+      "theme": "light",
+      "width": 1440,
+      "staleRetained": true,
+      "retry": true,
+      "selectionRetained": true
+    },
+    {
+      "lang": "zh",
+      "theme": "dark",
+      "width": 900,
+      "staleRetained": true,
+      "retry": true,
+      "selectionRetained": true
+    },
+    {
+      "lang": "zh",
+      "theme": "dark",
+      "width": 1440,
+      "staleRetained": true,
+      "retry": true,
+      "selectionRetained": true
+    }
+  ],
+  "errors": []
+}

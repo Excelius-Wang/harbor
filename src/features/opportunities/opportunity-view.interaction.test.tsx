@@ -154,3 +154,45 @@ it("provides monitor recovery instructions in both languages", () => {
   expect(en.opportunities.errors.stateRecovered).toContain("Monitoring is paused");
   expect(zh.opportunities.errors.stateRecovered).toContain("监控已暂停");
 });
+
+it("retains the selected brief through failed reanalysis and replaces it after retry", async () => {
+  const client = mount();
+  await screen.findByText("Issue summary");
+  const selected = screen.getByRole("button", { pressed: true });
+  fireEvent.click(selected);
+  const initial = client.getQueryData<MonitorSnapshot>(monitorKey)!;
+  const original = initial.items[0];
+  const stale = structuredClone(initial);
+  stale.error = "network";
+  stale.items[0].pending = true;
+  stale.items[0].error = "network";
+  stale.items[0].title = "Updated issue title";
+  vi.mocked(invoke).mockImplementation(async (command) => {
+    if (command === "opportunity_check") {
+      const fresh = structuredClone(stale);
+      fresh.error = null;
+      fresh.items[0].pending = false;
+      fresh.items[0].error = null;
+      fresh.items[0].analysis!.summary = "Freshly checked brief";
+      return fresh as never;
+    }
+    return stale as never;
+  });
+  await act(async () => {
+    client.setQueryData(monitorKey, stale);
+  });
+  expect(await screen.findByRole("heading", { name: "Updated issue title" })).toBeTruthy();
+  expect(screen.getByText(original.analysis!.summary)).toBeTruthy();
+  expect(screen.getByText(en.opportunities.staleItem)).toBeTruthy();
+  expect(screen.getByText(en.opportunities.errors.network)).toBeTruthy();
+  expect((screen.getByRole("button", { name: "Copy draft" }) as HTMLButtonElement).disabled).toBe(
+    true
+  );
+  fireEvent.click(screen.getByRole("button", { name: en.common.retry }));
+  await screen.findByText("Freshly checked brief");
+  expect(screen.queryByText(en.opportunities.staleItem)).toBeNull();
+  expect((screen.getByRole("button", { name: "Copy draft" }) as HTMLButtonElement).disabled).toBe(
+    false
+  );
+  expect(client.getQueryData<MonitorSnapshot>(monitorKey)!.items[0].id).toBe(original.id);
+});

@@ -378,3 +378,8 @@ passes 687 tests and the eight-case browser review passes. No Rust or shared-pri
 - Follow-up: settings field/scrollbar clearance and a locally scoped 3 px thumb are implemented and verified in eight focused cases; full `pnpm check` still passes.
 
 - Shared scrollbar follow-up: 3 px vertical/horizontal Radix thumbs and native overflow styling implemented; representative eight-case shared-control coverage and eight settings regressions pass, with `pnpm check` passing. [Scope and evidence](verification/opportunity-app/README.md#shared-scrollbar-rollout--2026-09-13).
+
+
+## Opportunity refresh correctness — 2026-09-14
+
+Local fixes for #99/#101 retain stale briefs and successful check times, preserve retry fairness, and avoid reanalysis for interval-only changes. Native tests (26), pnpm check (718 tests) and eight controlled browser combinations pass. Scope, captures, limitations and reproducible checks: [verification](verification/opportunity-refresh/README.md). No material/layout changes or full-site acceptance claim.

@@ -124,6 +124,8 @@ pub struct Opportunity {
     pub title: String,
     pub updated_at: String,
     pub checked_at: Option<String>,
+    #[serde(default)]
+    pub last_attempt_at: Option<String>,
     pub analysis: Option<Analysis>,
     pub pending: bool,
     pub error: Option<String>,

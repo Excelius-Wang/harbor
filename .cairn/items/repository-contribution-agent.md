@@ -7,7 +7,7 @@ Validate the first monitor-to-recommendation workflow inside Repolane, with a pa
 ## Current state
 
 - The user approved the minimal discovery/recommendation stage, then the second page concept, and authorized App integration. Claim posting, automated coding and PR submission are not part of this stage.
-- Working area: Harbor repository, branch `feat/opportunity-app`, rebased onto `origin/main`, excluding the separate open archive PR #97. The user authorized committing, pushing and opening a PR, including review-tool feedback fixes. PR #98 is open at https://github.com/Excelius-Wang/harbor/pull/98; implementation and account-isolation fixes are pushed. CodeRabbit returned four findings on `483e23e`, now fixed with regression coverage; original-head CodeQL passed. The four findings and a follow-up locale correction are addressed by the same-branch review-fix commit; final verification passed using `VITEST_MAX_WORKERS=2 pnpm check` after unrelated default-concurrency UI timeouts.
+- Working area: `/Users/bytedance/Documents/Work/Code/harbor`, currently `fix/opportunity-refresh-state` with verified #99/#101 fixes entering authorized review/merge; evidence: [refresh fixes](../../docs/verification/opportunity-refresh/README.md). App integration baseline is merge commit `8cb67655fb4046256be905a3d7fd078d1c3d56bd`. The user authorized continuing through merge. PR #98 (https://github.com/Excelius-Wang/harbor/pull/98) is MERGED; reviewed head `56b3df9` and merge result have identical trees. Final CodeRabbit review returned no actionable comments and no merge-blocking risk; all CodeQL checks passed. All four review threads are resolved. Remote/local `feat/opportunity-app` branches were deleted. Separate archive PR #97 remains untouched.
 - Implemented the Contribution opportunities navigation entry, compact list/detail page, EN/ZH configuration Dialog, native start/pause/check actions, historical screening, filters and copyable claim drafts. Narrow detail return retains scroll, filters and focus. Short-window settings now have a bounded scroll viewport and a reachable Save footer.
 - `src-tauri/src/opportunity/` owns background polling, cancellation, saved cursors, rules/model analysis, SQLite persistence and endpoint-scoped system keyring access. It reuses App GitHub OAuth. Logout pauses monitoring; hiding the window does not stop the process, quitting does. Enabled monitoring resumes on next launch.
 - `pnpm monitor` remains available as an independent CLI. Its database is separate; there is no CLI history migration. App users do not need Node. No GitHub write operation is implemented by either monitor.
@@ -16,7 +16,7 @@ Validate the first monitor-to-recommendation workflow inside Repolane, with a pa
 
 ## Next action
 
-Check PR #98 automatic re-review and final-head checks; address any new finding, without merging unless authorized.
+Configure the first repositories and model in the App, then run a bounded historical screening with the user to evaluate recommendation quality.
 
 ## Verification
 
