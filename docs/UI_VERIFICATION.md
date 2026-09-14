@@ -1,5 +1,9 @@
 # Harbor UI verification record
 
+## Notification in-flight correctness — 2026-09-14
+
+Local fixes for #107 and related #108 reuse TanStack Query state for per-thread duplicate guards, bulk exclusion and pending-dialog dismissal protection. pnpm check (723 tests, including review follow-up) and 32 controlled browser checks pass. Captures, scope and reproduction: [verification](verification/notification-inflight/README.md). Shared primitives and material are unchanged; no full-site acceptance claim.
+
 This record separates rendered evidence from source migration. Current six-batch acceptance and delivery references are in [UI_MIGRATION_CHECKLIST.md](UI_MIGRATION_CHECKLIST.md). Earlier dated entries retain their historical limits; they are not current delivery status.
 
 ## Repository, Issue and PR batch

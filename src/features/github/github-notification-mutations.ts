@@ -8,6 +8,20 @@ export type GitHubNotificationMutationTarget = {
   action: GitHubNotificationAction;
 };
 
+export const notificationWriteKey = [...githubQueryKeys.notificationsRoot, "write"] as const;
+
+export function notificationWritePending(queryClient: QueryClient, threadId?: number) {
+  return (
+    queryClient.isMutating({
+      mutationKey: notificationWriteKey,
+      predicate: (mutation) => {
+        const target = mutation.state.variables as GitHubNotificationMutationTarget | undefined;
+        return threadId === undefined || target === undefined || target.threadId === threadId;
+      },
+    }) > 0
+  );
+}
+
 export function updateGitHubNotification(target: GitHubNotificationMutationTarget) {
   return invoke<void>("github_update_notification", target);
 }

@@ -1,0 +1,206 @@
+{
+  "passed": 32,
+  "cases": [
+    {
+      "lang": "en",
+      "theme": "light",
+      "width": 900,
+      "scenario": "parallel-threads",
+      "calls": 2
+    },
+    {
+      "lang": "en",
+      "theme": "light",
+      "width": 900,
+      "scenario": "bulk-escape-guard"
+    },
+    {
+      "lang": "en",
+      "theme": "light",
+      "width": 900,
+      "scenario": "done-escape-guard"
+    },
+    {
+      "lang": "en",
+      "theme": "light",
+      "width": 900,
+      "scenario": "keyboard-read-and-bulk-success"
+    },
+    {
+      "lang": "en",
+      "theme": "light",
+      "width": 1440,
+      "scenario": "parallel-threads",
+      "calls": 2
+    },
+    {
+      "lang": "en",
+      "theme": "light",
+      "width": 1440,
+      "scenario": "bulk-escape-guard"
+    },
+    {
+      "lang": "en",
+      "theme": "light",
+      "width": 1440,
+      "scenario": "done-escape-guard"
+    },
+    {
+      "lang": "en",
+      "theme": "light",
+      "width": 1440,
+      "scenario": "keyboard-read-and-bulk-success"
+    },
+    {
+      "lang": "en",
+      "theme": "dark",
+      "width": 900,
+      "scenario": "parallel-threads",
+      "calls": 2
+    },
+    {
+      "lang": "en",
+      "theme": "dark",
+      "width": 900,
+      "scenario": "bulk-escape-guard"
+    },
+    {
+      "lang": "en",
+      "theme": "dark",
+      "width": 900,
+      "scenario": "done-escape-guard"
+    },
+    {
+      "lang": "en",
+      "theme": "dark",
+      "width": 900,
+      "scenario": "keyboard-read-and-bulk-success"
+    },
+    {
+      "lang": "en",
+      "theme": "dark",
+      "width": 1440,
+      "scenario": "parallel-threads",
+      "calls": 2
+    },
+    {
+      "lang": "en",
+      "theme": "dark",
+      "width": 1440,
+      "scenario": "bulk-escape-guard"
+    },
+    {
+      "lang": "en",
+      "theme": "dark",
+      "width": 1440,
+      "scenario": "done-escape-guard"
+    },
+    {
+      "lang": "en",
+      "theme": "dark",
+      "width": 1440,
+      "scenario": "keyboard-read-and-bulk-success"
+    },
+    {
+      "lang": "zh",
+      "theme": "light",
+      "width": 900,
+      "scenario": "parallel-threads",
+      "calls": 2
+    },
+    {
+      "lang": "zh",
+      "theme": "light",
+      "width": 900,
+      "scenario": "bulk-escape-guard"
+    },
+    {
+      "lang": "zh",
+      "theme": "light",
+      "width": 900,
+      "scenario": "done-escape-guard"
+    },
+    {
+      "lang": "zh",
+      "theme": "light",
+      "width": 900,
+      "scenario": "keyboard-read-and-bulk-success"
+    },
+    {
+      "lang": "zh",
+      "theme": "light",
+      "width": 1440,
+      "scenario": "parallel-threads",
+      "calls": 2
+    },
+    {
+      "lang": "zh",
+      "theme": "light",
+      "width": 1440,
+      "scenario": "bulk-escape-guard"
+    },
+    {
+      "lang": "zh",
+      "theme": "light",
+      "width": 1440,
+      "scenario": "done-escape-guard"
+    },
+    {
+      "lang": "zh",
+      "theme": "light",
+      "width": 1440,
+      "scenario": "keyboard-read-and-bulk-success"
+    },
+    {
+      "lang": "zh",
+      "theme": "dark",
+      "width": 900,
+      "scenario": "parallel-threads",
+      "calls": 2
+    },
+    {
+      "lang": "zh",
+      "theme": "dark",
+      "width": 900,
+      "scenario": "bulk-escape-guard"
+    },
+    {
+      "lang": "zh",
+      "theme": "dark",
+      "width": 900,
+      "scenario": "done-escape-guard"
+    },
+    {
+      "lang": "zh",
+      "theme": "dark",
+      "width": 900,
+      "scenario": "keyboard-read-and-bulk-success"
+    },
+    {
+      "lang": "zh",
+      "theme": "dark",
+      "width": 1440,
+      "scenario": "parallel-threads",
+      "calls": 2
+    },
+    {
+      "lang": "zh",
+      "theme": "dark",
+      "width": 1440,
+      "scenario": "bulk-escape-guard"
+    },
+    {
+      "lang": "zh",
+      "theme": "dark",
+      "width": 1440,
+      "scenario": "done-escape-guard"
+    },
+    {
+      "lang": "zh",
+      "theme": "dark",
+      "width": 1440,
+      "scenario": "keyboard-read-and-bulk-success"
+    }
+  ],
+  "errors": []
+}
