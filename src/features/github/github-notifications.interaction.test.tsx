@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
+import { toast } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import i18n from "@/i18n";
 import { GitHubNotifications } from "./github-notifications";
@@ -75,6 +76,7 @@ beforeEach(async () => {
 afterEach(() => {
   cleanup();
   clients.splice(0).forEach((client) => client.clear());
+  vi.restoreAllMocks();
   vi.resetAllMocks();
   vi.unstubAllGlobals();
 });
@@ -180,3 +182,40 @@ it("single done pending cannot be dismissed with Escape", async () => {
   await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
   expect(screen.queryByText("Notice 1")).toBeNull();
 });
+
+it.each(["retry", "cancel"])(
+  "keeps failed done confirmation recoverable via %s",
+  async (action) => {
+    const errorToast = vi.spyOn(toast, "error");
+    const user = userEvent.setup();
+    mount();
+    await screen.findByText("Notice 1");
+    await user.click(row(1).getByRole("button", { name: "Mark as done" }));
+    const dialog = screen.getByRole("alertdialog");
+    const confirm = within(dialog).getByRole("button", {
+      name: "Mark as done",
+    }) as HTMLButtonElement;
+    const cancel = within(dialog).getByRole("button", { name: "Cancel" }) as HTMLButtonElement;
+    await user.click(confirm);
+    await waitFor(() => expect(writes).toHaveLength(1));
+    await act(async () => writes[0].reject());
+    await waitFor(() => expect(confirm.disabled).toBe(false));
+    expect(cancel.disabled).toBe(false);
+    expect(screen.getByRole("alertdialog")).toBe(dialog);
+    expect(errorToast).toHaveBeenCalledWith("Notification could not be updated", {
+      description: "Request failed",
+    });
+    if (action === "retry") {
+      await user.click(confirm);
+      expect(writes).toHaveLength(2);
+      await act(async () => writes[1].resolve());
+      await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+      expect(screen.queryByText("Notice 1")).toBeNull();
+    } else {
+      await user.click(cancel);
+      await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+      expect(screen.getByText("Notice 1")).toBeTruthy();
+      expect(writes).toHaveLength(1);
+    }
+  }
+);

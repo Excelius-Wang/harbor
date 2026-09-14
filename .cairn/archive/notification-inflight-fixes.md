@@ -17,8 +17,8 @@ None — complete
 
 ## Verification
 
-- Four new regressions failed before the fix; seven focused interaction/cache tests pass after it.
-- pnpm check: 721 tests/143 files, format, lint, TypeScript and build pass. `/tmp/harbor-notification-check.log`.
+- Four new regressions failed before the fix; nine focused interaction/cache tests pass after it.
+- pnpm check: 723 tests/143 files, format, lint, TypeScript and build pass. `/tmp/harbor-notification-check.log`.
 - Thirty-two browser checks pass; two captures inspected. `docs/verification/notification-inflight/README.md` records evidence and limitations. Browser probes await Query observer rendering after an initial premature-state assertion.
 - Existing hook/SQLite/bundle warnings only. No real GitHub writes or native material changes.
 
