@@ -3241,7 +3241,7 @@
       "repositories": "Enter 1–20 repositories in owner/name format.",
       "interval": "Use a check interval between 60 and 86400 seconds.",
       "endpoint": "Enter an HTTPS API base URL without credentials or query parameters.",
-      "model": "Enter a valid model name and keep preferences under 8000 characters.",
+      "model": "Enter a valid model name.",
       "language": "Unsupported analysis language.",
       "labels": "Check the label names and number of labels.",
       "storage": "Local data could not be read or saved. Retry after checking available disk space.",
@@ -3260,7 +3260,9 @@
       "cancelled": "Check cancelled.",
       "copy": "Could not copy. Select and copy the draft manually.",
       "open": "Could not open GitHub. Please try again.",
-      "preview": "Preview request failed. Retry to test recovery."
-    }
+      "preview": "Preview request failed. Retry to test recovery.",
+      "preferences": "Keep contribution preferences within 8,000 characters."
+    },
+    "preferencesHelp": "Up to 8,000 characters. Some symbols count as two."
   }
 }

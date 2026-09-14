@@ -1,5 +1,10 @@
 # Harbor UI migration evidence
 
+
+## Unicode preference validation — 2026-09-14
+
+#100: matched native and input length units, added field-specific bilingual feedback. 725 frontend tests, 28 opportunity tests, cargo check and eight controlled browser cases pass. [Evidence and limits](verification/unicode-validation/README.md). Shared layout/material unchanged.
+
 ## Notification in-flight correctness — 2026-09-14
 
 Local fixes for #107 and related #108 reuse TanStack Query state for per-thread duplicate guards, bulk exclusion and pending-dialog dismissal protection. pnpm check (723 tests, including review follow-up) and 32 controlled browser checks pass. Captures, scope and reproduction: [verification](verification/notification-inflight/README.md). Shared primitives and material are unchanged; no full-site acceptance claim.

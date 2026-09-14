@@ -465,3 +465,24 @@ fn reobserving_failed_work_preserves_its_retry_position() {
         );
     }
 }
+
+#[test]
+fn preferences_match_the_input_utf16_limit_and_report_their_own_error() {
+    for (unit, accepted_count, rejected_count) in
+        [("a", 8000, 8001), ("测", 8000, 8001), ("😀", 4000, 4001)]
+    {
+        let mut config = config();
+        config.preferences = unit.repeat(accepted_count);
+        assert!(
+            config.validate().is_ok(),
+            "Expected valid preferences for {unit}"
+        );
+        config.preferences = unit.repeat(rejected_count);
+        assert_eq!(config.validate().unwrap_err(), "preferences");
+    }
+    let mut config = config();
+    config.preferences = "测".repeat(2667);
+    assert!(config.validate().is_ok());
+    config.model = String::new();
+    assert_eq!(config.validate().unwrap_err(), "model");
+}

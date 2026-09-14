@@ -59,6 +59,7 @@ export function OpportunitySettings({
     },
   });
   const pending = mutation.isPending;
+  const errorCode = mutation.error ? monitorError(mutation.error) : null;
   const keyRequired =
     !snapshot.hasApiKey || draft.endpoint.trim().replace(/\/$/, "") !== snapshot.config.endpoint;
   return (
@@ -101,12 +102,14 @@ export function OpportunitySettings({
                 />
                 <FieldDescription>{t("opportunities.repositoriesHelp")}</FieldDescription>
               </Field>
-              <Field>
+              <Field data-invalid={errorCode === "preferences"}>
                 <FieldLabel htmlFor={`${id}-preferences`}>
                   {t("opportunities.preferences")}
                 </FieldLabel>
                 <Textarea
                   id={`${id}-preferences`}
+                  aria-invalid={errorCode === "preferences"}
+                  aria-describedby={`${id}-preferences-help`}
                   rows={3}
                   maxLength={8000}
                   disabled={pending}
@@ -114,6 +117,9 @@ export function OpportunitySettings({
                   onChange={(e) => setDraft({ ...draft, preferences: e.target.value })}
                   placeholder={t("opportunities.preferencesPlaceholder")}
                 />
+                <FieldDescription id={`${id}-preferences-help`}>
+                  {t("opportunities.preferencesHelp")}
+                </FieldDescription>
               </Field>
               <Field>
                 <FieldLabel htmlFor={`${id}-endpoint`}>{t("opportunities.endpoint")}</FieldLabel>
@@ -202,7 +208,7 @@ export function OpportunitySettings({
           </ScrollArea>
           {mutation.error ? (
             <p role="alert" className="text-destructive text-sm">
-              {t(`opportunities.errors.${monitorError(mutation.error)}`, {
+              {t(`opportunities.errors.${errorCode}`, {
                 defaultValue: t("opportunities.errors.network"),
               })}
             </p>

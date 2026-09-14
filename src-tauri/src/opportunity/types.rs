@@ -67,8 +67,12 @@ impl Config {
             return Err("endpoint".into());
         }
         self.model = self.model.trim().to_string();
-        if self.model.is_empty() || self.model.len() > 200 || self.preferences.len() > 8000 {
+        if self.model.is_empty() || self.model.len() > 200 {
             return Err("model".into());
+        }
+        // Match HTML maxLength, including surrogate pairs used by some symbols.
+        if self.preferences.encode_utf16().take(8001).count() > 8000 {
+            return Err("preferences".into());
         }
         if !["en", "zh-CN"].contains(&self.language.as_str()) {
             return Err("language".into());
