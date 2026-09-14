@@ -208,11 +208,7 @@ export function installPreview() {
   );
   const scenarioCommands = parameters.get("commands")?.split(",").filter(Boolean);
   const requestCounts = new Map<string, number>();
-  const shortcuts = new Set(
-    [localStorage.getItem("global-shortcut-show-main")].filter((value): value is string =>
-      Boolean(value)
-    )
-  );
+  const shortcuts = new Set<string>();
   if (!native) {
     mockWindows("main");
     Object.defineProperty(globalThis, "isTauri", { value: true, configurable: true });
@@ -263,6 +259,8 @@ export function installPreview() {
       if (command.endsWith("is_registered")) return shortcuts.has(String(args.shortcut));
       const shortcutState = parameters.get("shortcut");
       if (shortcutState === "loading") return new Promise(() => {});
+      if (shortcutState === "restore-error" && command.endsWith("|register"))
+        throw new Error("Preview shortcut restoration failed");
       if (shortcutState === "error") throw new Error("Preview shortcut registration failed");
       if (Array.isArray(args.shortcuts))
         for (const shortcut of args.shortcuts) {

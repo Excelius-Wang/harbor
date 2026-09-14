@@ -1,5 +1,9 @@
 # Harbor UI verification record
 
+## Shortcut capture and restoration — 2026-09-14
+
+#105/#106: complete modifier capture, explicit WebKit focus, restoration error/retry and shared native dispatch implemented. 740 frontend tests, controlled browser matrix and native build/check pass; physical-key system activation remains pending. [Evidence and gate](verification/shortcut-registration/README.md). This is not a completed native acceptance claim.
+
 ## Notification in-flight correctness — 2026-09-14
 
 Local fixes for #107 and related #108 reuse TanStack Query state for per-thread duplicate guards, bulk exclusion and pending-dialog dismissal protection. pnpm check (723 tests, including review follow-up) and 32 controlled browser checks pass. Captures, scope and reproduction: [verification](verification/notification-inflight/README.md). Shared primitives and material are unchanged; no full-site acceptance claim.

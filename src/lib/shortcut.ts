@@ -11,7 +11,8 @@ export function convertToShortcut(event: KeyboardEvent): string {
   // Check if modifier keys are pressed
   if (event.ctrlKey) {
     keys.push("Ctrl");
-  } else if (event.metaKey) {
+  }
+  if (event.metaKey) {
     keys.push("Cmd");
   }
   if (event.altKey) {
@@ -62,18 +63,17 @@ export function convertToShortcut(event: KeyboardEvent): string {
   return shortcut;
 }
 
-export async function registerShortcut(
-  shortcut: string,
-  callback: () => void,
-  oldShortcut?: string
-): Promise<boolean> {
+export async function registerShortcut(shortcut: string, oldShortcut?: string): Promise<boolean> {
   try {
-    if (!(await unregisterShortcut(shortcut))) return false;
-    await register(shortcut, (event) => {
-      if (event.state === "Pressed") {
-        callback();
+    // Native dispatch survives the settings webview being closed.
+    if (!(await isRegistered(shortcut))) {
+      try {
+        await register(shortcut, () => {});
+      } catch (error) {
+        // Another window may have restored the same shortcut concurrently.
+        if (!(await isRegistered(shortcut))) throw error;
       }
-    });
+    }
     if (oldShortcut && oldShortcut !== shortcut && !(await unregisterShortcut(oldShortcut))) {
       await unregisterShortcut(shortcut);
       return false;
