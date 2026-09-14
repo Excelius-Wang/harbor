@@ -2,7 +2,7 @@ import { useListScroll } from "@/hooks/use-list-scroll";
 import { WorkspacePageHeader } from "@/features/workspace/workspace-page-header";
 import { WorkspaceStaleNotice } from "@/features/workspace/workspace-stale-notice";
 import { lazy, Suspense, useEffect, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useMutationState, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isTauri } from "@tauri-apps/api/core";
 import {
   Archive,
@@ -62,6 +62,8 @@ import { formatIssueDate, GitHubPagination } from "./github-issue-shared";
 import {
   invalidateGitHubNotifications,
   markAllGitHubNotificationsRead,
+  notificationWriteKey,
+  notificationWritePending,
   removeGitHubNotificationFromCache,
   updateGitHubNotification,
   type GitHubNotificationMutationTarget,
@@ -163,6 +165,7 @@ function NotificationRow({
   notification,
   locale,
   pending,
+  bulkPending,
   onOpen,
   onRead,
   onDone,
@@ -170,6 +173,7 @@ function NotificationRow({
   notification: GitHubNotification;
   locale: string;
   pending: GitHubNotificationMutationTarget | null;
+  bulkPending: boolean;
   onOpen: () => void;
   onRead: () => void;
   onDone: () => void;
@@ -226,7 +230,7 @@ function NotificationRow({
               variant="ghost"
               size="icon-sm"
               aria-label={t("workspace.notifications.markRead")}
-              disabled={threadPending}
+              disabled={bulkPending || threadPending}
               onClick={onRead}
             >
               {threadPending && pending.action === "read" ? <Spinner /> : <MailOpen />}
@@ -241,7 +245,7 @@ function NotificationRow({
               variant="ghost"
               size="icon-sm"
               aria-label={t("workspace.notifications.markDone")}
-              disabled={threadPending}
+              disabled={bulkPending || threadPending}
               onClick={onDone}
             >
               {threadPending && pending.action === "done" ? <Spinner /> : <Archive />}
@@ -298,10 +302,22 @@ export function GitHubNotifications({
       : null;
   const supplementalError = data && result.error ? parseIpcError(result.error) : null;
 
+  const pendingWrites = useMutationState({
+    filters: { mutationKey: notificationWriteKey, status: "pending" },
+    select: (mutation) => mutation.state.variables as GitHubNotificationMutationTarget | undefined,
+  });
+  const bulkPending = pendingWrites.some((target) => target === undefined);
+  const donePending = pendingWrites.some(
+    (target) => target === undefined || target.threadId === doneCandidate?.id
+  );
   const updateMutation = useMutation({
+    mutationKey: notificationWriteKey,
     mutationFn: updateGitHubNotification,
     onSuccess: (_, target) => {
       removeGitHubNotificationFromCache(queryClient, target.threadId);
+      if (target.action === "done") {
+        setDoneCandidate((candidate) => (candidate?.id === target.threadId ? null : candidate));
+      }
       toast.success(
         t(
           target.action === "done"
@@ -322,8 +338,10 @@ export function GitHubNotifications({
     },
   });
   const markAllMutation = useMutation({
+    mutationKey: notificationWriteKey,
     mutationFn: markAllGitHubNotificationsRead,
     onSuccess: () => {
+      setMarkAllOpen(false);
       toast.success(t("workspace.notifications.markAllAccepted"));
       void invalidateGitHubNotifications(queryClient);
     },
@@ -344,8 +362,13 @@ export function GitHubNotifications({
 
   useEffect(() => () => onSelectRepository(null), [onSelectRepository]);
 
+  const updateThread = (target: GitHubNotificationMutationTarget) => {
+    // Query state guards the event path synchronously, before React rerenders disabled controls.
+    if (notificationWritePending(queryClient, target.threadId)) return;
+    updateMutation.mutate(target);
+  };
   const markRead = (notification: GitHubNotification) => {
-    updateMutation.mutate({ threadId: notification.id, action: "read" });
+    updateThread({ threadId: notification.id, action: "read" });
   };
 
   const openNotification = (notification: GitHubNotification) => {
@@ -495,8 +518,6 @@ export function GitHubNotifications({
     );
   }
 
-  const pendingTarget = updateMutation.isPending ? updateMutation.variables : null;
-
   return (
     <section className="harbor-content flex min-w-0 flex-1 flex-col">
       <WorkspacePageHeader
@@ -519,9 +540,9 @@ export function GitHubNotifications({
           variant="ghost"
           size="sm"
           onClick={() => setMarkAllOpen(true)}
-          disabled={markAllMutation.isPending || !data?.notifications.length}
+          disabled={pendingWrites.length > 0 || !data?.notifications.length}
         >
-          {markAllMutation.isPending ? (
+          {bulkPending ? (
             <Spinner data-icon="inline-start" />
           ) : (
             <CheckCheck data-icon="inline-start" />
@@ -603,7 +624,10 @@ export function GitHubNotifications({
                   key={notification.id}
                   notification={notification}
                   locale={i18n.language}
-                  pending={pendingTarget}
+                  pending={
+                    pendingWrites.find((target) => target?.threadId === notification.id) ?? null
+                  }
+                  bulkPending={bulkPending}
                   onOpen={() => openNotification(notification)}
                   onRead={() => markRead(notification)}
                   onDone={() => setDoneCandidate(notification)}
@@ -642,7 +666,8 @@ export function GitHubNotifications({
       <AlertDialog
         open={Boolean(doneCandidate)}
         onOpenChange={(open) => {
-          if (!open) setDoneCandidate(null);
+          if (!open && !notificationWritePending(queryClient, doneCandidate?.id))
+            setDoneCandidate(null);
         }}
       >
         <AlertDialogContent size="sm">
@@ -655,22 +680,19 @@ export function GitHubNotifications({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={updateMutation.isPending}>
+            <AlertDialogCancel disabled={donePending}>
               {t("workspace.notifications.cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
-              disabled={updateMutation.isPending || !doneCandidate}
+              disabled={donePending || !doneCandidate}
               onClick={(event) => {
                 event.preventDefault();
                 if (!doneCandidate) return;
-                updateMutation.mutate(
-                  { threadId: doneCandidate.id, action: "done" },
-                  { onSuccess: () => setDoneCandidate(null) }
-                );
+                updateThread({ threadId: doneCandidate.id, action: "done" });
               }}
             >
-              {updateMutation.isPending ? (
+              {donePending ? (
                 <Spinner data-icon="inline-start" />
               ) : (
                 <Archive data-icon="inline-start" />
@@ -681,7 +703,12 @@ export function GitHubNotifications({
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={markAllOpen} onOpenChange={setMarkAllOpen}>
+      <AlertDialog
+        open={markAllOpen}
+        onOpenChange={(open) => {
+          if (!notificationWritePending(queryClient)) setMarkAllOpen(open);
+        }}
+      >
         <AlertDialogContent size="sm">
           <AlertDialogHeader>
             <AlertDialogTitle>{t("workspace.notifications.markAllTitle")}</AlertDialogTitle>
@@ -690,20 +717,19 @@ export function GitHubNotifications({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={markAllMutation.isPending}>
+            <AlertDialogCancel disabled={bulkPending}>
               {t("workspace.notifications.cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
-              disabled={markAllMutation.isPending}
+              disabled={pendingWrites.length > 0}
               onClick={(event) => {
                 event.preventDefault();
-                markAllMutation.mutate(undefined, {
-                  onSuccess: () => setMarkAllOpen(false),
-                });
+                if (notificationWritePending(queryClient)) return;
+                markAllMutation.mutate();
               }}
             >
-              {markAllMutation.isPending ? (
+              {bulkPending ? (
                 <Spinner data-icon="inline-start" />
               ) : (
                 <CheckCheck data-icon="inline-start" />
