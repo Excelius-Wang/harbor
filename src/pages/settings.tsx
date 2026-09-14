@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { emit } from "@tauri-apps/api/event";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
@@ -12,7 +12,6 @@ import { LanguageToggle } from "@/components/language-toggle";
 import { ShortcutInput } from "@/components/shortcut-input";
 import { Moon, Sun, Monitor, Palette, Keyboard } from "lucide-react";
 import { registerShortcut, unregisterShortcut } from "@/lib/shortcut";
-import { toggleWindow } from "@/lib/window";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { useAppTranslation } from "@/hooks/use-app-translation";
@@ -24,36 +23,47 @@ type SettingSection = "appearance" | "shortcut";
 function SettingsContents() {
   const [shortcut, setShortcut] = useState<string>("");
   const [shortcutPending, setShortcutPending] = useState(false);
-  const [shortcutError, setShortcutError] = useState(false);
+  const [shortcutError, setShortcutError] = useState<"restore" | "update" | null>(null);
   const changingShortcut = useRef(false);
   const [activeSection, setActiveSection] = useState<SettingSection>("appearance");
   const { t } = useAppTranslation();
   const { theme, setTheme } = useTheme();
 
-  const handleShowMainWindow = useCallback(async () => {
-    await toggleWindow("main");
-  }, []);
-
   useEffect(() => {
-    // Load saved shortcut
+    let active = true;
     const savedShortcut = localStorage.getItem(SHORTCUT_KEY);
     if (savedShortcut) {
       setShortcut(savedShortcut);
-      registerShortcut(savedShortcut, handleShowMainWindow);
+      changingShortcut.current = true;
+      setShortcutPending(true);
+      void registerShortcut(savedShortcut).then((restored) => {
+        if (!active) return;
+        setShortcutError(restored ? null : "restore");
+        changingShortcut.current = false;
+        setShortcutPending(false);
+        void emit("shortcut-changed", { shortcut: savedShortcut, restored }).catch((error) =>
+          console.error("Failed to notify shortcut restoration:", error)
+        );
+      });
     }
-  }, [handleShowMainWindow]);
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleShortcutChange = async (newShortcut: string) => {
-    if (changingShortcut.current || newShortcut === shortcut) return;
+    if (changingShortcut.current || (newShortcut === shortcut && shortcutError !== "restore"))
+      return;
+    const restoreFailed = shortcutError === "restore";
     changingShortcut.current = true;
     setShortcutPending(true);
-    setShortcutError(false);
+    setShortcutError(null);
     try {
       const changed = newShortcut
-        ? await registerShortcut(newShortcut, handleShowMainWindow, shortcut)
+        ? await registerShortcut(newShortcut, shortcut)
         : await unregisterShortcut(shortcut);
       if (!changed) {
-        setShortcutError(true);
+        setShortcutError(restoreFailed ? "restore" : "update");
         return;
       }
       setShortcut(newShortcut);
@@ -179,7 +189,25 @@ function SettingsContents() {
               ) : null}
               {shortcutError ? (
                 <Alert variant="destructive">
-                  <AlertDescription>{t("settings.shortcut.updateFailed")}</AlertDescription>
+                  <AlertDescription className="flex flex-wrap items-center gap-3">
+                    <span className="flex-1">
+                      {t(
+                        shortcutError === "restore"
+                          ? "settings.shortcut.restoreFailed"
+                          : "settings.shortcut.updateFailed"
+                      )}
+                    </span>
+                    {shortcutError === "restore" ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={shortcutPending}
+                        onClick={() => void handleShortcutChange(shortcut)}
+                      >
+                        {t("settings.shortcut.retry")}
+                      </Button>
+                    ) : null}
+                  </AlertDescription>
                 </Alert>
               ) : null}
             </section>

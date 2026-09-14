@@ -138,7 +138,12 @@ pub async fn github_connection_status(
 }
 
 #[tauri::command]
-pub async fn github_disconnect(state: State<'_, AppState>) -> Result<GitHubConnection, AppError> {
+pub async fn github_disconnect(
+    state: State<'_, AppState>,
+    monitor: State<'_, crate::opportunity::Monitor>,
+) -> Result<GitHubConnection, AppError> {
+    // Disconnect must remain available even if the monitor database is unavailable.
+    let _ = monitor.enabled(false).await;
     state.github.disconnect().await
 }
 

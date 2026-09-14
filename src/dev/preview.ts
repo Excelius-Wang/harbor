@@ -1,3 +1,4 @@
+import { createOpportunityFixtures } from "./opportunity-fixtures";
 import { createTransferFixtures } from "./transfer-fixtures";
 import { createIssueActionFixtures } from "./issue-action-fixtures";
 import { createPagesActionFixtures } from "./pages-action-fixtures";
@@ -117,6 +118,10 @@ export function installPreview() {
   const openedUrls: string[] = [];
   Object.assign(window, { __harborPreviewOpenedUrls: openedUrls });
   const state = parameters.get("state") ?? "populated";
+  const opportunityFixtures = createOpportunityFixtures(
+    parameters.get("opportunities"),
+    parameters.get("writes") === "accept"
+  );
   const repositoryActions = parameters.get("repoActions");
   const externalRepository = repositoryActions && repositoryActions !== "owned";
   const repositories = repositoryFixtures.map((repository, index) => ({
@@ -203,11 +208,7 @@ export function installPreview() {
   );
   const scenarioCommands = parameters.get("commands")?.split(",").filter(Boolean);
   const requestCounts = new Map<string, number>();
-  const shortcuts = new Set(
-    [localStorage.getItem("global-shortcut-show-main")].filter((value): value is string =>
-      Boolean(value)
-    )
-  );
+  const shortcuts = new Set<string>();
   if (!native) {
     mockWindows("main");
     Object.defineProperty(globalThis, "isTauri", { value: true, configurable: true });
@@ -258,6 +259,8 @@ export function installPreview() {
       if (command.endsWith("is_registered")) return shortcuts.has(String(args.shortcut));
       const shortcutState = parameters.get("shortcut");
       if (shortcutState === "loading") return new Promise(() => {});
+      if (shortcutState === "restore-error" && command.endsWith("|register"))
+        throw new Error("Preview shortcut restoration failed");
       if (shortcutState === "error") throw new Error("Preview shortcut registration failed");
       if (Array.isArray(args.shortcuts))
         for (const shortcut of args.shortcuts) {
@@ -297,7 +300,11 @@ export function installPreview() {
     }
     if (command === "github_connection_status")
       return { connected: true, identity: { login: "harbor-preview" } };
-    if (command.startsWith("github_") || command === "repository_context_ask") {
+    if (
+      command.startsWith("github_") ||
+      command.startsWith("opportunity_") ||
+      command === "repository_context_ask"
+    ) {
       if (commandState === "loading") return new Promise(() => {});
       await new Promise((resolve) => setTimeout(resolve, 120));
       const requestKey = JSON.stringify([command, args]);
@@ -309,6 +316,8 @@ export function installPreview() {
           message: "Preview request failed. Retry to check error feedback.",
         };
     }
+    const opportunityResult = opportunityFixtures(command, args, commandState === "empty");
+    if (opportunityResult !== undefined) return opportunityResult;
     if (command === "github_begin_login")
       return { authorizationUrl: "https://example.invalid/harbor-preview-auth" };
     if (command === "github_disconnect") return { connected: false };

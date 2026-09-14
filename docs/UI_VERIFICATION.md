@@ -1,5 +1,18 @@
 # Harbor UI verification record
 
+## Shortcut capture and restoration — 2026-09-14
+
+#105/#106: complete modifier capture, explicit WebKit focus, restoration error/retry and shared native dispatch implemented. 740 frontend tests, controlled browser matrix and native build/check pass; physical-key system activation remains pending. [Evidence and gate](verification/shortcut-registration/README.md). This is not a completed native acceptance claim.
+
+
+## Unicode preference validation — 2026-09-14
+
+#100: matched native and input length units, added field-specific bilingual feedback. 725 frontend tests, 28 opportunity tests, cargo check and eight controlled browser cases pass. [Evidence and limits](verification/unicode-validation/README.md). Shared layout/material unchanged.
+
+## Notification in-flight correctness — 2026-09-14
+
+Local fixes for #107 and related #108 reuse TanStack Query state for per-thread duplicate guards, bulk exclusion and pending-dialog dismissal protection. pnpm check (723 tests, including review follow-up) and 32 controlled browser checks pass. Captures, scope and reproduction: [verification](verification/notification-inflight/README.md). Shared primitives and material are unchanged; no full-site acceptance claim.
+
 This record separates rendered evidence from source migration. Current six-batch acceptance and delivery references are in [UI_MIGRATION_CHECKLIST.md](UI_MIGRATION_CHECKLIST.md). Earlier dated entries retain their historical limits; they are not current delivery status.
 
 ## Repository, Issue and PR batch
@@ -625,3 +638,18 @@ Fixed same-width rolling-year positioning, repeated-observer facing, selected-da
 ownership and Sunday/month-label overlap. Three new failing regressions now pass; full check
 passes 687 tests and the eight-case browser review passes. No Rust or shared-primitives changed.
 [Review findings and evidence](verification/calendar-review/README.md).
+
+## Contribution opportunities App integration — 2026-09-13
+
+The approved second concept is implemented with existing navigation, header, row, scroll and overlay primitives. Eight baseline theme/language/width combinations, 48 additional state combinations and eight short-dialog save cases were exercised. A short-window scroll/footer overlap was corrected and the revised viewport was visually inspected. Frontend checks pass 713 tests/142 files; 12 native monitor tests and cargo check pass. See [scoped evidence and screenshots](verification/opportunity-app/README.md).
+
+Browser fixtures intercept all opportunity reads and writes; claim drafts are never posted. Global palette/window material is unchanged. Native keychain and live provider/GitHub end-to-end behavior still require configured credentials and repository targets; prior visual evidence is reused only for unchanged shared primitive behavior outside this feature.
+
+The subsequent settings-scrollbar refinement reserves a measured 10 px field-to-track gap and renders a 3 px thumb over the existing drag target. Eight focused EN/ZH × theme × width cases verified actual dragging and saving; the updated `pnpm check` passes. See the [scrollbar capture and regression](verification/opportunity-app/README.md#settings-scrollbar-refinement--2026-09-13).
+
+Shared scrollbar rollout: the approved 3 px treatment now covers both Radix axes and native overflow controls, including filter lists. Eight gallery/isolated production-component combinations and eight settings drag/save combinations pass; dark/light captures inspected. Native WebView/OS auto-hide behavior was not newly verified. [Evidence](verification/opportunity-app/README.md#shared-scrollbar-rollout--2026-09-13).
+
+
+## Opportunity refresh correctness — 2026-09-14
+
+Local fixes for #99/#101 retain stale briefs and successful check times, preserve retry fairness, and avoid reanalysis for interval-only changes. Native tests (27, including review follow-up), pnpm check (718 tests) and eight controlled browser combinations pass. Scope, captures, limitations and reproducible checks: [verification](verification/opportunity-refresh/README.md). No material/layout changes or full-site acceptance claim.

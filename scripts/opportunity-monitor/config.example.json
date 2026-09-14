@@ -1,0 +1,8 @@
+{
+  "repositories": ["owner/repository"],
+  "preferences": "I work with TypeScript and React. Prefer small, well-described bugs. Explain recommendations in Simplified Chinese.",
+  "includeLabels": [],
+  "excludeLabels": ["duplicate", "wontfix"],
+  "intervalSeconds": 300,
+  "maxAnalyses": 10
+}

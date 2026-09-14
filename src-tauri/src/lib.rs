@@ -3,12 +3,13 @@ mod commands;
 mod error;
 mod github;
 mod github_oauth;
+mod opportunity;
 mod plugins;
 mod repository_context;
 mod window_appearance;
 mod window_layout;
 
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 
 #[tauri::command]
 fn update_tray_menu(
@@ -24,6 +25,10 @@ pub fn run() {
     let builder = tauri::Builder::default()
         .manage(app_state::AppState::default())
         .setup(|app| {
+            app.manage(opportunity::Monitor::new(
+                app.path().app_data_dir()?.join("opportunities.sqlite"),
+            ));
+            opportunity::background(app.handle().clone());
             if let Some(window) = app.get_webview_window("main") {
                 if let Err(error) = window_layout::fit_to_current_monitor(&window) {
                     eprintln!("failed to fit main window to monitor: {error}");
@@ -42,10 +47,22 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(|app, _, event| {
+                    if event.state == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                        let _ = app.emit_to("main", "shortcut-pressed", ());
+                    }
+                })
+                .build(),
+        )
         .plugin(plugins::system_tray::init())
         .invoke_handler(tauri::generate_handler![
             update_tray_menu,
+            opportunity::opportunity_snapshot,
+            opportunity::opportunity_save_config,
+            opportunity::opportunity_set_enabled,
+            opportunity::opportunity_check,
             window_appearance::sync_window_vibrancy,
             commands::github_begin_login,
             commands::github_login_availability,

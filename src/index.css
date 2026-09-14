@@ -424,8 +424,6 @@
   .harbor-filter-menu [data-slot="command-list"] {
     max-height: min(240px, calc(var(--radix-popover-content-available-height) - 38px));
     overscroll-behavior: contain;
-    scrollbar-width: thin;
-    scrollbar-color: color-mix(in srgb, var(--muted-foreground) 25%, transparent) transparent;
   }
 
   .harbor-filter-menu [data-slot="command-item"] {
@@ -714,32 +712,35 @@ kbd {
   opacity: 0.82;
 }
 
-/* Global scrollbar styles with theme support */
+/* Native scrollbars keep a broad drag target around a 3 px visual thumb. */
 ::-webkit-scrollbar {
-  width: 0.5rem;
-  height: 0.5rem;
+  width: 9px;
+  height: 9px;
 }
 
-::-webkit-scrollbar-track {
-  border-radius: calc(var(--radius) - 4px);
-  background-color: var(--muted);
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  border-radius: calc(var(--radius) - 4px);
-  background-color: color-mix(in oklch, var(--muted-foreground) 30%, transparent);
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-color: color-mix(in srgb, var(--muted-foreground) 32%, transparent);
+  background-clip: padding-box;
 }
 
-::-webkit-scrollbar-corner {
-  background-color: transparent;
+::-webkit-scrollbar-thumb:hover,
+::-webkit-scrollbar-thumb:active {
+  background-color: color-mix(in srgb, var(--muted-foreground) 55%, transparent);
 }
 
-.harbor-filter-menu [data-slot="command-list"]::-webkit-scrollbar {
-  width: 4px;
-}
-
-.harbor-filter-menu [data-slot="command-list"]::-webkit-scrollbar-track {
-  background: transparent;
+/* Engines without WebKit scrollbar styling retain their native thin variant. */
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--muted-foreground) 32%, transparent) transparent;
+  }
 }
 
 button {
@@ -1089,4 +1090,39 @@ button {
     0 0 0 2px var(--contribution-3),
     0 0 0 3px var(--background),
     0 0 0 4px var(--ring);
+}
+
+/* Shared Radix scrollbars retain their existing pointer targets in both axes. */
+[data-slot="scroll-area-thumb"] {
+  background: transparent;
+}
+
+[data-slot="scroll-area-thumb"]::before {
+  content: "";
+  position: absolute;
+  border-radius: 999px;
+  background: var(--muted-foreground);
+  opacity: 0.32;
+}
+
+[data-slot="scroll-area-scrollbar"][data-orientation="vertical"]
+  [data-slot="scroll-area-thumb"]::before {
+  inset-block: 0;
+  left: 50%;
+  width: 3px;
+  transform: translateX(-50%);
+}
+
+[data-slot="scroll-area-scrollbar"][data-orientation="horizontal"]
+  [data-slot="scroll-area-thumb"]::before {
+  inset-inline: 0;
+  top: 50%;
+  height: 3px;
+  transform: translateY(-50%);
+}
+
+[data-slot="scroll-area-scrollbar"]:hover [data-slot="scroll-area-thumb"]::before,
+[data-slot="scroll-area-scrollbar"][data-state="visible"]
+  [data-slot="scroll-area-thumb"]:active::before {
+  opacity: 0.55;
 }

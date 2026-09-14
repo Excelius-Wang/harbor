@@ -1,3 +1,5 @@
+import SettingsPage from "@/pages/settings";
+import { HarborWorkspace } from "@/features/workspace/harbor-workspace";
 import { useState, type ReactNode } from "react";
 import {
   CheckCircle2,
@@ -705,6 +707,9 @@ function Gallery() {
 }
 
 export default function ComponentGallery() {
+  if (new URLSearchParams(location.search).get("view") === "settings") return <SettingsPage />;
+  if (new URLSearchParams(location.search).get("view") === "opportunities")
+    return <HarborWorkspace initialSection="opportunities" />;
   return (
     <WindowFrame
       titleBar={<TitleBar title="Harbor · UI" />}

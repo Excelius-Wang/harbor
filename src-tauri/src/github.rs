@@ -1106,7 +1106,7 @@ impl GitHubService {
             .await
     }
 
-    async fn load_access_token(&self) -> Result<String, AppError> {
+    pub(crate) async fn load_access_token(&self) -> Result<String, AppError> {
         Ok(self.load_credentials().await?.access_token)
     }
 

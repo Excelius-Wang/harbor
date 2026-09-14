@@ -1,5 +1,18 @@
 # Harbor UI migration evidence
 
+## Shortcut capture and restoration — 2026-09-14
+
+#105/#106: complete modifier capture, explicit WebKit focus, restoration error/retry and shared native dispatch implemented. 740 frontend tests, controlled browser matrix and native build/check pass; physical-key system activation remains pending. [Evidence and gate](verification/shortcut-registration/README.md). This is not a completed native acceptance claim.
+
+
+## Unicode preference validation — 2026-09-14
+
+#100: matched native and input length units, added field-specific bilingual feedback. 725 frontend tests, 28 opportunity tests, cargo check and eight controlled browser cases pass. [Evidence and limits](verification/unicode-validation/README.md). Shared layout/material unchanged.
+
+## Notification in-flight correctness — 2026-09-14
+
+Local fixes for #107 and related #108 reuse TanStack Query state for per-thread duplicate guards, bulk exclusion and pending-dialog dismissal protection. pnpm check (723 tests, including review follow-up) and 32 controlled browser checks pass. Captures, scope and reproduction: [verification](verification/notification-inflight/README.md). Shared primitives and material are unchanged; no full-site acceptance claim.
+
 ## Current delivery boundary — 2026-09-09
 
 The historical phase-one cutoff has been delivered. The current authorized Goal covers the six remaining frontend batches and requires actual review, verified merge and branch cleanup for every delivery. Rules #87, Issue #88, Discussion #89 and Pages #90 are merged with those checks complete. Release/code transfer #91 is merged at `3338a49` after actual review and all final checks; its entire tree equals reviewed `3197c7d` and branch cleanup is complete. Recent repository, Project, Gist and conversation/reaction actions have 1056 passing browser scenarios and 659 passing tests; #92 is merged with final content verified.
@@ -368,3 +381,18 @@ Fixed same-width rolling-year positioning, repeated-observer facing, selected-da
 ownership and Sunday/month-label overlap. Three new failing regressions now pass; full check
 passes 687 tests and the eight-case browser review passes. No Rust or shared-primitives changed.
 [Review findings and evidence](verification/calendar-review/README.md).
+
+## Contribution opportunities — 2026-09-13
+
+- Implemented the approved second concept as a local feature: shared navigation, compact list/detail page, configuration Dialog and native monitoring controls.
+- Verified EN/ZH and light/dark at 900/1440 px; short-window form saving, dense detail return, keyboard filters and controlled state recovery pass. Native monitor tests and compilation pass.
+- Evidence and limits: [App integration](verification/opportunity-app/README.md). Live model quality, native keychain interaction and real GitHub end-to-end configuration remain unverified. No full-site or new native translucency acceptance is claimed.
+
+- Follow-up: settings field/scrollbar clearance and a locally scoped 3 px thumb are implemented and verified in eight focused cases; full `pnpm check` still passes.
+
+- Shared scrollbar follow-up: 3 px vertical/horizontal Radix thumbs and native overflow styling implemented; representative eight-case shared-control coverage and eight settings regressions pass, with `pnpm check` passing. [Scope and evidence](verification/opportunity-app/README.md#shared-scrollbar-rollout--2026-09-13).
+
+
+## Opportunity refresh correctness — 2026-09-14
+
+Local fixes for #99/#101 retain stale briefs and successful check times, preserve retry fairness, and avoid reanalysis for interval-only changes. Native tests (27, including review follow-up), pnpm check (718 tests) and eight controlled browser combinations pass. Scope, captures, limitations and reproducible checks: [verification](verification/opportunity-refresh/README.md). No material/layout changes or full-site acceptance claim.

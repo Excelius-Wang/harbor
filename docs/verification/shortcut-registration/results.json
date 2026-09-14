@@ -1,0 +1,85 @@
+{
+  "passed": 8,
+  "cases": [
+    {
+      "lang": "en",
+      "theme": "light",
+      "width": 900,
+      "restoreError": true,
+      "retryFailureRetainsValue": true,
+      "clear": true,
+      "allModifiers": true,
+      "tabNavigation": true
+    },
+    {
+      "lang": "en",
+      "theme": "light",
+      "width": 1440,
+      "restoreError": true,
+      "retryFailureRetainsValue": true,
+      "clear": true,
+      "allModifiers": true,
+      "tabNavigation": true
+    },
+    {
+      "lang": "en",
+      "theme": "dark",
+      "width": 900,
+      "restoreError": true,
+      "retryFailureRetainsValue": true,
+      "clear": true,
+      "allModifiers": true,
+      "tabNavigation": true
+    },
+    {
+      "lang": "en",
+      "theme": "dark",
+      "width": 1440,
+      "restoreError": true,
+      "retryFailureRetainsValue": true,
+      "clear": true,
+      "allModifiers": true,
+      "tabNavigation": true
+    },
+    {
+      "lang": "zh",
+      "theme": "light",
+      "width": 900,
+      "restoreError": true,
+      "retryFailureRetainsValue": true,
+      "clear": true,
+      "allModifiers": true,
+      "tabNavigation": true
+    },
+    {
+      "lang": "zh",
+      "theme": "light",
+      "width": 1440,
+      "restoreError": true,
+      "retryFailureRetainsValue": true,
+      "clear": true,
+      "allModifiers": true,
+      "tabNavigation": true
+    },
+    {
+      "lang": "zh",
+      "theme": "dark",
+      "width": 900,
+      "restoreError": true,
+      "retryFailureRetainsValue": true,
+      "clear": true,
+      "allModifiers": true,
+      "tabNavigation": true
+    },
+    {
+      "lang": "zh",
+      "theme": "dark",
+      "width": 1440,
+      "restoreError": true,
+      "retryFailureRetainsValue": true,
+      "clear": true,
+      "allModifiers": true,
+      "tabNavigation": true
+    }
+  ]
+}

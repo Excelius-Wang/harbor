@@ -35,6 +35,7 @@ export function ShortcutInput({ value, onChange, describedBy, disabled }: Shortc
         aria-describedby={describedBy}
         disabled={disabled}
         className="h-auto min-h-9 min-w-0 flex-1 px-2 py-1.5 whitespace-normal"
+        onClick={(event) => event.currentTarget.focus()}
         onKeyDown={handleKeydown}
       >
         <span className="sr-only">{t("settings.shortcut.showMain")}</span>
