@@ -4,4 +4,4 @@
 
 ## Current item
 
-[Bugfix merge delivery](.cairn/items/bugfix-merge.md)
+None — no current item
