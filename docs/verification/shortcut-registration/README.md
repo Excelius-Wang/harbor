@@ -32,3 +32,9 @@ cp output/playwright/shortcut-registration/en-light-900-success.png docs/verific
 ![All modifiers captured](en-light-900-success.png)
 
 Independent Standards review found no hard violations; its stale-clear feedback and native-event test recommendations were addressed. Spec review found two implementation gaps (duplicate cross-window registration and failed-replacement retry); both were fixed and the delta review cleared them. Physical-key verification remains the delivery gate above. Shared materials/layout and unaffected appearance settings are unchanged; no full-site acceptance claim.
+
+## CodeRabbit follow-up
+
+CodeRabbit identified rollback ownership and an incomplete browser retry assertion. Three native-plugin wrapper regressions cover existing, concurrently restored and newly created registrations; the first two failed before the fix. Only a registration created by the current call is now rolled back if old-shortcut removal fails. The browser script requires exactly one additional registration attempt before accepting retry recovery; all eight cases pass again. Independent delta Spec review confirms the ownership fix. No native implementation or visual layout changed in this follow-up.
+
+Final follow-up validation: `VITEST_MAX_WORKERS=2 pnpm check` passes 744 tests / 144 files, formatting, lint, TypeScript and build (`/tmp/harbor-shortcut-rollback-check.log`). The eight strengthened browser cases pass (`/tmp/harbor-shortcut-rollback-browser.log`).

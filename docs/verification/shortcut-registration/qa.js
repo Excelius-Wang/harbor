@@ -24,8 +24,15 @@ async (page) => {
           name: lang === "zh" ? "重试快捷键" : "Retry shortcut",
           exact: true,
         });
+        const attempts = await page.evaluate(() =>
+          window.__harborPreviewCalls.filter((command) => command === "plugin:global-shortcut|register").length
+        );
         await retry.focus();
         await page.keyboard.press("Enter");
+        await page.waitForFunction((expected) =>
+          window.__harborPreviewCalls.filter((command) => command === "plugin:global-shortcut|register").length === expected,
+          attempts + 1
+        );
         await retry.waitFor();
         if (
           (await page.evaluate(() => localStorage.getItem("global-shortcut-show-main"))) !==

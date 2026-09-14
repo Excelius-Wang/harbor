@@ -65,17 +65,19 @@ export function convertToShortcut(event: KeyboardEvent): string {
 
 export async function registerShortcut(shortcut: string, oldShortcut?: string): Promise<boolean> {
   try {
+    let registeredHere = false;
     // Native dispatch survives the settings webview being closed.
     if (!(await isRegistered(shortcut))) {
       try {
         await register(shortcut, () => {});
+        registeredHere = true;
       } catch (error) {
         // Another window may have restored the same shortcut concurrently.
         if (!(await isRegistered(shortcut))) throw error;
       }
     }
     if (oldShortcut && oldShortcut !== shortcut && !(await unregisterShortcut(oldShortcut))) {
-      await unregisterShortcut(shortcut);
+      if (registeredHere) await unregisterShortcut(shortcut);
       return false;
     }
     console.log("Shortcut registered successfully:", shortcut);

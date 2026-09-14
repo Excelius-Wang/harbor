@@ -56,3 +56,23 @@ it("accepts concurrent restoration only when the app now owns the shortcut", asy
   vi.mocked(register).mockRejectedValue(new Error("Already registered"));
   expect(await registerShortcut("Ctrl+Cmd+K")).toBe(true);
 });
+
+it.each(["existing", "concurrent", "created"])(
+  "rolls back only a registration created by this call: %s",
+  async (owner) => {
+    const current = new Set(["Ctrl+Shift+H"]);
+    if (owner === "existing") current.add("Ctrl+Cmd+K");
+    vi.mocked(isRegistered).mockImplementation(async (value) => current.has(value));
+    vi.mocked(register).mockImplementation(async () => {
+      current.add("Ctrl+Cmd+K");
+      if (owner === "concurrent") throw new Error("Already restored elsewhere");
+    });
+    vi.mocked(unregister).mockImplementation(async (value) => {
+      if (value === "Ctrl+Shift+H") throw new Error("Cannot remove old shortcut");
+      current.delete(value as string);
+    });
+    expect(await registerShortcut("Ctrl+Cmd+K", "Ctrl+Shift+H")).toBe(false);
+    expect(current.has("Ctrl+Shift+H")).toBe(true);
+    expect(current.has("Ctrl+Cmd+K")).toBe(owner !== "created");
+  }
+);
