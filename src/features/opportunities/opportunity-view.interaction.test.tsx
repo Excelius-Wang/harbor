@@ -196,3 +196,33 @@ it("retains the selected brief through failed reanalysis and replaces it after r
   );
   expect(client.getQueryData<MonitorSnapshot>(monitorKey)!.items[0].id).toBe(original.id);
 });
+
+it("identifies a preference validation error and preserves the Unicode draft for retry", async () => {
+  mount();
+  await screen.findByText("Issue summary");
+  fireEvent.click(screen.getByRole("button", { name: "Monitor settings" }));
+  const preferences = screen.getByLabelText("Contribution preferences") as HTMLTextAreaElement;
+  const value = "测".repeat(2667) + "😀";
+  fireEvent.change(preferences, { target: { value } });
+  expect(preferences.maxLength).toBe(8000);
+  expect(screen.getByText(en.opportunities.preferencesHelp)).toBeTruthy();
+  const handler = createOpportunityFixtures("preferences-error", true);
+  vi.mocked(invoke).mockImplementation(
+    async (command, args) => handler(command, args as Record<string, unknown>, false) as never
+  );
+  fireEvent.submit(preferences.closest("form")!);
+  await screen.findByText(en.opportunities.errors.preferences);
+  expect(preferences.getAttribute("aria-invalid")).toBe("true");
+  expect(preferences.value).toBe(value);
+  expect(screen.queryByText(en.opportunities.errors.model)).toBeNull();
+  fireEvent.submit(preferences.closest("form")!);
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(
+    vi
+      .mocked(invoke)
+      .mock.calls.filter(([command]) => command === "opportunity_save_config")
+      .every(
+        ([, args]) => (args as { config: { preferences: string } }).config.preferences === value
+      )
+  ).toBe(true);
+});
