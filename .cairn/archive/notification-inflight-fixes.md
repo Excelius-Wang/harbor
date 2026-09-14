@@ -6,10 +6,10 @@ Fix #107 duplicate per-thread writes and directly related #108 pending-dialog di
 
 ## Current state
 
-- Local implementation complete in `/Users/bytedance/Documents/Work/Code/harbor-worktrees/notification-inflight`, branch `fix/notification-inflight`, base `8cb6765`.
+- Local implementation complete in the dedicated notification worktree, branch `fix/notification-inflight`, base `8cb6765`.
 - Reuses TanStack Query mutation state and synchronous QueryClient guards, keeping independent threads concurrent while preventing duplicate same-thread and overlapping bulk operations. Pending dialogs retain keyboard dismissal protection; failures can retry.
 - No new dependencies or native changes. The user authorized review and merge delivery; the Harbor root merge checkpoint tracks integration. Issues remain open pending merge.
-- Separate #99/#101 batch is verified in `/Users/bytedance/Documents/Work/Code/harbor` on `fix/opportunity-refresh-state`.
+- Separate #99/#101 batch is verified in the primary Harbor worktree on `fix/opportunity-refresh-state`.
 
 ## Next action
 

@@ -1,6 +1,6 @@
 # Notification in-flight fixes (#107, #108)
 
-Implemented locally on `fix/notification-inflight`, based on `8cb6765`, in the separate worktree `/Users/bytedance/Documents/Work/Code/harbor-worktrees/notification-inflight`.
+Implemented locally on `fix/notification-inflight`, based on `8cb6765`, in a separate notification worktree.
 
 Notification updates share a TanStack Query mutation key. The page derives all pending targets with useMutationState and checks QueryClient synchronously before submitting. Different threads can still run concurrently; the same thread cannot submit another read/done, including automatic mark-read from opening its title. Bulk marking waits for thread writes, and thread writes wait for bulk marking. Pending confirmation dialogs reject Escape; success closes them and failure permits retry/cancel. Shared AlertDialog and other UI primitives are unchanged.
 
@@ -23,3 +23,13 @@ These checks verify the affected action states. Loading/empty/detail/list layout
 Standards review: zero findings. Spec review identified one missing acceptance case: failed single-done recovery. Two parameterized component cases now verify error feedback, retained confirmation, enabled controls, retry success and cancel without another request. The follow-up spec review confirmed that the gap is closed. No runtime implementation change was needed.
 
 Final pre-rebase validation: nine focused tests and `pnpm check` (723 tests/143 files) passed; `/tmp/harbor-pr111-review-check.log`. Existing 32 browser cases remain applicable because this follow-up changes tests only.
+
+
+After reviewing new captures, refresh the two checked-in screenshots from the repository root:
+
+```bash
+cp output/playwright/notification-inflight/en-light-900-threads.png docs/verification/notification-inflight/en-light-900-threads.png
+cp output/playwright/notification-inflight/zh-dark-1440-bulk.png docs/verification/notification-inflight/zh-dark-1440-bulk.png
+```
+
+CodeRabbit's initial review repeated the already-fixed done-failure test gap and requested portable archived paths plus screenshot-refresh instructions; both documentation requests are now addressed.
