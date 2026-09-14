@@ -1,5 +1,9 @@
 # Harbor UI verification record
 
+## Notification in-flight correctness — 2026-09-14
+
+Local fixes for #107 and related #108 reuse TanStack Query state for per-thread duplicate guards, bulk exclusion and pending-dialog dismissal protection. pnpm check (723 tests, including review follow-up) and 32 controlled browser checks pass. Captures, scope and reproduction: [verification](verification/notification-inflight/README.md). Shared primitives and material are unchanged; no full-site acceptance claim.
+
 This record separates rendered evidence from source migration. Current six-batch acceptance and delivery references are in [UI_MIGRATION_CHECKLIST.md](UI_MIGRATION_CHECKLIST.md). Earlier dated entries retain their historical limits; they are not current delivery status.
 
 ## Repository, Issue and PR batch
@@ -635,8 +639,3 @@ Browser fixtures intercept all opportunity reads and writes; claim drafts are ne
 The subsequent settings-scrollbar refinement reserves a measured 10 px field-to-track gap and renders a 3 px thumb over the existing drag target. Eight focused EN/ZH × theme × width cases verified actual dragging and saving; the updated `pnpm check` passes. See the [scrollbar capture and regression](verification/opportunity-app/README.md#settings-scrollbar-refinement--2026-09-13).
 
 Shared scrollbar rollout: the approved 3 px treatment now covers both Radix axes and native overflow controls, including filter lists. Eight gallery/isolated production-component combinations and eight settings drag/save combinations pass; dark/light captures inspected. Native WebView/OS auto-hide behavior was not newly verified. [Evidence](verification/opportunity-app/README.md#shared-scrollbar-rollout--2026-09-13).
-
-
-## Notification in-flight correctness — 2026-09-14
-
-Local fixes for #107 and related #108 reuse TanStack Query state for per-thread duplicate guards, bulk exclusion and pending-dialog dismissal protection. pnpm check (723 tests, including review follow-up) and 32 controlled browser checks pass. Captures, scope and reproduction: [verification](verification/notification-inflight/README.md). Shared primitives and material are unchanged; no full-site acceptance claim.

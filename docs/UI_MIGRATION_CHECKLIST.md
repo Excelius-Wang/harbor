@@ -1,5 +1,9 @@
 # Harbor UI migration evidence
 
+## Notification in-flight correctness — 2026-09-14
+
+Local fixes for #107 and related #108 reuse TanStack Query state for per-thread duplicate guards, bulk exclusion and pending-dialog dismissal protection. pnpm check (723 tests, including review follow-up) and 32 controlled browser checks pass. Captures, scope and reproduction: [verification](verification/notification-inflight/README.md). Shared primitives and material are unchanged; no full-site acceptance claim.
+
 ## Current delivery boundary — 2026-09-09
 
 The historical phase-one cutoff has been delivered. The current authorized Goal covers the six remaining frontend batches and requires actual review, verified merge and branch cleanup for every delivery. Rules #87, Issue #88, Discussion #89 and Pages #90 are merged with those checks complete. Release/code transfer #91 is merged at `3338a49` after actual review and all final checks; its entire tree equals reviewed `3197c7d` and branch cleanup is complete. Recent repository, Project, Gist and conversation/reaction actions have 1056 passing browser scenarios and 659 passing tests; #92 is merged with final content verified.
@@ -378,8 +382,3 @@ passes 687 tests and the eight-case browser review passes. No Rust or shared-pri
 - Follow-up: settings field/scrollbar clearance and a locally scoped 3 px thumb are implemented and verified in eight focused cases; full `pnpm check` still passes.
 
 - Shared scrollbar follow-up: 3 px vertical/horizontal Radix thumbs and native overflow styling implemented; representative eight-case shared-control coverage and eight settings regressions pass, with `pnpm check` passing. [Scope and evidence](verification/opportunity-app/README.md#shared-scrollbar-rollout--2026-09-13).
-
-
-## Notification in-flight correctness — 2026-09-14
-
-Local fixes for #107 and related #108 reuse TanStack Query state for per-thread duplicate guards, bulk exclusion and pending-dialog dismissal protection. pnpm check (723 tests, including review follow-up) and 32 controlled browser checks pass. Captures, scope and reproduction: [verification](verification/notification-inflight/README.md). Shared primitives and material are unchanged; no full-site acceptance claim.
