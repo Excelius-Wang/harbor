@@ -3053,7 +3053,9 @@
       "cleared": "Shortcut cleared!",
       "clear": "Clear shortcut",
       "updating": "Updating shortcut…",
-      "updateFailed": "Repolane could not update the shortcut. Try again."
+      "updateFailed": "Repolane could not update the shortcut. Try again.",
+      "restoreFailed": "The saved shortcut could not be restored. Retry, choose another combination or clear it.",
+      "retry": "Retry shortcut"
     }
   },
   "releaseVersion": {

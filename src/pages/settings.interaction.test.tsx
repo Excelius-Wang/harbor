@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -106,4 +106,74 @@ it("disables capture during registration and saves only its successful result", 
     expect(localStorage.getItem("global-shortcut-show-main")).toBe("Ctrl+Shift+H")
   );
   expect(capture.querySelector("kbd")?.textContent).toBe("Ctrl+Shift+H");
+});
+
+it("reports failed startup restoration and retries the same saved combination", async () => {
+  localStorage.setItem("global-shortcut-show-main", "Ctrl+Shift+H");
+  vi.mocked(registerShortcut).mockResolvedValueOnce(false).mockResolvedValue(true);
+  const user = userEvent.setup();
+  render(
+    <TooltipProvider>
+      <SettingsPage />
+    </TooltipProvider>
+  );
+  await user.click(screen.getByRole("button", { name: "Shortcuts" }));
+  await screen.findByRole("alert");
+  expect(
+    screen.getByRole("button", { name: /^Show Main Window/ }).querySelector("kbd")?.textContent
+  ).toBe("Ctrl+Shift+H");
+  await user.click(screen.getByRole("button", { name: "Retry shortcut" }));
+  await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+  expect(registerShortcut).toHaveBeenCalledTimes(2);
+  expect(localStorage.getItem("global-shortcut-show-main")).toBe("Ctrl+Shift+H");
+});
+
+it("allows clearing a saved shortcut after startup restoration fails", async () => {
+  localStorage.setItem("global-shortcut-show-main", "Ctrl+Shift+H");
+  vi.mocked(registerShortcut).mockResolvedValue(false);
+  const user = userEvent.setup();
+  render(
+    <TooltipProvider>
+      <SettingsPage />
+    </TooltipProvider>
+  );
+  await user.click(screen.getByRole("button", { name: "Shortcuts" }));
+  await screen.findByRole("alert");
+  await user.click(screen.getByRole("button", { name: "Clear shortcut" }));
+  await waitFor(() => expect(localStorage.getItem("global-shortcut-show-main")).toBeNull());
+  expect(screen.queryByRole("alert")).toBeNull();
+});
+
+it("keeps the saved combination retryable after a replacement also fails", async () => {
+  localStorage.setItem("global-shortcut-show-main", "Ctrl+Shift+H");
+  vi.mocked(registerShortcut).mockResolvedValue(false);
+  const user = userEvent.setup();
+  render(
+    <TooltipProvider>
+      <SettingsPage />
+    </TooltipProvider>
+  );
+  await user.click(screen.getByRole("button", { name: "Shortcuts" }));
+  await screen.findByRole("alert");
+  screen.getByRole("button", { name: /^Show Main Window/ }).focus();
+  await user.keyboard("{Control>}{Shift>}k{/Shift}{/Control}");
+  expect(localStorage.getItem("global-shortcut-show-main")).toBe("Ctrl+Shift+H");
+  vi.mocked(registerShortcut).mockResolvedValue(true);
+  await user.click(screen.getByRole("button", { name: "Retry shortcut" }));
+  await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+  expect(registerShortcut).toHaveBeenLastCalledWith("Ctrl+Shift+H", "Ctrl+Shift+H");
+});
+
+it("focuses capture on click even when the browser does not focus buttons", async () => {
+  const user = userEvent.setup();
+  render(
+    <TooltipProvider>
+      <SettingsPage />
+    </TooltipProvider>
+  );
+  await user.click(screen.getByRole("button", { name: "Shortcuts" }));
+  const capture = screen.getByRole("button", { name: /^Show Main Window/ });
+  capture.blur();
+  fireEvent.click(capture);
+  expect(document.activeElement).toBe(capture);
 });

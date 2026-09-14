@@ -1,5 +1,9 @@
 # Harbor UI migration evidence
 
+## Shortcut capture and restoration — 2026-09-14
+
+#105/#106: complete modifier capture, explicit WebKit focus, restoration error/retry and shared native dispatch implemented. 740 frontend tests, controlled browser matrix and native build/check pass; physical-key system activation remains pending. [Evidence and gate](verification/shortcut-registration/README.md). This is not a completed native acceptance claim.
+
 
 ## Unicode preference validation — 2026-09-14
 

@@ -9,7 +9,7 @@ mod repository_context;
 mod window_appearance;
 mod window_layout;
 
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 
 #[tauri::command]
 fn update_tray_menu(
@@ -47,7 +47,15 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(|app, _, event| {
+                    if event.state == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                        let _ = app.emit_to("main", "shortcut-pressed", ());
+                    }
+                })
+                .build(),
+        )
         .plugin(plugins::system_tray::init())
         .invoke_handler(tauri::generate_handler![
             update_tray_menu,

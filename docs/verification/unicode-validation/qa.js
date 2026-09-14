@@ -58,4 +58,4 @@ async (page) => {
         });
       }
   return { passed: cases.length, cases };
-};
+}
