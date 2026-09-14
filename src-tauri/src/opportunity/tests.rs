@@ -434,3 +434,34 @@ fn refreshed_snapshot_keeps_brief_visible_and_rule_rejection_removes_it() {
     }
     assert!(monitor.snapshot().unwrap().items.is_empty());
 }
+
+#[test]
+fn reobserving_failed_work_preserves_its_retry_position() {
+    for retain_brief in [true, false] {
+        let mut saved = recommended_state();
+        observe(
+            &mut saved,
+            "acme/widget",
+            vec![issue(1, BASE, NEXT), issue(2, BASE, NEXT)],
+            BASE,
+        )
+        .unwrap();
+        let item = saved.items.get_mut("acme/widget#1").unwrap();
+        if !retain_brief {
+            item.analysis = None;
+        }
+        apply_analysis_result(item, Err("network".into()), NEXT.into()).unwrap_err();
+        let mut updated = issue(1, BASE, NEXT);
+        updated["title"] = json!("Another update after a failed attempt");
+        observe(&mut saved, "acme/widget", vec![updated], BASE).unwrap();
+        assert_eq!(
+            saved.items["acme/widget#1"].last_attempt_at.as_deref(),
+            Some(NEXT)
+        );
+        assert_eq!(pending_items(&saved, &saved.config)[0].number, 2);
+        assert_eq!(
+            saved.items["acme/widget#1"].analysis.is_some(),
+            retain_brief
+        );
+    }
+}

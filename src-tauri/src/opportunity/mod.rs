@@ -440,6 +440,7 @@ fn observe(
         let previous = saved.items.get(&id).filter(|_| relevant);
         let checked_at = previous.as_ref().and_then(|item| item.checked_at.clone());
         let analysis = previous.and_then(|item| item.analysis.clone());
+        let last_attempt_at = previous.and_then(|item| item.last_attempt_at.clone());
         saved.items.insert(
             id.clone(),
             Opportunity {
@@ -450,7 +451,7 @@ fn observe(
                 title: issue["title"].as_str().ok_or("response")?.into(),
                 updated_at: updated,
                 checked_at,
-                last_attempt_at: None,
+                last_attempt_at,
                 analysis,
                 pending: relevant,
                 error: None,

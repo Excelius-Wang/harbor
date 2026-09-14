@@ -639,4 +639,4 @@ Shared scrollbar rollout: the approved 3 px treatment now covers both Radix axes
 
 ## Opportunity refresh correctness — 2026-09-14
 
-Local fixes for #99/#101 retain stale briefs and successful check times, preserve retry fairness, and avoid reanalysis for interval-only changes. Native tests (26), pnpm check (718 tests) and eight controlled browser combinations pass. Scope, captures, limitations and reproducible checks: [verification](verification/opportunity-refresh/README.md). No material/layout changes or full-site acceptance claim.
+Local fixes for #99/#101 retain stale briefs and successful check times, preserve retry fairness, and avoid reanalysis for interval-only changes. Native tests (27, including review follow-up), pnpm check (718 tests) and eight controlled browser combinations pass. Scope, captures, limitations and reproducible checks: [verification](verification/opportunity-refresh/README.md). No material/layout changes or full-site acceptance claim.
