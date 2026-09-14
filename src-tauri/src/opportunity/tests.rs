@@ -256,3 +256,212 @@ fn retention_removes_unconfigured_repositories_and_their_cursors() {
     assert!(saved.items.is_empty());
     assert!(saved.cursors.is_empty());
 }
+
+fn recommended_state() -> Saved {
+    let mut saved = Saved {
+        config: config(),
+        ..Default::default()
+    };
+    observe(&mut saved, "acme/widget", vec![issue(1, BASE, BASE)], BASE).unwrap();
+    let item = saved.items.get_mut("acme/widget#1").unwrap();
+    item.pending = false;
+    item.checked_at = Some(BASE.into());
+    item.analysis = Some(Analysis {
+        decision: "recommend".into(),
+        summary: "Original brief".into(),
+        claim_draft: "Can I investigate?".into(),
+        ..Default::default()
+    });
+    saved
+}
+
+#[test]
+fn open_update_retains_brief_until_successful_reanalysis() {
+    let mut saved = recommended_state();
+    let mut updated = issue(1, BASE, NEXT);
+    updated["title"] = json!("Updated title");
+    observe(&mut saved, "acme/widget", vec![updated.clone()], BASE).unwrap();
+    let item = &saved.items["acme/widget#1"];
+    assert!(item.pending);
+    assert_eq!(item.title, "Updated title");
+    assert_eq!(item.analysis.as_ref().unwrap().summary, "Original brief");
+    assert_eq!(item.checked_at.as_deref(), Some(BASE));
+    let item = saved.items.get_mut("acme/widget#1").unwrap();
+    assert_eq!(
+        apply_analysis_result(item, Err("network".into()), NEXT.into()),
+        Err("network".into())
+    );
+    assert!(item.pending);
+    assert_eq!(item.checked_at.as_deref(), Some(BASE));
+    assert_eq!(item.analysis.as_ref().unwrap().summary, "Original brief");
+    assert_eq!(item.error.as_deref(), Some("network"));
+    observe(&mut saved, "acme/widget", vec![updated], BASE).unwrap();
+    let item = saved.items.get_mut("acme/widget#1").unwrap();
+    apply_analysis_result(
+        item,
+        Ok(Some(Analysis {
+            decision: "clarify".into(),
+            summary: "New brief".into(),
+            ..Default::default()
+        })),
+        NEXT.into(),
+    )
+    .unwrap();
+    assert!(!item.pending);
+    assert!(item.error.is_none());
+    assert_eq!(item.checked_at.as_deref(), Some(NEXT));
+    assert_eq!(item.analysis.as_ref().unwrap().summary, "New brief");
+}
+
+#[test]
+fn failed_reanalysis_keeps_last_successful_check_time() {
+    let mut saved = recommended_state();
+    let item = saved.items.get_mut("acme/widget#1").unwrap();
+    item.pending = true;
+    apply_analysis_result(item, Err("modelResponse".into()), NEXT.into()).unwrap_err();
+    assert_eq!(item.checked_at.as_deref(), Some(BASE));
+    assert!(item.pending);
+}
+
+#[test]
+fn interval_change_preserves_completed_and_pending_analysis() {
+    let mut saved = recommended_state();
+    observe(&mut saved, "acme/widget", vec![issue(2, BASE, BASE)], BASE).unwrap();
+    let before = serde_json::to_value(&saved.items).unwrap();
+    let mut config = saved.config.clone();
+    config.interval_seconds = 600;
+    apply_config(&mut saved, config, 1000);
+    assert_eq!(serde_json::to_value(&saved.items).unwrap(), before);
+    assert_eq!(saved.next_check_at, 1600);
+}
+
+#[test]
+fn analysis_setting_changes_still_requeue_candidates() {
+    for change in 0..6 {
+        let mut saved = recommended_state();
+        let mut config = saved.config.clone();
+        match change {
+            0 => config.preferences = "Rust".into(),
+            1 => config.endpoint = "https://other.example/v1".into(),
+            2 => config.model = "other".into(),
+            3 => config.language = "zh-CN".into(),
+            4 => config.include_labels = vec!["bug".into()],
+            _ => config.exclude_labels = vec!["blocked".into()],
+        }
+        apply_config(&mut saved, config, 1000);
+        assert!(saved.items["acme/widget#1"].pending);
+        assert_eq!(
+            saved.items["acme/widget#1"]
+                .analysis
+                .as_ref()
+                .unwrap()
+                .summary,
+            "Original brief"
+        );
+        assert_eq!(saved.next_check_at, 0);
+    }
+}
+
+#[test]
+fn ineligible_updates_withdraw_retained_briefs() {
+    for change in 0..4 {
+        let mut saved = recommended_state();
+        let mut updated = issue(1, BASE, NEXT);
+        match change {
+            0 => updated["state"] = json!("closed"),
+            1 => updated["locked"] = json!(true),
+            2 => updated["assignees"] = json!([{"login":"owner"}]),
+            _ => updated["labels"] = json!([{"name":"duplicate"}]),
+        }
+        observe(&mut saved, "acme/widget", vec![updated], BASE).unwrap();
+        assert!(saved.items["acme/widget#1"].analysis.is_none());
+        assert!(!saved.items["acme/widget#1"].pending);
+    }
+}
+
+#[test]
+fn retries_rotate_without_refreshing_the_brief_timestamp() {
+    let mut saved = recommended_state();
+    observe(
+        &mut saved,
+        "acme/widget",
+        vec![issue(1, BASE, NEXT), issue(2, BASE, NEXT)],
+        BASE,
+    )
+    .unwrap();
+    let item = saved.items.get_mut("acme/widget#1").unwrap();
+    apply_analysis_result(item, Err("network".into()), NEXT.into()).unwrap_err();
+    assert_eq!(pending_items(&saved, &saved.config)[0].number, 2);
+    assert_eq!(
+        saved.items["acme/widget#1"].checked_at.as_deref(),
+        Some(BASE)
+    );
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("monitor.sqlite");
+    storage::save(&path, &saved).unwrap();
+    let loaded = storage::load(&path).unwrap();
+    assert_eq!(pending_items(&loaded, &loaded.config)[0].number, 2);
+    let mut legacy = serde_json::to_value(&saved).unwrap();
+    for item in legacy["items"].as_object_mut().unwrap().values_mut() {
+        item.as_object_mut().unwrap().remove("lastAttemptAt");
+    }
+    assert!(serde_json::from_value::<Saved>(legacy).is_ok());
+}
+
+#[test]
+fn refreshed_snapshot_keeps_brief_visible_and_rule_rejection_removes_it() {
+    let dir = tempfile::tempdir().unwrap();
+    let monitor = Monitor::new(dir.path().join("monitor.sqlite"));
+    {
+        let mut state = monitor.inner.lock().unwrap();
+        state.saved = recommended_state();
+        observe(
+            &mut state.saved,
+            "acme/widget",
+            vec![issue(1, BASE, NEXT)],
+            BASE,
+        )
+        .unwrap();
+    }
+    let snapshot = monitor.snapshot().unwrap();
+    assert_eq!(snapshot.items.len(), 1);
+    assert!(snapshot.items[0].pending);
+    assert_eq!(snapshot.items[0].checked_at.as_deref(), Some(BASE));
+    {
+        let mut state = monitor.inner.lock().unwrap();
+        let item = state.saved.items.get_mut("acme/widget#1").unwrap();
+        apply_analysis_result(item, Ok(None), NEXT.into()).unwrap();
+    }
+    assert!(monitor.snapshot().unwrap().items.is_empty());
+}
+
+#[test]
+fn reobserving_failed_work_preserves_its_retry_position() {
+    for retain_brief in [true, false] {
+        let mut saved = recommended_state();
+        observe(
+            &mut saved,
+            "acme/widget",
+            vec![issue(1, BASE, NEXT), issue(2, BASE, NEXT)],
+            BASE,
+        )
+        .unwrap();
+        let item = saved.items.get_mut("acme/widget#1").unwrap();
+        if !retain_brief {
+            item.analysis = None;
+        }
+        apply_analysis_result(item, Err("network".into()), NEXT.into()).unwrap_err();
+        let mut updated = issue(1, BASE, NEXT);
+        updated["title"] = json!("Another update after a failed attempt");
+        observe(&mut saved, "acme/widget", vec![updated], BASE).unwrap();
+        assert_eq!(
+            saved.items["acme/widget#1"].last_attempt_at.as_deref(),
+            Some(NEXT)
+        );
+        assert_eq!(pending_items(&saved, &saved.config)[0].number, 2);
+        assert_eq!(
+            saved.items["acme/widget#1"].analysis.is_some(),
+            retain_brief
+        );
+    }
+}

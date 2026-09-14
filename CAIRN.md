@@ -4,4 +4,4 @@
 
 ## Current item
 
-[Repository contribution agent](.cairn/items/repository-contribution-agent.md)
+[Bugfix merge delivery](.cairn/items/bugfix-merge.md)

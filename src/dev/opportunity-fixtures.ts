@@ -25,7 +25,7 @@ export function createOpportunityFixtures(scenario: string | null, writes: boole
     busy: scenario === "pending",
     lastCheckedAt: "2026-09-13T06:32:00Z",
     nextCheckAt: 0,
-    error: scenario === "failure" ? "rateLimit" : null,
+    error: scenario === "failure" ? "rateLimit" : scenario === "refresh-failed" ? "network" : null,
     pendingCount: 0,
     items: Array.from({ length: scenario === "dense" || scenario === "long" ? 45 : 5 }, (_, i) => ({
       id: `harbor-labs/ui-kit#${128 + i}`,
@@ -40,8 +40,8 @@ export function createOpportunityFixtures(scenario: string | null, writes: boole
           : ""),
       updatedAt: "2026-09-13T06:30:00Z",
       checkedAt: "2026-09-13T06:32:00Z",
-      pending: scenario === "stale",
-      error: null,
+      pending: scenario === "stale" || scenario === "refresh-failed",
+      error: scenario === "refresh-failed" ? "network" : null,
       analysis: {
         decision: i % 3 === 2 ? "clarify" : "recommend",
         summary: "关闭弹窗后，焦点没有回到触发按钮，影响键盘连续操作。",
@@ -80,6 +80,11 @@ export function createOpportunityFixtures(scenario: string | null, writes: boole
       state.lastCheckedAt = new Date().toISOString();
       state.error = null;
       state.busy = false;
+      for (const item of state.items) {
+        item.pending = false;
+        item.error = null;
+        item.checkedAt = state.lastCheckedAt;
+      }
     } else if (command !== "opportunity_snapshot")
       throw { code: "previewFixtureMissing", message: "Unknown opportunity preview command." };
     return structuredClone({ ...state, items: empty ? [] : state.items });

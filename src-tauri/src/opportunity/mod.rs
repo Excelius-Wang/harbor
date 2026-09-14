@@ -132,15 +132,7 @@ impl Monitor {
         let result = match key_result {
             Ok(Some(key)) if !key.trim().is_empty() => {
                 let mut state = self.inner.lock().map_err(|_| "storage")?;
-                if state.saved.config != config {
-                    for item in state.saved.items.values_mut() {
-                        item.pending = true;
-                    }
-                }
-                state.saved.config = config;
-                state.saved.has_api_key = true;
-                state.saved.error = None;
-                state.saved.next_check_at = 0;
+                apply_config(&mut state.saved, config, chrono::Utc::now().timestamp());
                 Ok(())
             }
             Ok(_) => Err("apiKey".into()),
@@ -308,19 +300,7 @@ impl Monitor {
         }
         let pending: Vec<_> = {
             let state = self.inner.lock().map_err(|_| "storage")?;
-            let mut items: Vec<_> = state
-                .saved
-                .items
-                .values()
-                .filter(|i| i.pending && config.repositories.contains(&i.repository))
-                .cloned()
-                .collect();
-            items.sort_by(|a, b| {
-                a.checked_at
-                    .cmp(&b.checked_at)
-                    .then_with(|| a.id.cmp(&b.id))
-            });
-            items.into_iter().take(10).collect()
+            pending_items(&state.saved, config)
         };
         for mut item in pending {
             if cancel.is_cancelled() {
@@ -358,18 +338,12 @@ impl Monitor {
                     .map(Some)
             }
             .await;
-            item.checked_at = Some(chrono::Utc::now().to_rfc3339());
-            match result {
-                Ok(analysis) => {
-                    item.analysis = analysis;
-                    item.pending = false;
-                    item.error = None;
-                }
-                Err(failure) => {
-                    let code = self.failure(failure);
-                    item.error = Some(code.clone());
-                    errors.push(code);
-                }
+            if let Err(code) = apply_analysis_result(
+                &mut item,
+                result.map_err(|failure| self.failure(failure)),
+                chrono::Utc::now().to_rfc3339(),
+            ) {
+                errors.push(code);
             }
             self.inner
                 .lock()
@@ -463,6 +437,10 @@ fn observe(
             continue;
         }
         let relevant = filter(&issue, &saved.config);
+        let previous = saved.items.get(&id).filter(|_| relevant);
+        let checked_at = previous.as_ref().and_then(|item| item.checked_at.clone());
+        let analysis = previous.and_then(|item| item.analysis.clone());
+        let last_attempt_at = previous.and_then(|item| item.last_attempt_at.clone());
         saved.items.insert(
             id.clone(),
             Opportunity {
@@ -472,8 +450,9 @@ fn observe(
                 number,
                 title: issue["title"].as_str().ok_or("response")?.into(),
                 updated_at: updated,
-                checked_at: None,
-                analysis: None,
+                checked_at,
+                last_attempt_at,
+                analysis,
                 pending: relevant,
                 error: None,
                 issue,
@@ -559,4 +538,63 @@ pub async fn opportunity_check(
 ) -> Result<Snapshot, String> {
     state.launch(app.clone(), history_days.unwrap_or(0)).await?;
     visible_snapshot(&app, &state).await
+}
+
+fn apply_config(saved: &mut Saved, config: Config, now: i64) {
+    // Polling cadence does not change the facts or preferences used by an analysis.
+    let mut previous_analysis_config = saved.config.clone();
+    previous_analysis_config.interval_seconds = config.interval_seconds;
+    let analysis_changed = previous_analysis_config != config;
+    let interval_only =
+        !analysis_changed && saved.config.interval_seconds != config.interval_seconds;
+    if analysis_changed {
+        for item in saved.items.values_mut() {
+            item.pending = true;
+        }
+    }
+    saved.next_check_at = if interval_only {
+        now + config.interval_seconds as i64
+    } else {
+        0
+    };
+    saved.config = config;
+    saved.has_api_key = true;
+    saved.error = None;
+}
+
+fn apply_analysis_result(
+    item: &mut Opportunity,
+    result: Result<Option<Analysis>, String>,
+    checked_at: String,
+) -> Result<(), String> {
+    item.last_attempt_at = Some(checked_at.clone());
+    match result {
+        Ok(analysis) => {
+            item.checked_at = Some(checked_at);
+            item.analysis = analysis;
+            item.pending = false;
+            item.error = None;
+            Ok(())
+        }
+        Err(code) => {
+            item.error = Some(code.clone());
+            Err(code)
+        }
+    }
+}
+
+fn pending_items(saved: &Saved, config: &Config) -> Vec<Opportunity> {
+    let mut items: Vec<_> = saved
+        .items
+        .values()
+        .filter(|item| item.pending && config.repositories.contains(&item.repository))
+        .cloned()
+        .collect();
+    // Failed attempts rotate behind untried work without changing the brief's timestamp.
+    items.sort_by(|a, b| {
+        a.last_attempt_at
+            .cmp(&b.last_attempt_at)
+            .then_with(|| a.id.cmp(&b.id))
+    });
+    items.into_iter().take(10).collect()
 }
