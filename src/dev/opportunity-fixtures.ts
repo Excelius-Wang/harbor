@@ -1,6 +1,7 @@
 import type { MonitorSnapshot } from "@/features/opportunities/opportunity-data";
 
 export function createOpportunityFixtures(scenario: string | null, writes: boolean) {
+  let preferencesRejected = false;
   const config = {
     repositories: ["harbor-labs/ui-kit", "harbor-labs/workbench", "harbor-labs/docs"],
     preferences: "TypeScript / React，优先复现步骤清晰的小问题。",
@@ -74,6 +75,10 @@ export function createOpportunityFixtures(scenario: string | null, writes: boole
       state.enabled = !!args.enabled;
       state.busy = false;
     } else if (command === "opportunity_save_config") {
+      if (scenario === "preferences-error" && !preferencesRejected) {
+        preferencesRejected = true;
+        throw "preferences";
+      }
       state.config = structuredClone(args.config) as typeof config;
       state.hasApiKey = true;
     } else if (command === "opportunity_check") {
