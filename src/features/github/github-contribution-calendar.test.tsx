@@ -109,22 +109,27 @@ it("disables month view when no days are available", () => {
       .disabled
   ).toBe(true);
 });
-it("lets a hovered date replace selected-date details and restores selection on leave", async () => {
+it("keeps selected details below the chart and shows tooltips only for hover or keyboard focus", async () => {
   mount();
   const cells = document.querySelectorAll<HTMLButtonElement>("[data-contribution-day]");
   fireEvent.click(cells[10]);
   const selected = cells[10].getAttribute("aria-label")!;
-  expect((await screen.findByRole("tooltip")).textContent).toContain(selected);
+  expect(screen.queryByRole("tooltip")).toBeNull();
+  expect(document.querySelector("[data-selected-date]")?.textContent).toContain(selected);
   fireEvent.pointerEnter(cells[20], { pointerType: "mouse" });
   fireEvent.pointerMove(cells[20], { pointerType: "mouse" });
-  const hovered = cells[20].getAttribute("aria-label")!;
-  expect(screen.getByRole("tooltip").textContent).toContain(hovered);
+  expect((await screen.findByRole("tooltip")).textContent).toContain(
+    cells[20].getAttribute("aria-label")
+  );
   fireEvent.pointerLeave(cells[20], { pointerType: "mouse" });
-  expect(screen.getByRole("tooltip").textContent).toContain(selected);
+  expect(screen.queryByRole("tooltip")).toBeNull();
+  const matches = vi.spyOn(cells[30], "matches").mockReturnValue(true);
   fireEvent.focus(cells[30]);
   expect(screen.getByRole("tooltip").textContent).toContain(cells[30].getAttribute("aria-label"));
   fireEvent.blur(cells[30]);
-  expect(screen.getByRole("tooltip").textContent).toContain(selected);
+  matches.mockRestore();
+  expect(screen.queryByRole("tooltip")).toBeNull();
+  expect(document.querySelector("[data-selected-date]")?.textContent).toContain(selected);
 });
 
 it("ends the entrance window before refreshed cells are mounted", () => {
@@ -146,4 +151,57 @@ it("ends the entrance window before refreshed cells are mounted", () => {
   } finally {
     vi.useRealTimers();
   }
+});
+
+it("preserves the selected date, focus and live counts when changing appearance or refreshing", () => {
+  const view = mount();
+  const cell = document.querySelector<HTMLButtonElement>('[data-contribution-day="2024-02-29"]')!;
+  fireEvent.focus(cell);
+  fireEvent.click(cell);
+  fireEvent.click(screen.getByRole("radio", { name: "workspace.profile.calendarAppearanceFlat" }));
+  expect(document.querySelector(".harbor-contribution-calendar")?.getAttribute("data-depth")).toBe(
+    "false"
+  );
+  expect(cell.getAttribute("aria-pressed")).toBe("true");
+  expect(cell.tabIndex).toBe(0);
+  expect(document.querySelector("[data-selected-date]")?.textContent).toContain("Feb 29, 2024");
+  const updated = days.map((day) =>
+    day.date === "2024-02-29" ? { ...day, contributionCount: 99 } : day
+  );
+  view.rerender(
+    <TooltipProvider>
+      <ContributionCalendar
+        summary={{ ...summary, weeks: [{ firstDay: days[0].date, days: updated }] }}
+      />
+    </TooltipProvider>
+  );
+  expect(document.querySelector("[data-selected-date]")?.textContent).toContain("99");
+  fireEvent.click(screen.getByRole("radio", { name: "workspace.profile.calendarAppearance3d" }));
+  expect(document.querySelector('[data-contribution-day="2024-02-29"]')).toBe(cell);
+  expect(cell.getAttribute("aria-pressed")).toBe("true");
+  expect(screen.getByRole("status").textContent).toContain("99");
+  fireEvent.keyDown(cell, { key: "Escape" });
+  expect(document.querySelector("[data-selected-date]")).toBeNull();
+});
+
+it("keeps the annual height scale across months and makes zero contributions flat", () => {
+  mount();
+  const zero = document.querySelector<HTMLButtonElement>(
+    `[data-contribution-day="${days[0].date}"]`
+  )!;
+  expect(zero.style.getPropertyValue("--day-height")).toBe("0px");
+  const leapDay = document.querySelector<HTMLButtonElement>(
+    '[data-contribution-day="2024-02-29"]'
+  )!;
+  const height = leapDay.style.getPropertyValue("--day-height");
+  fireEvent.click(screen.getByRole("button", { name: "workspace.profile.monthView" }));
+  fireEvent.click(screen.getByRole("button", { name: "workspace.profile.previousMonth" }));
+  const monthDay = document.querySelector<HTMLButtonElement>(
+    '[data-contribution-day="2024-02-29"]'
+  )!;
+  expect(monthDay.style.getPropertyValue("--day-height")).toBe(height);
+  expect(monthDay.textContent).toBe("29");
+  expect(document.querySelector(".harbor-contribution-calendar")?.getAttribute("data-depth")).toBe(
+    "true"
+  );
 });

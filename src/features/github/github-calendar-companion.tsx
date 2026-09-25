@@ -4,6 +4,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import type { GitHubContributionDay } from "./github-data";
+import { CalendarColumnResident } from "./github-calendar-column-resident";
 import sprites from "@/assets/calendar-traveler.png";
 
 export type CalendarVisit = { day: GitHubContributionDay; request: number };
@@ -29,7 +30,8 @@ export function useCompanionStep(
   phase: Phase,
   active: boolean,
   next: () => void,
-  resetKey: string
+  resetKey: string,
+  duration?: number
 ) {
   const remaining = useRef(0);
   const nextRef = useRef(next);
@@ -37,8 +39,8 @@ export function useCompanionStep(
     nextRef.current = next;
   }, [next]);
   useEffect(() => {
-    remaining.current = phase === "encounter" ? 900 : phase === "reward" ? 600 : 650;
-  }, [phase, resetKey]);
+    remaining.current = duration ?? (phase === "encounter" ? 900 : phase === "reward" ? 600 : 650);
+  }, [phase, resetKey, duration]);
   useEffect(() => {
     if (!active || phase === "idle") return;
     const started = performance.now();
@@ -52,6 +54,7 @@ export function useCompanionStep(
 
 export function CalendarCompanion({
   visit,
+  onColumn = false,
   period,
   total,
   visible,
@@ -62,6 +65,7 @@ export function CalendarCompanion({
   onMenuOpenChange,
 }: {
   visit: CalendarVisit | null;
+  onColumn?: boolean;
   period: string;
   total: number;
   visible: boolean;
@@ -82,6 +86,7 @@ export function CalendarCompanion({
     () =>
       typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches
   );
+  const [explored, setExplored] = useState<Set<string>>(() => new Set());
   const [phase, setPhase] = useState<Phase>("welcome");
   const key = `${period}:${visit?.request ?? 0}`;
   const hasVisit = Boolean(visit);
@@ -90,7 +95,7 @@ export function CalendarCompanion({
   const previousX = useRef(0);
   const targetDate = visit?.day.date ?? homeDate;
   useLayoutEffect(() => {
-    if (!map || !targetDate) return;
+    if (!map || !targetDate || onColumn) return;
     const measure = () => {
       const cell = Array.from(map.querySelectorAll<HTMLElement>("[data-contribution-day]")).find(
         (element) => element.dataset.contributionDay === targetDate
@@ -115,7 +120,7 @@ export function CalendarCompanion({
     const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
     observer?.observe(map);
     return () => observer?.disconnect();
-  }, [map, targetDate, period, layoutRevision]);
+  }, [map, targetDate, period, layoutRevision, onColumn]);
   const encounter = visit ? encounterForDay(visit.day) : "rest";
   const { level, progress } = companionProgress(total);
   const previousLevel = useRef(level);
@@ -165,6 +170,11 @@ export function CalendarCompanion({
     active,
     () => {
       if (phase === "reward") setLevelUp(false);
+      if (onColumn && visit && phase === "encounter") {
+        setExplored((current) =>
+          current.has(visit.day.date) ? current : new Set([...current, visit.day.date])
+        );
+      }
       setPhase((current) =>
         current === "walking"
           ? "encounter"
@@ -175,9 +185,24 @@ export function CalendarCompanion({
             : "idle"
       );
     },
-    key
+    key,
+    onColumn ? 180 : undefined
   );
-  const displayPhase = reduced ? (visit ? "encounter" : "idle") : phase;
+  useEffect(() => {
+    if (!onColumn || !visit || !reduced) return;
+    setExplored((current) =>
+      current.has(visit.day.date) ? current : new Set([...current, visit.day.date])
+    );
+  }, [onColumn, visit, reduced]);
+  const displayPhase = reduced
+    ? onColumn
+      ? "idle"
+      : visit
+        ? "encounter"
+        : "idle"
+    : onColumn && !visit
+      ? "idle"
+      : phase;
   const label = visit
     ? t("workspace.profile.contributionDay", {
         date: new Intl.DateTimeFormat(i18n.language, {
@@ -192,6 +217,7 @@ export function CalendarCompanion({
     "data-phase": displayPhase,
     "data-encounter": encounter,
     "data-month": period !== "year",
+    "data-on-column": onColumn,
     style: { "--companion-sprites": `url(${sprites})` } as CSSProperties,
   };
   return (
@@ -225,6 +251,11 @@ export function CalendarCompanion({
             <p className="text-xs">
               {t("workspace.profile.companion.levelRule", { count: total })}
             </p>
+            {onColumn ? (
+              <p className="text-xs" data-explored-count={explored.size}>
+                {t("workspace.profile.companion.explored", { count: explored.size })}
+              </p>
+            ) : null}
             <progress
               className="harbor-companion-progress"
               max={100}
@@ -251,29 +282,42 @@ export function CalendarCompanion({
       {map && targetDate
         ? createPortal(
             <div className="harbor-calendar-companion" {...attributes} aria-hidden="true">
-              <div
-                ref={positionRef}
-                className="harbor-companion-position"
-                style={{ left: position.x, top: position.y }}
-              >
-                <span
-                  className="harbor-companion-facing"
-                  style={{
-                    transform: `scaleX(${displayPhase === "walking" ? facing : position.reverse ? -1 : 1})`,
-                  }}
+              {onColumn ? (
+                <CalendarColumnResident
+                  map={map}
+                  date={targetDate}
+                  period={period}
+                  revision={layoutRevision}
+                  active={active}
+                  reduced={reduced}
+                  encounter={visit ? encounter : undefined}
+                  phase={displayPhase}
+                />
+              ) : (
+                <div
+                  ref={positionRef}
+                  className="harbor-companion-position"
+                  style={{ left: position.x, top: position.y }}
                 >
-                  <span className="harbor-companion-hero harbor-companion-sprite" />
-                  {visit && (encounter === "bug" || encounter === "chest") ? (
-                    <span
-                      className={`harbor-companion-object harbor-companion-sprite harbor-companion-${encounter}`}
-                    />
-                  ) : null}
-                  {visit && encounter === "rest" ? (
-                    <span className="harbor-companion-rest">z</span>
-                  ) : null}
-                  <span className="harbor-companion-spark">✦</span>
-                </span>
-              </div>
+                  <span
+                    className="harbor-companion-facing"
+                    style={{
+                      transform: `scaleX(${displayPhase === "walking" ? facing : position.reverse ? -1 : 1})`,
+                    }}
+                  >
+                    <span className="harbor-companion-hero harbor-companion-sprite" />
+                    {visit && (encounter === "bug" || encounter === "chest") ? (
+                      <span
+                        className={`harbor-companion-object harbor-companion-sprite harbor-companion-${encounter}`}
+                      />
+                    ) : null}
+                    {visit && encounter === "rest" ? (
+                      <span className="harbor-companion-rest">z</span>
+                    ) : null}
+                    <span className="harbor-companion-spark">✦</span>
+                  </span>
+                </div>
+              )}
             </div>,
             map
           )

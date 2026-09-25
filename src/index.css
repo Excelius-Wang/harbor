@@ -783,22 +783,27 @@ button {
 /* Profile contribution feedback stays local to the calendar. */
 .harbor-contribution-cell,
 .harbor-contribution-swatch {
-  background: color-mix(in oklch, var(--muted-foreground) 18%, var(--background));
+  --day-fill: color-mix(in oklch, var(--muted-foreground) 18%, var(--background));
+  background: var(--day-fill);
   border-radius: 3px;
   width: 12px;
   height: 12px;
 }
 .harbor-contribution-calendar [data-level="1"] {
-  background: var(--contribution-1);
+  --day-fill: var(--contribution-1);
+  background: var(--day-fill);
 }
 .harbor-contribution-calendar [data-level="2"] {
-  background: var(--contribution-2);
+  --day-fill: var(--contribution-2);
+  background: var(--day-fill);
 }
 .harbor-contribution-calendar [data-level="3"] {
-  background: var(--contribution-3);
+  --day-fill: var(--contribution-3);
+  background: var(--day-fill);
 }
 .harbor-contribution-calendar [data-level="4"] {
-  background: var(--contribution-4);
+  --day-fill: var(--contribution-4);
+  background: var(--day-fill);
 }
 .harbor-contribution-cell {
   position: relative;
@@ -867,6 +872,160 @@ button {
     0 0 0 2px var(--background),
     0 0 0 3px var(--contribution-3);
 }
+/* All column faces share the same oblique projection. The DOM retains date order. */
+.harbor-contribution-calendar {
+  container: contribution-calendar / inline-size;
+}
+.harbor-contribution-week {
+  display: grid;
+  grid-template-rows: 32px repeat(7, 12px);
+  gap: 4px;
+}
+.harbor-contribution-calendar[data-depth="true"] .harbor-contribution-week {
+  grid-template-rows: 64px repeat(7, 12px);
+  row-gap: 5px;
+}
+.harbor-contribution-calendar[data-depth="true"] .harbor-contribution-map {
+  column-gap: 3px;
+  isolation: isolate;
+}
+.harbor-contribution-calendar[data-depth="true"] [data-month="false"] .harbor-contribution-cell {
+  width: 16px;
+}
+.harbor-contribution-calendar[data-depth="true"] .harbor-contribution-board {
+  padding-right: 8px;
+  padding-bottom: 10px;
+}
+.harbor-contribution-calendar[data-depth="true"] [data-month="true"] .harbor-contribution-map {
+  gap: 24px 8px;
+  padding: 8px 0 0;
+}
+.harbor-contribution-calendar[data-depth="true"] .harbor-contribution-cell {
+  background: transparent;
+  border-radius: 1px;
+  z-index: var(--day-layer);
+}
+.harbor-contribution-calendar[data-depth="true"] .harbor-contribution-cell:hover,
+.harbor-contribution-calendar[data-depth="true"] .harbor-contribution-cell:focus-visible {
+  transform: none;
+}
+.harbor-contribution-calendar[data-depth="true"] .harbor-contribution-cell[aria-pressed="true"] {
+  z-index: 8;
+}
+.harbor-contribution-calendar[data-depth="true"] .harbor-contribution-cell:focus-visible {
+  z-index: 9;
+}
+.harbor-contribution-calendar[data-depth="true"] .harbor-contribution-cell[data-level="0"] {
+  --day-fill: color-mix(in oklch, var(--muted-foreground) 24%, var(--background));
+}
+.harbor-contribution-column {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: calc(100% + var(--day-height));
+  overflow: visible;
+  pointer-events: none;
+}
+.harbor-contribution-column polygon {
+  pointer-events: auto;
+  stroke-linejoin: round;
+}
+.harbor-contribution-top {
+  fill: var(--day-fill);
+  stroke: var(--harbor-glass-edge);
+  stroke-width: 0.4px;
+  vector-effect: non-scaling-stroke;
+}
+.harbor-contribution-front {
+  fill: color-mix(in oklch, var(--day-fill) 78%, var(--background));
+}
+.harbor-contribution-side {
+  fill: color-mix(in oklch, var(--day-fill) 52%, var(--background));
+}
+.harbor-contribution-cell[aria-pressed="true"] .harbor-contribution-top {
+  stroke: var(--contribution-3);
+  stroke-width: 2px;
+}
+.harbor-contribution-cell:hover .harbor-contribution-top,
+.harbor-contribution-cell:focus-visible .harbor-contribution-top {
+  stroke: var(--ring);
+  stroke-width: 2px;
+}
+.harbor-contribution-calendar[data-depth="true"] .harbor-contribution-number {
+  top: calc(30px - var(--day-height));
+  left: 15%;
+  font-size: 12px;
+}
+.harbor-calendar-companion[data-on-column="true"] {
+  --companion-size: 18px;
+  z-index: 10;
+}
+.harbor-calendar-companion[data-on-column="true"][data-month="true"] {
+  --companion-size: 24px;
+}
+.harbor-calendar-companion[data-on-column="true"] .harbor-companion-position {
+  transition: none;
+}
+.harbor-companion-contact {
+  position: absolute;
+  top: 92%;
+  left: 30%;
+  width: 40%;
+  height: 12%;
+  border-radius: 50%;
+  background: var(--harbor-glass-shadow);
+}
+.harbor-calendar-companion[data-on-column="true"] .harbor-companion-hero {
+  position: relative;
+  animation: none;
+}
+.harbor-contribution-layout {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+}
+.harbor-contribution-detail {
+  display: flex;
+  min-width: 0;
+  min-height: 32px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.harbor-contribution-calendar[data-month="true"] .harbor-contribution-detail {
+  align-items: flex-start;
+  justify-content: flex-start;
+  flex-direction: column;
+}
+.harbor-contribution-calendar[data-month="true"] .harbor-contribution-detail p {
+  font-size: 14px;
+  line-height: 1.6;
+}
+@container contribution-calendar (min-width: 820px) {
+  .harbor-contribution-calendar[data-month="true"] .harbor-contribution-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 560px) minmax(0, 1fr);
+    gap: 32px;
+  }
+  .harbor-contribution-calendar[data-month="true"] .harbor-contribution-detail {
+    border-left: 1px solid var(--border);
+    padding: 24px;
+  }
+}
+@media (forced-colors: active) {
+  .harbor-contribution-column polygon {
+    stroke: ButtonText;
+    stroke-width: 1px;
+    vector-effect: non-scaling-stroke;
+  }
+  .harbor-contribution-cell[aria-pressed="true"] .harbor-contribution-top {
+    stroke: Highlight;
+  }
+}
+
 /* Atlas: 1448x1086, four 362px columns. Authored pose rows start at y=25,394,758;
    offset each row explicitly to avoid sampling a neighboring pose at tile boundaries. */
 /* The sprite portal shares the date grid's coordinate system and never intercepts input. */
@@ -876,7 +1035,7 @@ button {
   pointer-events: none;
   --companion-size: 32px;
 }
-.harbor-calendar-companion[data-month="true"] {
+.harbor-calendar-companion[data-month="true"]:not([data-on-column="true"]) {
   --companion-size: 48px;
 }
 .harbor-companion-position {
@@ -985,6 +1144,68 @@ button {
 .harbor-calendar-companion[data-phase="reward"] .harbor-companion-spark,
 .harbor-calendar-companion[data-phase="encounter"][data-encounter="rest"] .harbor-companion-rest {
   animation: harbor-companion-found 600ms ease-out;
+}
+/* Column encounters share the cap without adding lanes or intercepting dates. */
+.harbor-column-object-anchor {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+.harbor-column-object-anchor .harbor-companion-object {
+  --companion-size: 16px;
+  left: -8px;
+  top: -15px;
+  opacity: 1;
+}
+.harbor-contribution-event {
+  position: absolute;
+  top: calc(1px - var(--day-height));
+  left: 58%;
+  font-size: 6px;
+  line-height: 6px;
+  color: var(--foreground);
+  pointer-events: none;
+}
+.harbor-column-event-mark {
+  position: absolute;
+  left: -3px;
+  top: -7px;
+  font-size: 8px;
+  line-height: 8px;
+  color: var(--foreground);
+}
+.harbor-calendar-companion[data-month="false"]
+  .harbor-column-object-anchor
+  .harbor-companion-object,
+.harbor-calendar-companion[data-month="true"] .harbor-contribution-event {
+  position: absolute;
+  top: calc(1px - var(--day-height));
+  left: 58%;
+  font-size: 6px;
+  line-height: 6px;
+  color: var(--foreground);
+  pointer-events: none;
+}
+.harbor-column-event-mark {
+  display: none;
+}
+.harbor-column-object-anchor[data-complete="true"][data-kind="bug"] {
+  opacity: 0.35;
+}
+.harbor-column-object-anchor[data-complete="true"] .harbor-companion-chest::after {
+  transform: translateY(-3px) rotate(-12deg);
+}
+.harbor-calendar-companion[data-on-column="true"] .harbor-companion-hero {
+  animation: none;
+}
+.harbor-calendar-companion[data-on-column="true"][data-month="true"][data-phase="encounter"][data-encounter="bug"]
+  .harbor-companion-hero {
+  animation: harbor-companion-swing 180ms steps(1) 1;
+}
+.harbor-calendar-companion[data-on-column="true"] .harbor-companion-object,
+.harbor-calendar-companion[data-on-column="true"] .harbor-companion-chest::after,
+.harbor-calendar-companion[data-on-column="true"] .harbor-companion-spark {
+  animation-duration: 180ms;
 }
 .harbor-companion-progress {
   width: 100%;

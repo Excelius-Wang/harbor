@@ -1,0 +1,14 @@
+[
+  {
+    "theme": "dark",
+    "width": 1440,
+    "dense": true,
+    "keyboard": true
+  },
+  {
+    "theme": "light",
+    "width": 900,
+    "dense": true,
+    "keyboard": true
+  }
+]

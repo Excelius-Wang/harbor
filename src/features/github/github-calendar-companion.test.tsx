@@ -228,3 +228,54 @@ it("keeps leftward facing when ResizeObserver repeats unchanged coordinates", ()
     "scaleX(-1)"
   );
 });
+
+it("runs rooftop encounters after arrival, replaces targets and records each date once", () => {
+  const view = render(<CalendarCompanion {...props} onColumn visit={visit} />);
+  expect(phase()).toBe("walking");
+  tick(180);
+  expect(phase()).toBe("encounter");
+  view.rerender(
+    <CalendarCompanion
+      {...props}
+      onColumn
+      visit={{
+        ...visit,
+        request: 2,
+        day: { ...visit.day, date: "2026-08-21", contributionCount: 0 },
+      }}
+    />
+  );
+  tick(180);
+  tick(180);
+  expect(phase()).toBe("idle");
+  fireEvent.click(screen.getByRole("button", { name: "workspace.profile.companion.settings" }));
+  expect(document.querySelector("[data-explored-count]")?.getAttribute("data-explored-count")).toBe(
+    "1"
+  );
+  view.rerender(<CalendarCompanion {...props} onColumn visit={visit} />);
+  tick(180);
+  tick(180);
+  expect(phase()).toBe("reward");
+  tick(180);
+  expect(phase()).toBe("idle");
+  expect(document.querySelector("[data-explored-count]")?.getAttribute("data-explored-count")).toBe(
+    "2"
+  );
+  view.rerender(<CalendarCompanion {...props} onColumn visit={{ ...visit, request: 3 }} />);
+  tick(180);
+  tick(180);
+  tick(180);
+  expect(document.querySelector("[data-explored-count]")?.getAttribute("data-explored-count")).toBe(
+    "2"
+  );
+  expect(screen.getByText("Lv. 5")).toBeTruthy();
+});
+it("records static rooftop exploration with reduced motion without playing encounters", () => {
+  reduced = true;
+  render(<CalendarCompanion {...props} onColumn visit={visit} />);
+  expect(phase()).toBe("idle");
+  fireEvent.click(screen.getByRole("button", { name: "workspace.profile.companion.settings" }));
+  expect(document.querySelector("[data-explored-count]")?.getAttribute("data-explored-count")).toBe(
+    "1"
+  );
+});

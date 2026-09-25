@@ -1,0 +1,7 @@
+{
+  "bug": "2026-08-09",
+  "backgroundPause": true,
+  "repeatCount": 1,
+  "zeroCount": 2,
+  "hoverKeepsSelection": true
+}
