@@ -6,6 +6,7 @@
   ],
   "rapidReplacement": true,
   "hiddenPause": true,
+  "pausedAnimationCount": 1,
   "landing": {
     "x": 0,
     "y": 0.0005041503906113576,

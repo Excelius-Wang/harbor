@@ -17,8 +17,8 @@ None — complete
 
 ## Verification
 
-- `pnpm check`: 751 tests / 145 files, formatting, lint, TypeScript and build pass. Log: `/tmp/harbor-calendar-pr-check.log`. Existing warnings are recorded in the evidence README.
-- Eight EN/ZH/theme/width encounter cases and supplementary background-pause, duplicate-count, zero-day and hover checks pass. Foot anchors align within 1 px. Prior travel/dense checks apply to unchanged behavior. Selected screenshots inspected. Prior 32 state cases apply only to unchanged query/error handling.
+- `pnpm check`: 751 tests / 145 files, formatting, lint, TypeScript and build pass. Log: `/tmp/harbor-review115-check.log`. Existing warnings are recorded in the evidence README.
+- Eight EN/ZH/theme/width encounter cases and supplementary background-pause, duplicate-count, zero-day and hover checks pass. Foot anchors align within 1 px. CodeRabbit test follow-up reran all 32 state cases and movement checks, requiring date buttons and an observed paused animation. Prior dense checks and screenshots apply to unchanged application code.
 - Browser harness uses visible SVG tops, arrow expressions without trailing semicolons and acknowledged animation pause before sampling. Avoid Vite reloads during matrix runs.
 
 Success: Rooftop encounters restored, verified and submitted in PR #115. Merge is not part of this delivery.

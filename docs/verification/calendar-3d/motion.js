@@ -15,10 +15,16 @@ async page => {
  if(await marker.getAttribute('data-travel')!=='fade')throw Error('Expected distant fade');
  await page.keyboard.press('End');await page.keyboard.press('Enter');
  if(await marker.evaluate(e=>e.getAnimations().filter(a=>a.playState==='running').length)>1)throw Error('Queued old movement');
- await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});document.dispatchEvent(new Event('visibilitychange'))});
+ await marker.evaluate(e=>{
+   if(!e.getAnimations().some(a=>a.playState==='running'))throw Error('No running movement before hiding');
+   Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});document.dispatchEvent(new Event('visibilitychange'))});
  await page.waitForFunction(()=>document.querySelector('.harbor-calendar-companion').dataset.active==='false');
  await page.waitForFunction(()=>document.querySelector('.harbor-companion-position').getAnimations().every(a=>!a.pending && (a.playState==='paused'||a.playState==='finished')));
- const paused=await marker.evaluate(e=>e.getAnimations().map(a=>a.currentTime));
+ const paused=await marker.evaluate(e=>{
+   const animations=e.getAnimations();
+   if(!animations.some(a=>a.playState==='paused'))throw Error('No paused movement animation');
+   return animations.map(a=>a.currentTime);
+ });
  await page.waitForTimeout(220);
  const after=await marker.evaluate(e=>e.getAnimations().map(a=>a.currentTime));
  if(JSON.stringify(paused)!==JSON.stringify(after))throw Error('Hidden movement did not pause');
@@ -34,5 +40,5 @@ async page => {
  await page.emulateMedia({reducedMotion:'reduce'});await page.keyboard.press('Home');await page.keyboard.press('Enter');
  if(await marker.evaluate(e=>e.getAnimations().some(a=>a.playState==='running')))throw Error('Reduced motion');
  const reduced=await aligned();if(Object.values(reduced).some(n=>n>1))throw Error('Reduced contact');
- return {hop,rapidReplacement:true,hiddenPause:true,landing,resize,reduced};
+ return {hop,rapidReplacement:true,hiddenPause:true,pausedAnimationCount:paused.length,landing,resize,reduced};
 }

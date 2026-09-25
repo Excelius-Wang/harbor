@@ -33,12 +33,12 @@ async (page) => {
           } else {
             await page.locator(".harbor-contribution-calendar").waitFor();
             if (state === "empty") {
+              const days = page.locator("[data-contribution-day]");
+              if ((await days.count()) === 0) throw Error("Empty has no day buttons");
               if (
-                !(await page
-                  .locator("[data-contribution-day]")
-                  .evaluateAll((es) =>
-                    es.every((e) => parseFloat(e.style.getPropertyValue("--day-height")) === 0)
-                  ))
+                !(await days.evaluateAll((es) =>
+                  es.every((e) => parseFloat(e.style.getPropertyValue("--day-height")) === 0)
+                ))
               )
                 throw Error("Empty has columns");
             } else {
