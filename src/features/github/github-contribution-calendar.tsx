@@ -1,12 +1,15 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type CSSProperties,
   type KeyboardEvent,
 } from "react";
+import { RadioGroup as RadioGroupPrimitive } from "radix-ui";
+import { RadioGroup } from "@/components/ui/radio-group";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -28,6 +31,33 @@ export function contributionMonths(summary: GitHubContributionSummary) {
   ].sort();
 }
 
+function ContributionColumn({ height, month }: { height: number; month: boolean }) {
+  const base = month ? 48 : 12;
+  const back = base - (month ? 20 : 8) - 4 - height;
+  const front = base - 4 - height;
+  return (
+    <svg
+      className="harbor-contribution-column"
+      aria-hidden="true"
+      viewBox={`0 ${-height} 100 ${base + height}`}
+      preserveAspectRatio="none"
+    >
+      <polygon
+        className="harbor-contribution-front"
+        points={`0,${front} 80,${front} 80,${base} 0,${base}`}
+      />
+      <polygon
+        className="harbor-contribution-side"
+        points={`80,${front} 100,${back} 100,${base - (month ? 20 : 8)} 80,${base}`}
+      />
+      <polygon
+        className="harbor-contribution-top"
+        points={`0,${front} 20,${back} 100,${back} 80,${front}`}
+      />
+    </svg>
+  );
+}
+
 export function ContributionCalendar({ summary }: { summary: GitHubContributionSummary }) {
   const { t, i18n } = useTranslation();
   const root = useRef<HTMLElement>(null);
@@ -40,24 +70,41 @@ export function ContributionCalendar({ summary }: { summary: GitHubContributionS
   const [tooltipFocusDay, setTooltipFocusDay] = useState<string | null>(null);
   const [hoveredDay, setHoveredDay] = useState<string | null>(null);
   const visitCounter = useRef(0);
+  const [depth, setDepth] = useState(true);
   const [month, setMonth] = useState<string | null>(null);
   const [focusedDay, setFocusedDay] = useState<string | null>(null);
   const months = useMemo(() => contributionMonths(summary), [summary]);
   const selectedMonth =
     month === null ? null : months.includes(month) ? month : (months[months.length - 1] ?? null);
   const monthIndex = selectedMonth ? months.indexOf(selectedMonth) : -1;
+  const viewportElement = useRef<HTMLDivElement | null>(null);
   const calendarViewport = useCallback(
     (viewport: HTMLDivElement | null) => {
+      viewportElement.current = viewport;
       if (viewport && !selectedMonth) viewport.scrollLeft = viewport.scrollWidth;
     },
     [selectedMonth]
   );
   const allDays = summary.weeks.flatMap((week) => week.days);
+  const maxCount = Math.max(1, ...allDays.map((day) => day.contributionCount));
   const days = selectedMonth
     ? allDays.filter((day) => day.date.startsWith(selectedMonth))
     : allDays;
   const currentVisitDay = visit ? days.find((day) => day.date === visit.day.date) : undefined;
   const currentVisit = visit && currentVisitDay ? { ...visit, day: currentVisitDay } : null;
+  const selectedDate = currentVisit?.day.date;
+  const lastDate = days[days.length - 1]?.date;
+  const homeDate = [...days].reverse().find((day) => day.contributionCount > 0)?.date ?? lastDate;
+  useLayoutEffect(() => {
+    const viewport = viewportElement.current;
+    const date = selectedDate ?? lastDate;
+    const cell = map?.querySelector<HTMLElement>(`[data-contribution-day="${date}"]`);
+    if (!viewport || !cell || selectedMonth) return;
+    const bounds = viewport.getBoundingClientRect();
+    const rect = cell.getBoundingClientRect();
+    if (rect.right + 12 > bounds.right) viewport.scrollLeft += rect.right + 12 - bounds.right;
+    else if (rect.left - 4 < bounds.left) viewport.scrollLeft += rect.left - 4 - bounds.left;
+  }, [depth, map, selectedMonth, selectedDate, lastDate]);
   useEffect(() => {
     if (!visit) return;
     const dismiss = (event: PointerEvent) => {
@@ -128,8 +175,9 @@ export function ContributionCalendar({ summary }: { summary: GitHubContributionS
           : Math.max(0, Math.min(cells.length - 1, index + steps[event.key]));
     cells[next]?.focus();
   };
-  const tooltipDate = hoveredDay ?? tooltipFocusDay ?? currentVisit?.day.date;
+  const tooltipDate = hoveredDay ?? tooltipFocusDay;
   const renderDay = (day: GitHubContributionDay, index: number) => {
+    const height = (Math.max(0, day.contributionCount) / maxCount) * 44;
     const label = t("workspace.profile.contributionDay", {
       count: day.contributionCount,
       date: dayFormatter.format(utcDate(day.date)),
@@ -145,6 +193,8 @@ export function ContributionCalendar({ summary }: { summary: GitHubContributionS
             aria-label={label}
             aria-pressed={visit?.day.date === day.date}
             onClick={() => {
+              setHoveredDay(null);
+              setTooltipFocusDay(null);
               setVisit({ day, request: ++visitCounter.current });
             }}
             tabIndex={day.date === focusDate ? 0 : -1}
@@ -154,27 +204,44 @@ export function ContributionCalendar({ summary }: { summary: GitHubContributionS
             onPointerLeave={() =>
               setHoveredDay((current) => (current === day.date ? null : current))
             }
-            onFocus={() => {
+            onFocus={(event) => {
               setFocusedDay(day.date);
-              setTooltipFocusDay(day.date);
+              if (event.currentTarget.matches(":focus-visible")) setTooltipFocusDay(day.date);
             }}
             onBlur={() => setTooltipFocusDay((current) => (current === day.date ? null : current))}
             style={
               {
                 gridRow: selectedMonth ? undefined : day.weekday + 2,
+                "--day-height": `${height}px`,
+                "--day-layer": depth
+                  ? (selectedMonth ? Math.floor(index / 7) : day.weekday) + 1
+                  : undefined,
                 "--day-delay": `${Math.min(index * 0.45, 160)}ms`,
               } as CSSProperties
             }
           >
+            {depth ? <ContributionColumn height={height} month={Boolean(selectedMonth)} /> : null}
+            {depth &&
+            !selectedMonth &&
+            visit?.day.date !== day.date &&
+            ["bug", "chest"].includes(encounterForDay(day)) ? (
+              <span className="harbor-contribution-event" aria-hidden="true">
+                {encounterForDay(day) === "chest" ? "◇" : "•"}
+              </span>
+            ) : null}
             {selectedMonth ? (
-              <span className="harbor-contribution-number">{Number(day.date.slice(-2))}</span>
+              <span className="harbor-contribution-number" aria-hidden="true">
+                {Number(day.date.slice(-2))}
+              </span>
             ) : null}
           </button>
         </TooltipTrigger>
-        <TooltipContent>
+        <TooltipContent sideOffset={depth ? height + 6 : 6}>
           {label}
-          {visit?.day.date === day.date ? (
-            <span className="ml-2">{t(`workspace.profile.companion.${encounterForDay(day)}`)}</span>
+          {depth && ["bug", "chest"].includes(encounterForDay(day)) ? (
+            <span className="block">
+              {t(`workspace.profile.companion.${encounterForDay(day)}`)}
+            </span>
           ) : null}
         </TooltipContent>
       </Tooltip>
@@ -208,6 +275,8 @@ export function ContributionCalendar({ summary }: { summary: GitHubContributionS
     <section
       ref={root}
       className="harbor-contribution-calendar flex min-w-0 flex-col gap-3 border-b pb-5"
+      data-depth={depth}
+      data-month={Boolean(selectedMonth)}
       data-entered={entered}
       data-arriving={arriving}
       onKeyDown={(event) => {
@@ -246,18 +315,35 @@ export function ContributionCalendar({ summary }: { summary: GitHubContributionS
           >
             {t("workspace.profile.monthView")}
           </Button>
+          <RadioGroup
+            value={depth ? "3d" : "flat"}
+            onValueChange={(value) => {
+              setDepth(value === "3d");
+              setHoveredDay(null);
+              setTooltipFocusDay(null);
+            }}
+            orientation="horizontal"
+            aria-label={t("workspace.profile.calendarAppearance")}
+            className="harbor-segmented ml-2 flex w-fit gap-1 rounded-md p-1"
+          >
+            {(["flat", "3d"] as const).map((value) => (
+              <RadioGroupPrimitive.Item key={value} value={value} asChild>
+                <Button variant="ghost" size="sm">
+                  {t(`workspace.profile.calendarAppearance${value === "flat" ? "Flat" : "3d"}`)}
+                </Button>
+              </RadioGroupPrimitive.Item>
+            ))}
+          </RadioGroup>
           <CalendarCompanion
             visit={currentVisit}
             period={selectedMonth ?? "year"}
+            onColumn={depth}
             total={summary.totalContributions}
             visible={visible}
             map={map}
-            layoutRevision={summary.weeks.map((week) => week.firstDay).join(":")}
+            layoutRevision={`${depth}:${selectedDate}:${days.map((day) => `${day.date}:${day.contributionCount}`).join(":")}`}
             onMenuOpenChange={setCompanionMenuOpen}
-            homeDate={
-              [...days].reverse().find((day) => day.contributionCount > 0)?.date ??
-              days[days.length - 1]?.date
-            }
+            homeDate={homeDate}
             onClear={() => setVisit(null)}
           />
         </div>
@@ -303,98 +389,132 @@ export function ContributionCalendar({ summary }: { summary: GitHubContributionS
           </span>
         </div>
       ) : null}
-      <div
-        key={selectedMonth ?? "year"}
-        className="harbor-contribution-period"
-        data-month={Boolean(selectedMonth)}
-      >
-        <div className="flex min-w-0 gap-1">
-          {!selectedMonth ? (
-            <div
-              className="grid grid-rows-[32px_repeat(7,12px)] gap-1 pt-1 pr-1 text-xs"
-              aria-hidden="true"
-            >
-              <span />
-              {Array.from({ length: 7 }, (_, day) => (
-                <span key={day}>
-                  {[1, 3, 5].includes(day)
-                    ? weekdayFormatter.format(new Date(Date.UTC(2026, 0, 4 + day)))
-                    : ""}
-                </span>
-              ))}
-            </div>
-          ) : null}
-          <ScrollArea className="min-w-0 flex-1 pb-2" viewportRef={calendarViewport}>
-            <div className={selectedMonth ? "w-full max-w-[392px] p-1" : "w-max p-1"}>
+      {days.length === 0 ? (
+        <p className="text-muted-foreground py-6 text-sm">{t("workspace.profile.calendarEmpty")}</p>
+      ) : null}
+      <div className="harbor-contribution-layout">
+        <div
+          hidden={days.length === 0}
+          key={selectedMonth ?? "year"}
+          className="harbor-contribution-period"
+          data-month={Boolean(selectedMonth)}
+        >
+          <div className="flex min-w-0 gap-1">
+            {!selectedMonth ? (
               <div
-                ref={setMap}
-                role="group"
-                aria-label={t("workspace.profile.contributionCalendarLabel")}
-                onKeyDown={navigateDays}
+                className="harbor-contribution-week harbor-contribution-weekdays pt-1 pr-1 text-xs"
+                aria-hidden="true"
+              >
+                <span />
+                {Array.from({ length: 7 }, (_, day) => (
+                  <span key={day}>
+                    {[1, 3, 5].includes(day)
+                      ? weekdayFormatter.format(new Date(Date.UTC(2026, 0, 4 + day)))
+                      : ""}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+            <ScrollArea className="min-w-0 flex-1 pb-2" viewportRef={calendarViewport}>
+              <div
                 className={
                   selectedMonth
-                    ? "harbor-contribution-map relative grid grid-cols-7 gap-1.5"
-                    : "harbor-contribution-map relative flex gap-1"
+                    ? "harbor-contribution-board w-full max-w-[560px] p-1"
+                    : "harbor-contribution-board w-max p-1"
                 }
               >
-                {selectedMonth ? (
-                  <>
-                    {Array.from({ length: 7 }, (_, day) => (
-                      <span key={`weekday-${day}`} className="pb-1 text-center text-xs">
-                        {weekdayFormatter.format(new Date(Date.UTC(2026, 0, 4 + day)))}
-                      </span>
-                    ))}
-                    {Array.from({ length: 42 }, (_, index) => {
-                      const number = index - firstOfMonth!.getUTCDay() + 1;
-                      const date = `${selectedMonth}-${String(number).padStart(2, "0")}`;
-                      const day = byDate.get(date);
-                      return day ? (
-                        renderDay(day, index)
-                      ) : (
-                        <span
-                          key={`blank-${index}`}
-                          className="text-muted-foreground/60 flex h-12 items-center justify-center text-xs"
-                          aria-hidden="true"
-                        >
-                          {number > 0 && number <= monthLength ? number : ""}
+                <div
+                  ref={setMap}
+                  role="group"
+                  aria-label={t("workspace.profile.contributionCalendarLabel")}
+                  onKeyDown={navigateDays}
+                  className={
+                    selectedMonth
+                      ? "harbor-contribution-map relative grid grid-cols-7 gap-1.5"
+                      : "harbor-contribution-map relative flex gap-1"
+                  }
+                >
+                  {selectedMonth ? (
+                    <>
+                      {Array.from({ length: 7 }, (_, day) => (
+                        <span key={`weekday-${day}`} className="pb-1 text-center text-xs">
+                          {weekdayFormatter.format(new Date(Date.UTC(2026, 0, 4 + day)))}
                         </span>
-                      );
-                    })}
-                  </>
-                ) : (
-                  <>
-                    {summary.weeks.map((week, weekIndex) => {
-                      const showMonth =
-                        weekIndex === 0 ||
-                        week.firstDay.slice(0, 7) !==
-                          summary.weeks[weekIndex - 1].firstDay.slice(0, 7);
-                      return (
-                        <div
-                          key={week.firstDay}
-                          className="grid grid-rows-[32px_repeat(7,12px)] gap-1"
-                        >
-                          <span className="w-3 overflow-visible text-xs whitespace-nowrap">
-                            {showMonth
-                              ? new Intl.DateTimeFormat(i18n.language, {
-                                  month: "short",
-                                  timeZone: "UTC",
-                                }).format(utcDate(week.firstDay))
-                              : ""}
+                      ))}
+                      {Array.from({ length: 42 }, (_, index) => {
+                        const number = index - firstOfMonth!.getUTCDay() + 1;
+                        const date = `${selectedMonth}-${String(number).padStart(2, "0")}`;
+                        const day = byDate.get(date);
+                        return day ? (
+                          renderDay(day, index)
+                        ) : (
+                          <span
+                            key={`blank-${index}`}
+                            className="text-muted-foreground/60 flex h-12 items-center justify-center text-xs"
+                            aria-hidden="true"
+                          >
+                            {number > 0 && number <= monthLength ? number : ""}
                           </span>
-                          {week.days.map((day, index) => renderDay(day, weekIndex * 7 + index))}
-                        </div>
-                      );
-                    })}
-                  </>
-                )}
+                        );
+                      })}
+                    </>
+                  ) : (
+                    <>
+                      {summary.weeks.map((week, weekIndex) => {
+                        const showMonth =
+                          weekIndex === 0 ||
+                          week.firstDay.slice(0, 7) !==
+                            summary.weeks[weekIndex - 1].firstDay.slice(0, 7);
+                        return (
+                          <div key={week.firstDay} className="harbor-contribution-week">
+                            <span className="w-3 overflow-visible text-xs whitespace-nowrap">
+                              {showMonth
+                                ? new Intl.DateTimeFormat(i18n.language, {
+                                    month: "short",
+                                    timeZone: "UTC",
+                                  }).format(utcDate(week.firstDay))
+                                : ""}
+                            </span>
+                            {week.days.map((day, index) => renderDay(day, weekIndex * 7 + index))}
+                          </div>
+                        );
+                      })}
+                    </>
+                  )}
+                </div>
+                <div className="mt-3 flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
+                  {depth && days.length > 0 ? (
+                    <span className="text-muted-foreground text-xs">
+                      {t("workspace.profile.calendarHeight")}
+                    </span>
+                  ) : null}
+                  {legend}
+                </div>
               </div>
-              <div className="mt-3">{legend}</div>
-            </div>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          </div>
+        </div>
+
+        <div className="harbor-contribution-detail">
+          {selectedMonth ? (
+            <h3 className="text-sm font-medium">{t("workspace.profile.calendarSelectedDay")}</h3>
+          ) : null}
+          <p className="text-muted-foreground text-xs" data-selected-date={currentVisit?.day.date}>
+            {currentVisit
+              ? t("workspace.profile.contributionDay", {
+                  count: currentVisit.day.contributionCount,
+                  date: dayFormatter.format(utcDate(currentVisit.day.date)),
+                })
+              : t("workspace.profile.calendarSelectHint")}
+          </p>
+          {currentVisit ? (
+            <Button variant="ghost" size="sm" onClick={() => setVisit(null)}>
+              {t("workspace.profile.companion.clearDate")}
+            </Button>
+          ) : null}
         </div>
       </div>
-
       {selectedMonth ? (
         <p className="text-muted-foreground text-xs">{t("workspace.profile.yearMetrics")}</p>
       ) : null}

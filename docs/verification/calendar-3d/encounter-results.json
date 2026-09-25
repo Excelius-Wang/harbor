@@ -1,0 +1,213 @@
+{
+  "results": [
+    {
+      "key": "en-light-900",
+      "annual": {
+        "footX": 0,
+        "footY": 0.0003515624999863576,
+        "continuous": true,
+        "hasEncounter": true,
+        "bounded": true,
+        "overflow": false
+      },
+      "monthly": {
+        "footX": 0.011250000000000426,
+        "footY": 0.004375000000010232,
+        "continuous": true,
+        "hasEncounter": true,
+        "bounded": true,
+        "overflow": false
+      },
+      "keyboard": true,
+      "refresh": true,
+      "pause": true,
+      "reduced": {
+        "transition": "0s",
+        "animation": "none"
+      }
+    },
+    {
+      "key": "en-light-1440",
+      "annual": {
+        "footX": 0,
+        "footY": 0.0003515624999863576,
+        "continuous": true,
+        "hasEncounter": true,
+        "bounded": true,
+        "overflow": false
+      },
+      "monthly": {
+        "footX": 0.011250000000000426,
+        "footY": 0.004375000000010232,
+        "continuous": true,
+        "hasEncounter": true,
+        "bounded": true,
+        "overflow": false
+      },
+      "keyboard": true,
+      "refresh": true,
+      "pause": true,
+      "reduced": {
+        "transition": "0s",
+        "animation": "none"
+      }
+    },
+    {
+      "key": "en-dark-900",
+      "annual": {
+        "footX": 0,
+        "footY": 0.0003515624999863576,
+        "continuous": true,
+        "hasEncounter": true,
+        "bounded": true,
+        "overflow": false
+      },
+      "monthly": {
+        "footX": 0.011250000000000426,
+        "footY": 0.004375000000010232,
+        "continuous": true,
+        "hasEncounter": true,
+        "bounded": true,
+        "overflow": false
+      },
+      "keyboard": true,
+      "refresh": true,
+      "pause": true,
+      "reduced": {
+        "transition": "0s",
+        "animation": "none"
+      }
+    },
+    {
+      "key": "en-dark-1440",
+      "annual": {
+        "footX": 0,
+        "footY": 0.0003515624999863576,
+        "continuous": true,
+        "hasEncounter": true,
+        "bounded": true,
+        "overflow": false
+      },
+      "monthly": {
+        "footX": 0.011250000000000426,
+        "footY": 0.004375000000010232,
+        "continuous": true,
+        "hasEncounter": true,
+        "bounded": true,
+        "overflow": false
+      },
+      "keyboard": true,
+      "refresh": true,
+      "pause": true,
+      "reduced": {
+        "transition": "0s",
+        "animation": "none"
+      }
+    },
+    {
+      "key": "zh-light-900",
+      "annual": {
+        "footX": 0,
+        "footY": 0.0003515624999863576,
+        "continuous": true,
+        "hasEncounter": true,
+        "bounded": true,
+        "overflow": false
+      },
+      "monthly": {
+        "footX": 0.011250000000000426,
+        "footY": 0.004375000000010232,
+        "continuous": true,
+        "hasEncounter": true,
+        "bounded": true,
+        "overflow": false
+      },
+      "keyboard": true,
+      "refresh": true,
+      "pause": true,
+      "reduced": {
+        "transition": "0s",
+        "animation": "none"
+      }
+    },
+    {
+      "key": "zh-light-1440",
+      "annual": {
+        "footX": 0,
+        "footY": 0.0003515624999863576,
+        "continuous": true,
+        "hasEncounter": true,
+        "bounded": true,
+        "overflow": false
+      },
+      "monthly": {
+        "footX": 0.011250000000000426,
+        "footY": 0.004375000000010232,
+        "continuous": true,
+        "hasEncounter": true,
+        "bounded": true,
+        "overflow": false
+      },
+      "keyboard": true,
+      "refresh": true,
+      "pause": true,
+      "reduced": {
+        "transition": "0s",
+        "animation": "none"
+      }
+    },
+    {
+      "key": "zh-dark-900",
+      "annual": {
+        "footX": 0,
+        "footY": 0.0003515624999863576,
+        "continuous": true,
+        "hasEncounter": true,
+        "bounded": true,
+        "overflow": false
+      },
+      "monthly": {
+        "footX": 0.011250000000000426,
+        "footY": 0.004375000000010232,
+        "continuous": true,
+        "hasEncounter": true,
+        "bounded": true,
+        "overflow": false
+      },
+      "keyboard": true,
+      "refresh": true,
+      "pause": true,
+      "reduced": {
+        "transition": "0s",
+        "animation": "none"
+      }
+    },
+    {
+      "key": "zh-dark-1440",
+      "annual": {
+        "footX": 0,
+        "footY": 0.0003515624999863576,
+        "continuous": true,
+        "hasEncounter": true,
+        "bounded": true,
+        "overflow": false
+      },
+      "monthly": {
+        "footX": 0.011250000000000426,
+        "footY": 0.004375000000010232,
+        "continuous": true,
+        "hasEncounter": true,
+        "bounded": true,
+        "overflow": false
+      },
+      "keyboard": true,
+      "refresh": true,
+      "pause": true,
+      "reduced": {
+        "transition": "0s",
+        "animation": "none"
+      }
+    }
+  ],
+  "errors": []
+}

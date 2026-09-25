@@ -87,7 +87,7 @@ function ProfileSkeleton() {
           <Skeleton className="h-12 w-full" />
         </div>
       </div>
-      <Skeleton className="h-44 w-full" />
+      <Skeleton className="h-80 w-full" />
       <Skeleton className="h-40 w-full" />
       <Skeleton className="h-12 w-full" />
     </div>
@@ -581,7 +581,7 @@ export function GitHubProfileView({
                 />
               ) : null}
               {contributions.isPending ? (
-                <Skeleton className="h-40 w-full" />
+                <Skeleton className="h-80 w-full" />
               ) : contributions.error && !contributions.data ? (
                 <Alert variant="destructive">
                   <CircleAlert />

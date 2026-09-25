@@ -1,0 +1,27 @@
+{
+  "hop": [
+    "translate(0px, 14.7498px)",
+    "translate(0px, -14px)",
+    "translate(0px, 0px)"
+  ],
+  "rapidReplacement": true,
+  "hiddenPause": true,
+  "landing": {
+    "x": 0,
+    "y": 0.0005041503906113576,
+    "shadowX": 0.015625,
+    "shadowY": 0.014495849609375
+  },
+  "resize": {
+    "x": 0,
+    "y": 0.0005041503906113576,
+    "shadowX": 0.015625,
+    "shadowY": 0.014495849609375
+  },
+  "reduced": {
+    "x": 0,
+    "y": 0.014999999999986358,
+    "shadowX": 0.015625,
+    "shadowY": 0
+  }
+}
